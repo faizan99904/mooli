@@ -15,10 +15,10 @@
         <div class="navbar-right">
             <div id="navbar-menu">
                 <ul class="nav navbar-nav">
-                    <li><a href="javascript:void(0);" (click)="noteToggle()" class="right_note icon-menu"
+                    <li><a href="javascript:void(0);" (click)="noteToggle()" class="right_note icon-menu-bar"
                             title="Right Menu">Notes</a></li>
                     <li class="dropdown hidden-xs">
-                        <a href="javascript:void(0);" class="dropdown-toggle icon-menu"
+                        <a href="javascript:void(0);" class="dropdown-toggle icon-menu-bar"
                             data-toggle="dropdown">Create</a>
                         <div class="dropdown-menu pb-0 mt-0">
                             <a class="dropdown-item pt-2 pb-2" href="javascript:void(0);">User</a>
@@ -28,7 +28,7 @@
                         </div>
                     </li>
                     <li class="dropdown hidden-xs">
-                        <a href="javascript:void(0);" class="dropdown-toggle icon-menu" data-toggle="dropdown">
+                        <a href="javascript:void(0);" class="dropdown-toggle icon-menu-bar" data-toggle="dropdown">
                             <i class="fa fa-envelope-o"></i>
                             <span class="notification-dot msg">4</span>
                         </a>
@@ -85,7 +85,7 @@
                         </ul>
                     </li>
                     <li class="dropdown">
-                        <a href="javascript:void(0);" class="dropdown-toggle icon-menu" data-toggle="dropdown">
+                        <a href="javascript:void(0);" class="dropdown-toggle icon-menu-bar" data-toggle="dropdown">
                             <i class="fa fa-bell-o"></i>
                             <span class="notification-dot info">4</span>
                         </a>
@@ -134,7 +134,7 @@
                         </ul>
                     </li>
                     <li class="dropdown language-menu hidden-xs">
-                        <a href="javascript:void(0);" class="dropdown-toggle icon-menu" data-toggle="dropdown"><i
+                        <a href="javascript:void(0);" class="dropdown-toggle icon-menu-bar" data-toggle="dropdown"><i
                                 class="fa fa-language"></i></a>
                         <div class="dropdown-menu language_widget mt-0">
                             <a class="dropdown-item pt-2 pb-2" href="javascript:void(0);"><img
@@ -150,15 +150,15 @@
                                     src="assets/images/flag/france.svg" alt="French"> French</a>
                         </div>
                     </li>
-                    <li><a href="javascript:void(0);" (click)="openRightMenu()" class="right_toggle icon-menu"
+                    <li><a href="javascript:void(0);" (click)="openRightMenu()" class="right_toggle icon-menu-bar"
                             title="Right Menu"><i class="fa fa-comments-o"></i></a></li>
                     <li class="hidden-xs">
                         <a *ngIf="!isFullScreen" href="javascript:void(0);" (click)="openfullScreen()"
-                            id="btnFullscreen" class="icon-menu"><i class="fa fa-arrows-alt"></i></a>
+                            id="btnFullscreen" class="icon-menu-bar"><i class="fa fa-arrows-alt"></i></a>
                         <a *ngIf="isFullScreen" href="javascript:void(0);" (click)="closeFullScreen()"
-                            id="btnFullscreen" class="icon-menu"><i class="fa fa-arrows-alt"></i></a>
+                            id="btnFullscreen" class="icon-menu-bar"><i class="fa fa-arrows-alt"></i></a>
                     </li>
-                    <li><a [routerLink]="['/login']" href="javascript:void(0)" class="icon-menu"><i
+                    <li><a [routerLink]="['/login']" href="javascript:void(0)" class="icon-menu-bar"><i
                                 class="fa fa-power-off"></i></a></li>
                 </ul>
             </div>
