@@ -13,10 +13,12 @@ body {
 @font-face {
   font-family: "simple-Line-Icons";
   src: url("../src/assets/fonts/simple-Line-Icons.eot");
-  src: url("../src/assets/fonts/simple-Line-Icons.eot") format("embedded-opentype"),
+  src: url("../src/assets/fonts/simple-Line-Icons.eot")
+      format("embedded-opentype"),
     url("../src/assets/fonts/simple-Line-Icons.woff") format("woff"),
     url("../src/assets/fonts/simple-Line-Icons.ttf") format("truetype"),
-    url("../src/assets/fonts/simple-Line-Icons.svg#Simple-Line-Icons") format("svg");
+    url("../src/assets/fonts/simple-Line-Icons.svg#Simple-Line-Icons")
+      format("svg");
   font-weight: normal;
   font-style: normal;
 }
@@ -693,7 +695,8 @@ body {
   src: url("../src/assets/fonts/weathericons-regular-webfont.eot?#iefix")
       format("embedded-opentype"),
     url("../src/assets/fonts/weathericons-regular-webfont.woff") format("woff"),
-    url("../src/assets/fonts/weathericons-regular-webfont.ttf") format("truetype"),
+    url("../src/assets/fonts/weathericons-regular-webfont.ttf")
+      format("truetype"),
     url("../src/assets/fonts/weathericons-regular-webfont.svg#weathericons-regular-webfontRg")
       format("svg");
   font-weight: normal;
@@ -1641,6 +1644,8 @@ body {
   --body-color: #fafafa;
   --box-shadow: #c7c1c1;
   --sidebar-bg: #202223;
+  --primary-color: #82b440;
+  --primary-gradient: linear-gradient(45deg, #82b440, #5db440);
 }
 [data-theme="dark"] {
   --dark-color: #e4e4e4;
@@ -1660,6 +1665,8 @@ body {
   --body-color: #181a1c;
   --box-shadow: #484c52;
   --sidebar-bg: #202223;
+  --primary-color: #82b440;
+  --primary-gradient: linear-gradient(45deg, #82b440, #5db440);
 }
 [class="theme-green"] {
   --primary-color: #82b440;
