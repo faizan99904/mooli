@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-email',
-  imports: [],
+  imports: [RouterLink],
   templateUrl: './email.component.html',
   styleUrl: './email.component.scss'
 })
