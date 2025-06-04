@@ -1,0 +1,48 @@
+.body {
+  background: white;
+}
+
+.nav-tabs3 {
+  background: white;
+}
+
+.card .header {
+  background: white;
+  margin-top: 1rem;
+}
+
+.profile_state {
+  background: white;
+  margin: 0;
+}
+
+.mb {
+  margin-bottom: 15px;
+}
+
+.mt {
+  margin-top: 2rem !important;
+}
+
+.header-dropdown {
+  display: flex;
+}
+
+.fancy-radio input[type="radio"] + span i {
+  display: inline-block;
+  vertical-align: middle;
+  -webkit-border-radius: 8px;
+  -moz-border-radius: 8px;
+  border-radius: 8px;
+  position: relative;
+  bottom: 1px;
+  content: "";
+  border: 1px solid var(--border-color);
+  width: 18px;
+  height: 18px;
+  margin-right: 5px;
+}
+
+.fancy-checkbox input[type="checkbox"] + span:before {
+  display: inline-block !important;
+}
