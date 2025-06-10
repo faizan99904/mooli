@@ -127,11 +127,7 @@ export const clientRoutes: Routes = [
         component: InvoiceDetailComponent,
         data: { title: 'Mooli | InvoiceDetail' },
       },
-      {
-        path: 'pages/signup',
-        component: SignupComponent,
-        data: { title: 'Mooli | Signup' },
-      },
+    
       {
         path: 'departments',
         component: DepartmentComponent,
@@ -223,5 +219,11 @@ export const clientRoutes: Routes = [
         data: { title: 'Mooli | Covid-19' },
       },
     ],
+  },
+
+  {
+    path: 'signup',
+    component: SignupComponent,
+    data: { title: 'Mooli | Signup' },
   },
 ];
