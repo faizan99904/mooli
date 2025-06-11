@@ -1,18 +1,19 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { GoogleMapsModule } from '@angular/google-maps';
 
 @Component({
   selector: 'app-worldmap',
-  standalone:true,
-  imports: [],
+  standalone: true,
+  imports: [GoogleMapsModule],
   templateUrl: './worldmap.component.html',
-  styleUrl: './worldmap.component.scss'
+  styleUrls: ['./worldmap.component.scss']
 })
-export class WorldmapComponent {
-  zoom: number = 8;
-  lat: number = 51.673858;
-  long: number = 7.815982;
+export class WorldmapComponent implements OnInit {
+  zoom = 8;
+  lat = 51.673858;
+  long = 7.815982;
+
   constructor() { }
 
-  ngOnInit(): void {
-  }
+  ngOnInit(): void { }
 }

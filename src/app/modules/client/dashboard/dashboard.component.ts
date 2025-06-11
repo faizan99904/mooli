@@ -9,7 +9,7 @@ import { WorldmapComponent } from "../worldmap/worldmap.component";
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, CommonModule, LineChartComponent, BarChartComponent, PieChartComponent, ColumnChartComponent, WorldmapComponent],
+  imports: [RouterLink, CommonModule, LineChartComponent, BarChartComponent, PieChartComponent, ColumnChartComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
