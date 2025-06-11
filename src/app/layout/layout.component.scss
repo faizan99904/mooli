@@ -4,3 +4,7 @@
     max-width: 270px;
   }
 }
+
+.toggle_menu_active .sidebar:hover {
+  left: none !important;
+}

@@ -9,8 +9,8 @@ body {
   font-family: Roboto, "Helvetica Neue", sans-serif;
 }
 
-a:hover{
-    text-decoration: none;
+a:hover {
+  text-decoration: none;
 }
 
 @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&display=swap");
@@ -2278,6 +2278,7 @@ html.fullscreen-bg #wrapper {
 }
 .toggle_menu_active .sidebar:hover .user-account {
   text-align: left;
+  justify-content: start;
 }
 .toggle_menu_active .sidebar:hover .user-account .user_div .user-photo {
   width: 40px;
@@ -2291,8 +2292,22 @@ html.fullscreen-bg #wrapper {
 .toggle_menu_active .sidebar .navbar-brand span {
   display: none;
 }
+
+// .toggle_menu_active #left-sidebar .navbar-brand {
+//   a span {
+//     display: none !important;
+//   }
+// }
+
+// .toggle_menu_active #left-sidebar:hover .navbar-brand {
+//   a span {
+//     display: inline-block !important;
+//   }
+// }
+
 .toggle_menu_active .user-account {
   text-align: right;
+  justify-content: end;
 }
 .toggle_menu_active .user-account .user_div .user-photo {
   width: 30px;

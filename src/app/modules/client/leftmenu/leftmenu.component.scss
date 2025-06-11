@@ -1,0 +1,24 @@
+.toggle_menu_active .sidebar:hover {
+  left: none !important;
+}
+
+.menu_toggle {
+  color: white;
+}
+
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown::before {
+  background: rgba(255, 255, 255, 0.1);
+  position: absolute;
+  content: "";
+  height: 100%;
+  width: 1px;
+  left: 21px;
+}
+
+.nav-dropdown::before {
+  background: rgba(23, 25, 28, 0.1);
+}
