@@ -2280,30 +2280,30 @@ html.fullscreen-bg #wrapper {
   text-align: left;
   justify-content: start;
 }
+
 .toggle_menu_active .sidebar:hover .user-account .user_div .user-photo {
   width: 40px;
 }
+
 .toggle_menu_active .sidebar:hover .user-account .dropdown {
   display: inline-block;
 }
+
 .toggle_menu_active .sidebar .navbar-brand {
   text-align: right;
 }
+
 .toggle_menu_active .sidebar .navbar-brand span {
   display: none;
 }
 
-// .toggle_menu_active #left-sidebar .navbar-brand {
-//   a span {
-//     display: none !important;
-//   }
-// }
+.toggle_menu_active #left-sidebar .nav-dropdown {
+  display: none !important;
+}
 
-// .toggle_menu_active #left-sidebar:hover .navbar-brand {
-//   a span {
-//     display: inline-block !important;
-//   }
-// }
+.toggle_menu_active #left-sidebar:hover .nav-dropdown {
+  display: block !important;
+}
 
 .toggle_menu_active .user-account {
   text-align: right;
