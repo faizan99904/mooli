@@ -1,11 +1,81 @@
-import { Component } from '@angular/core';
+
+
+import { Component, ViewChild } from '@angular/core';
+import {
+  ApexAxisChartSeries,
+  ApexChart,
+  ChartComponent,
+  ApexDataLabels,
+  ApexXAxis,
+  ApexPlotOptions,
+  ApexStroke,
+  NgApexchartsModule
+} from "ng-apexcharts";
+
+export type ChartOptions = {
+  series: ApexAxisChartSeries;
+  chart: ApexChart;
+  dataLabels: ApexDataLabels;
+  plotOptions: ApexPlotOptions;
+  xaxis: ApexXAxis;
+  stroke: ApexStroke;
+  colors: string[];
+};
 
 @Component({
   selector: 'app-bar-chart',
-  imports: [],
+  standalone: true,
+  imports: [NgApexchartsModule],
   templateUrl: './bar-chart.component.html',
-  styleUrl: './bar-chart.component.scss'
+  styleUrls: ['./bar-chart.component.scss']
+
 })
 export class BarChartComponent {
+  @ViewChild("chart") chart!: ChartComponent;
+  public chartOptions: ChartOptions; // Removed Partial<>
 
+  constructor() {
+    this.chartOptions = {
+      series: [
+        {
+          name: "serie1",
+          data: [44, 55, 41, 64, 22, 43, 21]
+        },
+        {
+          name: "serie2",
+
+          data: [53, 32, 33, 52, 13, 44, 32]
+        }
+      ],
+      chart: {
+        type: "bar",
+        height: 430
+      },
+      plotOptions: {
+        bar: {
+          horizontal: true,
+          dataLabels: {
+            position: "top"
+          }
+        },
+      },
+      colors: ['#82B440', '#0392CF'],
+      dataLabels: {
+        enabled: true,
+        offsetX: -6,
+        style: {
+          fontSize: "12px",
+          colors: ["#fff"]
+        }
+      },
+      stroke: {
+        show: true,
+        width: 1,
+        colors: ["#fff"]
+      },
+      xaxis: {
+        categories: [2001, 2002, 2003, 2004, 2005, 2006, 2007]
+      }
+    };
+  }
 }

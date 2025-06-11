@@ -1,10 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { LineChartComponent } from "../charts/line-chart/line-chart.component";
+import { BarChartComponent } from "../charts/bar-chart/bar-chart.component";
+import { PieChartComponent } from "../charts/pie-chart/pie-chart.component";
+import { ColumnChartComponent } from "../charts/column-chart/column-chart.component";
+import { WorldmapComponent } from "../worldmap/worldmap.component";
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, CommonModule],
+  imports: [RouterLink, CommonModule, LineChartComponent, BarChartComponent, PieChartComponent, ColumnChartComponent, WorldmapComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
