@@ -16,7 +16,7 @@ import {
   isSameDay,
   isSameMonth,
 } from 'date-fns';
-import { BsModalService, BsModalRef, } from 'ngx-bootstrap/modal';
+// import { BsModalService, BsModalRef, } from 'ngx-bootstrap/modal';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -37,15 +37,17 @@ const colors: any = {
 };
 
 @Component({
+  standalone: true,
+  imports: [CommonModule, RouterLink],
   selector: 'app-doctors-schedule',
   templateUrl: './doctors-schedule.component.html',
   styleUrls: ['./doctors-schedule.component.scss'], // fixed `styleUrl` -> `styleUrls`
-  imports:[CommonModule, RouterLink]
+
 })
 export class DoctorsScheduleComponent implements OnInit {
-  @ViewChild('modalContent', { static: true }) modalContent!: TemplateRef<any>;
+  // @ViewChild('modalContent', { static: true }) modalContent!: TemplateRef<any>;
 
-  modalRef!: BsModalRef;
+  // modalRef!: BsModalRef;
 
   CalendarView = CalendarView;
   view: CalendarView = CalendarView.Month;
@@ -64,7 +66,7 @@ export class DoctorsScheduleComponent implements OnInit {
       label: '<i class="fas fa-fw fa-pencil-alt"></i>',
       a11yLabel: 'Edit',
       onClick: ({ event }: { event: CalendarEvent }): void => {
-        this.handleEvent('Edited', event, this.modalContent);
+        // this.handleEvent('Edited', event, this.modalContent);
       },
     },
     {
@@ -72,7 +74,7 @@ export class DoctorsScheduleComponent implements OnInit {
       a11yLabel: 'Delete',
       onClick: ({ event }: { event: CalendarEvent }): void => {
         this.events = this.events.filter((iEvent) => iEvent !== event);
-        this.handleEvent('Deleted', event, this.modalContent);
+        // this.handleEvent('Deleted', event, this.modalContent);
       },
     },
   ];
@@ -118,7 +120,7 @@ export class DoctorsScheduleComponent implements OnInit {
     },
   ];
 
-  constructor(private modalService: BsModalService) { }
+  // constructor(private modalService: BsModalService) { }
 
   ngOnInit(): void { }
 
@@ -140,15 +142,15 @@ export class DoctorsScheduleComponent implements OnInit {
     this.events = this.events.map((iEvent) =>
       iEvent === event ? { ...event, start: newStart, end: newEnd } : iEvent
     );
-    this.handleEvent('Dropped or resized', event, this.modalContent);
+    // this.handleEvent('Dropped or resized', event, this.modalContent);
   }
 
-  handleEvent(action: string, event: CalendarEvent, modalContent: TemplateRef<any>): void {
-    this.modalData = { action, event };
-    this.modalRef = this.modalService.show(modalContent, {
-      class: 'gray modal-lg',
-    });
-  }
+  // handleEvent(action: string, event: CalendarEvent, modalContent: TemplateRef<any>): void {
+  //   this.modalData = { action, event };
+  //   this.modalRef = this.modalService.show(modalContent, {
+  //     class: 'gray modal-lg',
+  //   });
+  // }
 
   addEvent(): void {
     this.events = [
@@ -179,7 +181,7 @@ export class DoctorsScheduleComponent implements OnInit {
     this.activeDayIsOpen = false;
   }
 
-  openModal(template: TemplateRef<any>): void {
-    this.modalRef = this.modalService.show(template);
-  }
+  // openModal(template: TemplateRef<any>): void {
+  //   this.modalRef = this.modalService.show(template);
+  // }
 }
