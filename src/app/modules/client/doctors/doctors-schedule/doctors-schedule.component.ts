@@ -19,6 +19,7 @@ import {
 // import { BsModalService, BsModalRef, } from 'ngx-bootstrap/modal';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { FullcalenderComponent } from "../../fullcalender/fullcalender.component";
 
 // Define colors used for calendar events
 const colors: any = {
@@ -38,7 +39,7 @@ const colors: any = {
 
 @Component({
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FullcalenderComponent],
   selector: 'app-doctors-schedule',
   templateUrl: './doctors-schedule.component.html',
   styleUrls: ['./doctors-schedule.component.scss'], // fixed `styleUrl` -> `styleUrls`
