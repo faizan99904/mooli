@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
+import { VerticalCarouselComponent } from "../vertical-carousel/vertical-carousel.component";
 
 @Component({
   selector: 'app-social',
-  imports: [CommonModule],
+  imports: [CommonModule, VerticalCarouselComponent],
   templateUrl: './social.component.html',
   styleUrl: './social.component.scss'
 })

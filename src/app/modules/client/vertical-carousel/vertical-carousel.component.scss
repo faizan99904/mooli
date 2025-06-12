@@ -1,0 +1,59 @@
+.carousel.vert {
+  overflow: hidden;
+  position: relative;
+  height: 140px;
+}
+
+.carousel-inner {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.6s ease-in-out;
+}
+
+.carousel-item {
+  height: 140px;
+  width: 156px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  flex-direction: column;
+  background: white;
+  gap: 1rem;
+}
+
+.carousel-item:hover {
+  .icon i {
+    color: white;
+  }
+  .content {
+    .text,
+    .number {
+      color: white;
+    }
+  }
+}
+
+.icon i {
+  font-size: 24px;
+}
+
+.content {
+  text-align: center;
+}
+
+.fa-facebook {
+  color: #3b5998;
+}
+
+.fa-instagram {
+  color: #fb3958;
+}
+
+.fa-google {
+  color: #d34836;
+}
+
+.fa-twitter {
+  color: #0084b4;
+}

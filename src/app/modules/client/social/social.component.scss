@@ -10,3 +10,21 @@
 .card-footer {
   margin-bottom: 1rem;
 }
+
+.facebook-widget,
+.instagram-widget,
+.google-widget,
+.twitter-widget {
+  background: transparent;
+}
+
+.facebook-widget:hover,
+.instagram-widget:hover,
+.google-widget:hover,
+.twitter-widget:hover {
+  background: transparent;
+}
+
+.mt {
+  margin-top: 1rem;
+}

@@ -127,94 +127,41 @@
                         </ul>
                     </div>
                 </div>
-                <div class="row clearfix w_social3">
-                    <div class="col-lg-6 col-6">
-                        <div class="card facebook-widget">
-                            <div id="slider2" class="carousel slide vert" data-ride="carousel" data-interval="2000">
-                                <div class="carousel-inner">
-                                    <div class="carousel-item active">
-                                        <div class="icon"><i class="fa fa-facebook"></i></div>
-                                        <div class="content">
-                                            <div class="text">Like</div>
-                                            <div class="number">10K</div>
-                                        </div>
-                                    </div>
-                                    <div class="carousel-item">
-                                        <div class="icon"><i class="fa fa-facebook"></i></div>
-                                        <div class="content">
-                                            <div class="text">Comment</div>
-                                            <div class="number">217</div>
-                                        </div>
-                                    </div>
-                                    <div class="carousel-item">
-                                        <div class="icon"><i class="fa fa-facebook"></i></div>
-                                        <div class="content">
-                                            <div class="text">Share</div>
-                                            <div class="number">78</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="row clearfix">
+                    <div class="col-lg-6 col-6 mt">
+                        <div class="card" style="margin-top: -2rem;">
+                            <app-vertical-carousel [data]="[
+                                { icon: 'fa-facebook', text: 'Like', number: '10K', hoverBg: '#3b5998' },
+                                { icon: 'fa-facebook', text: 'Comment', number: '217', hoverBg: '#3b5998' },
+                                { icon: 'fa-facebook', text: 'Share', number: '78', hoverBg: '#3b5998' }
+                            ]" />
                         </div>
                     </div>
-                    <div class="col-lg-6 col-6">
-                        <div class="card instagram-widget">
-                            <div class="icon"><i class="fa fa-instagram"></i></div>
-                            <div class="content">
-                                <div class="text">Followers</div>
-                                <div class="number">231</div>
-                            </div>
+                    <div class="col-lg-6 col-6 mt">
+                        <div class="card">
+                            <app-vertical-carousel [data]="[
+                                { icon: 'fa-instagram', text: 'Followers', number: '231', hoverBg: '#fb3958' },
+                                { icon: 'fa-instagram', text: 'Comment', number: '217', hoverBg: '#fb3958' },
+                                { icon: 'fa-instagram', text: 'likes', number: '1.5k', hoverBg: '#fb3958' }
+                            ]" />
                         </div>
                     </div>
-                    <div class="col-lg-6 col-6">
-                        <div class="card google-widget">
-                            <div id="slider2" class="carousel slide vert" data-ride="carousel" data-interval="2000">
-                                <div class="carousel-inner">
-                                    <div class="carousel-item active">
-                                        <div class="icon"><i class="fa fa-google"></i></div>
-                                        <div class="content">
-                                            <div class="text">Like</div>
-                                            <div class="number">10K</div>
-                                        </div>
-                                    </div>
-                                    <div class="carousel-item">
-                                        <div class="icon"><i class="fa fa-google"></i></div>
-                                        <div class="content">
-                                            <div class="text">Comment</div>
-                                            <div class="number">217</div>
-                                        </div>
-                                    </div>
-                                    <div class="carousel-item">
-                                        <div class="icon"><i class="fa fa-google"></i></div>
-                                        <div class="content">
-                                            <div class="text">Share</div>
-                                            <div class="number">78</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="col-lg-6 col-6 mt">
+                        <div class="card">
+                            <app-vertical-carousel [data]="[
+                                { icon: 'fa-google', text: 'Like', number: '10k', hoverBg :'#d34836' },
+                                { icon: 'fa-google', text: 'Comment', number: '217', hoverBg :'#d34836' },
+                                { icon: 'fa-google', text: 'Share', number: '78', hoverBg :'#d34836' }
+                            ]" />
                         </div>
                     </div>
-                    <div class="col-lg-6 col-6">
-                        <div class="card twitter-widget">
-                            <div id="slider2" class="carousel slide vert" data-ride="carousel" data-interval="2000">
-                                <div class="carousel-inner">
-                                    <div class="carousel-item active">
-                                        <div class="icon"><i class="fa fa-twitter"></i></div>
-                                        <div class="content">
-                                            <div class="text">Followers</div>
-                                            <div class="number">10K</div>
-                                        </div>
-                                    </div>
-                                    <div class="carousel-item">
-                                        <div class="icon"><i class="fa fa-twitter"></i></div>
-                                        <div class="content">
-                                            <div class="text">Twitt</div>
-                                            <div class="number">657</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="col-lg-6 col-6 mt">
+                        <div class="card">
+                            <app-vertical-carousel [data]="[
+                                { icon: 'fa-twitter', text: 'Followers', number: '10k', hoverBg: '#0084b4' },
+                                { icon: 'fa-twitter', text: 'Comment', number: '789', hoverBg: '#0084b4' },
+                                { icon: 'fa-twitter', text: 'Tweet', number: '657', hoverBg: '#0084b4' }
+                            ]" />
                         </div>
                     </div>
                 </div>

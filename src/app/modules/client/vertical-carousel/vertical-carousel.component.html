@@ -1,0 +1,14 @@
+<div class="carousel vert">
+    <div class="carousel-inner" [style.transform]="transform()" [style.transition]="transition()"
+        (transitionend)="onTransitionEnd()">
+        <div class="carousel-item" *ngFor="let item of fullData" #carouselItem (mouseenter)="hoveredBg = item.hoverBg"
+            (mouseleave)="hoveredBg = null"
+            [ngStyle]="hoveredBg === item.hoverBg ? { backgroundColor: item.hoverBg } : {}">
+            <div class="icon"><i class="fa" [ngClass]="item.icon"></i></div>
+            <div class="content">
+                <div class="text">{{ item.text }}</div>
+                <div class="number">{{ item.number }}</div>
+            </div>
+        </div>
+    </div>
+</div>
