@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -8,6 +8,7 @@ import { RouterLink } from '@angular/router';
   styleUrl: './covid.component.scss',
 })
 export class CovidComponent implements OnInit {
+  @ViewChild('dropdownMenu') dropdown!: ElementRef;
   constructor() {}
 
   ngOnInit(): void {}

@@ -4,14 +4,14 @@ import { BsModalService, BsModalRef } from 'ngx-bootstrap/modal';
 
 @Component({
   selector: 'app-todo-list',
+  standalone: true,
   imports: [RouterLink],
   templateUrl: './todo-list.component.html',
-  styleUrl: './todo-list.component.scss'
+  styleUrl: './todo-list.component.scss',
 })
 export class TodoListComponent {
   // modalRef!: BsModalRef;
   // constructor(private modalService: BsModalService) { }
-
   // ngOnInit(): void {
   // }
   // openModal(template: TemplateRef<any>) {
