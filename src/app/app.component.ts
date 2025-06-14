@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { AfterViewInit, Component, OnInit, inject } from '@angular/core';
 import {
   Router,
   RouterOutlet,
@@ -16,7 +16,7 @@ import { CommonModule } from '@angular/common';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, AfterViewInit {
   title = 'Mooli'; // Removed duplicate title
   greenClass = true;
   orageClass = false;
@@ -25,12 +25,17 @@ export class AppComponent implements OnInit {
   timberClass = false;
   blueClass = false;
   amethystClass = false;
-
+  overLay:boolean = false
+  private observer!: MutationObserver;
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private titleService = inject(Title);
 
   ngOnInit(): void {
+
+  
+
+
     sessionStorage.setItem('Sidebar', 'light_active');
     sessionStorage.setItem('GradientColor', 'gradient');
 
@@ -53,6 +58,31 @@ export class AppComponent implements OnInit {
       document.querySelector('.page-loader-wrapper')?.classList.add('HideDiv');
     }, 1000);
   }
+
+  ngAfterViewInit(): void {
+    this.checkOverlayState();
+
+    // Create a MutationObserver to watch for changes in the DOM
+    this.observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          this.checkOverlayState();
+        }
+      });
+    });
+
+    // Start observing the document body for attribute changes
+    this.observer.observe(document.body, {
+      attributes: true, // Watch for attribute changes
+      subtree: true    // Watch all descendants as well
+    });
+  }
+
+  private checkOverlayState(): void {
+    const getClass = document.querySelector('.offcanvas-active');
+    this.overLay = document.body.contains(getClass);
+  }
+
 
   private getChild(activatedRoute: ActivatedRoute): ActivatedRoute {
     return activatedRoute.firstChild
