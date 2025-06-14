@@ -1,5 +1,10 @@
 import { Component, inject, AfterViewInit, OnInit } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import {
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+} from '@angular/router';
 import { AppComponent } from '../../../app.component';
 import { trigger, style, animate, transition } from '@angular/animations';
 import { CommonModule } from '@angular/common';
@@ -35,7 +40,13 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     this.initializeCollapsedStates();
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.closeSidebarOnMobile();
+      }
+    });
+  }
 
   ngAfterViewInit() {
     this.applyThemeAndStyles();
@@ -106,5 +117,13 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   cToggoleMenu(): void {
     document.body.classList.remove('offcanvas-active');
     document.querySelector('.overlay')?.classList.toggle('open');
+  }
+
+  private closeSidebarOnMobile(): void {
+    const width = window.innerWidth;
+    if (width < 768) {
+      document.body.classList.remove('offcanvas-active');
+      document.querySelector('.overlay')?.classList.toggle('open');
+    }
   }
 }
