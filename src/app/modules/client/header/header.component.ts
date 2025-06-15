@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-header',
@@ -13,7 +13,7 @@ export class HeaderComponent implements OnInit {
   contactTab!: boolean;
   groupTab!: boolean;
   chatTab: boolean = true;
-  constructor() {}
+  constructor(private router: Router) {}
 
   ngOnInit(): void {
     // setTimeout(() => {
@@ -79,5 +79,10 @@ export class HeaderComponent implements OnInit {
     } else if (number == '3') {
       this.contactTab = true;
     }
+  }
+
+  logout(): void {
+    localStorage.removeItem('token');
+    this.router.navigateByUrl('/login');
   }
 }

@@ -9,14 +9,16 @@
                 <p class="lead">Login to your account</p>
             </div>
             <div class="body">
-                <form class="form-auth-small" action="index.html">
+                <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="form-auth-small" action="index.html">
                     <div class="form-group c_form_group">
                         <label>Email</label>
-                        <input type="email" class="form-control" placeholder="Enter your email address">
+                        <input formControlName="email" type="email" class="form-control"
+                            placeholder="Enter your email address">
                     </div>
                     <div class="form-group c_form_group">
                         <label>Password</label>
-                        <input type="password" class="form-control" placeholder="Enter your password">
+                        <input formControlName="password" type=" password" class="form-control"
+                            placeholder="Enter your password">
                     </div>
                     <div class="form-group clearfix">
                         <label class="fancy-checkbox element-left">
@@ -26,8 +28,8 @@
                     </div>
                     <button type="submit" class="btn btn-dark btn-lg btn-block">LOGIN</button>
                     <div class="bottom">
-                        <span class="helper-text m-b-10"><i class="fa fa-lock"></i> <a
-                                [routerLink]="'/forgot-password'" href="javascript:void(0)">
+                        <span class="helper-text m-b-10"><i class="fa fa-lock"></i> <a [routerLink]="'/forgot-password'"
+                                href="javascript:void(0)">
                                 Forgot password?</a></span>
                         <span>Don't have an account? <a [routerLink]="'/signup'"
                                 href="javascript:void(0)">Register</a></span>

@@ -123,7 +123,8 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     const width = window.innerWidth;
     if (width < 768) {
       document.body.classList.remove('offcanvas-active');
-      document.querySelector('.overlay')?.classList.toggle('open');
+      const overlay = document.querySelector('.overlay');
+      overlay?.classList.remove('open');
     }
   }
 }

@@ -36,11 +36,13 @@ import { DoctorsProfileComponent } from './doctors/doctors-profile/doctors-profi
 import { DoctorsScheduleComponent } from './doctors/doctors-schedule/doctors-schedule.component';
 import { EventsComponent } from './doctors/doctors-schedule/events/events.component';
 import { CovidComponent } from './dashboard/covid/covid.component';
+import { authGuard } from '../auth/auth.guard';
 
 export const clientRoutes: Routes = [
   {
     path: '',
     component: LayoutComponent,
+    canActivate: [authGuard],
     children: [
       {
         path: '',
@@ -127,7 +129,7 @@ export const clientRoutes: Routes = [
         component: InvoiceDetailComponent,
         data: { title: 'Mooli | InvoiceDetail' },
       },
-    
+
       {
         path: 'departments',
         component: DepartmentComponent,

@@ -14,3 +14,10 @@
   border: 1px solid #ececec;
 }
 
+.fancy-checkbox input[type="checkbox"]:checked + span:before {
+  font-family: "FontAwesome";
+  content: "\f0c8";
+  color: #82b440;
+  border-color: #82b440;
+  line-height: 17px;
+}
