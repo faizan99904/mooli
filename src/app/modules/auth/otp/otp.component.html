@@ -1,0 +1,67 @@
+<div class="wrapper auth_div vivify fadeIn">
+    <div class="otp-container">
+        <div class="card">
+            <div class="header">
+                <p class="lead">Verify Your Identity</p>
+                <p class="small text-muted">We've sent a 6-digit code to your email</p>
+            </div>
+            <div class="body">
+                <form [formGroup]="otpForm" (ngSubmit)="onSubmit()" class="form-auth-small">
+                    <div class="form-group c_form_group">
+                        <label>Verification Code</label>
+                        <div class="otp-input-group">
+                            <input #otpInput0 formControlName="digit0" type="text" class="form-control otp-box"
+                                maxlength="1" (keyup)="handleKeyUp($event, 0)" (keydown)="handleKeyDown($event, 0)"
+                                (paste)="handlePaste($event)">
+
+                            <!-- Input 1 -->
+                            <input #otpInput1 formControlName="digit1" type="text" class="form-control otp-box"
+                                maxlength="1" (keyup)="handleKeyUp($event, 1)" (keydown)="handleKeyDown($event, 1)"
+                                (paste)="handlePaste($event)">
+
+                            <!-- Input 2 -->
+                            <input #otpInput2 formControlName="digit2" type="text" class="form-control otp-box"
+                                maxlength="1" (keyup)="handleKeyUp($event, 2)" (keydown)="handleKeyDown($event, 2)"
+                                (paste)="handlePaste($event)">
+
+                            <!-- Input 3 -->
+                            <input #otpInput3 formControlName="digit3" type="text" class="form-control otp-box"
+                                maxlength="1" (keyup)="handleKeyUp($event, 3)" (keydown)="handleKeyDown($event, 3)"
+                                (paste)="handlePaste($event)">
+
+                            <!-- Input 4 -->
+                            <input #otpInput4 formControlName="digit4" type="text" class="form-control otp-box"
+                                maxlength="1" (keyup)="handleKeyUp($event, 4)" (keydown)="handleKeyDown($event, 4)"
+                                (paste)="handlePaste($event)">
+
+                            <!-- Input 5 -->
+                            <input #otpInput5 formControlName="digit5" type="text" class="form-control otp-box"
+                                maxlength="1" (keyup)="handleKeyUp($event, 5)" (keydown)="handleKeyDown($event, 5)"
+                                (paste)="handlePaste($event)">
+                        </div>
+                    </div>
+
+                    <div class="form-group clearfix">
+                        <label class="fancy-checkbox element-left">
+                            <input type="checkbox">
+                            <span>Remember this device</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark btn-lg btn-block">VERIFY</button>
+
+                    <div class="bottom">
+                        <span class="helper-text m-b-10">
+                            <i class="fa fa-clock-o"></i>
+                            <span id="countdown">01:30</span> remaining
+                        </span>
+                        <span>
+                            Didn't receive code?
+                            <a href="javascript:void(0)" (click)="resendOtp.emit()">Resend</a>
+                        </span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

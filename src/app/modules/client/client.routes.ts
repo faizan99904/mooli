@@ -37,6 +37,7 @@ import { DoctorsScheduleComponent } from './doctors/doctors-schedule/doctors-sch
 import { EventsComponent } from './doctors/doctors-schedule/events/events.component';
 import { CovidComponent } from './dashboard/covid/covid.component';
 import { authGuard } from '../auth/auth.guard';
+import { OtpComponent } from '../auth/otp/otp.component';
 
 export const clientRoutes: Routes = [
   {
@@ -226,6 +227,12 @@ export const clientRoutes: Routes = [
   {
     path: 'signup',
     component: SignupComponent,
+    data: { title: 'Mooli | Signup' },
+  },
+
+  {
+    path: 'otp',
+    component: OtpComponent,
     data: { title: 'Mooli | Signup' },
   },
 ];
