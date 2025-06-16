@@ -37,7 +37,7 @@ import { DoctorsScheduleComponent } from './doctors/doctors-schedule/doctors-sch
 import { EventsComponent } from './doctors/doctors-schedule/events/events.component';
 import { CovidComponent } from './dashboard/covid/covid.component';
 import { authGuard } from '../auth/auth.guard';
-import { OtpComponent } from '../auth/otp/otp.component';
+import { ForgotPasswordComponent } from '../auth/forgot-password/forgot-password.component';
 
 export const clientRoutes: Routes = [
   {
@@ -231,8 +231,8 @@ export const clientRoutes: Routes = [
   },
 
   {
-    path: 'otp',
-    component: OtpComponent,
-    data: { title: 'Mooli | Signup' },
+    path: 'forgot-password',
+    component: ForgotPasswordComponent,
+    data: { title: 'Mooli | Forget Password' },
   },
 ];
