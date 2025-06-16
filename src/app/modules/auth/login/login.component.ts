@@ -7,6 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { BackendService } from '../../../core/services/backend.service';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-login',
@@ -19,7 +20,8 @@ export class LoginComponent {
   constructor(
     private fb: FormBuilder,
     private backend: BackendService,
-    private router: Router
+    private router: Router,
+    private toaster: ToastrService
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.email]],
@@ -35,13 +37,14 @@ export class LoginComponent {
           const token = response?.data?.token;
           if (token) {
             localStorage.setItem('token', token);
+            this.toaster.success(response.message || 'Login Successfully');
             this.router.navigateByUrl('/');
-            console.log('navigated!', response.message);
           } else {
             console.log('Login Failed');
           }
         },
         error: (err) => {
+          this.toaster.error('Something went wrong!');
           console.error('Login failed:', err);
         },
       });

@@ -17,6 +17,7 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { BackendService } from '../../../core/services/backend.service';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-forgot-password',
@@ -46,7 +47,8 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
   constructor(
     private fb: FormBuilder,
     private backend: BackendService,
-    private router: Router
+    private router: Router,
+    private toaster: ToastrService
   ) {}
 
   ngOnInit() {
@@ -172,9 +174,13 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
       const payload = this.recoveryForm.value;
       this.backend.forgetPass(payload).subscribe({
         next: (response) => {
+          this.toaster.success('Otp sent successfully!');
           this.isOtp = true;
           this.startCountdown();
           console.log(response);
+        },
+        error: (err) => {
+          this.toaster.error('Something went wrong!');
         },
       });
       console.log(this.recoveryForm.value);
@@ -197,10 +203,12 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
     if (this.otpForm.value) {
       this.backend.verifyOtp(payload).subscribe({
         next: (response) => {
+          this.toaster.success('Otp verified successfully!');
           this.router.navigateByUrl('/login');
           console.log('OTP verified successfully', response);
         },
         error: (error) => {
+          this.toaster.error('Something went wrong!');
           console.error('OTP verification failed', error);
         },
       });
