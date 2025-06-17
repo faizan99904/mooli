@@ -106,7 +106,6 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
 
   handleKeyUp(event: any, index: number) {
     const value = event.target.value;
-
     if (value.length === 1) {
       if (index < 5) {
         this.focusInput(index + 1);
