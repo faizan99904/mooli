@@ -29,9 +29,13 @@
               "src/styles.scss",
               "node_modules/ngx-bootstrap/datepicker/bs-datepicker.css",
               "node_modules/ngx-toastr/toastr.css",
-              "node_modules/angular-calendar/css/angular-calendar.css"
+              "node_modules/angular-calendar/css/angular-calendar.css",
+              "node_modules/datatables.net-dt/css/dataTables.dataTables.min.css"
             ],
-            "scripts": []
+            "scripts": [
+              "node_modules/jquery/dist/jquery.min.js",
+              "node_modules/datatables.net/js/dataTables.min.js"
+            ]
           },
           "configurations": {
             "production": {

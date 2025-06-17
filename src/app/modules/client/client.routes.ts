@@ -37,7 +37,8 @@ import { DoctorsScheduleComponent } from './doctors/doctors-schedule/doctors-sch
 import { EventsComponent } from './doctors/doctors-schedule/events/events.component';
 import { CovidComponent } from './dashboard/covid/covid.component';
 import { authGuard } from '../auth/auth.guard';
-import { ForgotPasswordComponent } from '../auth/forgot-password/forgot-password.component';
+import { roleGuard } from '../auth/role.guard';
+import { UsersComponent } from './users/users.component';
 
 export const clientRoutes: Routes = [
   {
@@ -49,11 +50,13 @@ export const clientRoutes: Routes = [
         path: '',
         component: DashboardComponent,
         data: { title: 'Mooli | Dashboard' },
+        canActivate: [roleGuard(['superAdmin'])],
       },
       {
         path: 'app-inbox',
         component: EmailComponent,
         data: { title: 'Mooli | Inbox' },
+        canActivate: [roleGuard(['admin', 'superAdmin'])],
       },
       {
         path: 'app-chat',
@@ -221,6 +224,12 @@ export const clientRoutes: Routes = [
         component: CovidComponent,
         data: { title: 'Mooli | Covid-19' },
       },
+
+      {
+        path: 'users',
+        component: UsersComponent,
+        data: { title: 'Mooli | Users' },
+      },
     ],
   },
 
@@ -228,11 +237,5 @@ export const clientRoutes: Routes = [
     path: 'signup',
     component: SignupComponent,
     data: { title: 'Mooli | Signup' },
-  },
-
-  {
-    path: 'forgot-password',
-    component: ForgotPasswordComponent,
-    data: { title: 'Mooli | Forget Password' },
   },
 ];

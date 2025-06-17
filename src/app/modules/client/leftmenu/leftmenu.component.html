@@ -13,7 +13,7 @@
     </div>
 
     <div class="sidebar-scroll">
-        <div class="user-account d-flex">
+        <div *ngIf="role === 'admin'" class="user-account d-flex">
             <div class="user_div">
                 <img src="assets/images/user.png" class="user-photo" alt="User Profile Picture">
             </div>
@@ -33,7 +33,7 @@
         </div>
 
         <nav id="left-sidebar-nav" class="sidebar-nav">
-            <ul id="main-menu" class="metismenu animation-li-delay">
+            <ul *ngIf="role === 'admin'" id="main-menu" class="metismenu animation-li-delay">
                 <li class="header">Hospital</li>
                 <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/']"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
@@ -148,6 +148,14 @@
                                 aria-valuemin="0" aria-valuemax="100" style="width: 50%;"></div>
                         </div>
                     </div>
+                </li>
+            </ul>
+            <ul *ngIf="role === 'superAdmin'" id="main-menu" class="metismenu animation-li-delay">
+                <li>
+                    <a [routerLink]="['/']"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
+                </li>
+                <li>
+                    <a [routerLink]="['/users']"><i class="fa fa-dashboard"></i> <span>User</span></a>
                 </li>
             </ul>
         </nav>

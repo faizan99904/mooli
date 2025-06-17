@@ -173,14 +173,14 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
     if (this.recoveryForm.valid) {
       const payload = this.recoveryForm.value;
       this.backend.forgetPass(payload).subscribe({
-        next: (response) => {
-          this.toaster.success('Otp sent successfully!');
+        next: (response: any) => {
+          this.toaster.success(response?.message || 'Otp sent successfully!');
           this.isOtp = true;
           this.startCountdown();
           console.log(response);
         },
         error: (err) => {
-          this.toaster.error('Something went wrong!');
+          this.toaster.error(err.error?.message || 'Something went wrong!');
         },
       });
       console.log(this.recoveryForm.value);
@@ -202,14 +202,15 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
     };
     if (this.otpForm.value) {
       this.backend.verifyOtp(payload).subscribe({
-        next: (response) => {
-          this.toaster.success('Otp verified successfully!');
+        next: (response: any) => {
+          this.toaster.success(
+            response?.message || 'Otp verified successfully!'
+          );
           this.router.navigateByUrl('/login');
           console.log('OTP verified successfully', response);
         },
-        error: (error) => {
-          this.toaster.error('Something went wrong!');
-          console.error('OTP verification failed', error);
+        error: (err) => {
+          this.toaster.error(err.error?.message || 'Something went wrong!');
         },
       });
     }

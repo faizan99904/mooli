@@ -34,9 +34,11 @@ export class LoginComponent {
       const payload = this.loginForm.value;
       this.backend.login(payload).subscribe({
         next: (response) => {
-          const token = response?.data?.token;
+          const token = response?.data.token;
+          const role = response?.data.userDetails.role;
           if (token) {
             localStorage.setItem('token', token);
+            localStorage.setItem('role', role);
             this.toaster.success(response.message || 'Login Successfully');
             this.router.navigateByUrl('/');
           } else {
@@ -44,7 +46,7 @@ export class LoginComponent {
           }
         },
         error: (err) => {
-          this.toaster.error('Something went wrong!');
+          this.toaster.error(err.error?.message || 'Something went wrong!');
           console.error('Login failed:', err);
         },
       });

@@ -32,9 +32,9 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   PaymentCollapsed = true;
   RoomCollapsed = true;
   PatientCollapsed = true;
-
   private router = inject(Router);
   private app = inject(AppComponent);
+  role = localStorage.getItem('role');
 
   constructor() {
     this.initializeCollapsedStates();
