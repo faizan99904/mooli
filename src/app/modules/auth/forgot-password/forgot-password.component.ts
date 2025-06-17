@@ -33,14 +33,20 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
   countdownTime: number = 120;
   countdownDisplay: string = '02:00';
   showCountdown: boolean = true;
+  isChangePass: boolean = true;
   private countdownInterval: any;
   @ViewChild('otpInput') otpInputs!: QueryList<ElementRef>;
-  @Output() otpVerified = new EventEmitter<string>();
+  @Output() otpVerified = new EventEmitter<{
+    otp: string;
+    newPassword: string;
+  }>();
   @Output() resendOtp = new EventEmitter<void>();
   @ViewChild('otpInput0') otpInput0!: ElementRef;
   @ViewChild('otpInput1') otpInput1!: ElementRef;
   @ViewChild('otpInput2') otpInput2!: ElementRef;
   @ViewChild('otpInput3') otpInput3!: ElementRef;
+  @ViewChild('otpInput4') otpInput4!: ElementRef;
+  @ViewChild('otpInput5') otpInput5!: ElementRef;
 
   otpForm!: FormGroup;
 
@@ -52,34 +58,45 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
   ) {}
 
   ngOnInit() {
-    this.recoveryForm = this.fb.group(
-      {
-        email: ['', [Validators.required, Validators.email]],
-        newPassword: ['', [Validators.required, Validators.minLength(6)]],
-        confirmPassword: ['', Validators.required],
-      },
-      { validator: this.passwordMatchValidator }
-    );
+    this.recoveryForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+    });
 
     this.otpForm = this.fb.group({
       digit0: ['', [Validators.required, Validators.pattern('[0-9]')]],
       digit1: ['', [Validators.required, Validators.pattern('[0-9]')]],
       digit2: ['', [Validators.required, Validators.pattern('[0-9]')]],
       digit3: ['', [Validators.required, Validators.pattern('[0-9]')]],
+      digit4: ['', [Validators.required, Validators.pattern('[0-9]')]],
+      digit5: ['', [Validators.required, Validators.pattern('[0-9]')]],
+      newPassword: ['', [Validators.required]],
     });
   }
 
-  passwordMatchValidator(formGroup: FormGroup) {
-    const newPassword = formGroup.get('newPassword')?.value;
-    const confirmPassword = formGroup.get('confirmPassword')?.value;
-    return newPassword === confirmPassword ? null : { mismatch: true };
+  changePass() {
+    const otpFields = [
+      this.otpForm.value.digit0,
+      this.otpForm.value.digit1,
+      this.otpForm.value.digit2,
+      this.otpForm.value.digit3,
+      this.otpForm.value.digit4,
+      this.otpForm.value.digit5,
+    ];
+
+    const allFilled = otpFields.every(
+      (val) => val && val.toString().length === 1
+    );
+
+    if (allFilled) {
+      this.isChangePass = !this.isChangePass;
+    } else {
+      this.toaster.warning('Please fill all OTP digits.');
+    }
   }
 
-  togglePasswordVisibility(field: 'newPassword' | 'confirmPassword') {
+  togglePasswordVisibility(field: 'newPassword') {
     if (field === 'newPassword') {
       this.showNewPassword = !this.showNewPassword;
-    } else {
-      this.showConfirmPassword = !this.showConfirmPassword;
     }
   }
 
@@ -91,7 +108,7 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
     const value = event.target.value;
 
     if (value.length === 1) {
-      if (index < 3) {
+      if (index < 5) {
         this.focusInput(index + 1);
       }
     }
@@ -107,13 +124,11 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
     event.preventDefault();
     const clipboardData = event.clipboardData || (window as any).clipboardData;
     const pastedText = clipboardData.getData('text');
-    const otp = pastedText.replace(/\D/g, '').substring(0, 3);
-
+    const otp = pastedText.replace(/\D/g, '').substring(0, 6);
     for (let i = 0; i < otp.length; i++) {
       this.otpForm.get(`digit${i}`)?.setValue(otp[i]);
     }
-
-    this.focusInput(Math.min(3, otp.length - 1));
+    this.focusInput(Math.min(5, otp.length - 1));
   }
 
   private focusInput(index: number) {
@@ -129,6 +144,12 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
         break;
       case 3:
         this.otpInput3.nativeElement.focus();
+        break;
+      case 4:
+        this.otpInput4.nativeElement.focus();
+        break;
+      case 5:
+        this.otpInput5.nativeElement.focus();
         break;
     }
   }
@@ -159,8 +180,13 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
 
   onSubmit() {
     if (this.otpForm.valid) {
-      const otp = Object.values(this.otpForm.value).join('');
-      this.otpVerified.emit(otp);
+      const otp = Object.values(this.otpForm.value).slice(0, 6).join('');
+      const newPassword = this.otpForm.value.newPassword;
+      const payload = {
+        otp,
+        newPassword,
+      };
+      this.otpVerified.emit(payload);
     }
   }
 
@@ -190,29 +216,37 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
   }
 
   verifyOtp() {
-    const otp = [
-      this.otpForm.value.digit0,
-      this.otpForm.value.digit1,
-      this.otpForm.value.digit2,
-      this.otpForm.value.digit3,
-    ].join('');
-    const payload = {
-      email: this.recoveryForm.get('email')?.value,
-      otp: otp,
-    };
     if (this.otpForm.value) {
+      const otp = [
+        this.otpForm.value.digit0,
+        this.otpForm.value.digit1,
+        this.otpForm.value.digit2,
+        this.otpForm.value.digit3,
+        this.otpForm.value.digit4,
+        this.otpForm.value.digit5,
+      ].join('');
+
+      const payload = {
+        otp,
+        email: this.recoveryForm.get('email')?.value,
+        newPassword: this.otpForm.get('newPassword')?.value,
+      };
+
+      console.log(payload, 'OTP');
       this.backend.verifyOtp(payload).subscribe({
         next: (response: any) => {
           this.toaster.success(
-            response?.message || 'Otp verified successfully!'
+            response?.message || 'OTP verified successfully!'
           );
           this.router.navigateByUrl('/login');
-          console.log('OTP verified successfully', response);
         },
         error: (err) => {
           this.toaster.error(err.error?.message || 'Something went wrong!');
         },
       });
+    } else {
+      this.otpForm.markAllAsTouched();
+      this.recoveryForm.markAllAsTouched();
     }
   }
 }

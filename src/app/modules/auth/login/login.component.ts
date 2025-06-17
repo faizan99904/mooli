@@ -24,14 +24,16 @@ export class LoginComponent {
     private toaster: ToastrService
   ) {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.email]],
-      password: [''],
+      email: ['', [Validators.required]],
+      password: ['', [Validators.required]],
     });
   }
 
   onSubmit() {
     if (this.loginForm.valid) {
       const payload = this.loginForm.value;
+      
+      
       this.backend.login(payload).subscribe({
         next: (response) => {
           const token = response?.data.token;

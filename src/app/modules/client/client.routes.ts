@@ -50,7 +50,7 @@ export const clientRoutes: Routes = [
         path: '',
         component: DashboardComponent,
         data: { title: 'Mooli | Dashboard' },
-        canActivate: [roleGuard(['superAdmin'])],
+        canActivate: [roleGuard(['admin', 'superAdmin'])],
       },
       {
         path: 'app-inbox',
