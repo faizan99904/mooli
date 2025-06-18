@@ -39,12 +39,12 @@ export class CreateUserComponent implements OnInit {
       role: ['', Validators.required],
     });
 
-    this.backend.getRole().subscribe({
-      next: (res) => {
-        this.roleId = res.data._id;
-        console.log(res.data._id);
-      },
-    });
+    // this.backend.getRole().subscribe({
+    //   next: (res) => {
+    //     this.roleId = res.data._id;
+    //     console.log(res.data._id);
+    //   },
+    // });
   }
 
   submitForm() {

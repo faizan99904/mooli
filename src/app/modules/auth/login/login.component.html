@@ -1,48 +1,61 @@
 <div class="auth-main">
     <div class="auth_div vivify fadeIn">
         <div class="auth_brand">
-            <a class="navbar-brand" href="#"><img src="assets/images/icon.svg" width="50"
-                    class="d-inline-block align-top mr-2" alt="">Mooli</a>
+            <a class="navbar-brand" href="#">
+                <img src="assets/images/icon.svg" width="50" class="d-inline-block align-top mr-2" alt="">Mooli
+            </a>
         </div>
+
         <div class="card">
             <div class="header">
                 <p class="lead">Login to your account</p>
             </div>
+
             <div class="body">
-                <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="form-auth-small" action="index.html">
+                <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="form-auth-small">
                     <div class="form-group c_form_group">
-                        <label>Email or Username</label>
-                        <input formControlName="email" type="email" class="form-control"
-                            placeholder="Enter your email address">
+                        <label for="email">Email or Username</label>
+                        <input id="email" name="email" formControlName="email" type="email" class="form-control"
+                            placeholder="Enter your email address" autocomplete="username" />
                     </div>
+
                     <div class="form-group c_form_group">
-                        <label>Password</label>
-                        <input formControlName="password" type=" password" class="form-control"
-                            placeholder="Enter your password">
+                        <label for="password">Password</label>
+                        <input id="password" name="password" formControlName="password" type="password"
+                            class="form-control" placeholder="Enter your password" autocomplete="current-password" />
                     </div>
+
                     <div class="form-group clearfix">
                         <label class="fancy-checkbox element-left">
-                            <input type="checkbox">
+                            <input type="checkbox" />
                             <span>Remember me</span>
                         </label>
                     </div>
+
                     <button type="submit"
                         class="btn btn-dark btn-lg btn-block d-flex justify-content-center align-items-center"
                         [disabled]="loading">
                         <span *ngIf="loading" class="spinner"></span>
                         {{ loading ? 'Logging in...' : 'LOGIN' }}
                     </button>
-                    <div class="bottom">
-                        <span class="helper-text m-b-10"><i class="fa fa-lock"></i> <a [routerLink]="'/forgot-password'"
-                                href="javascript:void(0)">
-                                Forgot password?</a></span>
-                        <span>Don't have an account? <a [routerLink]="'/signup'"
-                                href="javascript:void(0)">Register</a></span>
+
+                    <div class="bottom mt-3">
+                        <span class="helper-text m-b-10">
+                            <i class="fa fa-lock"></i>
+                            <a [routerLink]="'/forgot-password'">Forgot password?</a>
+                        </span>
+                        <br />
+                        <span>
+                            Don't have an account?
+                            <a [routerLink]="'/signup'">Register</a>
+                        </span>
                     </div>
                 </form>
+
             </div>
         </div>
     </div>
+
     <div class="animate_lines">
         <div class="line"></div>
         <div class="line"></div>

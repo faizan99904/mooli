@@ -44,8 +44,10 @@ export class LoginComponent {
           if (token) {
             localStorage.setItem('token', token);
             localStorage.setItem('role', role);
-            this.toaster.success(response.message || 'Login Successfully');
-            this.router.navigateByUrl('/');
+            setTimeout(() => {
+              this.router.navigateByUrl('/');
+              this.toaster.success(response.message || 'Login Successfully');
+            }, 100);
           } else {
             console.log('Login Failed');
           }
