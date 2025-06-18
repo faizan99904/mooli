@@ -38,7 +38,8 @@ import { EventsComponent } from './doctors/doctors-schedule/events/events.compon
 import { CovidComponent } from './dashboard/covid/covid.component';
 import { authGuard } from '../auth/auth.guard';
 import { roleGuard } from '../auth/role.guard';
-import { UsersComponent } from './users/users.component';
+import { UsersComponent } from './User/users/users.component';
+import { CreateUserComponent } from './User/create-user/create-user.component';
 
 export const clientRoutes: Routes = [
   {
@@ -50,13 +51,13 @@ export const clientRoutes: Routes = [
         path: '',
         component: DashboardComponent,
         data: { title: 'Mooli | Dashboard' },
-        canActivate: [roleGuard(['admin', 'superAdmin'])],
+        canActivate: [roleGuard(['ADMIN', 'superAdmin'])],
       },
       {
         path: 'app-inbox',
         component: EmailComponent,
         data: { title: 'Mooli | Inbox' },
-        canActivate: [roleGuard(['admin', 'superAdmin'])],
+        canActivate: [roleGuard(['ADMIN', 'superAdmin'])],
       },
       {
         path: 'app-chat',
@@ -229,6 +230,13 @@ export const clientRoutes: Routes = [
         path: 'users',
         component: UsersComponent,
         data: { title: 'Mooli | Users' },
+      },
+
+      {
+        path: 'create-user',
+        component: CreateUserComponent,
+        data: { title: 'Mooli | Add Users' },
+        canActivate: [roleGuard(['ADMIN', 'superAdmin'])],
       },
     ],
   },

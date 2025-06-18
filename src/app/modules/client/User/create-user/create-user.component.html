@@ -1,0 +1,128 @@
+<div id="main-content">
+    <div class="container-fluid">
+        <!-- Page header section  -->
+        <div class="block-header">
+            <div class="row clearfix">
+                <div class="col-lg-4 col-md-12 col-sm-12">
+                    <h1>Hi, Welcomeback!</h1>
+                    <span>JustDo Add Users,</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row clearfix">
+            <div class="col-lg-12 col-md-12 col-sm-12">
+                <div class="card">
+                    <div class="body">
+                        <form [formGroup]="userForm" (ngSubmit)="submitForm()">
+                            <div class="row clearfix">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>First Name <span class="text-danger">*</span></label>
+                                        <input class="form-control" formControlName="firstName" />
+                                        <div *ngIf="userForm.get('firstName')?.touched && userForm.get('firstName')?.invalid"
+                                            style="font-size: 12px; color: red;">
+                                            First Name is required.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Last Name <span class="text-danger">*</span></label>
+                                        <input class="form-control" formControlName="lastName" />
+                                        <div *ngIf="userForm.get('lastName')?.touched && userForm.get('lastName')?.invalid"
+                                            style="font-size: 12px; color: red;">
+                                            Last Name is required.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Username <span class="text-danger">*</span></label>
+                                        <input class="form-control" formControlName="username" />
+                                        <div *ngIf="userForm.get('username')?.touched && userForm.get('username')?.invalid"
+                                            style="font-size: 12px; color: red;">
+                                            Username is required.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Email <span class="text-danger">*</span></label>
+                                        <input class="form-control" type="email" formControlName="email" />
+                                        <div *ngIf="userForm.get('email')?.touched && userForm.get('email')?.invalid"
+                                            style="font-size: 12px; color: red;">
+                                            <span *ngIf="userForm.get('email')?.errors?.['required']">Email is
+                                                required.</span>
+                                            <span *ngIf="userForm.get('email')?.errors?.['email']">Invalid email
+                                                format.</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Password <span class="text-danger">*</span></label>
+                                        <input class="form-control" type="password" formControlName="password" />
+                                        <div *ngIf="userForm.get('password')?.touched && userForm.get('password')?.invalid"
+                                            style="font-size: 12px; color: red;">
+                                            <span *ngIf="userForm.get('password')?.errors?.['required']">Password is
+                                                required.</span>
+                                            <span *ngIf="userForm.get('password')?.errors?.['minlength']">Password must
+                                                be at least 6 characters.</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Mobile <span class="text-danger">*</span></label>
+                                        <input class="form-control" formControlName="mobile" />
+                                        <div *ngIf="userForm.get('mobile')?.touched && userForm.get('mobile')?.invalid"
+                                            style="font-size: 12px; color: red;">
+                                            <span *ngIf="userForm.get('mobile')?.errors?.['required']">Mobile is
+                                                required.</span>
+                                            <span *ngIf="userForm.get('mobile')?.errors?.['pattern']">Mobile must be 11
+                                                digits.</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Address <span class="text-danger">*</span></label>
+                                        <textarea class="form-control" rows="1" formControlName="address"></textarea>
+                                        <div *ngIf="userForm.get('address')?.touched && userForm.get('address')?.invalid"
+                                            style="font-size: 12px; color: red;">
+                                            Address is required.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Role <span class="text-danger">*</span></label>
+                                        <select class="form-control" formControlName="role">
+                                            <option value="" disabled>Select Role</option>
+                                            <option value="Admin">Admin</option>
+                                        </select>
+                                        <div *ngIf="userForm.get('role')?.touched && userForm.get('role')?.invalid"
+                                            style="font-size: 12px; color: red;">
+                                            Role is required.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 mt-3">
+                                    <button [disabled]="userForm.invalid" type="submit"
+                                        class="btn btn-primary">Submit</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

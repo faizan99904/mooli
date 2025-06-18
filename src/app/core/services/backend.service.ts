@@ -24,4 +24,8 @@ export class BackendService {
   verifyOtp(payload: { email: string; otp: string }): Observable<any> {
     return this.http.post(CONFIG.verifyOtp, payload);
   }
+
+  getRole(): Observable<any> {
+    return this.http.get<any>(CONFIG.getAllRole);
+  }
 }

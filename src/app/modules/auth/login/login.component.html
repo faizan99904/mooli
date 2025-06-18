@@ -26,7 +26,12 @@
                             <span>Remember me</span>
                         </label>
                     </div>
-                    <button type="submit" class="btn btn-dark btn-lg btn-block">LOGIN</button>
+                    <button type="submit"
+                        class="btn btn-dark btn-lg btn-block d-flex justify-content-center align-items-center"
+                        [disabled]="loading">
+                        <span *ngIf="loading" class="spinner"></span>
+                        {{ loading ? 'Logging in...' : 'LOGIN' }}
+                    </button>
                     <div class="bottom">
                         <span class="helper-text m-b-10"><i class="fa fa-lock"></i> <a [routerLink]="'/forgot-password'"
                                 href="javascript:void(0)">

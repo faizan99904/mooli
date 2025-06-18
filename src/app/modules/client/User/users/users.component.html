@@ -1,0 +1,36 @@
+<div class="wrapper p-t-100 px-4">
+    <div class="title">
+        <button [routerLink]="'/create-user'" type="submit" class="btn btn-dark btn-lg btn-block">
+            Add Users
+        </button>
+    </div>
+    <table datatable [dtOptions]="dtOptions" class="table w-full text-[12px]">
+        <thead class="bg-white">
+            <tr>
+                <th class="border px-2 py-1">Username</th>
+                <th class="border px-2 py-1">FirstName</th>
+                <th class="border px-2 py-1">LastName</th>
+                <th class="border px-2 py-1">Mobile</th>
+                <th class="border px-2 py-1">Email</th>
+                <th class="border px-2 py-1">Address</th>
+            </tr>
+        </thead>
+
+        <tbody *ngIf="Users.length > 0">
+            <tr *ngFor="let user of Users">
+                <td class="border px-2 py-1">{{ user.username }}</td>
+                <td class="border px-2 py-1">{{ user.firstName }}</td>
+                <td class="border px-2 py-1">{{ user.lastName }}</td>
+                <td class="border px-2 py-1">{{ user.mobile }}</td>
+                <td class="border px-2 py-1">{{ user.email }}</td>
+                <td class="border px-2 py-1">{{ user.address }}</td>
+            </tr>
+        </tbody>
+
+        <tbody *ngIf="Users.length === 0">
+            <tr>
+                <td colspan="7" class="text-center py-2">No matching users found</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

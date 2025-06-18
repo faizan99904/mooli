@@ -30,10 +30,12 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
   recoveryForm!: FormGroup;
   showNewPassword = false;
   showConfirmPassword = false;
-  countdownTime: number = 120;
-  countdownDisplay: string = '02:00';
+  countdownTime: number = 300;
+  countdownDisplay: string = '05:00';
   showCountdown: boolean = true;
   isChangePass: boolean = true;
+  resLoader: boolean = false;
+  verLoader: boolean = false;
   private countdownInterval: any;
   @ViewChild('otpInput') otpInputs!: QueryList<ElementRef>;
   @Output() otpVerified = new EventEmitter<{
@@ -155,7 +157,7 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
 
   startCountdown() {
     this.showCountdown = true;
-    this.countdownTime = 120;
+    this.countdownTime = 300;
     this.updateCountdownDisplay();
 
     this.countdownInterval = setInterval(() => {
@@ -196,15 +198,18 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
 
   resetPass() {
     if (this.recoveryForm.valid) {
+      this.resLoader = true;
       const payload = this.recoveryForm.value;
       this.backend.forgetPass(payload).subscribe({
         next: (response: any) => {
+          this.resLoader = false;
           this.toaster.success(response?.message || 'Otp sent successfully!');
           this.isOtp = true;
           this.startCountdown();
           console.log(response);
         },
         error: (err) => {
+          this.resLoader = false;
           this.toaster.error(err.error?.message || 'Something went wrong!');
         },
       });
@@ -216,6 +221,7 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
 
   verifyOtp() {
     if (this.otpForm.value) {
+      this.verLoader = true;
       const otp = [
         this.otpForm.value.digit0,
         this.otpForm.value.digit1,
@@ -234,12 +240,14 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
       console.log(payload, 'OTP');
       this.backend.verifyOtp(payload).subscribe({
         next: (response: any) => {
+          this.verLoader = false;
           this.toaster.success(
             response?.message || 'OTP verified successfully!'
           );
           this.router.navigateByUrl('/login');
         },
         error: (err) => {
+          this.verLoader = false;
           this.toaster.error(err.error?.message || 'Something went wrong!');
         },
       });
