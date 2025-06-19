@@ -39,19 +39,12 @@ export class UsersComponent implements OnInit {
           .subscribe({
             next: (resp) => {
               this.Users = resp?.data?.data || [];
-              this.toaster.success(
-                resp?.message || 'Users fetched successfully'
-              );
               callback({
                 recordsTotal: resp.data.recordsTotal,
                 recordsFiltered: resp.data.recordsFiltered,
                 data: [],
               });
             },
-            error: (err) =>
-              this.toaster.error(
-                err?.error?.message || 'Failed to fetch users'
-              ),
           });
       },
     };

@@ -28,4 +28,19 @@ export class BackendService {
   getRole(): Observable<any> {
     return this.http.get<any>(CONFIG.getAllRole);
   }
+
+  getAllNotes(): Observable<any> {
+    return this.http.get<any>(CONFIG.getAllNotes);
+  }
+
+  addNote(payload: { notes: string; isBookMarked: boolean }): Observable<any> {
+    return this.http.post<any>(CONFIG.addNotes, payload);
+  }
+
+  changePass(payload: {
+    newPassword: string;
+    oldPassword: string;
+  }): Observable<any> {
+    return this.http.post<any>(CONFIG.changePass, payload);
+  }
 }

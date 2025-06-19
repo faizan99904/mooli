@@ -1,5 +1,3 @@
-
-
 <div id="main-content">
 
     <div class="container-fluid">
@@ -910,20 +908,19 @@
                                         <hr>
                                         <h6>Change Password</h6>
                                         <div class="form-group c_form_group">
-                                            <input type="password" class="form-control" placeholder="Current Password">
+                                            <input [(ngModel)]="oldPassword" type="text" class="form-control"
+                                                placeholder="Current Password">
                                         </div>
                                         <div class="form-group c_form_group">
-                                            <input type="password" class="form-control" placeholder="New Password">
-                                        </div>
-                                        <div class="form-group c_form_group">
-                                            <input type="password" class="form-control"
-                                                placeholder="Confirm New Password">
+                                            <input [(ngModel)]="newPassword" type="password" class="form-control"
+                                                placeholder="New Password">
                                         </div>
                                     </div>
                                     <div class="col-sm-12 m-t-20 text-right">
-                                        <button type="button" class="btn btn-primary theme-bg gradient">SAVE</button>
+                                        <button (click)="changePass()" type="button"
+                                            class="btn btn-primary theme-bg gradient">SAVE</button>
                                         &nbsp;
-                                        <button type="button" class="btn btn-default">CANCEL</button>
+                                        <button (click)="cancel()" type="button" class="btn btn-default">CANCEL</button>
                                     </div>
                                 </div>
                             </div>

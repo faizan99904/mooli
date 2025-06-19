@@ -1,11 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { BackendService } from '../../../core/services/backend.service';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-settings',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './settings.component.html',
-  styleUrl: './settings.component.scss'
+  styleUrl: './settings.component.scss',
 })
 export class SettingsComponent {
   Company: boolean = true;
@@ -15,10 +18,14 @@ export class SettingsComponent {
   Invoice!: boolean;
   Notifications!: boolean;
   Changepassword!: boolean;
-  constructor() { }
+  oldPassword: string = '';
+  newPassword: string = '';
+  constructor(
+    private backend: BackendService,
+    private toaster: ToastrService
+  ) {}
 
-
-  onTab(number:any) {
+  onTab(number: any) {
     this.Company = false;
     this.Localization = false;
     this.Permissions = false;
@@ -29,27 +36,38 @@ export class SettingsComponent {
 
     if (number == '1') {
       this.Company = true;
-    }
-    else if (number == '2') {
+    } else if (number == '2') {
       this.Localization = true;
-    }
-    else if (number == '3') {
+    } else if (number == '3') {
       this.Permissions = true;
-    }
-    else if (number == '4') {
+    } else if (number == '4') {
       this.Email = true;
-    }
-    else if (number == '5') {
+    } else if (number == '5') {
       this.Invoice = true;
-    }
-    else if (number == '6') {
+    } else if (number == '6') {
       this.Notifications = true;
-    }
-    else if (number == '7') {
+    } else if (number == '7') {
       this.Changepassword = true;
     }
   }
 
-  ngOnInit(): void {
+  ngOnInit(): void {}
+
+  changePass() {
+    const payload = {
+      oldPassword: this.oldPassword,
+      newPassword: this.newPassword,
+    };
+
+    this.backend.changePass(payload).subscribe({
+      next: (resp: any) => {
+        this.toaster.success(resp.message || 'Pasword changed!');
+      },
+    });
+  }
+
+  cancel() {
+    this.oldPassword = '';
+    this.newPassword = '';
   }
 }

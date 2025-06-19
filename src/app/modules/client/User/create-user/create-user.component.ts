@@ -10,6 +10,7 @@ import { CONFIG } from '../../../../../../config';
 import { ToastrService } from 'ngx-toastr';
 import { CommonModule } from '@angular/common';
 import { BackendService } from '../../../../core/services/backend.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-create-user',
@@ -20,11 +21,16 @@ import { BackendService } from '../../../../core/services/backend.service';
 export class CreateUserComponent implements OnInit {
   userForm!: FormGroup;
   roleId: any;
+  roles: any[] = [];
+  adminRoleId: string = '';
+  superAdminRoleId: string = '';
+  isRoleLoaded = false;
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
     private toast: ToastrService,
-    private backend: BackendService
+    private backend: BackendService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -39,27 +45,35 @@ export class CreateUserComponent implements OnInit {
       role: ['', Validators.required],
     });
 
-    // this.backend.getRole().subscribe({
-    //   next: (res) => {
-    //     this.roleId = res.data._id;
-    //     console.log(res.data._id);
-    //   },
-    // });
+    this.backend.getRole().subscribe({
+      next: (res) => {
+        for (const role of res.data) {
+          if (role.name === 'ADMIN') {
+            this.adminRoleId = role._id;
+          } else if (role.name === 'superAdmin') {
+            this.superAdminRoleId = role._id;
+          }
+        }
+        this.isRoleLoaded = true;
+      },
+    });
   }
 
   submitForm() {
-    this.userForm.get('role')?.setValue(this.roleId);
     if (this.userForm.invalid) {
       this.userForm.markAllAsTouched();
       return;
     }
 
-    const payload = this.userForm.value;
+    const payload = { ...this.userForm.value };
+    payload.role = [payload.role];
+
     console.log('Final Payload:', payload);
 
     this.http.post(CONFIG.createUser, payload).subscribe({
       next: (resp: any) => {
         this.toast.success(resp?.message || 'Users Created successfully');
+        this.router.navigateByUrl('/users');
       },
       error: (err) => {
         this.toast.error(err?.message || 'Oops!');

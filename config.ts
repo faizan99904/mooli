@@ -8,4 +8,7 @@ export const CONFIG = {
   getAllUsers: BASE_URL_API + '/api/users/getAllUsers',
   createUser: BASE_URL_API + '/api/users/createuser',
   getAllRole: BASE_URL_API + '/api/users/getAllRole',
+  getAllNotes: BASE_URL_API + '/api/note/getAllNote',
+  addNotes: BASE_URL_API + '/api/note/addNote',
+  changePass: BASE_URL_API + '/api/auth/changepassword',
 };

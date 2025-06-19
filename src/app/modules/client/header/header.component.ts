@@ -1,10 +1,13 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { BackendService } from '../../../core/services/backend.service';
+import { FormsModule } from '@angular/forms';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-header',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, DatePipe],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
 })
@@ -13,13 +16,48 @@ export class HeaderComponent implements OnInit {
   contactTab!: boolean;
   groupTab!: boolean;
   chatTab: boolean = true;
-  constructor(private router: Router) {}
+  noteText: string = '';
+  notesList: any[] = [];
+  constructor(
+    private router: Router,
+    private backend: BackendService,
+    private toaster: ToastrService
+  ) {}
 
   ngOnInit(): void {
     // setTimeout(() => {
     //   document.getElementsByClassName('page-loader-wrapper')[0].classList.add("HideDiv");
     // }, 1000);
+    this.getAllNotes();
   }
+
+  getAllNotes() {
+    this.backend.getAllNotes().subscribe({
+      next: (resp: any) => {
+        this.notesList = resp.data;
+        console.log('api called: ', resp);
+      },
+    });
+  }
+
+  andNote() {
+    if (!this.noteText.trim()) return;
+
+    const payload = {
+      notes: this.noteText,
+      isBookMarked: false,
+    };
+
+    this.backend.addNote(payload).subscribe({
+      next: (resp: any) => {
+        console.log('note added', resp);
+        this.toaster.success(resp.message || 'Note added Successfully!');
+        this.noteText = '';
+        this.getAllNotes();
+      },
+    });
+  }
+
   mToggoleMenu() {
     document
       .getElementsByTagName('body')[0]
@@ -34,6 +72,7 @@ export class HeaderComponent implements OnInit {
     document.getElementById('rightbar')?.classList.toggle('open');
     document.getElementsByClassName('overlay')[0].classList.toggle('open');
   }
+
   openfullScreen() {
     let elem = document.documentElement;
     let methodToBeInvoked =
