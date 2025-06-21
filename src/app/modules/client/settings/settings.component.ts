@@ -6,6 +6,7 @@ import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-settings',
+  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
@@ -23,7 +24,7 @@ export class SettingsComponent {
   constructor(
     private backend: BackendService,
     private toaster: ToastrService
-  ) {}
+  ) { }
 
   onTab(number: any) {
     this.Company = false;
@@ -51,7 +52,7 @@ export class SettingsComponent {
     }
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void { }
 
   changePass() {
     const payload = {

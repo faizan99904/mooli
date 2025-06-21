@@ -23,29 +23,29 @@
             <div class="col-12">
                 <div class="d-lg-flex justify-content-between">
                     <ul class="nav nav-tabs3 page-header-tab">
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Company}" data-toggle="tab"
-                                (click)="onTab('1')" href="javascript:void(0)">Company</a></li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Localization}" data-toggle="tab"
-                                (click)="onTab('2')" href="javascript:void(0)">Localization</a>
+                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Company}" 
+                                (click)="onTab('1')" >Company</a></li>
+                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Localization}" 
+                                (click)="onTab('2')" >Localization</a>
                         </li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Permissions}" data-toggle="tab"
-                                (click)="onTab('3')" href="javascript:void(0)">Roles &
+                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Permissions}" 
+                                (click)="onTab('3')" >Roles &
                                 Permissions</a></li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Email}" data-toggle="tab"
-                                (click)="onTab('4')" href="javascript:void(0)">Email</a></li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Invoice}" data-toggle="tab"
-                                (click)="onTab('5')" href="javascript:void(0)">Invoice</a>
+                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Email}" 
+                                (click)="onTab('4')" >Email</a></li>
+                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Invoice}" 
+                                (click)="onTab('5')" >Invoice</a>
                         </li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Notifications}" data-toggle="tab"
-                                (click)="onTab('6')" href="javascript:void(0)">Notifications
+                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Notifications}" 
+                                (click)="onTab('6')" >Notifications
                             </a></li>
                         <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Changepassword}"
-                                data-toggle="tab" (click)="onTab('7')" href="javascript:void(0)">Change
+                                 (click)="onTab('7')" >Change
                                 Password </a></li>
                     </ul>
                 </div>
                 <div class="tab-content">
-                    <div class="tab-pane active show" id="Company_Settings" [ngClass]="{'active': Company}">
+                    <div class="tab-pane active show"   *ngIf="Company">
                         <div class="card">
                             <div class="card-header">
                                 Company Settings
@@ -412,7 +412,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane" id="Localization" [ngClass]="{'active': Localization}">
+                    <div class="tab-pane show active"  *ngIf="Localization">
                         <div class="card">
                             <div class="card-header">
                                 Basic Settings
@@ -492,7 +492,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane" id="Roles_Permissions" [ngClass]="{'active': Permissions}">
+                    <div class="tab-pane show active"    *ngIf="Permissions">
                         <div class="card">
                             <div class="card-header">
                                 Roles & Permissions
@@ -723,7 +723,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane" id="Email_Settings" [ngClass]="{'active': Email}">
+                    <div class="tab-pane show active"    *ngIf="Email">
                         <div class="card">
                             <div class="card-header">
                                 SMTP Email Settings
@@ -799,7 +799,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane" id="Invoice_Settings" [ngClass]="{'active': Invoice}">
+                    <div class="tab-pane show active"  *ngIf="Invoice">
                         <div class="card">
                             <div class="card-header">
                                 Invoice Settings
@@ -824,7 +824,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane" id="Notifications" [ngClass]="{'active': Notifications}">
+                    <div class="tab-pane show active" *ngIf="Notifications">
                         <div class="card">
                             <div class="card-header">
                                 Notifications Settings
@@ -880,7 +880,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane" id="Change_Password" [ngClass]="{'active': Changepassword}">
+                    <div class="tab-pane show active"   *ngIf="Changepassword">
                         <div class="card">
                             <div class="card-header">
                                 Change Password
