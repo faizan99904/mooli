@@ -500,7 +500,7 @@
                         (click)="item.isBookMarked = !item.isBookMarked">
                         <i class="fa fa-star-o"></i>
                     </a>
-                    <a href="javascript:void(0);" class="delete">
+                    <a (click)="deleteNoteById(item._id)" class="delete">
                         <i class="fa fa-trash"></i>
                     </a>
                 </div>

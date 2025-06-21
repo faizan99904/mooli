@@ -13,6 +13,7 @@ import { ToastrService } from 'ngx-toastr';
 })
 export class SettingsComponent {
   showPassword = false;
+  showCurrentPass = false;
   Company: boolean = true;
   Localization!: boolean;
   Permissions!: boolean;
@@ -55,7 +56,11 @@ export class SettingsComponent {
 
   ngOnInit(): void {}
 
-  togglePasswordVisibility() {
+  toggleCurrentPass() {
+    this.showCurrentPass = !this.showCurrentPass;
+  }
+
+  toggleNewPass() {
     this.showPassword = !this.showPassword;
   }
 

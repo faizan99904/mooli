@@ -43,4 +43,8 @@ export class BackendService {
   }): Observable<any> {
     return this.http.post<any>(CONFIG.changePass, payload);
   }
+
+  deleteNote(id: string): Observable<any> {
+    return this.http.delete(`${CONFIG.deleteNote.replace(':id', id)}`);
+  }
 }

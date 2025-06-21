@@ -908,8 +908,13 @@
                                         <hr>
                                         <h6>Change Password</h6>
                                         <div class="form-group c_form_group">
-                                            <input [(ngModel)]="oldPassword" type="text" class="form-control"
-                                                placeholder="Current Password">
+                                            <div class="input-group flex">
+                                                <input [(ngModel)]="oldPassword"
+                                                    [type]="showCurrentPass ? 'text' : 'password'" class="form-control"
+                                                    placeholder="Current Password">
+                                                <i class="fa" [ngClass]="showCurrentPass ? 'fa-eye-slash' : 'fa-eye'"
+                                                    (click)="toggleCurrentPass()"></i>
+                                            </div>
                                         </div>
                                         <div class="form-group c_form_group">
                                             <div class="input-group flex">
@@ -918,7 +923,7 @@
                                                     autocomplete="off" placeholder="New Password" />
 
                                                 <i class="fa" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"
-                                                    (click)="togglePasswordVisibility()"></i>
+                                                    (click)="toggleNewPass()"></i>
                                             </div>
                                         </div>
                                     </div>

@@ -58,6 +58,18 @@ export class HeaderComponent implements OnInit {
     });
   }
 
+  deleteNoteById(id: string) {
+    this.backend.deleteNote(id).subscribe({
+      next: (resp) => {
+        console.log('Note deleted:', resp);
+        this.getAllNotes();
+      },
+      error: (err) => {
+        console.error('Delete failed:', err);
+      },
+    });
+  }
+
   mToggoleMenu() {
     document
       .getElementsByTagName('body')[0]

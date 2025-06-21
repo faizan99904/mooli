@@ -11,4 +11,5 @@ export const CONFIG = {
   getAllNotes: BASE_URL_API + '/api/note/getAllNote',
   addNotes: BASE_URL_API + '/api/note/addNote',
   changePass: BASE_URL_API + '/api/auth/changepassword',
+  deleteNote: BASE_URL_API + '/api/note/deleteNote/:id',
 };
