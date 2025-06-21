@@ -17,6 +17,7 @@ import { CommonModule } from '@angular/common';
   styleUrl: './login.component.scss',
 })
 export class LoginComponent {
+  showNewPassword = false;
   loading: boolean = false;
   loginForm: FormGroup;
   constructor(
@@ -29,6 +30,12 @@ export class LoginComponent {
       email: ['', [Validators.required]],
       password: ['', [Validators.required]],
     });
+  }
+
+  togglePasswordVisibility(field: 'password') {
+    if (field === 'password') {
+      this.showNewPassword = !this.showNewPassword;
+    }
   }
 
   onSubmit() {

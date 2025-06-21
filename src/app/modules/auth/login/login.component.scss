@@ -18,6 +18,12 @@
   line-height: 17px;
 }
 
+.flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .spinner {
   border: 2px solid #f3f3f3;
   border-top: 2px solid #fff;
