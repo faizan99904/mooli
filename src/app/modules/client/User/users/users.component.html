@@ -13,6 +13,7 @@
                 <th class="border px-2 py-1">Mobile</th>
                 <th class="border px-2 py-1">Email</th>
                 <th class="border px-2 py-1">Address</th>
+                <th class="border px-2 py-1" style="text-align: center;">Actions</th>
             </tr>
         </thead>
 
@@ -24,6 +25,10 @@
                 <td class="border px-2 py-1">{{ user.mobile }}</td>
                 <td class="border px-2 py-1">{{ user.email }}</td>
                 <td class="border px-2 py-1">{{ user.address }}</td>
+                <td class="border px-2 py-1" style="text-align: center;">
+                    <i (click)="deleteUser(user._id)" class="text-red fa fa-trash"></i>
+                    <i (click)="editUser(user)" class="fa-solid fa-pen m-l"></i>
+                </td>
             </tr>
         </tbody>
 

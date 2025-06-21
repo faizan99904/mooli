@@ -1,11 +1,12 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ViewChild } from '@angular/core';
 import { CONFIG } from '../../../../../../config';
 import { CommonModule } from '@angular/common';
-import { DataTablesModule } from 'angular-datatables';
+import { DataTableDirective, DataTablesModule } from 'angular-datatables';
 import { Config } from 'datatables.net';
+import { Router, RouterLink } from '@angular/router';
+import { BackendService } from '../../../../core/services/backend.service';
 import { ToastrService } from 'ngx-toastr';
-import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-users',
@@ -16,7 +17,13 @@ import { RouterLink } from '@angular/router';
 })
 export class UsersComponent implements OnInit {
   http = inject(HttpClient);
-  constructor(private toaster: ToastrService) {}
+  @ViewChild(DataTableDirective, { static: false })
+  dtDirective!: DataTableDirective;
+  constructor(
+    private backend: BackendService,
+    private toast: ToastrService,
+    private router: Router
+  ) {}
 
   dtOptions: Config = {};
   Users: any[] = [];
@@ -50,7 +57,23 @@ export class UsersComponent implements OnInit {
     };
   }
 
-  deleteUser(userId: string) {
-    console.log('Delete user with ID:', userId);
+  deleteUser(id: string) {
+    this.backend.deleteUser(id).subscribe({
+      next: (resp) => {
+        this.toast.success(resp.message || 'User deleted Successfully!');
+        if (this.dtDirective && this.dtDirective.dtInstance) {
+          this.dtDirective.dtInstance.then((dtInstance: any) => {
+            dtInstance.ajax.reload(null, false);
+          });
+        }
+      },
+      error: (err) => {
+        this.toast.error(err.message || 'Something went wrong!');
+      },
+    });
+  }
+
+  editUser(user: any) {
+    this.router.navigate(['/create-user'], { state: { user } });
   }
 }

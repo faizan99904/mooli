@@ -47,4 +47,13 @@ export class BackendService {
   deleteNote(id: string): Observable<any> {
     return this.http.delete(`${CONFIG.deleteNote.replace(':id', id)}`);
   }
+
+  deleteUser(id: string): Observable<any> {
+    return this.http.delete(`${CONFIG.deleteUser.replace(':id', id)}`);
+  }
+
+  updateUser(id: string, data: any) {
+    const url = CONFIG.editUser.replace(':id', id);
+    return this.http.put(url, data);
+  }
 }
