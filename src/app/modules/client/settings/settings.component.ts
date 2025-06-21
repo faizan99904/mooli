@@ -12,6 +12,7 @@ import { ToastrService } from 'ngx-toastr';
   styleUrl: './settings.component.scss',
 })
 export class SettingsComponent {
+  showPassword = false;
   Company: boolean = true;
   Localization!: boolean;
   Permissions!: boolean;
@@ -24,7 +25,7 @@ export class SettingsComponent {
   constructor(
     private backend: BackendService,
     private toaster: ToastrService
-  ) { }
+  ) {}
 
   onTab(number: any) {
     this.Company = false;
@@ -52,7 +53,11 @@ export class SettingsComponent {
     }
   }
 
-  ngOnInit(): void { }
+  ngOnInit(): void {}
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
+  }
 
   changePass() {
     const payload = {
