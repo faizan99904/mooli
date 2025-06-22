@@ -7,7 +7,12 @@ import { Config } from 'datatables.net';
 import { Router, RouterLink } from '@angular/router';
 import { BackendService } from '../../../../core/services/backend.service';
 import { ToastrService } from 'ngx-toastr';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 
 @Component({
   selector: 'app-users',
@@ -18,7 +23,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 })
 export class UsersComponent implements OnInit {
   http = inject(HttpClient);
-  isEditUser:boolean = false
+  isEditUser: boolean = false;
   @ViewChild(DataTableDirective, { static: false })
   dtDirective!: DataTableDirective;
   userForm!: FormGroup;
@@ -27,20 +32,18 @@ export class UsersComponent implements OnInit {
     private backend: BackendService,
     private toast: ToastrService,
     private router: Router,
-    private fb:FormBuilder
+    private fb: FormBuilder
   ) {
-
     this.userForm = this.fb.group({
-      userId:[''],
+      userId: [''],
       username: ['', [Validators.required, Validators.minLength(3)]],
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       mobile: ['', [Validators.required]],
       address: [''],
-      status: ['', Validators.required]
+      status: ['', Validators.required],
     });
-
   }
 
   dtOptions: Config = {};
@@ -91,18 +94,18 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  renderTable(){
-    this.dtDirective.dtInstance.then((dtInstance:any)=>{
-     dtInstance.draw()
-    })
+  renderTable() {
+    this.dtDirective.dtInstance.then((dtInstance: any) => {
+      dtInstance.draw();
+    });
   }
 
   editUser(user: any) {
     this.router.navigate(['/create-user'], { state: { user } });
   }
 
-  editUserModal(user:any){
-    this.isEditUser = !this.isEditUser
+  editUserModal(user: any) {
+    this.isEditUser = !this.isEditUser;
     this.userForm.patchValue({
       username: user.username,
       firstName: user.lastName,
@@ -111,21 +114,24 @@ export class UsersComponent implements OnInit {
       mobile: user.mobile,
       address: user.address,
       status: user.status,
-      userId: user._id
+      userId: user._id,
     });
   }
 
-  onSubmit(){
-     this.http.put(CONFIG.editUser, this.userForm.value).subscribe({
-         next:(res:any)=>{
-             this.toast.success("edit user successfully");
-             this.renderTable()
-         },
-         error:(error)=>{
-           this.toast.error("error");
-         }
-     })
+  onSubmit() {
+    this.http.put(CONFIG.editUser, this.userForm.value).subscribe({
+      next: (res: any) => {
+        this.toast.success(res.message || 'edit user successfully');
+        this.isEditUser = false;
+        this.renderTable();
+      },
+      error: (error) => {
+        this.toast.error(error.message || 'error');
+      },
+    });
   }
- 
 
+  onCancel() {
+    this.isEditUser = false;
+  }
 }
