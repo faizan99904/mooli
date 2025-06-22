@@ -13,5 +13,5 @@ export const CONFIG = {
   changePass: BASE_URL_API + '/api/auth/changepassword',
   deleteNote: BASE_URL_API + '/api/note/deleteNote/:id',
   deleteUser: BASE_URL_API + '/api/users/deleteUser/:id',
-  editUser: BASE_URL_API + '/api/users/updateUser/:id',
+  editUser: BASE_URL_API + '/api/users/updateUser',
 };
