@@ -19,6 +19,7 @@ import { Router } from '@angular/router';
   styleUrl: './create-user.component.scss',
 })
 export class CreateUserComponent implements OnInit {
+  showPassword: boolean = false;
   userForm!: FormGroup;
   roleId: any;
   roles: any[] = [];
@@ -47,6 +48,12 @@ export class CreateUserComponent implements OnInit {
         this.isRoleLoaded = true;
       },
     });
+  }
+
+  togglePasswordVisibility(field: 'password') {
+    if (field === 'password') {
+      this.showPassword = !this.showPassword;
+    }
   }
 
   initForm() {

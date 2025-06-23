@@ -64,13 +64,22 @@
                                 <div class="col-sm-6">
                                     <div class="form-group">
                                         <label>Password <span class="text-danger">*</span></label>
-                                        <input class="form-control" type="password" formControlName="password" />
+                                        <div class="input-group flex">
+                                            <input class="form-control" [type]="showPassword ? 'text' : 'password'"
+                                                formControlName="password" />
+                                            <div class="input-group-append ico">
+                                                <i (click)="togglePasswordVisibility('password')" class="fa"
+                                                    [ngClass]="{'fa-eye': !showPassword, 'fa-eye-slash': showPassword}"></i>
+                                            </div>
+                                        </div>
                                         <div *ngIf="userForm.get('password')?.touched && userForm.get('password')?.invalid"
                                             style="font-size: 12px; color: red;">
                                             <span *ngIf="userForm.get('password')?.errors?.['required']">Password is
                                                 required.</span>
-                                            <span *ngIf="userForm.get('password')?.errors?.['minlength']">Password must
+                                            <span *ngIf="userForm.get('password')?.errors?.['minlength']">Password
+                                                must
                                                 be at least 6 characters.</span>
+
                                         </div>
                                     </div>
                                 </div>

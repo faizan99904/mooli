@@ -1,0 +1,250 @@
+.prescription-table {
+  .bold {
+    font-weight: bold;
+  }
+
+  .wrapper {
+    height: 100%;
+    width: 100%;
+
+    .row {
+      margin-right: -2.5px !important;
+      margin-left: -2.5px !important;
+    }
+
+    .title {
+      display: flex;
+      justify-content: space-between;
+      color: black;
+      padding: 0 16px;
+    }
+
+    .dr-title {
+      display: flex;
+      flex-direction: column;
+      font-size: 24px;
+      align-items: end;
+    }
+
+    .degree {
+      font-size: 20px;
+      width: 100%;
+      display: flex;
+    }
+
+    .left {
+      justify-content: flex-end;
+    }
+
+    .center-title {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
+
+      .title-box {
+        padding: 1rem;
+        border: 3px solid black;
+        border-radius: 16px;
+        align-items: center;
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+        max-width: 300px;
+        width: 100%;
+
+        .date {
+          color: black;
+          font-size: 16px;
+          text-decoration: underline;
+          font-weight: bold;
+        }
+      }
+    }
+    .patient-details {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      margin-top: 2rem;
+      max-width: 760px;
+      margin-left: auto;
+      margin-right: auto;
+      flex-direction: column;
+
+      .row {
+        flex-direction: row-reverse;
+        color: black;
+        width: 100%;
+        border: 1px solid black;
+
+        div {
+          padding: 8px;
+          border-right: 1px solid black;
+        }
+        div:last-child {
+          border-right: 0;
+        }
+      }
+    }
+
+    .logo {
+      width: 30px;
+    }
+
+    .rem-wrapper {
+      display: flex;
+      flex-direction: row-reverse;
+      width: 100%;
+      padding: 0 2rem;
+      margin-top: 1.5rem;
+      gap: 1.2rem;
+
+      .lab-wrapper {
+        gap: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        max-width: 180px;
+        width: 100%;
+
+        .lab-table {
+          color: black;
+          width: 100%;
+        }
+      }
+
+      .medicine-wrapper {
+        width: 100%;
+        border: 3px solid black;
+        font-weight: bold;
+        color: black;
+        overflow: hidden;
+
+        .med-title {
+          font-size: 24px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .row {
+          div {
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            min-height: 31.1px;
+          }
+          div:last-child {
+            border-right: none;
+          }
+
+          .col-1 {
+            font-weight: 500;
+            font-size: 14px;
+          }
+
+          .tab-title {
+            font-size: 20px;
+            justify-content: center;
+            padding-left: 16px;
+            font-weight: 600;
+            flex-direction: column;
+            align-items: flex-end;
+
+            span {
+              font-size: 18px;
+              font-weight: 500;
+            }
+          }
+
+          .twice {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+
+        .precautions {
+          height: 20.2%;
+          border-top: 2px solid black;
+          display: flex;
+          width: 100%;
+          align-items: center;
+          justify-content: center;
+        }
+      }
+    }
+  }
+
+  .col,
+  .col-1,
+  .col-10,
+  .col-11,
+  .col-12,
+  .col-2,
+  .col-3,
+  .col-4,
+  .col-5,
+  .col-6,
+  .col-7,
+  .col-8,
+  .col-9,
+  .col-auto,
+  .col-lg,
+  .col-lg-1,
+  .col-lg-10,
+  .col-lg-11,
+  .col-lg-12,
+  .col-lg-2,
+  .col-lg-3,
+  .col-lg-4,
+  .col-lg-5,
+  .col-lg-6,
+  .col-lg-7,
+  .col-lg-8,
+  .col-lg-9,
+  .col-lg-auto,
+  .col-md,
+  .col-md-1,
+  .col-md-10,
+  .col-md-11,
+  .col-md-12,
+  .col-md-2,
+  .col-md-3,
+  .col-md-4,
+  .col-md-5,
+  .col-md-6,
+  .col-md-7,
+  .col-md-8,
+  .col-md-9,
+  .col-md-auto,
+  .col-sm,
+  .col-sm-1,
+  .col-sm-10,
+  .col-sm-11,
+  .col-sm-12,
+  .col-sm-2,
+  .col-sm-3,
+  .col-sm-4,
+  .col-sm-5,
+  .col-sm-6,
+  .col-sm-7,
+  .col-sm-8,
+  .col-sm-9,
+  .col-sm-auto,
+  .col-xl,
+  .col-xl-1,
+  .col-xl-10,
+  .col-xl-11,
+  .col-xl-12,
+  .col-xl-2,
+  .col-xl-3,
+  .col-xl-4,
+  .col-xl-5,
+  .col-xl-6,
+  .col-xl-7,
+  .col-xl-8,
+  .col-xl-9,
+  .col-xl-auto {
+    padding-right: 4.5px;
+    padding-left: 4.5px;
+  }
+}

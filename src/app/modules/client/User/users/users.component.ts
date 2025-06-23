@@ -1,5 +1,11 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, OnInit, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  inject,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { CONFIG } from '../../../../../../config';
 import { CommonModule } from '@angular/common';
 import { DataTableDirective, DataTablesModule } from 'angular-datatables';
@@ -13,15 +19,23 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { PrescriptionComponent } from '../../prescription/prescription.component';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, DataTablesModule, RouterLink, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    DataTablesModule,
+    RouterLink,
+    ReactiveFormsModule,
+    PrescriptionComponent,
+  ],
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss',
 })
 export class UsersComponent implements OnInit {
+  @ViewChild('pdfContent', { static: false }) pdfContent!: ElementRef;
   http = inject(HttpClient);
   isEditUser: boolean = false;
   @ViewChild(DataTableDirective, { static: false })
