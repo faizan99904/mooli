@@ -14,7 +14,6 @@ export class PrescriptionComponent {
 
   downloadPDF() {
     const content = this.pdfContent.nativeElement;
-
     html2canvas(content, { scale: 2 }).then((canvas) => {
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');

@@ -3,6 +3,38 @@
     font-weight: bold;
   }
 
+  .urdu-profession {
+    font-size: 16px !important;
+    justify-content: flex-end;
+  }
+
+  .urdu-title {
+    font-size: 16px !important;
+    justify-content: flex-start !important;
+    font-weight: bold;
+  }
+
+  .urdu-hospital {
+    font-size: 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  .eng-profession {
+    font-size: 16px !important;
+    justify-content: flex-start !important;
+  }
+
+  .eng-title {
+    font-size: 16px !important;
+    justify-content: flex-end !important;
+    font-weight: bold;
+  }
+
+  .eng-hospital {
+    font-size: 16px !important;
+    justify-content: flex-end !important;
+  }
+
   .wrapper {
     height: 100%;
     width: 100%;
@@ -142,7 +174,7 @@
           }
 
           .tab-title {
-            font-size: 20px;
+            font-size: 16px;
             justify-content: center;
             padding-left: 16px;
             font-weight: 600;
@@ -150,7 +182,7 @@
             align-items: flex-end;
 
             span {
-              font-size: 18px;
+              font-size: 14px;
               font-weight: 500;
             }
           }
