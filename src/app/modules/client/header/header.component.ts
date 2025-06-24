@@ -35,7 +35,6 @@ export class HeaderComponent implements OnInit {
     this.backend.getAllNotes().subscribe({
       next: (resp: any) => {
         this.notesList = resp.data;
-        console.log('api called: ', resp);
       },
     });
   }
