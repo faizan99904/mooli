@@ -98,6 +98,7 @@
       display: flex;
       justify-content: center;
       margin-top: 2rem;
+      // margin-top: 4.5rem;
 
       .title-box {
         padding: 1rem;
@@ -146,9 +147,9 @@
     }
 
     .logo {
-      width: 150px !important;
+      width: 200px !important;
       position: absolute;
-      top: 35%;
+      top: 60%;
       left: 50%;
       transform: translate(-50%, -50%);
     }

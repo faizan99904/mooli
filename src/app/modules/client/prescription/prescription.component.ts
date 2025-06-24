@@ -12,76 +12,46 @@ import jsPDF from 'jspdf';
 export class PrescriptionComponent {
   @ViewChild('pdfContent', { static: false }) pdfContent!: ElementRef;
 
-  // downloadPDF() {
-  //   const content = this.pdfContent.nativeElement;
-  //   html2canvas(content, { scale: 2 }).then((canvas) => {
-  //     const imgData = canvas.toDataURL('image/png');
-  //     const pdf = new jsPDF('p', 'mm', 'a4');
-
-  //     const pageWidth = pdf.internal.pageSize.getWidth();
-  //     const pageHeight = pdf.internal.pageSize.getHeight();
-
-  //     const imgProps = {
-  //       width: pageWidth,
-  //       height: (canvas.height * pageWidth) / canvas.width,
-  //     };
-
-  //     let position = 0;
-  //     let heightLeft = imgProps.height;
-  //     pdf.addImage(
-  //       imgData,
-  //       'PNG',
-  //       0,
-  //       position,
-  //       imgProps.width,
-  //       imgProps.height
-  //     );
-  //     heightLeft -= pageHeight;
-  //     while (heightLeft > 0) {
-  //       position = heightLeft - imgProps.height;
-  //       pdf.addPage();
-  //       pdf.addImage(
-  //         imgData,
-  //         'PNG',
-  //         0,
-  //         position,
-  //         imgProps.width,
-  //         imgProps.height
-  //       );
-  //       heightLeft -= pageHeight;
-  //     }
-
-  //     pdf.save('prescription.pdf');
-  //   });
-  // }
-
   downloadPDF() {
     const content = this.pdfContent.nativeElement;
+    html2canvas(content, { scale: 1.2 }).then((canvas) => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
 
-    html2canvas(content, { scale: 2, scrollY: -window.scrollY }).then(
-      (canvas) => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
 
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgProps = {
+        width: pageWidth,
+        height: (canvas.height * pageWidth) / canvas.width,
+      };
 
-        const imgWidth = pageWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        let heightLeft = imgHeight;
-        let position = 0;
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      let position = 0;
+      let heightLeft = imgProps.height;
+      pdf.addImage(
+        imgData,
+        'PNG',
+        0,
+        position,
+        imgProps.width,
+        imgProps.height
+      );
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position = heightLeft - imgProps.height;
+        pdf.addPage();
+        pdf.addImage(
+          imgData,
+          'PNG',
+          0,
+          position,
+          imgProps.width,
+          imgProps.height
+        );
         heightLeft -= pageHeight;
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
-        }
-
-        pdf.save('prescription.pdf');
       }
-    );
+
+      pdf.save('prescription.pdf');
+    });
   }
 }
