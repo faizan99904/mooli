@@ -1,4 +1,3 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import {
   FormBuilder,
@@ -6,7 +5,6 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { CONFIG } from '../../../../../../config';
 import { ToastrService } from 'ngx-toastr';
 import { CommonModule } from '@angular/common';
 import { BackendService } from '../../../../core/services/backend.service';
@@ -25,10 +23,10 @@ export class CreateUserComponent implements OnInit {
   roles: any[] = [];
   adminRoleId: string = '';
   superAdminRoleId: string = '';
+  ownerRoleId: string = '';
   isRoleLoaded = false;
   constructor(
     private fb: FormBuilder,
-    private http: HttpClient,
     private toast: ToastrService,
     private backend: BackendService,
     private router: Router
@@ -43,6 +41,8 @@ export class CreateUserComponent implements OnInit {
             this.adminRoleId = role._id;
           } else if (role.name === 'superAdmin') {
             this.superAdminRoleId = role._id;
+          } else if (role.name === 'Owner') {
+            this.ownerRoleId = role._id;
           }
         }
         this.isRoleLoaded = true;
@@ -76,7 +76,7 @@ export class CreateUserComponent implements OnInit {
     }
     const payload = { ...this.userForm.value };
     payload.role = [payload.role];
-    this.http.post(CONFIG.createUser, payload).subscribe({
+    this.backend.createUser(payload).subscribe({
       next: (resp: any) => {
         this.toast.success(resp?.message || 'User created successfully');
         this.router.navigateByUrl('/users');

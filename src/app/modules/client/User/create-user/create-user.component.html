@@ -116,6 +116,7 @@
                                             <option value="" disabled>Select Role</option>
                                             <option [value]="adminRoleId">Admin</option>
                                             <option [value]="superAdminRoleId">Super Admin</option>
+                                            <option [value]="ownerRoleId">Owner</option>
                                         </select>
                                         <div *ngIf="userForm.get('role')?.touched && userForm.get('role')?.invalid"
                                             style="font-size: 12px; color: red;">

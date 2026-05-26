@@ -1,12 +1,9 @@
-import { HttpClient } from '@angular/common/http';
 import {
   Component,
   ElementRef,
-  inject,
   OnInit,
   ViewChild,
 } from '@angular/core';
-import { CONFIG } from '../../../../../../config';
 import { CommonModule } from '@angular/common';
 import { DataTableDirective, DataTablesModule } from 'angular-datatables';
 import { Config } from 'datatables.net';
@@ -36,7 +33,6 @@ import { PrescriptionComponent } from '../../prescription/prescription.component
 })
 export class UsersComponent implements OnInit {
   @ViewChild('pdfContent', { static: false }) pdfContent!: ElementRef;
-  http = inject(HttpClient);
   isEditUser: boolean = false;
   @ViewChild(DataTableDirective, { static: false })
   dtDirective!: DataTableDirective;
@@ -76,18 +72,16 @@ export class UsersComponent implements OnInit {
       autoWidth: false,
       processing: true,
       ajax: (dataTablesParameters: any, callback: any) => {
-        this.http
-          .post<any>(CONFIG.getAllUsers, dataTablesParameters)
-          .subscribe({
-            next: (resp) => {
-              this.Users = resp?.data?.data || [];
-              callback({
-                recordsTotal: resp.data.recordsTotal,
-                recordsFiltered: resp.data.recordsFiltered,
-                data: [],
-              });
-            },
-          });
+        this.backend.getAllUsers(dataTablesParameters).subscribe({
+          next: (resp) => {
+            this.Users = resp?.data?.data || [];
+            callback({
+              recordsTotal: resp.data.recordsTotal,
+              recordsFiltered: resp.data.recordsFiltered,
+              data: [],
+            });
+          },
+        });
       },
     };
   }
@@ -122,7 +116,7 @@ export class UsersComponent implements OnInit {
     this.isEditUser = !this.isEditUser;
     this.userForm.patchValue({
       username: user.username,
-      firstName: user.lastName,
+      firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
       mobile: user.mobile,
@@ -133,7 +127,9 @@ export class UsersComponent implements OnInit {
   }
 
   onSubmit() {
-    this.http.put(CONFIG.editUser, this.userForm.value).subscribe({
+    const userId = this.userForm.value.userId;
+
+    this.backend.updateUser(userId, this.userForm.value).subscribe({
       next: (res: any) => {
         this.toast.success(res.message || 'edit user successfully');
         this.isEditUser = false;

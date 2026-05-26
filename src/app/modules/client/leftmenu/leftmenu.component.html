@@ -13,7 +13,7 @@
     </div>
 
     <div class="sidebar-scroll">
-        <div *ngIf="role === 'ADMIN'" class="user-account d-flex">
+        <div *ngIf="canViewAllRoutes" class="user-account d-flex">
             <div class="user_div">
                 <img src="assets/images/user.png" class="user-photo" alt="User Profile Picture">
             </div>
@@ -33,7 +33,7 @@
         </div>
 
         <nav id="left-sidebar-nav" class="sidebar-nav">
-            <ul *ngIf="role === 'ADMIN'" id="main-menu" class="metismenu animation-li-delay">
+            <ul *ngIf="canViewAllRoutes" id="main-menu" class="metismenu animation-li-delay">
                 <li class="header">Hospital</li>
                 <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/']"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
@@ -112,6 +112,10 @@
                     <a [routerLink]="['/our-staff']"><i class="fa fa-users"></i><span>Our Staffs</span></a>
                 </li>
 
+                <li *ngIf="isOwner" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                    <a [routerLink]="['/users']"><i class="fa fa-users"></i><span>Users</span></a>
+                </li>
+
                 <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/contacts']"><i class="fa fa-address-book"></i><span>Contacts</span></a>
                 </li>
@@ -150,7 +154,7 @@
                     </div>
                 </li>
             </ul>
-            <ul *ngIf="role === 'superAdmin'" id="main-menu" class="metismenu animation-li-delay">
+            <ul *ngIf="isSuperAdmin" id="main-menu" class="metismenu animation-li-delay">
                 <li>
                     <a [routerLink]="['/']"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
                 </li>

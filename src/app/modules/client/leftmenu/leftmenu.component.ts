@@ -34,7 +34,23 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   PatientCollapsed = true;
   private router = inject(Router);
   private app = inject(AppComponent);
-  role = localStorage.getItem('role');
+  role = localStorage.getItem('role') || 'ADMIN';
+
+  get isAdmin(): boolean {
+    return this.normalizeRole(this.role) === 'admin';
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.normalizeRole(this.role) === 'superadmin';
+  }
+
+  get isOwner(): boolean {
+    return this.normalizeRole(this.role) === 'owner';
+  }
+
+  get canViewAllRoutes(): boolean {
+    return this.isAdmin || this.isOwner;
+  }
 
   constructor() {
     this.initializeCollapsedStates();
@@ -59,6 +75,10 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     this.PaymentCollapsed = !url.includes('payments');
     this.RoomCollapsed = !url.includes('room-allotment');
     this.PatientCollapsed = !url.includes('patients');
+  }
+
+  private normalizeRole(role: string): string {
+    return role.trim().replace(/[\s_-]/g, '').toLowerCase();
   }
 
   private applyThemeAndStyles(): void {

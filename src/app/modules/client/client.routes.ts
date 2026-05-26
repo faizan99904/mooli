@@ -49,9 +49,13 @@ export const clientRoutes: Routes = [
     children: [
       {
         path: '',
+        pathMatch: 'full',
+        redirectTo: 'dashboard',
+      },
+      {
+        path: 'dashboard',
         component: DashboardComponent,
         data: { title: 'Mooli | Dashboard' },
-        canActivate: [roleGuard(['ADMIN', 'superAdmin'])],
       },
       {
         path: 'app-inbox',
