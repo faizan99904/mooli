@@ -133,7 +133,10 @@ export class HeaderComponent implements OnInit {
 
   logout(): void {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     localStorage.removeItem('role');
+    localStorage.removeItem('roleId');
+    localStorage.removeItem('permissions');
     this.router.navigateByUrl('/login');
   }
 }

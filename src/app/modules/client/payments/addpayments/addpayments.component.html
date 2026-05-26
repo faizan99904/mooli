@@ -1,29 +1,10 @@
-
 <div id="main-content">
     <div class="container-fluid">
-        <!-- Page header section  -->
         <div class="block-header">
             <div class="row clearfix">
                 <div class="col-lg-4 col-md-12 col-sm-12">
-                    <h1>Hi, Welcomeback!</h1>
-                    <span>JustDo Add New Payments,</span>
-                </div>
-                <div class="col-lg-8 col-md-12 col-sm-12 text-lg-right">
-                    <div
-                        class="d-flex align-items-center justify-content-lg-end mt-4 mt-lg-0 flex-wrap vivify pullUp delay-550">
-                        <div class="border-right pr-4 mr-4 mb-2 mb-xl-0 hidden-xs">
-                            <p class="text-muted mb-1">Today's</p>
-                            <h5 class="mb-0">$214</h5>
-                        </div>
-                        <div class="border-right pr-4 mr-4 mb-2 mb-xl-0">
-                            <p class="text-muted mb-1">Week</p>
-                            <h5 class="mb-0">$1206</h5>
-                        </div>
-                        <div class="pr-4 mb-2 mb-xl-0">
-                            <p class="text-muted mb-1">Month</p>
-                            <h5 class="mb-0">$2420</h5>
-                        </div>
-                    </div>
+                    <h1>Add Invoice</h1>
+                    <span>Create hospital bill</span>
                 </div>
             </div>
         </div>
@@ -32,78 +13,80 @@
             <div class="col-sm-12">
                 <div class="card">
                     <div class="body">
-                        <form>
+                        <form [formGroup]="billForm" (ngSubmit)="submitBill()">
                             <div class="form-group row">
-                                <label class="col-sm-2 col-form-label">Patients Information</label>
+                                <label class="col-sm-2 col-form-label">Patient Information</label>
                                 <div class="col-md-6 col-sm-10">
                                     <div class="form-group">
-                                        <input type="number" class="form-control" placeholder="Invoice Number">
+                                        <select class="form-control" formControlName="patientId">
+                                            <option value="">Select patient</option>
+                                            <option *ngFor="let patient of patients" [value]="patient._id">{{ patientName(patient) }}</option>
+                                        </select>
                                     </div>
                                     <div class="form-group">
-                                        <input type="text" class="form-control" placeholder="Patient Name">
+                                        <select class="form-control" formControlName="appointmentId">
+                                            <option value="">Optional appointment</option>
+                                            <option *ngFor="let appointment of appointments" [value]="appointment._id">
+                                                {{ appointment.appointmentNo }} - {{ appointment.appointmentDate | date:'mediumDate' }}
+                                            </option>
+                                        </select>
                                     </div>
-                                    <select class="form-control show-tick">
-                                        <option value="">- Doctor -</option>
-                                        <option>Dr. John Smith</option>
-                                        <option>Dr. Maryam Amiri</option>
-                                        <option>Dr. Hossein Shams </option>
-                                    </select>
                                 </div>
                             </div>
+
+                            <div class="form-group row mt-5">
+                                <label class="col-sm-2 col-form-label">Bill Items</label>
+                                <div class="col-md-8 col-sm-10">
+                                    <div formArrayName="items">
+                                        <div class="row mb-2" *ngFor="let item of items.controls; let i = index" [formGroupName]="i">
+                                            <div class="col-md-5">
+                                                <input class="form-control" placeholder="Description" formControlName="description">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input class="form-control" type="number" placeholder="Qty" formControlName="quantity">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input class="form-control" type="number" placeholder="Unit price" formControlName="unitPrice">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-danger btn-block" (click)="removeItem(i)">Remove</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-default" (click)="addItem()">Add Item</button>
+                                </div>
+                            </div>
+
                             <div class="form-group row mt-5">
                                 <label class="col-sm-2 col-form-label">Payment Information</label>
                                 <div class="col-md-6 col-sm-10">
-                                    <div class="form-group">
-                                        <label>Full name (on the card)</label>
-                                        <div class="input-group">
-                                            <div class="input-group-prepend">
-                                                <span class="input-group-text"><i class="fa fa-user"></i></span>
-                                            </div>
-                                            <input type="text" class="form-control" name="username" placeholder=""
-                                                required="">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>Card number</label>
-                                        <div class="input-group">
-                                            <div class="input-group-prepend">
-                                                <span class="input-group-text"><i class="fa fa-credit-card"></i></span>
-                                            </div>
-                                            <input type="text" class="form-control" name="cardNumber" placeholder="">
-                                        </div>
-                                    </div>
-
                                     <div class="row">
-                                        <div class="col-sm-8">
-                                            <div class="form-group">
-                                                <label><span class="hidden-xs">Expiration</span> </label>
-                                                <div class="form-inline">
-                                                    <select class="form-control" style="width:45%">
-                                                        <option>MM</option>
-                                                        <option>01 - Janiary</option>
-                                                        <option>02 - February</option>
-                                                        <option>03 - February</option>
-                                                    </select>
-                                                    <span style="width:10%; text-align: center"> / </span>
-                                                    <select class="form-control" style="width:45%">
-                                                        <option>YY</option>
-                                                        <option>2018</option>
-                                                        <option>2019</option>
-                                                    </select>
-                                                </div>
-                                            </div>
+                                        <div class="col-md-4 form-group">
+                                            <label>Discount</label>
+                                            <input type="number" class="form-control" formControlName="discount">
                                         </div>
-                                        <div class="col-sm-4">
-                                            <div class="form-group">
-                                                <label data-toggle="tooltip" title=""
-                                                    data-original-title="3 digits code on back side of the card">CVV <i
-                                                        class="fa fa-question-circle"></i></label>
-                                                <input class="form-control" required="" type="text">
-                                            </div>
+                                        <div class="col-md-4 form-group">
+                                            <label>Tax</label>
+                                            <input type="number" class="form-control" formControlName="tax">
+                                        </div>
+                                        <div class="col-md-4 form-group">
+                                            <label>Paid Amount</label>
+                                            <input type="number" class="form-control" formControlName="paidAmount">
                                         </div>
                                     </div>
-                                    <button class="subscribe btn btn-primary btn-block" type="button"> Confirm </button>
+                                    <div class="form-group">
+                                        <label>Payment Method</label>
+                                        <select class="form-control" formControlName="paymentMethod">
+                                            <option *ngFor="let method of paymentMethods" [value]="method">{{ method }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Subtotal:</strong> {{ subtotal() }} |
+                                        <strong>Grand Total:</strong> {{ grandTotal() }}
+                                    </div>
+                                    <button class="subscribe btn btn-primary btn-block" type="submit" [disabled]="saving">
+                                        {{ saving ? 'Saving...' : 'Confirm' }}
+                                    </button>
                                 </div>
                             </div>
                         </form>

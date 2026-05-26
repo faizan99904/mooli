@@ -57,15 +57,12 @@ export class LoginComponent {
       next: (response) => {
         this.loading = false;
 
-        const data = response?.data || response || {};
-        const token = data?.token || data?.accessToken || data?.access_token;
-        const user = data?.user || data?.userDetails || data?.admin;
-        const userRole = user?.role || data?.role;
-        const role =
-          typeof userRole === 'string'
-            ? userRole
-            : userRole?.name || userRole?.roleName;
-        const roleId = user?.roleId || data?.roleId || userRole?._id;
+        const data = response.data;
+        const token = data.token;
+        const user = data.user;
+        const userRole = user?.role;
+        const role = userRole?.name;
+        const roleId = userRole?._id;
         const permissions = userRole?.permissions || [];
 
         if (!token) {
@@ -77,7 +74,7 @@ export class LoginComponent {
         if (user) {
           localStorage.setItem('user', JSON.stringify(user));
         }
-        localStorage.setItem('role', role || 'ADMIN');
+        localStorage.setItem('role', role || '');
         localStorage.setItem('roleId', roleId || '');
         localStorage.setItem('permissions', JSON.stringify(permissions));
 

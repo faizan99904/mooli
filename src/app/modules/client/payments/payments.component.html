@@ -1,29 +1,10 @@
-
 <div id="main-content">
     <div class="container-fluid">
-        <!-- Page header section  -->
         <div class="block-header">
             <div class="row clearfix">
                 <div class="col-lg-4 col-md-12 col-sm-12">
-                    <h1>Hi, Welcomeback!</h1>
-                    <span>JustDo Payments,</span>
-                </div>
-                <div class="col-lg-8 col-md-12 col-sm-12 text-lg-right">
-                    <div
-                        class="d-flex align-items-center justify-content-lg-end mt-4 mt-lg-0 flex-wrap vivify pullUp delay-550">
-                        <div class="border-right pr-4 mr-4 mb-2 mb-xl-0 hidden-xs">
-                            <p class="text-muted mb-1">Today's</p>
-                            <h5 class="mb-0">$214</h5>
-                        </div>
-                        <div class="border-right pr-4 mr-4 mb-2 mb-xl-0">
-                            <p class="text-muted mb-1">Week</p>
-                            <h5 class="mb-0">$1206</h5>
-                        </div>
-                        <div class="pr-4 mb-2 mb-xl-0">
-                            <p class="text-muted mb-1">Month</p>
-                            <h5 class="mb-0">$2420</h5>
-                        </div>
-                    </div>
+                    <h1>Payments</h1>
+                    <span>Recorded payment transactions</span>
                 </div>
             </div>
         </div>
@@ -32,223 +13,67 @@
             <div class="col-sm-12">
                 <div class="card">
                     <div class="body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <select class="form-control" [(ngModel)]="referenceType">
+                                    <option value="">All references</option>
+                                    <option value="sale">Sale</option>
+                                    <option value="purchase">Purchase</option>
+                                    <option value="sales_return">Sales return</option>
+                                    <option value="purchase_return">Purchase return</option>
+                                    <option value="expense">Expense</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-control" [(ngModel)]="method">
+                                    <option value="">All methods</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="card">Card</option>
+                                    <option value="bank">Bank</option>
+                                    <option value="online">Online</option>
+                                    <option value="wallet">Wallet</option>
+                                    <option value="check">Check</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-default btn-block" (click)="page = 1; loadPayments()">Filter</button>
+                            </div>
+                        </div>
+
                         <div class="table-responsive">
-                            <table class="table table-border table-hover js-basic-example dataTable">
+                            <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th>Bill No</th>
-                                        <th>Bill date</th>
-                                        <th>Patient</th>
-                                        <th>Doctor</th>
-                                        <th>Charges</th>
-                                        <th>Tax</th>
-                                        <th>Discount</th>
-                                        <th>Total</th>
+                                        <th>Reference</th>
+                                        <th>Method</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                        <th>Reference No</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td>21</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
+                                    <tr *ngFor="let payment of payments">
+                                        <td>{{ payment.referenceType }}</td>
+                                        <td>{{ payment.method }}</td>
+                                        <td>{{ payment.amount }}</td>
+                                        <td>{{ payment.paymentDate | date:'mediumDate' }}</td>
+                                        <td>{{ payment.referenceNo }}</td>
                                     </tr>
-                                    <tr>
-                                        <td>14</td>
-                                        <td>02/21/2020</td>
-                                        <td>Lori Perkins</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
+                                    <tr *ngIf="!loading && payments.length === 0">
+                                        <td colspan="5" class="text-center text-muted">No payments found</td>
                                     </tr>
-                                    <tr>
-                                        <td>12</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>22</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>11</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Jessica Patterson</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>17</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>16</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>15</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>105</td>
-                                        <td>02/21/2020</td>
-                                        <td>Lori Perkins</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>56</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>34</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Jessica Patterson</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>21</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>17</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>16</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>15</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>14</td>
-                                        <td>02/21/2020</td>
-                                        <td>Lori Perkins</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>12</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>22</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>11</td>
-                                        <td>02/21/2020</td>
-                                        <td>Christina Bing</td>
-                                        <td>Jessica Patterson</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
-                                    </tr>
-                                    <tr>
-                                        <td>105</td>
-                                        <td>02/21/2020</td>
-                                        <td>Lori Perkins</td>
-                                        <td>Juan Freeman</td>
-                                        <td>102</td>
-                                        <td>10</td>
-                                        <td>10%</td>
-                                        <td>210</td>
+                                    <tr *ngIf="loading">
+                                        <td colspan="5" class="text-center text-muted">Loading...</td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button class="btn btn-default" (click)="changePage(page - 1)" [disabled]="page <= 1">Prev</button>
+                            <span>Page {{ page }} of {{ totalPages || 1 }}</span>
+                            <button class="btn btn-default" (click)="changePage(page + 1)"
+                                [disabled]="totalPages > 0 && page >= totalPages">Next</button>
                         </div>
                     </div>
                 </div>

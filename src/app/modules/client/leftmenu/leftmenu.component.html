@@ -113,6 +113,10 @@
                 </li>
 
                 <li *ngIf="isOwner" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                    <a [routerLink]="['/hospitals']"><i class="fa fa-hospital-o"></i><span>Hospitals</span></a>
+                </li>
+
+                <li *ngIf="isOwner" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/users']"><i class="fa fa-users"></i><span>Users</span></a>
                 </li>
 
@@ -157,6 +161,9 @@
             <ul *ngIf="isSuperAdmin" id="main-menu" class="metismenu animation-li-delay">
                 <li>
                     <a [routerLink]="['/']"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
+                </li>
+                <li>
+                    <a [routerLink]="['/hospitals']"><i class="fa fa-hospital-o"></i> <span>Hospitals</span></a>
                 </li>
                 <li>
                     <a [routerLink]="['/users']"><i class="fa fa-dashboard"></i> <span>User</span></a>

@@ -1,103 +1,47 @@
 <div id="main-content" class="wrapper p-t-100 px-4">
-    <div class="title m-t-10">
-        <button [routerLink]="'/create-user'" type="submit" class="btn btn-dark btn-lg btn-block">
+    <div class="title m-t-10 mb-3">
+        <button [routerLink]="'/create-user'" type="button" class="btn btn-dark btn-lg btn-block">
             Add Users
         </button>
     </div>
-    <table datatable [dtOptions]="dtOptions" class="table w-full text-[12px]">
+    <div class="mb-3">
+        <input class="form-control" [(ngModel)]="search" placeholder="Search users">
+    </div>
+    <table class="table w-full text-[12px]">
         <thead class="bg-white">
             <tr>
-                <th class="border px-2 py-1">Username</th>
-                <th class="border px-2 py-1">FirstName</th>
-                <th class="border px-2 py-1">LastName</th>
-                <th class="border px-2 py-1">Mobile</th>
+                <th class="border px-2 py-1">Name</th>
                 <th class="border px-2 py-1">Email</th>
-                <th class="border px-2 py-1">Address</th>
+                <th class="border px-2 py-1">Phone</th>
+                <th class="border px-2 py-1">Role</th>
+                <th class="border px-2 py-1">Status</th>
                 <th class="border px-2 py-1" style="text-align: center;">Actions</th>
             </tr>
         </thead>
 
-        <tbody *ngIf="Users.length > 0">
-            <tr *ngFor="let user of Users">
-                <td class="border px-2 py-1">{{ user.username }}</td>
-                <td class="border px-2 py-1">{{ user.firstName }}</td>
-                <td class="border px-2 py-1">{{ user.lastName }}</td>
-                <td class="border px-2 py-1">{{ user.mobile }}</td>
+        <tbody *ngIf="filteredUsers().length > 0">
+            <tr *ngFor="let user of filteredUsers()">
+                <td class="border px-2 py-1">{{ user.name }}</td>
                 <td class="border px-2 py-1">{{ user.email }}</td>
-                <td class="border px-2 py-1">{{ user.address }}</td>
+                <td class="border px-2 py-1">{{ user.phone || '-' }}</td>
+                <td class="border px-2 py-1">{{ user.role?.name || '-' }}</td>
+                <td class="border px-2 py-1">{{ user.status }}</td>
                 <td class="border px-2 py-1" style="text-align: center;">
                     <i (click)="deleteUser(user._id)" class="text-red fa fa-trash"></i>
-                    <i (click)="editUserModal(user)" class="fa-solid fa-pen m-l"></i>
+                    <i (click)="editUser(user)" class="fa fa-pen m-l"></i>
                 </td>
             </tr>
         </tbody>
 
-        <tbody *ngIf="Users.length === 0">
+        <tbody *ngIf="!loading && filteredUsers().length === 0">
             <tr>
-                <td colspan="7" class="text-center py-2">No matching users found</td>
+                <td colspan="6" class="text-center py-2">No matching users found</td>
+            </tr>
+        </tbody>
+        <tbody *ngIf="loading">
+            <tr>
+                <td colspan="6" class="text-center py-2">Loading...</td>
             </tr>
         </tbody>
     </table>
 </div>
-
-
-<div class="modal" *ngIf="isEditUser" (click)="editUserModal({})">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-        <div class="modal-header" style="border-bottom: 0px !important;">
-            <h2>Edit User Info</h2>
-            <button class="close-btn" (click)="editUserModal({})">&times;</button>
-        </div>
-
-        <form class="modal-form" [formGroup]="userForm" (ngSubmit)="onSubmit()">
-
-
-            <div>
-                <label>Username</label>
-                <input type="text" formControlName="username" />
-            </div>
-
-            <div class="row">
-                <div>
-                    <label>First Name</label>
-                    <input type="text" formControlName="firstName" />
-                </div>
-                <div>
-                    <label>Last Name</label>
-                    <input type="text" formControlName="lastName" />
-                </div>
-            </div>
-
-            <div>
-                <label>Email</label>
-                <input type="email" formControlName="email" />
-            </div>
-
-            <div>
-                <label>Mobile</label>
-                <input type="text" formControlName="mobile" />
-            </div>
-
-            <div>
-                <label>Address</label>
-                <input type="text" formControlName="address" />
-            </div>
-
-            <div class="row">
-                <div>
-                    <label>Status</label>
-                    <select formControlName="status">
-                        <option selected>active</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button (click)="onCancel()" class="cancel-btn" type="button">Cancel</button>
-                <button class="save-btn" type="submit">Save</button>
-            </div>
-        </form>
-
-
-    </div>
-</div>
-
-<app-prescription></app-prescription>

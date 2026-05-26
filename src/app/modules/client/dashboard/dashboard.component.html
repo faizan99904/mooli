@@ -23,7 +23,7 @@
                         <div class="mb-3 mb-xl-0">
                             <p class="text-muted mb-1">Revenue <span id="mini-bar-chart1" class="mini-bar-chart"></span>
                             </p>
-                            <h5 class="mb-0">$56 M</h5>
+                            <h5 class="mb-0">{{ summary.totalRevenue | currency:'USD':'symbol':'1.0-0' }}</h5>
                         </div>
                     </div>
                 </div>
@@ -62,7 +62,7 @@
                                 <div class="card">
                                     <div class="body">
                                         <div>Total Doctors</div>
-                                        <div class="mt-3 h1">1,035</div>
+                                        <div class="mt-3 h1">{{ loading ? '...' : summary.totalDoctors }}</div>
                                         <div class="d-flex">
                                             <div class="mr-3">1.78% <i class="fa fa-caret-down"></i></div>
                                             <span>Last year</span>
@@ -73,8 +73,8 @@
                             <div class="col-lg-3 col-md-6">
                                 <div class="card">
                                     <div class="body">
-                                        <div>Total Pharmacists</div>
-                                        <div class="mt-3 h1">735</div>
+                                        <div>Today Appointments</div>
+                                        <div class="mt-3 h1">{{ loading ? '...' : summary.todayAppointments }}</div>
                                         <div class="d-flex">
                                             <div class="mr-3">6.78% <i class="fa fa-caret-down"></i></div>
                                             <span>Last year</span>
@@ -85,8 +85,8 @@
                             <div class="col-lg-3 col-md-6">
                                 <div class="card">
                                     <div class="body">
-                                        <div>Total Nurses</div>
-                                        <div class="mt-3 h1">2,652</div>
+                                        <div>Pending Appointments</div>
+                                        <div class="mt-3 h1">{{ loading ? '...' : summary.pendingAppointments }}</div>
                                         <div class="d-flex">
                                             <div class="mr-3">13.78% <i class="fa fa-caret-down"></i></div>
                                             <span>Last year</span>
@@ -98,7 +98,7 @@
                                 <div class="card">
                                     <div class="body">
                                         <div>Total Patients</div>
-                                        <div class="mt-3 h1">1,671</div>
+                                        <div class="mt-3 h1">{{ loading ? '...' : summary.totalPatients }}</div>
                                         <div class="d-flex">
                                             <div class="mr-3">5.78% <i class="fa fa-caret-down"></i></div>
                                             <span>Last year</span>
@@ -268,47 +268,15 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>Michelle</td>
-                                    <td>Dental</td>
+                                <tr *ngFor="let appointment of summary.upcomingAppointments">
+                                    <td>{{ doctorName(appointment) }}</td>
+                                    <td>{{ appointment.department?.name || '-' }}</td>
                                     <td>
-                                        <span class="badge badge-success">Available</span>
+                                        <span class="badge badge-success">{{ appointment.status }}</span>
                                     </td>
                                 </tr>
-                                <tr>
-                                    <td>Jason</td>
-                                    <td>Ortho</td>
-                                    <td>
-                                        <span class="badge badge-warning">On Leave</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>David</td>
-                                    <td>Skin</td>
-                                    <td>
-                                        <span class="badge badge-danger">Not Available</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Angelica </td>
-                                    <td>Dental</td>
-                                    <td>
-                                        <span class="badge badge-success">Available</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Michelle</td>
-                                    <td>Dental</td>
-                                    <td>
-                                        <span class="badge badge-success">Available</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Jason</td>
-                                    <td>Ortho</td>
-                                    <td>
-                                        <span class="badge badge-warning">On Leave</span>
-                                    </td>
+                                <tr *ngIf="!loading && summary.upcomingAppointments.length === 0">
+                                    <td colspan="3" class="text-center text-muted">No upcoming appointments</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -325,14 +293,14 @@
                         <app-pie-chart></app-pie-chart>
                         <div class="mt-2">
                             <div class="form-group">
-                                <label class="d-block">Cancelled <span class="float-right">2,098</span></label>
+                                <label class="d-block">Pending <span class="float-right">{{ summary.pendingAppointments }}</span></label>
                                 <div class="progress progress-xs">
                                     <div class="progress-bar" role="progressbar" aria-valuenow="77" aria-valuemin="0"
                                         aria-valuemax="100" style="width: 77%; background-color: #2c83b6;"></div>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="d-block">Completed <span class="float-right">1,002</span></label>
+                                <label class="d-block">Completed <span class="float-right">{{ summary.completedAppointments }}</span></label>
                                 <div class="progress progress-xs">
                                     <div class="progress-bar" role="progressbar" aria-valuenow="50" aria-valuemin="0"
                                         aria-valuemax="100" style="width: 50%; background-color: #a5d8a2;"></div>

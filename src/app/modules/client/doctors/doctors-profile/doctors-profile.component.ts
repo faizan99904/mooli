@@ -1,22 +1,80 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
+import { BackendService } from '../../../../core/services/backend.service';
+import { Appointment, Doctor, Patient } from '../../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-doctors-profile',
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './doctors-profile.component.html',
   styleUrl: './doctors-profile.component.scss'
 })
-export class DoctorsProfileComponent {
+export class DoctorsProfileComponent implements OnInit {
   basicTab: boolean = true;
   accountTab!: boolean;
   generalTab!: boolean;
   isFull!: boolean;
   isFull1!: boolean;
   isFull2!: boolean;
-  constructor() { }
+  loading = false;
+  doctor: Doctor | null = null;
+  patients: Patient[] = [];
+  appointments: Appointment[] = [];
+
+  constructor(
+    private route: ActivatedRoute,
+    private backend: BackendService,
+    private toastr: ToastrService
+  ) { }
 
   ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.loadDoctor(id);
+    }
+  }
+
+  loadDoctor(id: string): void {
+    this.loading = true;
+    this.backend
+      .getDoctor(id)
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: (doctor) => {
+          this.doctor = doctor;
+          this.loadRelated(id);
+        },
+        error: (err) => {
+          this.toastr.error(err?.error?.message || 'Something went wrong');
+        },
+      });
+  }
+
+  loadRelated(id: string): void {
+    this.backend.getDoctorPatients(id, { limit: 100 }).subscribe({
+      next: (result) => {
+        this.patients = result.items;
+      },
+      error: () => {
+        this.patients = [];
+      },
+    });
+
+    this.backend.getDoctorAppointments(id, { limit: 100 }).subscribe({
+      next: (result) => {
+        this.appointments = result.items;
+      },
+      error: () => {
+        this.appointments = [];
+      },
+    });
+  }
+
+  patientName(patient?: Patient | null): string {
+    return patient ? `${patient.firstName} ${patient.lastName}`.trim() : '-';
   }
 
   fullScreenSection(number:any) {

@@ -1,6 +1,26 @@
-// const BASE_URL_API = 'https://hospital-backend-jfr5.onrender.com';
-const BASE_URL_API = 'https://posbackend-faizan99904.fly.dev';
+export const API_BASE_URL = 'https://posbackend-faizan99904.fly.dev/api/v1';
 
 export const CONFIG = {
-  login: BASE_URL_API + '/api/v1/auth/login',
+  auth: {
+    login: API_BASE_URL + '/auth/login',
+    me: API_BASE_URL + '/auth/me',
+  },
+
+  hospitalDashboard: {
+    summary: API_BASE_URL + '/hospital-dashboard/summary',
+  },
+
+  hospitals: API_BASE_URL + '/hospitals',
+  departments: API_BASE_URL + '/departments',
+  doctors: API_BASE_URL + '/doctors',
+  patients: API_BASE_URL + '/patients',
+  patientHistory: API_BASE_URL + '/patient-history',
+  appointments: API_BASE_URL + '/appointments',
+  prescriptions: API_BASE_URL + '/prescriptions',
+  rooms: API_BASE_URL + '/rooms',
+  roomAllotments: API_BASE_URL + '/room-allotments',
+  bills: API_BASE_URL + '/bills',
+  payments: API_BASE_URL + '/payments',
+  users: API_BASE_URL + '/users',
+  roles: API_BASE_URL + '/roles',
 };

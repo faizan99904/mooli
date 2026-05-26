@@ -5,21 +5,30 @@ import {
 import { inject } from '@angular/core';
 
 export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
-  return (route, state) => {
+  return () => {
     const role = localStorage.getItem('role');
+    const permissions = JSON.parse(
+      localStorage.getItem('permissions') || '[]'
+    ) as string[];
     const router = inject(Router);
     const normalizeRole = (value: string) =>
       value.trim().replace(/[\s_-]/g, '').toLowerCase();
     const normalizedRole = role ? normalizeRole(role) : '';
-    const isOwner = normalizedRole === 'owner';
+    const isElevated =
+      normalizedRole === 'owner' ||
+      normalizedRole === 'superadmin' ||
+      permissions.includes('*');
     const hasAllowedRole = allowedRoles.some(
       (allowedRole) => normalizeRole(allowedRole) === normalizedRole
     );
+    const hasAllowedPermission = allowedRoles.some((allowedRole) =>
+      permissions.includes(allowedRole)
+    );
 
-    if (isOwner || hasAllowedRole) {
+    if (isElevated || hasAllowedRole || hasAllowedPermission) {
       return true;
     } else {
-      return router.createUrlTree(['/login']);
+      return router.createUrlTree(['/dashboard']);
     }
   };
 };

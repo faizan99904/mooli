@@ -1,20 +1,206 @@
-import { Component, TemplateRef } from '@angular/core';
-import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
+
+import {
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import { finalize } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
+import { BackendService } from '../../../core/services/backend.service';
+import { Department, Hospital, User } from '../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-department',
-  imports: [],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './department.component.html',
-  styleUrl: './department.component.scss'
+  styleUrl: './department.component.scss',
 })
-export class DepartmentComponent {
-  // modalRef!: BsModalRef;
-  // constructor(private modalService: BsModalService) { }
+export class DepartmentComponent implements OnInit {
+  departments: Department[] = [];
+  departmentForm: FormGroup;
+  hospitals: Hospital[] = [];
+  currentUser: User | null = null;
+  currentHospitalId: string | null = null;
+  isOwnerOrSuperAdmin = false;
+  loading = false;
+  saving = false;
+  search = '';
+  status = '';
+  page = 1;
+  limit = 10;
+  totalPages = 0;
+  editingId: string | null = null;
 
-  // openModal(template: TemplateRef<any>) {
-  //   this.modalRef = this.modalService.show(template);
-  // }
+  constructor(
+    private fb: FormBuilder,
+    private backend: BackendService,
+    private toastr: ToastrService
+  ) {
+    this.departmentForm = this.fb.group({
+      hospitalId: ['', Validators.required],
+      name: ['', Validators.required],
+      description: [''],
+      status: ['active', Validators.required],
+    });
+  }
 
-  // ngOnInit(): void {
-  // }
+  ngOnInit(): void {
+    this.setLoggedInUser();
+    this.loadInitialData();
+  }
+
+  can(permission: string): boolean {
+    return this.backend.hasPermission(permission);
+  }
+
+  loadDepartments(): void {
+    this.loading = true;
+    this.backend
+      .getDepartments({
+        page: this.page,
+        limit: this.limit,
+        search: this.search,
+        status: this.status,
+        hospitalId: this.departmentForm.value.hospitalId || this.currentHospitalId,
+      })
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: (result) => {
+          this.departments = result.items;
+          this.totalPages = result.pagination.totalPages;
+        },
+        error: (err) => {
+          this.departments = [];
+          this.toastr.error(err?.error?.message || 'Something went wrong');
+        },
+      });
+  }
+
+  submitDepartment(): void {
+    if (this.departmentForm.invalid) {
+      this.departmentForm.markAllAsTouched();
+      return;
+    }
+
+    this.saving = true;
+    const value = this.departmentForm.value;
+
+    const payload: Partial<Department> = {
+      hospitalId: value.hospitalId || this.currentHospitalId || '',
+      name: value.name,
+      description: value.description || '',
+      status: value.status,
+    };
+
+    const request$ = this.editingId
+      ? this.backend.updateDepartment(this.editingId, payload)
+      : this.backend.createDepartment(payload);
+
+    request$.pipe(finalize(() => (this.saving = false))).subscribe({
+      next: (response) => {
+        this.toastr.success(response.message);
+        this.resetForm();
+        this.loadDepartments();
+      },
+      error: (err) => {
+        this.toastr.error(err?.error?.message || 'Something went wrong');
+      },
+    });
+  }
+
+  editDepartment(department: Department): void {
+    this.editingId = department._id;
+    this.departmentForm.patchValue({
+      hospitalId: department.hospitalId || this.currentHospitalId || '',
+      name: department.name,
+      description: department.description || '',
+      status: department.status,
+    });
+  }
+
+  deleteDepartment(id: string): void {
+    if (!confirm('Delete this department?')) {
+      return;
+    }
+
+    this.backend.deleteDepartment(id).subscribe({
+      next: (response) => {
+        this.toastr.success(response.message);
+        this.loadDepartments();
+      },
+      error: (err) => {
+        this.toastr.error(err?.error?.message || 'Something went wrong');
+      },
+    });
+  }
+
+  resetForm(): void {
+    this.editingId = null;
+    this.departmentForm.reset({
+      hospitalId: this.currentHospitalId || this.departmentForm.value.hospitalId || '',
+      name: '',
+      description: '',
+      status: 'active',
+    });
+  }
+
+  changePage(nextPage: number): void {
+    if (nextPage < 1 || (this.totalPages && nextPage > this.totalPages)) {
+      return;
+    }
+
+    this.page = nextPage;
+    this.loadDepartments();
+  }
+
+  setLoggedInUser(): void {
+    this.currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
+
+    const role = localStorage.getItem('role') || '';
+    const normalizedRole = role.trim().replace(/[\s_-]/g, '').toLowerCase();
+    const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
+
+    this.isOwnerOrSuperAdmin =
+      normalizedRole === 'owner' ||
+      normalizedRole === 'superadmin' ||
+      permissions.includes('*');
+
+    this.currentHospitalId = this.currentUser?.hospitalId || null;
+
+    if (this.currentHospitalId) {
+      this.departmentForm.patchValue({
+        hospitalId: this.currentHospitalId,
+      });
+    }
+  }
+
+  loadInitialData(): void {
+    if (this.isOwnerOrSuperAdmin) {
+      this.backend.getHospitals().subscribe({
+        next: (result) => {
+          this.hospitals = result.items || [];
+
+          if (!this.currentHospitalId && this.hospitals.length > 0) {
+            this.departmentForm.patchValue({
+              hospitalId: this.hospitals[0]._id,
+            });
+          }
+
+          this.loadDepartments();
+        },
+        error: () => {
+          this.hospitals = [];
+          this.loadDepartments();
+        },
+      });
+
+      return;
+    }
+
+    this.loadDepartments();
+  }
 }

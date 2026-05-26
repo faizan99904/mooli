@@ -40,6 +40,8 @@ import { authGuard } from '../auth/auth.guard';
 import { roleGuard } from '../auth/role.guard';
 import { UsersComponent } from './User/users/users.component';
 import { CreateUserComponent } from './User/create-user/create-user.component';
+import { HospitalsComponent } from './hospitals/hospitals.component'; 
+import { CreateHospitalComponent } from './create-hospital/create-hospital.component';
 
 export const clientRoutes: Routes = [
   {
@@ -134,9 +136,14 @@ export const clientRoutes: Routes = [
         data: { title: 'Mooli | Invoices' },
       },
       {
-        path: 'payments/invoices/invoice-detail',
+        path: 'payments/invoices/invoice-detail/:id',
         component: InvoiceDetailComponent,
         data: { title: 'Mooli | InvoiceDetail' },
+      },
+      {
+        path: 'payments/invoices/invoice-detail',
+        pathMatch: 'full',
+        redirectTo: 'payments/invoices',
       },
 
       {
@@ -185,14 +192,24 @@ export const clientRoutes: Routes = [
         data: { title: 'Mooli | AddPatient' },
       },
       {
-        path: 'patients/patient-profile',
+        path: 'patients/patient-profile/:id',
         component: PatientProfileComponent,
         data: { title: 'Mooli | PatientProfile' },
       },
       {
-        path: 'patients/patient-invoices',
+        path: 'patients/patient-profile',
+        pathMatch: 'full',
+        redirectTo: 'patients/all-patients',
+      },
+      {
+        path: 'patients/patient-invoices/:id',
         component: PatientInvoicesComponent,
         data: { title: 'Mooli | PatientInvoices' },
+      },
+      {
+        path: 'patients/patient-invoices',
+        pathMatch: 'full',
+        redirectTo: 'patients/all-patients',
       },
       {
         path: 'appointments',
@@ -215,9 +232,14 @@ export const clientRoutes: Routes = [
         data: { title: 'Mooli | AddDoctors' },
       },
       {
-        path: 'doctors-profile',
+        path: 'doctors-profile/:id',
         component: DoctorsProfileComponent,
         data: { title: 'Mooli | DoctorsProfile' },
+      },
+      {
+        path: 'doctors-profile',
+        pathMatch: 'full',
+        redirectTo: 'all-doctors',
       },
       {
         path: 'doctors-schedule',
@@ -241,6 +263,18 @@ export const clientRoutes: Routes = [
         component: CreateUserComponent,
         data: { title: 'Mooli | Add Users' },
         canActivate: [roleGuard(['ADMIN', 'superAdmin'])],
+      },
+      {
+        path: 'hospitals',
+        component: HospitalsComponent,
+        data: { title: 'Mooli | Hospitals' },
+        canActivate: [roleGuard(['owner', 'superAdmin', 'hospitals.view'])],
+      },
+      {
+        path: 'create-hospital',
+        component: CreateHospitalComponent,
+        data: { title: 'Mooli | Add Hospital' },
+        canActivate: [roleGuard(['owner', 'superAdmin', 'hospitals.create'])],
       },
     ],
   },

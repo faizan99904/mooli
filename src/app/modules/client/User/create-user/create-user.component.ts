@@ -9,6 +9,7 @@ import { ToastrService } from 'ngx-toastr';
 import { CommonModule } from '@angular/common';
 import { BackendService } from '../../../../core/services/backend.service';
 import { Router } from '@angular/router';
+import { Role, User } from '../../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-create-user',
@@ -17,14 +18,12 @@ import { Router } from '@angular/router';
   styleUrl: './create-user.component.scss',
 })
 export class CreateUserComponent implements OnInit {
-  showPassword: boolean = false;
+  showPassword = false;
   userForm!: FormGroup;
-  roleId: any;
-  roles: any[] = [];
-  adminRoleId: string = '';
-  superAdminRoleId: string = '';
-  ownerRoleId: string = '';
-  isRoleLoaded = false;
+  roles: Role[] = [];
+  saving = false;
+  editingUser: User | null = null;
+
   constructor(
     private fb: FormBuilder,
     private toast: ToastrService,
@@ -33,20 +32,11 @@ export class CreateUserComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.editingUser = history.state?.user || null;
     this.initForm();
-    this.backend.getRole().subscribe({
-      next: (res) => {
-        for (const role of res.data) {
-          if (role.name === 'ADMIN') {
-            this.adminRoleId = role._id;
-          } else if (role.name === 'superAdmin') {
-            this.superAdminRoleId = role._id;
-          } else if (role.name === 'Owner') {
-            this.ownerRoleId = role._id;
-          }
-        }
-        this.isRoleLoaded = true;
-      },
+    this.backend.getRoles().subscribe({
+      next: (roles) => (this.roles = roles),
+      error: () => (this.roles = []),
     });
   }
 
@@ -58,14 +48,13 @@ export class CreateUserComponent implements OnInit {
 
   initForm() {
     this.userForm = this.fb.group({
-      username: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.minLength(6)]],
-      firstName: ['', Validators.required],
-      lastName: ['', Validators.required],
-      mobile: ['', [Validators.required, Validators.pattern('^[0-9]{11}$')]],
-      address: ['', Validators.required],
-      role: ['', Validators.required],
+      roleId: [this.editingUser?.roleId || '', Validators.required],
+      name: [this.editingUser?.name || '', Validators.required],
+      email: [this.editingUser?.email || '', [Validators.required, Validators.email]],
+      password: ['', this.editingUser ? [] : [Validators.required, Validators.minLength(8)]],
+      phone: [this.editingUser?.phone || ''],
+      status: [this.editingUser?.status || 'active', Validators.required],
+      isEmailVerified: [true],
     });
   }
 
@@ -74,15 +63,38 @@ export class CreateUserComponent implements OnInit {
       this.userForm.markAllAsTouched();
       return;
     }
-    const payload = { ...this.userForm.value };
-    payload.role = [payload.role];
-    this.backend.createUser(payload).subscribe({
-      next: (resp: any) => {
-        this.toast.success(resp?.message || 'User created successfully');
+
+    const value = this.userForm.value;
+    const payload: Record<string, unknown> = {
+      roleId: value.roleId,
+      hospitalId: null,
+      name: value.name,
+      email: value.email,
+      phone: value.phone || undefined,
+      status: value.status,
+      isEmailVerified: value.isEmailVerified,
+      storeId: null,
+      warehouseId: null,
+    };
+
+    if (!this.editingUser) {
+      payload['password'] = value.password;
+    }
+
+    this.saving = true;
+    const request$ = this.editingUser
+      ? this.backend.updateUser(this.editingUser._id, payload)
+      : this.backend.createUser(payload);
+
+    request$.subscribe({
+      next: (resp) => {
+        this.saving = false;
+        this.toast.success(resp?.message || 'User saved successfully');
         this.router.navigateByUrl('/users');
       },
       error: (err) => {
-        this.toast.error(err?.message || 'Oops!');
+        this.saving = false;
+        this.toast.error(err?.error?.message || 'Oops!');
       },
     });
   }

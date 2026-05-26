@@ -1,147 +1,79 @@
-import {
-  Component,
-  ElementRef,
-  OnInit,
-  ViewChild,
-} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DataTableDirective, DataTablesModule } from 'angular-datatables';
-import { Config } from 'datatables.net';
+import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { BackendService } from '../../../../core/services/backend.service';
 import { ToastrService } from 'ngx-toastr';
-import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { PrescriptionComponent } from '../../prescription/prescription.component';
+import { BackendService } from '../../../../core/services/backend.service';
+import { User } from '../../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [
-    CommonModule,
-    DataTablesModule,
-    RouterLink,
-    ReactiveFormsModule,
-    PrescriptionComponent,
-  ],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss',
 })
 export class UsersComponent implements OnInit {
-  @ViewChild('pdfContent', { static: false }) pdfContent!: ElementRef;
-  isEditUser: boolean = false;
-  @ViewChild(DataTableDirective, { static: false })
-  dtDirective!: DataTableDirective;
-  userForm!: FormGroup;
+  users: User[] = [];
+  search = '';
+  loading = false;
 
   constructor(
     private backend: BackendService,
     private toast: ToastrService,
-    private router: Router,
-    private fb: FormBuilder
-  ) {
-    this.userForm = this.fb.group({
-      userId: [''],
-      username: ['', [Validators.required, Validators.minLength(3)]],
-      firstName: ['', Validators.required],
-      lastName: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      mobile: ['', [Validators.required]],
-      address: [''],
-      status: ['', Validators.required],
+    private router: Router
+  ) {}
+
+  ngOnInit(): void {
+    this.loadUsers();
+  }
+
+  loadUsers(): void {
+    this.loading = true;
+    this.backend.getUsers().subscribe({
+      next: (users) => {
+        this.users = users;
+        this.loading = false;
+      },
+      error: (err) => {
+        this.loading = false;
+        this.users = [];
+        this.toast.error(err?.error?.message || 'Something went wrong');
+      },
     });
   }
 
-  dtOptions: Config = {};
-  Users: any[] = [];
+  filteredUsers(): User[] {
+    const searchValue = this.search.toLowerCase();
+    if (!searchValue) {
+      return this.users;
+    }
 
-  ngOnInit(): void {
-    this.initializeDataTable();
-  }
-
-  initializeDataTable(): void {
-    this.dtOptions = {
-      pagingType: 'full_numbers',
-      ordering: false,
-      serverSide: true,
-      searching: true,
-      autoWidth: false,
-      processing: true,
-      ajax: (dataTablesParameters: any, callback: any) => {
-        this.backend.getAllUsers(dataTablesParameters).subscribe({
-          next: (resp) => {
-            this.Users = resp?.data?.data || [];
-            callback({
-              recordsTotal: resp.data.recordsTotal,
-              recordsFiltered: resp.data.recordsFiltered,
-              data: [],
-            });
-          },
-        });
-      },
-    };
+    return this.users.filter((user) =>
+      [user.name, user.email, user.phone, user.role?.name, user.status]
+        .join(' ')
+        .toLowerCase()
+        .includes(searchValue)
+    );
   }
 
   deleteUser(id: string) {
+    if (!confirm('Delete this user?')) {
+      return;
+    }
+
     this.backend.deleteUser(id).subscribe({
       next: (resp) => {
-        this.toast.success(resp.message || 'User deleted Successfully!');
-        if (this.dtDirective && this.dtDirective.dtInstance) {
-          this.dtDirective.dtInstance.then((dtInstance: any) => {
-            dtInstance.ajax.reload(null, false);
-          });
-        }
+        this.toast.success(resp.message || 'User deleted successfully');
+        this.loadUsers();
       },
       error: (err) => {
-        this.toast.error(err.message || 'Something went wrong!');
+        this.toast.error(err?.error?.message || 'Something went wrong');
       },
     });
   }
 
-  renderTable() {
-    this.dtDirective.dtInstance.then((dtInstance: any) => {
-      dtInstance.draw();
-    });
-  }
-
-  editUser(user: any) {
+  editUser(user: User) {
     this.router.navigate(['/create-user'], { state: { user } });
-  }
-
-  editUserModal(user: any) {
-    this.isEditUser = !this.isEditUser;
-    this.userForm.patchValue({
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      mobile: user.mobile,
-      address: user.address,
-      status: user.status,
-      userId: user._id,
-    });
-  }
-
-  onSubmit() {
-    const userId = this.userForm.value.userId;
-
-    this.backend.updateUser(userId, this.userForm.value).subscribe({
-      next: (res: any) => {
-        this.toast.success(res.message || 'edit user successfully');
-        this.isEditUser = false;
-        this.renderTable();
-      },
-      error: (error) => {
-        this.toast.error(error.message || 'error');
-      },
-    });
-  }
-
-  onCancel() {
-    this.isEditUser = false;
   }
 }

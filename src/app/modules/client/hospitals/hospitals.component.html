@@ -1,0 +1,81 @@
+<div id="main-content" class="wrapper p-t-100 px-4">
+    <div class="block-header">
+        <div class="row clearfix align-items-center">
+            <div class="col-lg-6 col-md-12 col-sm-12">
+                <h1>Hospitals</h1>
+                <span>Manage hospitals / centers</span>
+            </div>
+
+            <div class="col-lg-6 col-md-12 col-sm-12 text-right">
+                <button [routerLink]="'/create-hospital'" type="button" class="btn btn-primary">
+                    <i class="fa fa-plus"></i>
+                    Add Hospital
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="body">
+            <div class="mb-3">
+                <input class="form-control" [(ngModel)]="search"
+                    placeholder="Search hospital by name, code, city, status..." />
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover table-custom spacing5">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Code</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>City</th>
+                            <th>Status</th>
+                            <th style="text-align: center;">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody *ngIf="!loading && filteredHospitals().length > 0">
+                        <tr *ngFor="let hospital of filteredHospitals()">
+                            <td>
+                                <strong>{{ hospital.name }}</strong>
+                                <div class="text-muted small">{{ hospital.subscriptionPlan || '-' }}</div>
+                            </td>
+                            <td>{{ hospital.code }}</td>
+                            <td>{{ hospital.email || '-' }}</td>
+                            <td>{{ hospital.phone || '-' }}</td>
+                            <td>{{ hospital.city || '-' }}</td>
+                            <td>
+                                <span class="badge" [ngClass]="{
+                    'badge-success': hospital.status === 'active',
+                    'badge-danger': hospital.status === 'inactive'
+                  }">
+                                    {{ hospital.status }}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <i class="fa fa-pencil action-icon" title="Edit" (click)="editHospital(hospital)"></i>
+
+                                <i class="fa fa-trash text-danger action-icon m-l" title="Delete"
+                                    (click)="deleteHospital(hospital._id)"></i>
+                            </td>
+                        </tr>
+                    </tbody>
+
+                    <tbody *ngIf="loading">
+                        <tr>
+                            <td colspan="7" class="text-center py-3">Loading...</td>
+                        </tr>
+                    </tbody>
+
+                    <tbody *ngIf="!loading && filteredHospitals().length === 0">
+                        <tr>
+                            <td colspan="7" class="text-center py-3">No hospitals found</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

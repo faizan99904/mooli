@@ -1,145 +1,104 @@
 <div id="main-content">
     <div class="container-fluid">
-        <!-- Page header section  -->
         <div class="block-header">
             <div class="row clearfix">
                 <div class="col-lg-4 col-md-12 col-sm-12">
-                    <h1>Hi, Welcomeback!</h1>
-                    <span>JustDo Add Patients,</span>
-                </div>
-                <div class="col-lg-8 col-md-12 col-sm-12 text-lg-right">
-                    <div
-                        class="d-flex align-items-center justify-content-lg-end mt-4 mt-lg-0 flex-wrap vivify pullUp delay-550">
-                        <div class="border-right pr-4 mr-4 mb-2 mb-xl-0 hidden-xs">
-                            <p class="text-muted mb-1">Fever</p>
-                            <h5 class="mb-0">214</h5>
-                        </div>
-                        <div class="border-right pr-4 mr-4 mb-2 mb-xl-0">
-                            <p class="text-muted mb-1">Cholera</p>
-                            <h5 class="mb-0">206</h5>
-                        </div>
-                        <div class="pr-4 mb-2 mb-xl-0">
-                            <p class="text-muted mb-1">Malaria</p>
-                            <h5 class="mb-0">420</h5>
-                        </div>
-                    </div>
+                    <h1>Add Patient</h1>
+                    <span>Create patient profile</span>
                 </div>
             </div>
         </div>
 
         <div class="row clearfix">
-            <div class="col-sm-12">
+            <div class="col-lg-12">
                 <div class="card">
+                    <div class="header">
+                        <h2>Patient Information</h2>
+                    </div>
                     <div class="body">
-                        <form>
-                            <div class="form-group row">
-                                <label class="col-md-2 col-sm-4 col-form-label">Basic Information</label>
-                                <div class="col-md-8 col-sm-8">
-                                    <div class="row clearfix">
-                                        <div class="col-md-4 col-sm-12">
-                                            <div class="form-group c_form_group">
-                                                <label>Last Name <span class="text-danger">*</span></label>
-                                                <input class="form-control" type="text" value="">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 col-sm-12">
-                                            <div class="form-group c_form_group">
-                                                <label>Last Name <span class="text-danger">*</span></label>
-                                                <input class="form-control" type="text" value="">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4 col-sm-12">
-                                            <div class="form-group c_form_group">
-                                                <label>Phone No.</label>
-                                                <input class="form-control" type="text" value="">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row clearfix">
-                                        <div class="col-md-3 col-sm-6">
-                                            <div class="form-group c_form_group">
-                                                <label>Select Date <span class="text-danger">*</span></label>
-                                                <input type="text" data-provide="datepicker" data-date-autoclose="true"
-                                                    class="form-control" placeholder="Select Date" bsDatepicker>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 col-sm-6">
-                                            <div class="form-group c_form_group">
-                                                <label>Age <span class="text-danger">*</span></label>
-                                                <input class="form-control" type="text" value=""
-                                                    placeholder="Enter here">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 col-sm-6">
-                                            <div class="form-group c_form_group">
-                                                <label>Gender <span class="text-danger">*</span></label>
-                                                <select class="form-control show-tick">
-                                                    <option value="">- Select -</option>
-                                                    <option value="10">Male</option>
-                                                    <option value="20">Female</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 col-sm-6">
-                                            <div class="form-group c_form_group">
-                                                <label>Enter Your Email <span class="text-danger">*</span></label>
-                                                <input class="form-control" type="text" value=""
-                                                    placeholder="Enter here">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row clearfix">
-                                        <div class="col-lg-12">
-                                            <input type="file" class="dropify">
-                                        </div>
-                                        <div class="col-sm-12">
-                                            <div class="form-group m-t-20">
-                                                <textarea rows="6" class="form-control"
-                                                    placeholder="Description"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
+                        <form [formGroup]="patientForm" (ngSubmit)="submitPatient()">
+                            <div class="row clearfix">
+                                <div class="col-md-4 form-group">
+                                    <label>Assigned Doctor</label>
+                                    <select class="form-control" formControlName="assignedDoctorId">
+                                        <option value="">Select doctor</option>
+                                        <option *ngFor="let doctor of doctors" [value]="doctor.userId">
+                                            {{ doctor.user?.name || doctor.specialization }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>First Name</label>
+                                    <input class="form-control" formControlName="firstName">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Last Name</label>
+                                    <input class="form-control" formControlName="lastName">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Email</label>
+                                    <input class="form-control" formControlName="email">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Phone</label>
+                                    <input class="form-control" formControlName="phone">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Gender</label>
+                                    <select class="form-control" formControlName="gender">
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Date of Birth</label>
+                                    <input class="form-control" type="date" formControlName="dateOfBirth">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Blood Group</label>
+                                    <select class="form-control" formControlName="bloodGroup">
+                                        <option value="">Select blood group</option>
+                                        <option *ngFor="let bloodGroup of bloodGroups" [value]="bloodGroup">{{ bloodGroup }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Status</label>
+                                    <select class="form-control" formControlName="status">
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                        <option value="deceased">Deceased</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-12 form-group">
+                                    <label>Address</label>
+                                    <input class="form-control" formControlName="address">
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label>Emergency Contact Name</label>
+                                    <input class="form-control" formControlName="emergencyContactName">
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label>Emergency Contact Phone</label>
+                                    <input class="form-control" formControlName="emergencyContactPhone">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Allergies</label>
+                                    <input class="form-control" formControlName="allergies" placeholder="Comma separated">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Chronic Diseases</label>
+                                    <input class="form-control" formControlName="chronicDiseases" placeholder="Comma separated">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label>Current Medications</label>
+                                    <input class="form-control" formControlName="currentMedications" placeholder="Comma separated">
                                 </div>
                             </div>
-                            <div class="form-group row mt-5">
-                                <label class="col-md-2 col-sm-4 col-form-label">Registration Information</label>
-                                <div class="col-md-8 col-sm-10">
-                                    <div class="row clearfix">
-                                        <div class="col-sm-6">
-                                            <div class="form-group c_form_group">
-                                                <label>Doctor Name <span class="text-danger">*</span></label>
-                                                <input class="form-control" type="text" value=""
-                                                    placeholder="Enter here">
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <div class="form-group c_form_group">
-                                                <label>Staff on Duty <span class="text-danger">*</span></label>
-                                                <input class="form-control" type="text" value=""
-                                                    placeholder="Enter here">
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <div class="form-group c_form_group">
-                                                <label>Ward No. <span class="text-danger">*</span></label>
-                                                <input class="form-control" type="text" value=""
-                                                    placeholder="Enter here">
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <div class="form-group c_form_group">
-                                                <label>Please choose date <span class="text-danger">*</span></label>
-                                                <input type="text" data-provide="datepicker" data-date-autoclose="true"
-                                                    class="form-control" placeholder="Select" bsDatepicker>
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-12">
-                                            <button type="submit" class="btn btn-primary">Submit</button>
-                                            <button type="submit" class="btn btn-outline-secondary ml-1">Cancel</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+
+                            <button class="btn btn-primary" type="submit" [disabled]="saving">
+                                {{ saving ? 'Saving...' : 'Save Patient' }}
+                            </button>
                         </form>
                     </div>
                 </div>
