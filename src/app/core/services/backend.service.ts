@@ -18,6 +18,7 @@ import {
   Patient,
   PatientHistory,
   Payment,
+  ProductCatalogItem,
   Prescription,
   Role,
   Room,
@@ -366,6 +367,12 @@ export class BackendService {
 
   deletePrescription(id: string): Observable<ApiResponse<Prescription>> {
     return this.delete<Prescription>(`${CONFIG.prescriptions}/${id}`);
+  }
+
+  getProducts(params?: Record<string, unknown>): Observable<ListResult<ProductCatalogItem>> {
+    return this.get<PaginatedResponse<ProductCatalogItem>>(CONFIG.products, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
   }
 
   getRooms(params?: Record<string, unknown>): Observable<ListResult<Room>> {

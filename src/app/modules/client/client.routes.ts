@@ -43,6 +43,9 @@ import { CreateUserComponent } from './User/create-user/create-user.component';
 import { HospitalsComponent } from './hospitals/hospitals.component'; 
 import { CreateHospitalComponent } from './create-hospital/create-hospital.component';
 import { RolesComponent } from './roles/roles.component';
+import { CareRecordsComponent } from './care-records/care-records.component';
+import { PrescriptionComponent } from './prescription/prescription.component';
+import { PharmacyComponent } from './pharmacy/pharmacy.component';
 
 const HOSPITAL_DASHBOARD_ACCESS = ['owner', 'superAdmin', 'hospital_dashboard.read'];
 const DOCTOR_READ_ACCESS = ['owner', 'superAdmin', 'doctors.read'];
@@ -60,6 +63,11 @@ const USER_MANAGE_ACCESS = ['owner', 'superAdmin', 'users.create', 'users.update
 const HOSPITAL_READ_ACCESS = ['owner', 'superAdmin', 'hospitals.read'];
 const HOSPITAL_MANAGE_ACCESS = ['owner', 'superAdmin', 'hospitals.create', 'hospitals.update'];
 const ROLE_READ_ACCESS = ['owner', 'superAdmin', 'roles.read'];
+const HISTORY_ACCESS = ['owner', 'superAdmin', 'patients_history.read', 'patients_history.create'];
+const PRESCRIPTION_ACCESS = ['owner', 'superAdmin', 'prescriptions.read', 'prescriptions.create'];
+const PHARMACY_ACCESS = ['owner', 'superAdmin', 'prescriptions.read', 'products.read'];
+const LABORATORY_ACCESS = ['owner', 'superAdmin', 'patients.read', 'patients_history.read'];
+const WARD_ADMIN_ACCESS = ['owner', 'superAdmin', 'room_allotments.read', 'patients_history.read'];
 
 export const clientRoutes: Routes = [
   {
@@ -248,6 +256,51 @@ export const clientRoutes: Routes = [
         component: AppointmentComponent,
         data: { title: 'Mooli | Appointment' },
         canActivate: [roleGuard(APPOINTMENT_ACCESS)],
+      },
+      {
+        path: 'clinical-records',
+        component: CareRecordsComponent,
+        data: {
+          title: 'Mooli | Clinical Records',
+          pageTitle: 'Clinical Records',
+          pageSubtitle: 'Doctor diagnosis, old notes, and follow-up entries',
+          recordType: 'clinical',
+        },
+        canActivate: [roleGuard(HISTORY_ACCESS)],
+      },
+      {
+        path: 'laboratory',
+        component: CareRecordsComponent,
+        data: {
+          title: 'Mooli | Laboratory',
+          pageTitle: 'Laboratory Records',
+          pageSubtitle: 'CBC, test notes, and patient lab result updates',
+          recordType: 'laboratory',
+        },
+        canActivate: [roleGuard(LABORATORY_ACCESS)],
+      },
+      {
+        path: 'ward-admin',
+        component: CareRecordsComponent,
+        data: {
+          title: 'Mooli | Ward Admin',
+          pageTitle: 'Ward Admin',
+          pageSubtitle: 'Admitted patients, drip notes, and ward treatment updates',
+          recordType: 'ward',
+        },
+        canActivate: [roleGuard(WARD_ADMIN_ACCESS)],
+      },
+      {
+        path: 'prescriptions',
+        component: PrescriptionComponent,
+        data: { title: 'Mooli | Prescriptions' },
+        canActivate: [roleGuard(PRESCRIPTION_ACCESS)],
+      },
+      {
+        path: 'pharmacy',
+        component: PharmacyComponent,
+        data: { title: 'Mooli | Pharmacy' },
+        canActivate: [roleGuard(PHARMACY_ACCESS)],
       },
       {
         path: 'doctors',

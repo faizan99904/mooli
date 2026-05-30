@@ -1,0 +1,102 @@
+<div id="main-content">
+    <div class="container-fluid">
+        <div class="block-header">
+            <div class="row clearfix">
+                <div class="col-lg-6 col-md-12 col-sm-12">
+                    <h1>Pharmacy Queue</h1>
+                    <span>Review doctor prescriptions and match them with POS medicine stock</span>
+                </div>
+                <div class="col-lg-6 col-md-12 col-sm-12 text-lg-right">
+                    <a class="btn btn-default" [routerLink]="['/prescriptions']">Prescriptions</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row clearfix">
+            <div class="col-12">
+                <div class="card">
+                    <div class="body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <select class="form-control" [(ngModel)]="selectedPatientId" (change)="page = 1; loadPrescriptions()">
+                                    <option value="">All patients</option>
+                                    <option *ngFor="let patient of patients" [value]="patient._id">{{ patientName(patient) }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8 text-md-right text-muted small">
+                                <span *ngIf="productsLoading">Refreshing POS medicine catalog...</span>
+                                <span *ngIf="!canViewProducts">This role needs <code>products.read</code> to see matched POS medicines.</span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Doctor</th>
+                                        <th>Medicines</th>
+                                        <th>POS Match</th>
+                                        <th>Follow Up</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let prescription of prescriptions">
+                                        <td>
+                                            <div>{{ patientName(prescription.patient) }}</div>
+                                            <a class="small" [routerLink]="['/patients/patient-profile', prescription.patientId]">Open profile</a>
+                                        </td>
+                                        <td>{{ prescription.doctor?.name || '-' }}</td>
+                                        <td>
+                                            <div *ngFor="let medicine of prescription.medicines" class="mb-2">
+                                                <div class="font-weight-bold">{{ medicine.name }}</div>
+                                                <div class="text-muted small">
+                                                    {{ medicine.dosage || '-' }} | {{ medicine.frequency || '-' }} | {{ medicine.duration || '-' }}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <ng-container *ngIf="canViewProducts; else noProductAccess">
+                                                <div *ngFor="let medicine of prescription.medicines" class="mb-2">
+                                                    <div *ngIf="getMedicineMatches(medicine.name).length; else noMatch">
+                                                        <div *ngFor="let product of getMedicineMatches(medicine.name)" class="small">
+                                                            <strong>{{ product.name }}</strong>
+                                                            <span class="text-muted">({{ product.sku }})</span>
+                                                            <div class="text-muted">
+                                                                Stock: {{ product.availableQuantity || product.stockQuantity || '0' }}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <ng-template #noMatch>
+                                                        <span class="text-muted small">No POS medicine match</span>
+                                                    </ng-template>
+                                                </div>
+                                            </ng-container>
+                                            <ng-template #noProductAccess>
+                                                <span class="text-muted small">Permission required</span>
+                                            </ng-template>
+                                        </td>
+                                        <td>{{ prescription.followUpDate | date:'mediumDate' }}</td>
+                                    </tr>
+                                    <tr *ngIf="!loading && prescriptions.length === 0">
+                                        <td colspan="5" class="text-center text-muted">No prescriptions found</td>
+                                    </tr>
+                                    <tr *ngIf="loading">
+                                        <td colspan="5" class="text-center text-muted">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button class="btn btn-default" (click)="changePage(page - 1)" [disabled]="page <= 1">Prev</button>
+                            <span>Page {{ page }} of {{ totalPages || 1 }}</span>
+                            <button class="btn btn-default" (click)="changePage(page + 1)"
+                                [disabled]="totalPages > 0 && page >= totalPages">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

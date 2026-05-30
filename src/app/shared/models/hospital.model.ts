@@ -94,6 +94,8 @@ export interface PatientHistory {
   doctorId: string;
   doctor?: User | null;
   appointmentId?: string | null;
+  recordType?: 'clinical' | 'laboratory' | 'ward';
+  title?: string | null;
   diagnosis?: string | null;
   symptoms?: string | null;
   notes?: string | null;
@@ -198,6 +200,22 @@ export interface Payment {
   amount: string;
   paymentDate: string;
   referenceNo: string;
+}
+
+export interface ProductCatalogItem {
+  _id: string;
+  name: string;
+  sku: string;
+  barcode?: string | null;
+  brand?: string | null;
+  unit?: string | null;
+  sellingPrice?: string | null;
+  reorderLevel?: string | null;
+  stockQuantity?: string | null;
+  availableQuantity?: string | null;
+  stockScopeCity?: string | null;
+  stockLocationCount?: number;
+  isActive?: boolean;
 }
 
 export interface DashboardSummary {

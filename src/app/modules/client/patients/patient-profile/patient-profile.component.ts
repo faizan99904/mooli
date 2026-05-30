@@ -87,4 +87,18 @@ export class PatientProfileComponent implements OnInit {
       ? `${this.patient.firstName} ${this.patient.lastName}`.trim()
       : '-';
   }
+
+  canOpenClinicalRecords(): boolean {
+    const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
+    return permissions.includes('*') || permissions.includes('patients_history.read');
+  }
+
+  canOpenPrescriptions(): boolean {
+    const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
+    return (
+      permissions.includes('*') ||
+      permissions.includes('prescriptions.read') ||
+      permissions.includes('prescriptions.create')
+    );
+  }
 }

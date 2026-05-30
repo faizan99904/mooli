@@ -81,6 +81,34 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     return this.canViewAllRoutes || this.hasPermission('appointments.read');
   }
 
+  get canViewClinicalRecords(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('patients_history.read');
+  }
+
+  get canManageClinicalRecords(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('patients_history.create') || this.hasPermission('patients_history.update');
+  }
+
+  get canViewPrescriptions(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('prescriptions.read');
+  }
+
+  get canManagePrescriptions(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('prescriptions.create') || this.hasPermission('prescriptions.update');
+  }
+
+  get canViewPharmacy(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('products.read') || this.hasPermission('prescriptions.read');
+  }
+
+  get canViewLaboratory(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('patients_history.read') || this.hasPermission('patients.read');
+  }
+
+  get canViewWardAdmin(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('room_allotments.read') || this.hasPermission('patients_history.read');
+  }
+
   get canViewPatients(): boolean {
     return this.canViewAllRoutes || this.hasPermission('patients.read');
   }

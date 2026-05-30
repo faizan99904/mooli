@@ -8,6 +8,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import html2canvas from 'html2canvas';
@@ -40,9 +41,15 @@ export class PrescriptionComponent implements OnInit {
   limit = 10;
   totalPages = 0;
   selectedPatientId = '';
+  editingId: string | null = null;
+  currentHospitalId: string | null = null;
+  routePatientId = '';
+  routeDoctorId = '';
+  routeAppointmentId = '';
 
   constructor(
     private fb: FormBuilder,
+    private route: ActivatedRoute,
     private backend: BackendService,
     private toastr: ToastrService
   ) {
@@ -57,6 +64,19 @@ export class PrescriptionComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as
+      | { hospitalId?: string | null }
+      | null;
+    this.currentHospitalId = currentUser?.hospitalId || null;
+    this.route.queryParamMap.subscribe((params) => {
+      this.routePatientId = params.get('patientId') || '';
+      this.routeDoctorId = params.get('doctorId') || '';
+      this.routeAppointmentId = params.get('appointmentId') || '';
+      this.selectedPatientId = this.routePatientId;
+      this.applyRouteDefaults();
+      this.page = 1;
+      this.loadPrescriptions();
+    });
     this.loadLookups();
     this.loadPrescriptions();
   }
@@ -129,6 +149,7 @@ export class PrescriptionComponent implements OnInit {
 
     const value = this.prescriptionForm.value;
     const payload: Record<string, unknown> = {
+      hospitalId: this.currentHospitalId || undefined,
       patientId: value.patientId,
       doctorId: value.doctorId,
       appointmentId: value.appointmentId || undefined,
@@ -138,15 +159,15 @@ export class PrescriptionComponent implements OnInit {
     };
 
     this.saving = true;
-    this.backend
-      .createPrescription(payload)
+    const request$ = this.editingId
+      ? this.backend.updatePrescription(this.editingId, payload)
+      : this.backend.createPrescription(payload);
+    request$
       .pipe(finalize(() => (this.saving = false)))
       .subscribe({
         next: (response) => {
           this.toastr.success(response.message);
-          this.prescriptionForm.reset();
-          this.medicines.clear();
-          this.addMedicine();
+          this.resetForm();
           this.loadPrescriptions();
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Something went wrong'),
@@ -178,6 +199,52 @@ export class PrescriptionComponent implements OnInit {
 
     this.page = nextPage;
     this.loadPrescriptions();
+  }
+
+  editPrescription(prescription: Prescription): void {
+    this.editingId = prescription._id;
+    this.prescriptionForm.patchValue({
+      patientId: prescription.patientId,
+      doctorId: prescription.doctorId,
+      appointmentId: prescription.appointmentId || '',
+      advice: prescription.advice || '',
+      followUpDate: prescription.followUpDate ? String(prescription.followUpDate).slice(0, 10) : '',
+    });
+    this.medicines.clear();
+    (prescription.medicines || []).forEach((medicine) => {
+      this.medicines.push(
+        this.fb.group({
+          name: [medicine.name || '', Validators.required],
+          dosage: [medicine.dosage || ''],
+          frequency: [medicine.frequency || ''],
+          duration: [medicine.duration || ''],
+          instructions: [medicine.instructions || ''],
+        })
+      );
+    });
+    if (this.medicines.length === 0) {
+      this.addMedicine();
+    }
+  }
+
+  resetForm(): void {
+    this.editingId = null;
+    this.prescriptionForm.reset();
+    this.medicines.clear();
+    this.addMedicine();
+    this.applyRouteDefaults();
+  }
+
+  private applyRouteDefaults(): void {
+    if (this.editingId) {
+      return;
+    }
+
+    this.prescriptionForm.patchValue({
+      patientId: this.routePatientId,
+      doctorId: this.routeDoctorId,
+      appointmentId: this.routeAppointmentId,
+    });
   }
 
   downloadPDF() {

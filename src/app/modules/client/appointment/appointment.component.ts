@@ -7,6 +7,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
@@ -19,7 +20,7 @@ import {
 
 @Component({
   selector: 'app-appointment',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './appointment.component.html',
   styleUrl: './appointment.component.scss',
 })
@@ -187,6 +188,14 @@ export class AppointmentComponent implements OnInit {
 
   patientName(patient?: Patient | null): string {
     return patient ? `${patient.firstName} ${patient.lastName}`.trim() : '-';
+  }
+
+  canOpenClinicalRecords(): boolean {
+    return this.backend.hasPermission('patients_history.read');
+  }
+
+  canOpenPrescriptions(): boolean {
+    return this.backend.hasPermission('prescriptions.read') || this.backend.hasPermission('prescriptions.create');
   }
 
   changePage(nextPage: number): void {

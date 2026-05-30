@@ -55,6 +55,26 @@
                     <a [routerLink]="['/appointments']"><i class="fa fa-calendar"></i><span>Appointment</span></a>
                 </li>
 
+                <li *ngIf="canViewClinicalRecords || canManageClinicalRecords" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                    <a [routerLink]="['/clinical-records']"><i class="fa fa-stethoscope"></i><span>Clinical Records</span></a>
+                </li>
+
+                <li *ngIf="canViewPrescriptions || canManagePrescriptions" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                    <a [routerLink]="['/prescriptions']"><i class="fa fa-file-text-o"></i><span>Prescriptions</span></a>
+                </li>
+
+                <li *ngIf="canViewPharmacy" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                    <a [routerLink]="['/pharmacy']"><i class="fa fa-medkit"></i><span>Pharmacy</span></a>
+                </li>
+
+                <li *ngIf="canViewLaboratory" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                    <a [routerLink]="['/laboratory']"><i class="fa fa-flask"></i><span>Laboratory</span></a>
+                </li>
+
+                <li *ngIf="canViewWardAdmin" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                    <a [routerLink]="['/ward-admin']"><i class="fa fa-heartbeat"></i><span>Ward Admin</span></a>
+                </li>
+
                 <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/todolist']"><i class="fa fa-th-list"></i> <span>Todo List</span></a>
                 </li>

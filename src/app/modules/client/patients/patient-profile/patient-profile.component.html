@@ -8,6 +8,12 @@
                 </div>
                 <div class="col-lg-8 col-md-12 col-sm-12 text-lg-right">
                     <a class="btn btn-default" [routerLink]="['/patients/all-patients']">Back to Patients</a>
+                    <a class="btn btn-default ml-2" *ngIf="patient && canOpenClinicalRecords()"
+                        [routerLink]="['/clinical-records']"
+                        [queryParams]="{ patientId: patient._id, doctorId: patient.assignedDoctorId }">Clinical Records</a>
+                    <a class="btn btn-default ml-2" *ngIf="patient && canOpenPrescriptions()"
+                        [routerLink]="['/prescriptions']"
+                        [queryParams]="{ patientId: patient._id, doctorId: patient.assignedDoctorId }">Prescriptions</a>
                 </div>
             </div>
         </div>
@@ -55,6 +61,8 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Title</th>
                                     <th>Diagnosis</th>
                                     <th>Notes</th>
                                 </tr>
@@ -62,11 +70,13 @@
                             <tbody>
                                 <tr *ngFor="let item of history">
                                     <td>{{ item.createdAt | date:'mediumDate' }}</td>
+                                    <td>{{ item.recordType || 'clinical' }}</td>
+                                    <td>{{ item.title || '-' }}</td>
                                     <td>{{ item.diagnosis || '-' }}</td>
                                     <td>{{ item.notes || '-' }}</td>
                                 </tr>
                                 <tr *ngIf="history.length === 0">
-                                    <td colspan="3" class="text-center text-muted">No history found</td>
+                                    <td colspan="5" class="text-center text-muted">No history found</td>
                                 </tr>
                             </tbody>
                         </table>

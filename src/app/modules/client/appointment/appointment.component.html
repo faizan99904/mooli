@@ -127,6 +127,16 @@
                                         <td>{{ appointment.appointmentDate | date:'mediumDate' }} {{ appointment.startTime }} - {{ appointment.endTime }}</td>
                                         <td><span class="badge badge-info">{{ appointment.status }}</span></td>
                                         <td class="text-right">
+                                            <a class="btn btn-sm btn-outline-primary mr-1"
+                                                [routerLink]="['/patients/patient-profile', appointment.patientId]">Patient</a>
+                                            <a class="btn btn-sm btn-outline-secondary mr-1"
+                                                *ngIf="canOpenClinicalRecords()"
+                                                [routerLink]="['/clinical-records']"
+                                                [queryParams]="{ patientId: appointment.patientId, doctorId: appointment.doctorId, appointmentId: appointment._id }">History</a>
+                                            <a class="btn btn-sm btn-outline-info mr-1"
+                                                *ngIf="canOpenPrescriptions()"
+                                                [routerLink]="['/prescriptions']"
+                                                [queryParams]="{ patientId: appointment.patientId, doctorId: appointment.doctorId, appointmentId: appointment._id }">Prescription</a>
                                             <button class="btn btn-sm btn-default mr-1" (click)="editAppointment(appointment)">Edit</button>
                                             <button class="btn btn-sm btn-success mr-1" (click)="updateStatus(appointment, 'completed')">Complete</button>
                                             <button class="btn btn-sm btn-danger" (click)="deleteAppointment(appointment._id)">Delete</button>

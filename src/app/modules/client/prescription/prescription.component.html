@@ -12,7 +12,7 @@
         <div class="row clearfix">
             <div class="col-lg-4 col-md-12">
                 <div class="card">
-                    <div class="header"><h2>Add Prescription</h2></div>
+                    <div class="header"><h2>{{ editingId ? 'Edit Prescription' : 'Add Prescription' }}</h2></div>
                     <div class="body">
                         <form [formGroup]="prescriptionForm" (ngSubmit)="submitPrescription()">
                             <div class="form-group">
@@ -77,8 +77,9 @@
                                 <input class="form-control" type="date" formControlName="followUpDate">
                             </div>
                             <button class="btn btn-primary" type="submit" [disabled]="saving">
-                                {{ saving ? 'Saving...' : 'Save Prescription' }}
+                                {{ saving ? 'Saving...' : editingId ? 'Update Prescription' : 'Save Prescription' }}
                             </button>
+                            <button class="btn btn-default ml-2" type="button" *ngIf="editingId" (click)="resetForm()">Cancel</button>
                         </form>
                     </div>
                 </div>
@@ -119,6 +120,7 @@
                                         <td>{{ prescription.medicines.length }}</td>
                                         <td>{{ prescription.followUpDate | date:'mediumDate' }}</td>
                                         <td class="text-right">
+                                            <button class="btn btn-sm btn-default mr-1" (click)="editPrescription(prescription)">Edit</button>
                                             <button class="btn btn-sm btn-danger" (click)="deletePrescription(prescription._id)">Delete</button>
                                         </td>
                                     </tr>

@@ -1,0 +1,197 @@
+<div id="main-content">
+    <div class="container-fluid">
+        <div class="block-header">
+            <div class="row clearfix">
+                <div class="col-lg-6 col-md-12 col-sm-12">
+                    <h1>{{ pageTitle }}</h1>
+                    <span>{{ pageSubtitle }}</span>
+                </div>
+                <div class="col-lg-6 col-md-12 col-sm-12 text-lg-right">
+                    <a class="btn btn-default" [routerLink]="['/patients/all-patients']">Patients</a>
+                    <a class="btn btn-default ml-2" [routerLink]="['/appointments']">Appointments</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row clearfix" *ngIf="recordType === 'ward'">
+            <div class="col-12">
+                <div class="card">
+                    <div class="header">
+                        <h2>Current Admitted Patients</h2>
+                    </div>
+                    <div class="body table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Room</th>
+                                    <th>Admitted At</th>
+                                    <th class="text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let allotment of activeAllotments">
+                                    <td>{{ patientName(allotment.patient) }}</td>
+                                    <td>{{ allotment.room?.roomNo || '-' }}</td>
+                                    <td>{{ allotment.admittedAt | date:'short' }}</td>
+                                    <td class="text-right">
+                                        <a class="btn btn-sm btn-outline-primary"
+                                            [routerLink]="['/patients/patient-profile', allotment.patientId]">Profile</a>
+                                    </td>
+                                </tr>
+                                <tr *ngIf="activeAllotments.length === 0">
+                                    <td colspan="4" class="text-center text-muted">No admitted patients found</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row clearfix">
+            <div class="col-lg-4 col-md-12" *ngIf="canCreate || editingId">
+                <div class="card">
+                    <div class="header">
+                        <h2>{{ editingId ? 'Update Record' : 'Add Record' }}</h2>
+                    </div>
+                    <div class="body">
+                        <form [formGroup]="recordForm" (ngSubmit)="submitRecord()">
+                            <div class="form-group">
+                                <label>Patient</label>
+                                <select class="form-control" formControlName="patientId">
+                                    <option value="">Select patient</option>
+                                    <option *ngFor="let patient of patients" [value]="patient._id">{{ patientName(patient) }}</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Doctor</label>
+                                <select class="form-control" formControlName="doctorId">
+                                    <option value="">Select doctor</option>
+                                    <option *ngFor="let doctor of doctors" [value]="doctor.userId">{{ doctor.user?.name || doctor.specialization }}</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Appointment</label>
+                                <select class="form-control" formControlName="appointmentId">
+                                    <option value="">Optional</option>
+                                    <option *ngFor="let appointment of appointments" [value]="appointment._id">
+                                        {{ appointment.appointmentNo }} - {{ patientName(appointment.patient) }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ titleLabel }}</label>
+                                <input class="form-control" formControlName="title">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ diagnosisLabel }}</label>
+                                <input class="form-control" formControlName="diagnosis">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ symptomsLabel }}</label>
+                                <textarea class="form-control" rows="2" formControlName="symptoms"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ notesLabel }}</label>
+                                <textarea class="form-control" rows="4" formControlName="notes"></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 form-group">
+                                    <label>Blood Pressure</label>
+                                    <input class="form-control" formControlName="bloodPressure">
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label>Temperature</label>
+                                    <input class="form-control" formControlName="temperature">
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label>Pulse</label>
+                                    <input class="form-control" formControlName="pulse">
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label>Weight</label>
+                                    <input class="form-control" formControlName="weight">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Height</label>
+                                <input class="form-control" formControlName="height">
+                            </div>
+                            <button class="btn btn-primary" type="submit" [disabled]="saving">
+                                {{ saving ? 'Saving...' : editingId ? 'Update Record' : 'Save Record' }}
+                            </button>
+                            <button class="btn btn-default ml-2" type="button" *ngIf="editingId" (click)="resetForm()">Cancel</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div [class]="(canCreate || editingId) ? 'col-lg-8 col-md-12' : 'col-12'">
+                <div class="card">
+                    <div class="header">
+                        <h2>Record List</h2>
+                    </div>
+                    <div class="body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <select class="form-control" [(ngModel)]="selectedPatientId" (change)="recordsPage = 1; loadRecords()">
+                                    <option value="">All patients</option>
+                                    <option *ngFor="let patient of patients" [value]="patient._id">{{ patientName(patient) }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 text-md-right">
+                                <a class="btn btn-default" [routerLink]="['/prescriptions']" *ngIf="recordType === 'clinical'">Open Prescriptions</a>
+                                <a class="btn btn-default" [routerLink]="['/pharmacy']" *ngIf="recordType === 'laboratory'">Open Pharmacy</a>
+                                <a class="btn btn-default" [routerLink]="['/room-allotment/alloted-rooms']" *ngIf="recordType === 'ward'">Open Allotments</a>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Doctor</th>
+                                        <th>{{ titleLabel }}</th>
+                                        <th>{{ diagnosisLabel }}</th>
+                                        <th>Date</th>
+                                        <th class="text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let record of records">
+                                        <td>{{ patientName(record.patient) }}</td>
+                                        <td>{{ doctorName(record.doctorId, record.doctor) }}</td>
+                                        <td>{{ record.title || '-' }}</td>
+                                        <td>{{ record.diagnosis || '-' }}</td>
+                                        <td>{{ record.createdAt | date:'mediumDate' }}</td>
+                                        <td class="text-right">
+                                            <a class="btn btn-sm btn-outline-primary mr-1"
+                                                [routerLink]="['/patients/patient-profile', record.patientId]">Profile</a>
+                                            <button class="btn btn-sm btn-default mr-1" *ngIf="canUpdate" (click)="editRecord(record)">Edit</button>
+                                            <button class="btn btn-sm btn-danger" *ngIf="canDelete" (click)="deleteRecord(record)">Delete</button>
+                                        </td>
+                                    </tr>
+                                    <tr *ngIf="!loading && records.length === 0">
+                                        <td colspan="6" class="text-center text-muted">No records found</td>
+                                    </tr>
+                                    <tr *ngIf="loading">
+                                        <td colspan="6" class="text-center text-muted">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button class="btn btn-default" (click)="changePage(recordsPage - 1)" [disabled]="recordsPage <= 1">Prev</button>
+                            <span>Page {{ recordsPage }} of {{ totalPages || 1 }}</span>
+                            <button class="btn btn-default" (click)="changePage(recordsPage + 1)"
+                                [disabled]="totalPages > 0 && recordsPage >= totalPages">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
