@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../../core/services/backend.service';
@@ -26,7 +26,8 @@ export class AllDoctorsComponent implements OnInit {
 
   constructor(
     private backend: BackendService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -86,6 +87,10 @@ export class AllDoctorsComponent implements OnInit {
         this.toastr.error(err?.error?.message || 'Something went wrong');
       },
     });
+  }
+
+  editDoctor(doctor: Doctor): void {
+    this.router.navigate(['/add-doctors'], { state: { doctor } });
   }
 
   changePage(nextPage: number): void {

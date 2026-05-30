@@ -33,82 +33,82 @@
         </div>
 
         <nav id="left-sidebar-nav" class="sidebar-nav">
-            <ul *ngIf="canViewAllRoutes" id="main-menu" class="metismenu animation-li-delay">
+            <ul id="main-menu" class="metismenu animation-li-delay">
                 <li class="header">Hospital</li>
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewDashboard" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/']"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
                 </li>
 
-                <li>
+                <li *ngIf="canViewDoctors || canManageDoctors">
                     <a (click)="isCollapsed = !isCollapsed" [attr.aria-expanded]="!isCollapsed" class="has-arrow">
                         <i class="fa fa-user-md"></i><span>Doctors</span>
                     </a>
                     <ul class="nav-dropdown" *ngIf="!isCollapsed" [@collapseExpand]>
-                        <li><a [routerLink]="['/all-doctors']">All Doctors</a></li>
-                        <li><a [routerLink]="['/add-doctors']">Add Doctors</a></li>
-                        <li><a [routerLink]="['/doctors-profile']">Doctors Profile</a></li>
-                        <li><a [routerLink]="['/doctors-schedule']">Doctors Schedule</a></li>
+                        <li *ngIf="canViewDoctors"><a [routerLink]="['/all-doctors']">All Doctors</a></li>
+                        <li *ngIf="canManageDoctors"><a [routerLink]="['/add-doctors']">Add Doctors</a></li>
+                        <li *ngIf="canViewDoctors"><a [routerLink]="['/doctors-profile']">Doctors Profile</a></li>
+                        <li *ngIf="canViewDoctors"><a [routerLink]="['/doctors-schedule']">Doctors Schedule</a></li>
                     </ul>
                 </li>
 
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewAppointments" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/appointments']"><i class="fa fa-calendar"></i><span>Appointment</span></a>
                 </li>
 
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/todolist']"><i class="fa fa-th-list"></i> <span>Todo List</span></a>
                 </li>
 
-                <li>
+                <li *ngIf="canViewPatients || canManagePatients || canViewBilling">
                     <a (click)="PatientCollapsed = !PatientCollapsed" [attr.aria-expanded]="!PatientCollapsed"
                         class="has-arrow">
                         <i class="fa fa-user-circle-o"></i><span>Patients</span>
                     </a>
                     <ul class="nav-dropdown" *ngIf="!PatientCollapsed" [@collapseExpand]>
-                        <li><a [routerLink]="['/patients/all-patients']">All Patient</a></li>
-                        <li><a [routerLink]="['/patients/add-patient']">Add Patient</a></li>
-                        <li><a [routerLink]="['/patients/patient-profile']">Patient Profile</a></li>
-                        <li><a [routerLink]="['/patients/patient-invoices']">Patient Invoices</a></li>
+                        <li *ngIf="canViewPatients"><a [routerLink]="['/patients/all-patients']">All Patient</a></li>
+                        <li *ngIf="canManagePatients"><a [routerLink]="['/patients/add-patient']">Add Patient</a></li>
+                        <li *ngIf="canViewPatients"><a [routerLink]="['/patients/patient-profile']">Patient Profile</a></li>
+                        <li *ngIf="canViewBilling"><a [routerLink]="['/patients/patient-invoices']">Patient Invoices</a></li>
                     </ul>
                 </li>
 
-                <li>
+                <li *ngIf="canViewRooms || canManageRooms">
                     <a (click)="RoomCollapsed = !RoomCollapsed" [attr.aria-expanded]="!RoomCollapsed" class="has-arrow">
                         <i class="fa fa-thumbs-up"></i><span>Room Allotment</span>
                     </a>
                     <ul class="nav-dropdown" *ngIf="!RoomCollapsed" [@collapseExpand]>
-                        <li><a [routerLink]="['/room-allotment/alloted-rooms']">Alloted Rooms</a></li>
-                        <li><a [routerLink]="['/room-allotment/add-alloted-rooms']">Add Allotment</a></li>
+                        <li *ngIf="canViewRooms"><a [routerLink]="['/room-allotment/alloted-rooms']">Alloted Rooms</a></li>
+                        <li *ngIf="canManageRooms"><a [routerLink]="['/room-allotment/add-alloted-rooms']">Add Allotment</a></li>
                     </ul>
                 </li>
 
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewDepartments" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/departments']"><i class="fa fa-table"></i><span>Departments</span></a>
                 </li>
 
-                <li>
+                <li *ngIf="canViewBilling || canManageBilling">
                     <a (click)="PaymentCollapsed = !PaymentCollapsed" [attr.aria-expanded]="!PaymentCollapsed"
                         class="has-arrow">
                         <i class="fa fa-cc-paypal"></i><span>Payments</span>
                     </a>
                     <ul class="nav-dropdown" *ngIf="!PaymentCollapsed" [@collapseExpand]>
-                        <li><a [routerLink]="['/payments']">Payments</a></li>
-                        <li><a [routerLink]="['/payments/addpayment']">Add Payments</a></li>
-                        <li><a [routerLink]="['/payments/invoices']">Invoice</a></li>
+                        <li *ngIf="canViewBilling"><a [routerLink]="['/payments']">Payments</a></li>
+                        <li *ngIf="canManageBilling"><a [routerLink]="['/payments/addpayment']">Add Payments</a></li>
+                        <li *ngIf="canViewBilling"><a [routerLink]="['/payments/invoices']">Invoice</a></li>
                     </ul>
                 </li>
 
-                <li class="header">Admin</li>
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewHospitalAdministration || canViewAllRoutes" class="header">Admin</li>
+                <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/app-inbox']"><i class="fa fa-envelope"></i><span>Email</span>
                         <span class="badge badge-default mr-0">12</span></a>
                 </li>
 
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/app-chat']"><i class="fa fa-comments"></i><span>Chat</span></a>
                 </li>
 
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/our-staff']"><i class="fa fa-users"></i><span>Our Staffs</span></a>
                 </li>
 
@@ -124,28 +124,28 @@
                     <a [routerLink]="['/roles']"><i class="fa fa-shield"></i><span>Roles</span></a>
                 </li>
 
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/contacts']"><i class="fa fa-address-book"></i><span>Contacts</span></a>
                 </li>
 
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/filemanager']"><i class="fa fa-folder"></i><span>File Manager</span></a>
                 </li>
 
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/our-centers']"><i class="fa fa-map-marker"></i><span>Our Centres</span></a>
                 </li>
 
-                <li class="header">Social</li>
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewAllRoutes" class="header">Social</li>
+                <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/blog']"><i class="fa fa-globe"></i><span>Blog</span></a>
                 </li>
 
-                <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/social']"><i class="fa fa-share-alt-square"></i><span>Social</span></a>
                 </li>
 
-                <li class="extra_widget">
+                <li *ngIf="canViewAllRoutes" class="extra_widget">
                     <div class="form-group">
                         <label class="d-block">Traffic this Month <span class="float-right">77%</span></label>
                         <div class="progress progress-xxs">
@@ -160,20 +160,6 @@
                                 aria-valuemin="0" aria-valuemax="100" style="width: 50%;"></div>
                         </div>
                     </div>
-                </li>
-            </ul>
-            <ul *ngIf="isSuperAdmin" id="main-menu" class="metismenu animation-li-delay">
-                <li>
-                    <a [routerLink]="['/']"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
-                </li>
-                <li>
-                    <a [routerLink]="['/hospitals']"><i class="fa fa-hospital-o"></i> <span>Hospitals</span></a>
-                </li>
-                <li>
-                    <a [routerLink]="['/users']"><i class="fa fa-dashboard"></i> <span>User</span></a>
-                </li>
-                <li>
-                    <a [routerLink]="['/roles']"><i class="fa fa-shield"></i> <span>Roles</span></a>
                 </li>
             </ul>
         </nav>

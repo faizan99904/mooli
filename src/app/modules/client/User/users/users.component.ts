@@ -32,9 +32,9 @@ export class UsersComponent implements OnInit {
 
   loadUsers(): void {
     this.loading = true;
-    this.backend.getUsers().subscribe({
+    this.backend.getUsers({ context: 'hospital' }).subscribe({
       next: (users) => {
-        this.users = users;
+        this.users = users || [];
         this.loading = false;
       },
       error: (err) => {
@@ -80,7 +80,7 @@ export class UsersComponent implements OnInit {
       return;
     }
 
-    this.backend.deleteUser(id).subscribe({
+    this.backend.deleteUser(id, { context: 'hospital' }).subscribe({
       next: (resp) => {
         this.toast.success(resp.message || 'User deleted successfully');
         this.loadUsers();

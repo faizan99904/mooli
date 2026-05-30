@@ -3,8 +3,8 @@
         <div class="block-header">
             <div class="row clearfix">
                 <div class="col-lg-4 col-md-12 col-sm-12">
-                    <h1>Payments</h1>
-                    <span>Recorded payment transactions</span>
+                    <h1>Billing Payments</h1>
+                    <span>Invoice payment activity from hospital bills</span>
                 </div>
             </div>
         </div>
@@ -15,27 +15,14 @@
                     <div class="body">
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <select class="form-control" [(ngModel)]="referenceType">
-                                    <option value="">All references</option>
-                                    <option value="sale">Sale</option>
-                                    <option value="purchase">Purchase</option>
-                                    <option value="sales_return">Sales return</option>
-                                    <option value="purchase_return">Purchase return</option>
-                                    <option value="expense">Expense</option>
+                                <select class="form-control" [(ngModel)]="paymentStatus">
+                                    <option value="">All payment statuses</option>
+                                    <option value="unpaid">Unpaid</option>
+                                    <option value="partial">Partial</option>
+                                    <option value="paid">Paid</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <select class="form-control" [(ngModel)]="method">
-                                    <option value="">All methods</option>
-                                    <option value="cash">Cash</option>
-                                    <option value="card">Card</option>
-                                    <option value="bank">Bank</option>
-                                    <option value="online">Online</option>
-                                    <option value="wallet">Wallet</option>
-                                    <option value="check">Check</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
+                            <div class="col-md-8">
                                 <button class="btn btn-default btn-block" (click)="page = 1; loadPayments()">Filter</button>
                             </div>
                         </div>
@@ -44,26 +31,28 @@
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th>Reference</th>
+                                        <th>Bill No</th>
+                                        <th>Patient</th>
                                         <th>Method</th>
-                                        <th>Amount</th>
-                                        <th>Date</th>
-                                        <th>Reference No</th>
+                                        <th>Paid Amount</th>
+                                        <th>Due Amount</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr *ngFor="let payment of payments">
-                                        <td>{{ payment.referenceType }}</td>
-                                        <td>{{ payment.method }}</td>
-                                        <td>{{ payment.amount }}</td>
-                                        <td>{{ payment.paymentDate | date:'mediumDate' }}</td>
-                                        <td>{{ payment.referenceNo }}</td>
+                                    <tr *ngFor="let bill of bills">
+                                        <td>{{ bill.billNo }}</td>
+                                        <td>{{ patientName(bill) }}</td>
+                                        <td>{{ bill.paymentMethod || '-' }}</td>
+                                        <td>{{ bill.paidAmount }}</td>
+                                        <td>{{ bill.dueAmount }}</td>
+                                        <td>{{ bill.paymentStatus }}</td>
                                     </tr>
-                                    <tr *ngIf="!loading && payments.length === 0">
-                                        <td colspan="5" class="text-center text-muted">No payments found</td>
+                                    <tr *ngIf="!loading && bills.length === 0">
+                                        <td colspan="6" class="text-center text-muted">No billing payments found</td>
                                     </tr>
                                     <tr *ngIf="loading">
-                                        <td colspan="5" class="text-center text-muted">Loading...</td>
+                                        <td colspan="6" class="text-center text-muted">Loading...</td>
                                     </tr>
                                 </tbody>
                             </table>

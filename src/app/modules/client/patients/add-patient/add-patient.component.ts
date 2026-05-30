@@ -10,7 +10,7 @@ import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../../core/services/backend.service';
-import { Doctor } from '../../../../shared/models/hospital.model';
+import { Doctor, Patient, User } from '../../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-add-patient',
@@ -21,6 +21,9 @@ import { Doctor } from '../../../../shared/models/hospital.model';
 export class AddPatientComponent implements OnInit {
   patientForm: FormGroup;
   doctors: Doctor[] = [];
+  editingPatient: Patient | null = null;
+  currentUser: User | null = null;
+  currentHospitalId: string | null = null;
   saving = false;
   bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -50,6 +53,10 @@ export class AddPatientComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.editingPatient = history.state?.patient || null;
+    this.currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
+    this.currentHospitalId = this.currentUser?.hospitalId || null;
+    this.applyEditingState();
     this.backend.getDoctors({ limit: 100, status: 'active' }).subscribe({
       next: (result) => {
         this.doctors = result.items;
@@ -91,9 +98,16 @@ export class AddPatientComponent implements OnInit {
       status: value.status,
     };
 
+    if (!this.editingPatient && this.currentHospitalId) {
+      payload['hospitalId'] = this.currentHospitalId;
+    }
+
     this.saving = true;
-    this.backend
-      .createPatient(payload)
+    const request$ = this.editingPatient
+      ? this.backend.updatePatient(this.editingPatient._id, payload)
+      : this.backend.createPatient(payload);
+
+    request$
       .pipe(finalize(() => (this.saving = false)))
       .subscribe({
         next: (response) => {
@@ -104,5 +118,29 @@ export class AddPatientComponent implements OnInit {
           this.toastr.error(err?.error?.message || 'Something went wrong');
         },
       });
+  }
+
+  private applyEditingState(): void {
+    if (!this.editingPatient) {
+      return;
+    }
+
+    this.patientForm.patchValue({
+      assignedDoctorId: this.editingPatient.assignedDoctorId,
+      firstName: this.editingPatient.firstName,
+      lastName: this.editingPatient.lastName,
+      email: this.editingPatient.email || '',
+      phone: this.editingPatient.phone || '',
+      gender: this.editingPatient.gender,
+      dateOfBirth: this.editingPatient.dateOfBirth ? String(this.editingPatient.dateOfBirth).slice(0, 10) : '',
+      bloodGroup: this.editingPatient.bloodGroup || '',
+      address: this.editingPatient.address || '',
+      emergencyContactName: this.editingPatient.emergencyContactName || '',
+      emergencyContactPhone: this.editingPatient.emergencyContactPhone || '',
+      allergies: (this.editingPatient.allergies || []).join(', '),
+      chronicDiseases: (this.editingPatient.chronicDiseases || []).join(', '),
+      currentMedications: (this.editingPatient.currentMedications || []).join(', '),
+      status: this.editingPatient.status || 'active',
+    });
   }
 }

@@ -121,7 +121,7 @@ export class CreateUserComponent implements OnInit, OnDestroy {
 
     this.saving = true;
     const request$ = this.editingUser
-      ? this.backend.updateUser(this.editingUser._id, payload)
+      ? this.backend.updateUser(this.editingUser._id, payload, { context: 'hospital' })
       : this.backend.createUser(payload);
 
     request$.subscribe({

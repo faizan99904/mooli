@@ -44,6 +44,23 @@ import { HospitalsComponent } from './hospitals/hospitals.component';
 import { CreateHospitalComponent } from './create-hospital/create-hospital.component';
 import { RolesComponent } from './roles/roles.component';
 
+const HOSPITAL_DASHBOARD_ACCESS = ['owner', 'superAdmin', 'hospital_dashboard.read'];
+const DOCTOR_READ_ACCESS = ['owner', 'superAdmin', 'doctors.read'];
+const DOCTOR_MANAGE_ACCESS = ['owner', 'superAdmin', 'doctors.create', 'doctors.update'];
+const APPOINTMENT_ACCESS = ['owner', 'superAdmin', 'appointments.read'];
+const PATIENT_READ_ACCESS = ['owner', 'superAdmin', 'patients.read'];
+const PATIENT_MANAGE_ACCESS = ['owner', 'superAdmin', 'patients.create', 'patients.update'];
+const BILL_READ_ACCESS = ['owner', 'superAdmin', 'bills.read'];
+const BILL_MANAGE_ACCESS = ['owner', 'superAdmin', 'bills.create', 'bills.update_payment'];
+const DEPARTMENT_ACCESS = ['owner', 'superAdmin', 'departments.read'];
+const ROOM_READ_ACCESS = ['owner', 'superAdmin', 'room_allotments.read', 'rooms.read'];
+const ROOM_MANAGE_ACCESS = ['owner', 'superAdmin', 'room_allotments.create', 'room_allotments.update', 'rooms.create', 'rooms.update'];
+const USER_READ_ACCESS = ['owner', 'superAdmin', 'users.read'];
+const USER_MANAGE_ACCESS = ['owner', 'superAdmin', 'users.create', 'users.update'];
+const HOSPITAL_READ_ACCESS = ['owner', 'superAdmin', 'hospitals.read'];
+const HOSPITAL_MANAGE_ACCESS = ['owner', 'superAdmin', 'hospitals.create', 'hospitals.update'];
+const ROLE_READ_ACCESS = ['owner', 'superAdmin', 'roles.read'];
+
 export const clientRoutes: Routes = [
   {
     path: '',
@@ -59,6 +76,7 @@ export const clientRoutes: Routes = [
         path: 'dashboard',
         component: DashboardComponent,
         data: { title: 'Mooli | Dashboard' },
+        canActivate: [roleGuard(HOSPITAL_DASHBOARD_ACCESS)],
       },
       {
         path: 'app-inbox',
@@ -125,21 +143,25 @@ export const clientRoutes: Routes = [
         path: 'payments',
         component: PaymentsComponent,
         data: { title: 'Mooli | Payments' },
+        canActivate: [roleGuard(BILL_READ_ACCESS)],
       },
       {
         path: 'payments/addpayment',
         component: AddpaymentsComponent,
         data: { title: 'Mooli | AddPayments' },
+        canActivate: [roleGuard(BILL_MANAGE_ACCESS)],
       },
       {
         path: 'payments/invoices',
         component: InvoicesComponent,
         data: { title: 'Mooli | Invoices' },
+        canActivate: [roleGuard(BILL_READ_ACCESS)],
       },
       {
         path: 'payments/invoices/invoice-detail/:id',
         component: InvoiceDetailComponent,
         data: { title: 'Mooli | InvoiceDetail' },
+        canActivate: [roleGuard(BILL_READ_ACCESS)],
       },
       {
         path: 'payments/invoices/invoice-detail',
@@ -151,6 +173,7 @@ export const clientRoutes: Routes = [
         path: 'departments',
         component: DepartmentComponent,
         data: { title: 'Mooli | Departments' },
+        canActivate: [roleGuard(DEPARTMENT_ACCESS)],
       },
       {
         path: 'our-centers',
@@ -166,36 +189,43 @@ export const clientRoutes: Routes = [
         path: 'room-allotment',
         component: RoomAllotmentComponent,
         data: { title: 'Mooli | RoomAllotment' },
+        canActivate: [roleGuard(ROOM_READ_ACCESS)],
       },
       {
         path: 'room-allotment/alloted-rooms',
         component: AllotedRoomsComponent,
         data: { title: 'Mooli | AllotedRooms' },
+        canActivate: [roleGuard(ROOM_READ_ACCESS)],
       },
       {
         path: 'room-allotment/add-alloted-rooms',
         component: AddAllotmentComponent,
         data: { title: 'Mooli | Add-Allotment-Rooms' },
+        canActivate: [roleGuard(ROOM_MANAGE_ACCESS)],
       },
       {
         path: 'patients',
         component: PatientsComponent,
         data: { title: 'Mooli | Patients' },
+        canActivate: [roleGuard(PATIENT_READ_ACCESS)],
       },
       {
         path: 'patients/all-patients',
         component: AllPatientsComponent,
         data: { title: 'Mooli | AllPatients' },
+        canActivate: [roleGuard(PATIENT_READ_ACCESS)],
       },
       {
         path: 'patients/add-patient',
         component: AddPatientComponent,
         data: { title: 'Mooli | AddPatient' },
+        canActivate: [roleGuard(PATIENT_MANAGE_ACCESS)],
       },
       {
         path: 'patients/patient-profile/:id',
         component: PatientProfileComponent,
         data: { title: 'Mooli | PatientProfile' },
+        canActivate: [roleGuard(PATIENT_READ_ACCESS)],
       },
       {
         path: 'patients/patient-profile',
@@ -206,6 +236,7 @@ export const clientRoutes: Routes = [
         path: 'patients/patient-invoices/:id',
         component: PatientInvoicesComponent,
         data: { title: 'Mooli | PatientInvoices' },
+        canActivate: [roleGuard(BILL_READ_ACCESS)],
       },
       {
         path: 'patients/patient-invoices',
@@ -216,26 +247,31 @@ export const clientRoutes: Routes = [
         path: 'appointments',
         component: AppointmentComponent,
         data: { title: 'Mooli | Appointment' },
+        canActivate: [roleGuard(APPOINTMENT_ACCESS)],
       },
       {
         path: 'doctors',
         component: DoctorsComponent,
         data: { title: 'Mooli | Doctors' },
+        canActivate: [roleGuard(DOCTOR_READ_ACCESS)],
       },
       {
         path: 'all-doctors',
         component: AllDoctorsComponent,
         data: { title: 'Mooli | AllDoctors' },
+        canActivate: [roleGuard(DOCTOR_READ_ACCESS)],
       },
       {
         path: 'add-doctors',
         component: AddDoctorsComponent,
         data: { title: 'Mooli | AddDoctors' },
+        canActivate: [roleGuard(DOCTOR_MANAGE_ACCESS)],
       },
       {
         path: 'doctors-profile/:id',
         component: DoctorsProfileComponent,
         data: { title: 'Mooli | DoctorsProfile' },
+        canActivate: [roleGuard(DOCTOR_READ_ACCESS)],
       },
       {
         path: 'doctors-profile',
@@ -246,6 +282,7 @@ export const clientRoutes: Routes = [
         path: 'doctors-schedule',
         component: DoctorsScheduleComponent,
         data: { title: 'Mooli | DoctorsSchedule' },
+        canActivate: [roleGuard(DOCTOR_READ_ACCESS)],
       },
       {
         path: 'covid-19',
@@ -257,32 +294,32 @@ export const clientRoutes: Routes = [
         path: 'users',
         component: UsersComponent,
         data: { title: 'Mooli | Users' },
-        canActivate: [roleGuard(['ADMIN', 'superAdmin', 'users.view'])],
+        canActivate: [roleGuard(USER_READ_ACCESS)],
       },
 
       {
         path: 'create-user',
         component: CreateUserComponent,
         data: { title: 'Mooli | Add Users' },
-        canActivate: [roleGuard(['ADMIN', 'superAdmin', 'users.create', 'users.update'])],
+        canActivate: [roleGuard(USER_MANAGE_ACCESS)],
       },
       {
         path: 'hospitals',
         component: HospitalsComponent,
         data: { title: 'Mooli | Hospitals' },
-        canActivate: [roleGuard(['owner', 'superAdmin', 'hospitals.view'])],
+        canActivate: [roleGuard(HOSPITAL_READ_ACCESS)],
       },
       {
         path: 'create-hospital',
         component: CreateHospitalComponent,
         data: { title: 'Mooli | Add Hospital' },
-        canActivate: [roleGuard(['owner', 'superAdmin', 'hospitals.create'])],
+        canActivate: [roleGuard(HOSPITAL_MANAGE_ACCESS)],
       },
       {
         path: 'roles',
         component: RolesComponent,
         data: { title: 'Mooli | Hospital Roles' },
-        canActivate: [roleGuard(['owner', 'superAdmin', 'roles.read'])],
+        canActivate: [roleGuard(ROLE_READ_ACCESS)],
       },
     ],
   },

@@ -65,6 +65,8 @@
                                         <td><span class="badge badge-info">{{ patient.status }}</span></td>
                                         <td class="text-right">
                                             <a class="btn btn-sm btn-default mr-1" [routerLink]="['/patients/patient-profile', patient._id]">View</a>
+                                            <button class="btn btn-sm btn-primary mr-1" *ngIf="can('patients.update')"
+                                                (click)="editPatient(patient)">Edit</button>
                                             <button class="btn btn-sm btn-danger" *ngIf="can('patients.delete')"
                                                 (click)="deletePatient(patient._id)">Delete</button>
                                         </td>

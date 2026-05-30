@@ -3,8 +3,8 @@
         <div class="block-header">
             <div class="row clearfix">
                 <div class="col-lg-4 col-md-12 col-sm-12">
-                    <h1>Add Patient</h1>
-                    <span>Create patient profile</span>
+                    <h1>{{ editingPatient ? 'Edit Patient' : 'Add Patient' }}</h1>
+                    <span>{{ editingPatient ? 'Update patient profile' : 'Create patient profile' }}</span>
                 </div>
             </div>
         </div>
@@ -97,7 +97,7 @@
                             </div>
 
                             <button class="btn btn-primary" type="submit" [disabled]="saving">
-                                {{ saving ? 'Saving...' : 'Save Patient' }}
+                                {{ saving ? 'Saving...' : editingPatient ? 'Update Patient' : 'Save Patient' }}
                             </button>
                         </form>
                     </div>

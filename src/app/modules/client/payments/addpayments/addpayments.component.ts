@@ -23,6 +23,7 @@ export class AddpaymentsComponent implements OnInit {
   billForm: FormGroup;
   patients: Patient[] = [];
   appointments: Appointment[] = [];
+  currentHospitalId: string | null = null;
   saving = false;
   paymentMethods = ['cash', 'card', 'bank', 'online', 'wallet', 'check'];
 
@@ -44,6 +45,8 @@ export class AddpaymentsComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as { hospitalId?: string | null } | null;
+    this.currentHospitalId = currentUser?.hospitalId || null;
     this.backend.getPatients({ limit: 100, status: 'active' }).subscribe({
       next: (result) => (this.patients = result.items),
       error: () => (this.patients = []),
@@ -116,6 +119,10 @@ export class AddpaymentsComponent implements OnInit {
       paidAmount: Number(value.paidAmount || 0),
       paymentMethod: value.paymentMethod || undefined,
     };
+
+    if (this.currentHospitalId) {
+      payload['hospitalId'] = this.currentHospitalId;
+    }
 
     this.saving = true;
     this.backend

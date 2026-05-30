@@ -50,19 +50,71 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewAllRoutes(): boolean {
-    return this.isAdmin || this.isOwner;
+    return this.isAdmin || this.isOwner || this.isSuperAdmin || this.hasWildcardPermission;
   }
 
   get canViewUsers(): boolean {
-    return this.isAdmin || this.isOwner || this.hasPermission('users.view');
+    return this.canViewAllRoutes || this.hasPermission('users.read');
   }
 
   get canViewHospitals(): boolean {
-    return this.isOwner || this.hasPermission('hospitals.view');
+    return this.canViewAllRoutes || this.hasPermission('hospitals.read');
   }
 
   get canViewRoles(): boolean {
-    return this.isOwner || this.isAdmin || this.hasPermission('roles.read');
+    return this.canViewAllRoutes || this.hasPermission('roles.read');
+  }
+
+  get canViewDashboard(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('hospital_dashboard.read');
+  }
+
+  get canViewDoctors(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('doctors.read');
+  }
+
+  get canManageDoctors(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('doctors.create') || this.hasPermission('doctors.update');
+  }
+
+  get canViewAppointments(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('appointments.read');
+  }
+
+  get canViewPatients(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('patients.read');
+  }
+
+  get canManagePatients(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('patients.create') || this.hasPermission('patients.update');
+  }
+
+  get canViewRooms(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('room_allotments.read') || this.hasPermission('rooms.read');
+  }
+
+  get canManageRooms(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('room_allotments.create') || this.hasPermission('room_allotments.update') || this.hasPermission('rooms.create') || this.hasPermission('rooms.update');
+  }
+
+  get canViewDepartments(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('departments.read');
+  }
+
+  get canViewBilling(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('bills.read');
+  }
+
+  get canManageBilling(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('bills.create') || this.hasPermission('bills.update_payment');
+  }
+
+  get canViewHospitalAdministration(): boolean {
+    return this.canViewHospitals || this.canViewUsers || this.canViewRoles;
+  }
+
+  get hasWildcardPermission(): boolean {
+    return this.permissions.includes('*');
   }
 
   constructor() {
@@ -95,7 +147,7 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   private hasPermission(permission: string): boolean {
-    return this.permissions.includes('*') || this.permissions.includes(permission);
+    return this.hasWildcardPermission || this.permissions.includes(permission);
   }
 
   private applyThemeAndStyles(): void {

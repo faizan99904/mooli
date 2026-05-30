@@ -69,6 +69,8 @@
                                         </td>
                                         <td class="text-right">
                                             <a class="btn btn-sm btn-default mr-1" [routerLink]="['/doctors-profile', doctor._id]">View</a>
+                                            <button class="btn btn-sm btn-primary mr-1" *ngIf="can('doctors.update')"
+                                                (click)="editDoctor(doctor)">Edit</button>
                                             <button class="btn btn-sm btn-danger" *ngIf="can('doctors.delete')"
                                                 (click)="deleteDoctor(doctor._id)">Delete</button>
                                         </td>

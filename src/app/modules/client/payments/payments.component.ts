@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
-import { Payment } from '../../../shared/models/hospital.model';
+import { Bill } from '../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-payments',
@@ -13,10 +13,9 @@ import { Payment } from '../../../shared/models/hospital.model';
   styleUrl: './payments.component.scss',
 })
 export class PaymentsComponent implements OnInit {
-  payments: Payment[] = [];
+  bills: Bill[] = [];
   loading = false;
-  method = '';
-  referenceType = '';
+  paymentStatus = '';
   page = 1;
   limit = 10;
   totalPages = 0;
@@ -33,23 +32,26 @@ export class PaymentsComponent implements OnInit {
   loadPayments(): void {
     this.loading = true;
     this.backend
-      .getPayments({
+      .getBills({
         page: this.page,
         limit: this.limit,
-        method: this.method,
-        referenceType: this.referenceType,
+        paymentStatus: this.paymentStatus,
       })
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (result) => {
-          this.payments = result.items;
+          this.bills = result.items;
           this.totalPages = result.pagination.totalPages;
         },
         error: (err) => {
-          this.payments = [];
+          this.bills = [];
           this.toastr.error(err?.error?.message || 'Something went wrong');
         },
       });
+  }
+
+  patientName(bill: Bill): string {
+    return bill.patient ? `${bill.patient.firstName} ${bill.patient.lastName}`.trim() : '-';
   }
 
   changePage(nextPage: number): void {

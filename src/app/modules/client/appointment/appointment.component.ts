@@ -38,6 +38,7 @@ export class AppointmentComponent implements OnInit {
   limit = 10;
   totalPages = 0;
   editingId: string | null = null;
+  currentHospitalId: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -58,6 +59,8 @@ export class AppointmentComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as { hospitalId?: string | null } | null;
+    this.currentHospitalId = currentUser?.hospitalId || null;
     this.loadLookups();
     this.loadAppointments();
   }
@@ -116,6 +119,10 @@ export class AppointmentComponent implements OnInit {
       ...value,
       departmentId: value.departmentId || undefined,
     };
+
+    if (!this.editingId && this.currentHospitalId) {
+      payload['hospitalId'] = this.currentHospitalId;
+    }
 
     this.saving = true;
     const request$ = this.editingId

@@ -3,8 +3,8 @@
         <div class="block-header">
             <div class="row clearfix">
                 <div class="col-lg-4 col-md-12 col-sm-12">
-                    <h1>Add Doctor</h1>
-                    <span>Create hospital doctor profile</span>
+                    <h1>{{ editingDoctor ? 'Edit Doctor' : 'Add Doctor' }}</h1>
+                    <span>{{ editingDoctor ? 'Update hospital doctor profile' : 'Create hospital doctor profile' }}</span>
                 </div>
             </div>
         </div>
@@ -64,6 +64,9 @@
                                     <small class="text-danger"
                                         *ngIf="doctorForm.get('password')?.touched && doctorForm.get('password')?.invalid">
                                         Password minimum 8 characters required
+                                    </small>
+                                    <small class="text-muted" *ngIf="editingDoctor">
+                                        Leave blank while editing to keep the existing password.
                                     </small>
                                 </div>
 
@@ -141,7 +144,7 @@
                             </div>
 
                             <button class="btn btn-primary" type="submit" [disabled]="saving">
-                                {{ saving ? 'Saving...' : 'Save Doctor' }}
+                                {{ saving ? 'Saving...' : editingDoctor ? 'Update Doctor' : 'Save Doctor' }}
                             </button>
                         </form>
                     </div>

@@ -10,7 +10,7 @@ import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../../core/services/backend.service';
-import { Department, Hospital, User } from '../../../../shared/models/hospital.model';
+import { Department, Doctor, Hospital, User } from '../../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-add-doctors',
@@ -20,6 +20,7 @@ import { Department, Hospital, User } from '../../../../shared/models/hospital.m
 })
 export class AddDoctorsComponent implements OnInit {
   doctorForm: FormGroup;
+  editingDoctor: Doctor | null = null;
 
   departments: Department[] = [];
   hospitals: Hospital[] = [];
@@ -58,7 +59,9 @@ export class AddDoctorsComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.editingDoctor = history.state?.doctor || null;
     this.setLoggedInUser();
+    this.applyEditingState();
     this.loadInitialData();
   }
 
@@ -110,7 +113,7 @@ export class AddDoctorsComponent implements OnInit {
   }
 
   loadDepartments(): void {
-    const hospitalId = this.doctorForm.value.hospitalId || this.currentHospitalId;
+    const hospitalId = this.doctorForm.value.hospitalId || this.currentHospitalId || this.editingDoctor?.hospitalId;
 
     this.backend
       .getDepartments({
@@ -154,10 +157,8 @@ export class AddDoctorsComponent implements OnInit {
     const hospitalId = value.hospitalId || this.currentHospitalId;
 
     const payload: Record<string, unknown> = {
-      hospitalId,
       name: value.name,
       email: value.email,
-      password: value.password,
       phone: value.phone || undefined,
       departmentId: value.departmentId || undefined,
       specialization: value.specialization || undefined,
@@ -178,10 +179,18 @@ export class AddDoctorsComponent implements OnInit {
       status: value.status,
     };
 
+    if (!this.editingDoctor) {
+      payload['hospitalId'] = hospitalId;
+      payload['password'] = value.password;
+    }
+
     this.saving = true;
 
-    this.backend
-      .createDoctor(payload)
+    const request$ = this.editingDoctor
+      ? this.backend.updateDoctor(this.editingDoctor._id, payload)
+      : this.backend.createDoctor(payload);
+
+    request$
       .pipe(finalize(() => (this.saving = false)))
       .subscribe({
         next: (response) => {
@@ -192,5 +201,34 @@ export class AddDoctorsComponent implements OnInit {
           this.toastr.error(err?.error?.message || 'Something went wrong');
         },
       });
+  }
+
+  private applyEditingState(): void {
+    if (!this.editingDoctor) {
+      return;
+    }
+
+    this.selectedDays = [...(this.editingDoctor.availableDays || [])];
+    const primarySlot = this.editingDoctor.availableSlots?.[0];
+
+    this.doctorForm.patchValue({
+      hospitalId: this.editingDoctor.hospitalId || this.currentHospitalId || '',
+      name: this.editingDoctor.user?.name || '',
+      email: this.editingDoctor.user?.email || '',
+      password: '',
+      phone: this.editingDoctor.user?.phone || '',
+      departmentId: this.editingDoctor.departmentId || '',
+      specialization: this.editingDoctor.specialization || '',
+      qualification: this.editingDoctor.qualification || '',
+      experienceYears: this.editingDoctor.experienceYears || 0,
+      consultationFee: this.editingDoctor.consultationFee || 0,
+      slotDay: primarySlot?.day || this.editingDoctor.availableDays?.[0] || 'monday',
+      startTime: primarySlot?.startTime || '09:00',
+      endTime: primarySlot?.endTime || '13:00',
+      status: this.editingDoctor.status || 'active',
+    });
+
+    this.doctorForm.get('password')?.clearValidators();
+    this.doctorForm.get('password')?.updateValueAndValidity();
   }
 }

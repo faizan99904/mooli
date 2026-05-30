@@ -474,8 +474,8 @@ export class BackendService {
     return this.delete<Role>(url);
   }
 
-  getUsers(): Observable<User[]> {
-    return this.get<User[]>(CONFIG.users).pipe(map((response) => this.unwrapData(response)));
+  getUsers(params?: Record<string, unknown>): Observable<User[]> {
+    return this.get<User[]>(CONFIG.users, params).pipe(map((response) => this.unwrapData(response)));
   }
 
   getAllUsers(dataTablesParameters?: any): Observable<DataTablesResponse<User>> {
@@ -500,18 +500,24 @@ export class BackendService {
     return this.post<User>(CONFIG.users, payload);
   }
 
-  getUser(id: string): Observable<User> {
-    return this.get<User>(`${CONFIG.users}/${id}`).pipe(
+  getUser(id: string, params?: Record<string, unknown>): Observable<User> {
+    return this.get<User>(`${CONFIG.users}/${id}`, params).pipe(
       map((response) => this.unwrapData(response))
     );
   }
 
-  updateUser(id: string, payload: Record<string, unknown>): Observable<ApiResponse<User>> {
-    return this.patch<User>(`${CONFIG.users}/${id}`, payload);
+  updateUser(
+    id: string,
+    payload: Record<string, unknown>,
+    params?: Record<string, unknown>
+  ): Observable<ApiResponse<User>> {
+    const url = params ? `${CONFIG.users}/${id}?${this.cleanParams(params).toString()}` : `${CONFIG.users}/${id}`;
+    return this.patch<User>(url, payload);
   }
 
-  deleteUser(id: string): Observable<ApiResponse<User>> {
-    return this.delete<User>(`${CONFIG.users}/${id}`);
+  deleteUser(id: string, params?: Record<string, unknown>): Observable<ApiResponse<User>> {
+    const url = params ? `${CONFIG.users}/${id}?${this.cleanParams(params).toString()}` : `${CONFIG.users}/${id}`;
+    return this.delete<User>(url);
   }
 
   getAllNotes(): Observable<{ data: any[] }> {

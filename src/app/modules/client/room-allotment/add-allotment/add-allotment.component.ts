@@ -22,6 +22,7 @@ export class AddAllotmentComponent implements OnInit {
   allotmentForm: FormGroup;
   patients: Patient[] = [];
   rooms: Room[] = [];
+  currentHospitalId: string | null = null;
   saving = false;
 
   constructor(
@@ -39,6 +40,8 @@ export class AddAllotmentComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as { hospitalId?: string | null } | null;
+    this.currentHospitalId = currentUser?.hospitalId || null;
     this.backend.getPatients({ limit: 100, status: 'active' }).subscribe({
       next: (result) => (this.patients = result.items),
       error: () => (this.patients = []),
@@ -66,6 +69,10 @@ export class AddAllotmentComponent implements OnInit {
       admittedAt: value.admittedAt ? new Date(value.admittedAt).toISOString() : undefined,
       notes: value.notes || undefined,
     };
+
+    if (this.currentHospitalId) {
+      payload['hospitalId'] = this.currentHospitalId;
+    }
 
     this.saving = true;
     this.backend
