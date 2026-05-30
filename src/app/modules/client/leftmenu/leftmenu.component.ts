@@ -35,6 +35,7 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private app = inject(AppComponent);
   role = localStorage.getItem('role') || 'ADMIN';
+  permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
 
   get isAdmin(): boolean {
     return this.normalizeRole(this.role) === 'admin';
@@ -50,6 +51,14 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
 
   get canViewAllRoutes(): boolean {
     return this.isAdmin || this.isOwner;
+  }
+
+  get canViewUsers(): boolean {
+    return this.isAdmin || this.isOwner || this.hasPermission('users.view');
+  }
+
+  get canViewHospitals(): boolean {
+    return this.isOwner || this.hasPermission('hospitals.view');
   }
 
   constructor() {
@@ -79,6 +88,10 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
 
   private normalizeRole(role: string): string {
     return role.trim().replace(/[\s_-]/g, '').toLowerCase();
+  }
+
+  private hasPermission(permission: string): boolean {
+    return this.permissions.includes('*') || this.permissions.includes(permission);
   }
 
   private applyThemeAndStyles(): void {

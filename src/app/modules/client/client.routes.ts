@@ -256,13 +256,14 @@ export const clientRoutes: Routes = [
         path: 'users',
         component: UsersComponent,
         data: { title: 'Mooli | Users' },
+        canActivate: [roleGuard(['ADMIN', 'superAdmin', 'users.view'])],
       },
 
       {
         path: 'create-user',
         component: CreateUserComponent,
         data: { title: 'Mooli | Add Users' },
-        canActivate: [roleGuard(['ADMIN', 'superAdmin'])],
+        canActivate: [roleGuard(['ADMIN', 'superAdmin', 'users.create', 'users.update'])],
       },
       {
         path: 'hospitals',

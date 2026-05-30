@@ -15,10 +15,51 @@
                     <div class="body">
                         <form [formGroup]="userForm" (ngSubmit)="submitForm()">
                             <div class="row clearfix">
+                                <div class="col-sm-6" *ngIf="!canSelectHospital">
+                                    <div class="form-group">
+                                        <label>Hospital</label>
+                                        <input class="form-control hospital-readonly" type="text"
+                                            [value]="currentHospitalName || currentHospitalId || 'No hospital assigned'"
+                                            readonly />
+                                        <small class="text-danger" *ngIf="!currentHospitalId">
+                                            Your account must be assigned to a hospital before creating users.
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-6" *ngIf="canSelectHospital">
+                                    <div class="form-group">
+                                        <label>Hospital <span class="text-danger">*</span></label>
+                                        <input class="form-control mb-2" type="search"
+                                            [formControl]="hospitalSearchControl"
+                                            placeholder="Search hospitals by name, code, or city" />
+                                        <select class="form-control" formControlName="hospitalId">
+                                            <option value="">Select Hospital</option>
+                                            <option *ngFor="let hospital of hospitals" [value]="hospital._id">
+                                                {{ hospital.name }}
+                                            </option>
+                                        </select>
+                                        <small class="text-muted form-hint" *ngIf="hospitalsLoading">
+                                            Loading hospitals...
+                                        </small>
+                                        <small class="text-danger form-hint" *ngIf="hospitalsError">
+                                            {{ hospitalsError }}
+                                        </small>
+                                        <small class="text-danger form-hint"
+                                            *ngIf="userForm.get('hospitalId')?.touched && userForm.get('hospitalId')?.invalid">
+                                            Hospital is required
+                                        </small>
+                                    </div>
+                                </div>
+
                                 <div class="col-sm-6">
                                     <div class="form-group">
                                         <label>Name <span class="text-danger">*</span></label>
                                         <input class="form-control" formControlName="name" />
+                                        <small class="text-danger"
+                                            *ngIf="userForm.get('name')?.touched && userForm.get('name')?.invalid">
+                                            Name is required
+                                        </small>
                                     </div>
                                 </div>
 
@@ -26,6 +67,10 @@
                                     <div class="form-group">
                                         <label>Email <span class="text-danger">*</span></label>
                                         <input class="form-control" type="email" formControlName="email" />
+                                        <small class="text-danger"
+                                            *ngIf="userForm.get('email')?.touched && userForm.get('email')?.invalid">
+                                            Valid email is required
+                                        </small>
                                     </div>
                                 </div>
 
@@ -40,6 +85,10 @@
                                                     [ngClass]="{'fa-eye': !showPassword, 'fa-eye-slash': showPassword}"></i>
                                             </div>
                                         </div>
+                                        <small class="text-danger"
+                                            *ngIf="userForm.get('password')?.touched && userForm.get('password')?.invalid">
+                                            Password minimum 8 characters required
+                                        </small>
                                     </div>
                                 </div>
 
@@ -54,9 +103,18 @@
                                     <div class="form-group">
                                         <label>Role <span class="text-danger">*</span></label>
                                         <select class="form-control" formControlName="roleId">
-                                            <option value="" disabled>Select Role</option>
+                                            <option value="" disabled>
+                                                {{ rolesLoading ? 'Loading roles...' : 'Select Role' }}
+                                            </option>
                                             <option *ngFor="let role of roles" [value]="role._id">{{ role.name }}</option>
                                         </select>
+                                        <small class="text-danger form-hint" *ngIf="rolesError">
+                                            {{ rolesError }}
+                                        </small>
+                                        <small class="text-danger form-hint"
+                                            *ngIf="userForm.get('roleId')?.touched && userForm.get('roleId')?.invalid">
+                                            Role is required
+                                        </small>
                                     </div>
                                 </div>
 
@@ -78,7 +136,7 @@
                                 </div>
 
                                 <div class="col-12 mt-3">
-                                    <button [disabled]="userForm.invalid || saving" type="submit"
+                                    <button [disabled]="isSubmitDisabled" type="submit"
                                         class="btn btn-primary">
                                         {{ saving ? 'Saving...' : 'Submit' }}
                                     </button>

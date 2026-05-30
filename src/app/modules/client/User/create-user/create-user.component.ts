@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   FormBuilder,
+  FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
@@ -9,7 +10,8 @@ import { ToastrService } from 'ngx-toastr';
 import { CommonModule } from '@angular/common';
 import { BackendService } from '../../../../core/services/backend.service';
 import { Router } from '@angular/router';
-import { Role, User } from '../../../../shared/models/hospital.model';
+import { debounceTime, distinctUntilChanged, finalize, Subject, takeUntil } from 'rxjs';
+import { Hospital, Role, User } from '../../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-create-user',
@@ -17,12 +19,23 @@ import { Role, User } from '../../../../shared/models/hospital.model';
   templateUrl: './create-user.component.html',
   styleUrl: './create-user.component.scss',
 })
-export class CreateUserComponent implements OnInit {
+export class CreateUserComponent implements OnInit, OnDestroy {
   showPassword = false;
   userForm!: FormGroup;
   roles: Role[] = [];
+  hospitals: Hospital[] = [];
+  hospitalSearchControl = new FormControl('', { nonNullable: true });
+  currentUser: User | null = null;
+  currentHospitalId: string | null = null;
+  currentHospitalName = '';
+  canSelectHospital = false;
+  rolesLoading = false;
+  rolesError = '';
+  hospitalsLoading = false;
+  hospitalsError = '';
   saving = false;
   editingUser: User | null = null;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private fb: FormBuilder,
@@ -33,11 +46,16 @@ export class CreateUserComponent implements OnInit {
 
   ngOnInit(): void {
     this.editingUser = history.state?.user || null;
+    this.setLoggedInUser();
     this.initForm();
-    this.backend.getRoles().subscribe({
-      next: (roles) => (this.roles = roles),
-      error: () => (this.roles = []),
-    });
+    this.validateEditingScope();
+    this.loadRoles();
+    this.loadHospitalContext();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   togglePasswordVisibility(field: 'password') {
@@ -47,7 +65,12 @@ export class CreateUserComponent implements OnInit {
   }
 
   initForm() {
+    const hospitalId = this.canSelectHospital
+      ? this.editingUser?.hospitalId || ''
+      : this.currentHospitalId || '';
+
     this.userForm = this.fb.group({
+      hospitalId: [hospitalId, Validators.required],
       roleId: [this.editingUser?.roleId || '', Validators.required],
       name: [this.editingUser?.name || '', Validators.required],
       email: [this.editingUser?.email || '', [Validators.required, Validators.email]],
@@ -56,6 +79,10 @@ export class CreateUserComponent implements OnInit {
       status: [this.editingUser?.status || 'active', Validators.required],
       isEmailVerified: [true],
     });
+
+    if (!this.canSelectHospital) {
+      this.userForm.get('hospitalId')?.disable({ emitEvent: false });
+    }
   }
 
   submitForm() {
@@ -64,17 +91,28 @@ export class CreateUserComponent implements OnInit {
       return;
     }
 
-    const value = this.userForm.value;
+    const value = this.userForm.getRawValue();
+    const hospitalId = this.getResolvedHospitalId();
+
+    if (!hospitalId) {
+      this.userForm.get('hospitalId')?.markAsTouched();
+      this.toast.error('A hospital is required before saving this user.');
+      return;
+    }
+
+    if (!this.canAssignSelectedRole(String(value.roleId || ''))) {
+      this.toast.error('You cannot assign the selected role.');
+      return;
+    }
+
     const payload: Record<string, unknown> = {
       roleId: value.roleId,
-      hospitalId: null,
+      hospitalId,
       name: value.name,
       email: value.email,
       phone: value.phone || undefined,
       status: value.status,
       isEmailVerified: value.isEmailVerified,
-      storeId: null,
-      warehouseId: null,
     };
 
     if (!this.editingUser) {
@@ -97,5 +135,168 @@ export class CreateUserComponent implements OnInit {
         this.toast.error(err?.error?.message || 'Oops!');
       },
     });
+  }
+
+  get isSubmitDisabled(): boolean {
+    return (
+      !this.userForm ||
+      this.userForm.invalid ||
+      this.saving ||
+      this.rolesLoading ||
+      (this.canSelectHospital && this.hospitalsLoading) ||
+      !this.getResolvedHospitalId()
+    );
+  }
+
+  private setLoggedInUser(): void {
+    this.currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
+
+    const role = localStorage.getItem('role') || this.currentUser?.role?.name || '';
+    const normalizedRole = this.normalizeRole(role);
+    const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
+
+    this.canSelectHospital =
+      normalizedRole === 'owner' ||
+      normalizedRole === 'superadmin' ||
+      permissions.includes('*');
+
+    this.currentHospitalId = this.currentUser?.hospitalId || null;
+    this.currentHospitalName = this.currentUser?.hospital?.name || '';
+  }
+
+  private validateEditingScope(): void {
+    if (
+      this.editingUser?.hospitalId &&
+      this.currentHospitalId &&
+      !this.canSelectHospital &&
+      this.editingUser.hospitalId !== this.currentHospitalId
+    ) {
+      this.toast.error('You cannot edit a user from another hospital.');
+      this.router.navigateByUrl('/users');
+    }
+  }
+
+  private loadRoles(): void {
+    this.rolesLoading = true;
+    this.rolesError = '';
+
+    this.backend
+      .getRoles()
+      .pipe(finalize(() => (this.rolesLoading = false)))
+      .subscribe({
+        next: (roles) => {
+          this.roles = this.filterAssignableRoles(roles || []);
+
+          if (
+            this.userForm.value.roleId &&
+            !this.canAssignSelectedRole(String(this.userForm.value.roleId))
+          ) {
+            this.userForm.patchValue({ roleId: '' });
+          }
+        },
+        error: (err) => {
+          this.roles = [];
+          this.rolesError = err?.error?.message || 'Unable to load roles.';
+        },
+      });
+  }
+
+  private loadHospitalContext(): void {
+    if (this.canSelectHospital) {
+      this.loadHospitals();
+      this.hospitalSearchControl.valueChanges
+        .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+        .subscribe((search) => this.loadHospitals(search));
+      return;
+    }
+
+    if (!this.currentHospitalId) {
+      this.hospitalsError = 'Your account is not assigned to a hospital.';
+      return;
+    }
+
+    if (this.currentHospitalName) {
+      return;
+    }
+
+    this.backend.getHospital(this.currentHospitalId).subscribe({
+      next: (hospital) => (this.currentHospitalName = hospital.name),
+      error: () => (this.currentHospitalName = 'Assigned hospital'),
+    });
+  }
+
+  private loadHospitals(search = ''): void {
+    this.hospitalsLoading = true;
+    this.hospitalsError = '';
+
+    this.backend
+      .getHospitals({
+        limit: 50,
+        search,
+      })
+      .pipe(finalize(() => (this.hospitalsLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.hospitals = result.items || [];
+          this.includeSelectedHospitalIfMissing();
+        },
+        error: (err) => {
+          this.hospitals = [];
+          this.hospitalsError = err?.error?.message || 'Unable to load hospitals.';
+        },
+      });
+  }
+
+  private includeSelectedHospitalIfMissing(): void {
+    const selectedHospitalId = String(this.userForm.get('hospitalId')?.value || '');
+
+    if (
+      !selectedHospitalId ||
+      this.hospitals.some((hospital) => hospital._id === selectedHospitalId)
+    ) {
+      return;
+    }
+
+    this.backend.getHospital(selectedHospitalId).subscribe({
+      next: (hospital) => (this.hospitals = [hospital, ...this.hospitals]),
+    });
+  }
+
+  private filterAssignableRoles(roles: Role[]): Role[] {
+    const activeRoles = roles.filter((role) => role.isActive !== false);
+
+    if (this.canSelectHospital) {
+      return activeRoles;
+    }
+
+    return activeRoles.filter((role) => !this.isElevatedRole(role));
+  }
+
+  private canAssignSelectedRole(roleId: string): boolean {
+    return this.roles.some((role) => role._id === roleId);
+  }
+
+  private isElevatedRole(role: Role): boolean {
+    const roleName = this.normalizeRole(role.name);
+
+    return (
+      roleName === 'owner' ||
+      roleName === 'superadmin' ||
+      Boolean(role.permissions?.includes('*'))
+    );
+  }
+
+  private getResolvedHospitalId(): string {
+    const formHospitalId = String(this.userForm?.getRawValue()?.hospitalId || '');
+
+    if (this.canSelectHospital) {
+      return formHospitalId;
+    }
+
+    return this.currentHospitalId || formHospitalId;
+  }
+
+  private normalizeRole(role: string): string {
+    return role.trim().replace(/[\s_-]/g, '').toLowerCase();
   }
 }

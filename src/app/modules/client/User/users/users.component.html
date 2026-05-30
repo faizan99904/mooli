@@ -1,6 +1,6 @@
 <div id="main-content" class="wrapper p-t-100 px-4">
     <div class="title m-t-10 mb-3">
-        <button [routerLink]="'/create-user'" type="button" class="btn btn-dark btn-lg btn-block">
+        <button *ngIf="canCreateUser()" [routerLink]="'/create-user'" type="button" class="btn btn-dark btn-lg btn-block">
             Add Users
         </button>
     </div>
@@ -13,6 +13,7 @@
                 <th class="border px-2 py-1">Name</th>
                 <th class="border px-2 py-1">Email</th>
                 <th class="border px-2 py-1">Phone</th>
+                <th class="border px-2 py-1" *ngIf="canViewHospitalColumn">Hospital</th>
                 <th class="border px-2 py-1">Role</th>
                 <th class="border px-2 py-1">Status</th>
                 <th class="border px-2 py-1" style="text-align: center;">Actions</th>
@@ -24,23 +25,25 @@
                 <td class="border px-2 py-1">{{ user.name }}</td>
                 <td class="border px-2 py-1">{{ user.email }}</td>
                 <td class="border px-2 py-1">{{ user.phone || '-' }}</td>
+                <td class="border px-2 py-1" *ngIf="canViewHospitalColumn">{{ user.hospital?.name || user.hospitalId || '-' }}</td>
                 <td class="border px-2 py-1">{{ user.role?.name || '-' }}</td>
                 <td class="border px-2 py-1">{{ user.status }}</td>
                 <td class="border px-2 py-1" style="text-align: center;">
-                    <i (click)="deleteUser(user._id)" class="text-red fa fa-trash"></i>
-                    <i (click)="editUser(user)" class="fa fa-pen m-l"></i>
+                    <i *ngIf="canDeleteUser()" (click)="deleteUser(user._id)" class="text-red fa fa-trash"></i>
+                    <i *ngIf="canUpdateUser()" (click)="editUser(user)" class="fa fa-pen m-l"></i>
+                    <span *ngIf="!canDeleteUser() && !canUpdateUser()">-</span>
                 </td>
             </tr>
         </tbody>
 
         <tbody *ngIf="!loading && filteredUsers().length === 0">
             <tr>
-                <td colspan="6" class="text-center py-2">No matching users found</td>
+                <td [attr.colspan]="canViewHospitalColumn ? 7 : 6" class="text-center py-2">No matching users found</td>
             </tr>
         </tbody>
         <tbody *ngIf="loading">
             <tr>
-                <td colspan="6" class="text-center py-2">Loading...</td>
+                <td [attr.colspan]="canViewHospitalColumn ? 7 : 6" class="text-center py-2">Loading...</td>
             </tr>
         </tbody>
     </table>

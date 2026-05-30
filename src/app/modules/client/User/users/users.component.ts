@@ -17,6 +17,8 @@ export class UsersComponent implements OnInit {
   users: User[] = [];
   search = '';
   loading = false;
+  role = localStorage.getItem('role') || '';
+  permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
 
   constructor(
     private backend: BackendService,
@@ -50,11 +52,27 @@ export class UsersComponent implements OnInit {
     }
 
     return this.users.filter((user) =>
-      [user.name, user.email, user.phone, user.role?.name, user.status]
+      [user.name, user.email, user.phone, user.role?.name, user.hospital?.name, user.status]
         .join(' ')
         .toLowerCase()
         .includes(searchValue)
     );
+  }
+
+  get canViewHospitalColumn(): boolean {
+    return this.isElevated();
+  }
+
+  canCreateUser(): boolean {
+    return this.isElevated() || this.isHospitalAdmin() || this.hasPermission('users.create');
+  }
+
+  canUpdateUser(): boolean {
+    return this.isElevated() || this.isHospitalAdmin() || this.hasPermission('users.update');
+  }
+
+  canDeleteUser(): boolean {
+    return this.isElevated() || this.hasPermission('users.delete');
   }
 
   deleteUser(id: string) {
@@ -75,5 +93,27 @@ export class UsersComponent implements OnInit {
 
   editUser(user: User) {
     this.router.navigate(['/create-user'], { state: { user } });
+  }
+
+  private hasPermission(permission: string): boolean {
+    return this.permissions.includes('*') || this.permissions.includes(permission);
+  }
+
+  private isElevated(): boolean {
+    const normalizedRole = this.normalizeRole(this.role);
+
+    return (
+      normalizedRole === 'owner' ||
+      normalizedRole === 'superadmin' ||
+      this.permissions.includes('*')
+    );
+  }
+
+  private isHospitalAdmin(): boolean {
+    return this.normalizeRole(this.role) === 'admin';
+  }
+
+  private normalizeRole(role: string): string {
+    return role.trim().replace(/[\s_-]/g, '').toLowerCase();
   }
 }

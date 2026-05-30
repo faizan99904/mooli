@@ -27,3 +27,13 @@
   right: 10px;
   z-index: 999;
 }
+
+.hospital-readonly {
+  background-color: #f8f9fa;
+  cursor: default;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 0.25rem;
+}

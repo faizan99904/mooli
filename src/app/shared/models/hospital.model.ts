@@ -16,6 +16,7 @@ export interface User {
   _id: string;
   companyId?: string;
   hospitalId?: string | null;
+  hospital?: Hospital | null;
   roleId?: string;
   name: string;
   email: string;
