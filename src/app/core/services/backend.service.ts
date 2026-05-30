@@ -448,8 +448,8 @@ export class BackendService {
     return this.post<Payment>(CONFIG.payments, payload);
   }
 
-  getRoles(): Observable<Role[]> {
-    return this.get<Role[]>(CONFIG.roles).pipe(map((response) => this.unwrapData(response)));
+  getRoles(params?: Record<string, unknown>): Observable<Role[]> {
+    return this.get<Role[]>(CONFIG.roles, params).pipe(map((response) => this.unwrapData(response)));
   }
 
   getRole(): Observable<{ data: Role[] }> {
@@ -460,12 +460,18 @@ export class BackendService {
     return this.post<Role>(CONFIG.roles, payload);
   }
 
-  updateRole(id: string, payload: Record<string, unknown>): Observable<ApiResponse<Role>> {
-    return this.patch<Role>(`${CONFIG.roles}/${id}`, payload);
+  updateRole(
+    id: string,
+    payload: Record<string, unknown>,
+    params?: Record<string, unknown>
+  ): Observable<ApiResponse<Role>> {
+    const url = params ? `${CONFIG.roles}/${id}?${this.cleanParams(params).toString()}` : `${CONFIG.roles}/${id}`;
+    return this.patch<Role>(url, payload);
   }
 
-  deleteRole(id: string): Observable<ApiResponse<Role>> {
-    return this.delete<Role>(`${CONFIG.roles}/${id}`);
+  deleteRole(id: string, params?: Record<string, unknown>): Observable<ApiResponse<Role>> {
+    const url = params ? `${CONFIG.roles}/${id}?${this.cleanParams(params).toString()}` : `${CONFIG.roles}/${id}`;
+    return this.delete<Role>(url);
   }
 
   getUsers(): Observable<User[]> {

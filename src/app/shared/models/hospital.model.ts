@@ -5,6 +5,7 @@ export type Status = 'active' | 'inactive';
 export interface Role {
   _id: string;
   companyId?: string | null;
+  context?: 'pos' | 'hospital';
   name: string;
   description?: string;
   permissions: string[];

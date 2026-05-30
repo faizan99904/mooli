@@ -42,6 +42,7 @@ import { UsersComponent } from './User/users/users.component';
 import { CreateUserComponent } from './User/create-user/create-user.component';
 import { HospitalsComponent } from './hospitals/hospitals.component'; 
 import { CreateHospitalComponent } from './create-hospital/create-hospital.component';
+import { RolesComponent } from './roles/roles.component';
 
 export const clientRoutes: Routes = [
   {
@@ -276,6 +277,12 @@ export const clientRoutes: Routes = [
         component: CreateHospitalComponent,
         data: { title: 'Mooli | Add Hospital' },
         canActivate: [roleGuard(['owner', 'superAdmin', 'hospitals.create'])],
+      },
+      {
+        path: 'roles',
+        component: RolesComponent,
+        data: { title: 'Mooli | Hospital Roles' },
+        canActivate: [roleGuard(['owner', 'superAdmin', 'roles.read'])],
       },
     ],
   },

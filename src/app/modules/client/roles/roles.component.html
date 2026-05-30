@@ -1,0 +1,137 @@
+<div id="main-content">
+  <div class="container-fluid">
+    <div class="block-header">
+      <div class="row clearfix">
+        <div class="col-lg-8 col-md-12 col-sm-12">
+          <h1>Hospital Roles</h1>
+          <span>Manage hospital-only permissions without mixing them into the POS role set.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row clearfix">
+      <div class="col-lg-5 col-md-12" *ngIf="can('roles.create') || can('roles.update') || editingRoleId">
+        <div class="card role-editor-card">
+          <div class="header">
+            <h2>{{ editingRoleId ? 'Edit Hospital Role' : 'Create Hospital Role' }}</h2>
+          </div>
+          <div class="body">
+            <form [formGroup]="roleForm" (ngSubmit)="submitRole()">
+              <div class="form-group">
+                <label>Role Name</label>
+                <input class="form-control" formControlName="name" placeholder="Reception Manager" />
+                <small class="text-danger" *ngIf="roleForm.get('name')?.touched && roleForm.get('name')?.invalid">
+                  Enter at least 2 characters.
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label>Description</label>
+                <textarea
+                  class="form-control"
+                  rows="3"
+                  formControlName="description"
+                  placeholder="Access profile for front desk operations"
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Status</label>
+                <select class="form-control" formControlName="isActive">
+                  <option [ngValue]="true">Active</option>
+                  <option [ngValue]="false">Inactive</option>
+                </select>
+              </div>
+
+              <div class="permission-groups">
+                <div class="permission-group" *ngFor="let group of permissionGroups">
+                  <div class="permission-group__header">
+                    <h6>{{ group.title }}</h6>
+                  </div>
+                  <label class="permission-option" *ngFor="let permission of group.permissions">
+                    <input
+                      type="checkbox"
+                      [checked]="hasPermissionSelected(permission.key)"
+                      (change)="togglePermission(permission.key, $event)"
+                    />
+                    <span>{{ permission.label }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="editor-actions">
+                <button class="btn btn-primary" type="submit" [disabled]="saving">
+                  {{ saving ? 'Saving...' : editingRoleId ? 'Update Role' : 'Create Role' }}
+                </button>
+                <button class="btn btn-default ml-2" type="button" (click)="resetForm()" *ngIf="editingRoleId">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-7 col-md-12">
+        <div class="card role-list-card">
+          <div class="header">
+            <h2>Hospital Role Library</h2>
+          </div>
+          <div class="body">
+            <div class="row mb-3">
+              <div class="col-md-8">
+                <input
+                  class="form-control"
+                  [(ngModel)]="search"
+                  placeholder="Search roles by name, description, or permission"
+                  (keyup.enter)="loadRoles()"
+                />
+              </div>
+              <div class="col-md-4">
+                <select class="form-control" [(ngModel)]="status" (change)="loadRoles()">
+                  <option value="">All statuses</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="role-pill-grid" *ngIf="!loading && visibleRoles().length">
+              <article class="role-pill-card" *ngFor="let role of visibleRoles()">
+                <div class="role-pill-card__top">
+                  <div>
+                    <h5>{{ role.name }}</h5>
+                    <p>{{ role.description || 'No description provided.' }}</p>
+                  </div>
+                  <span class="badge" [ngClass]="role.isActive !== false ? 'badge-success' : 'badge-warning'">
+                    {{ role.isActive !== false ? 'active' : 'inactive' }}
+                  </span>
+                </div>
+
+                <div class="role-pill-card__permissions">
+                  <span class="permission-chip" *ngFor="let permission of role.permissions">
+                    {{ permission }}
+                  </span>
+                </div>
+
+                <div class="role-pill-card__actions">
+                  <button class="btn btn-sm btn-default mr-1" *ngIf="can('roles.update')" (click)="editRole(role)">
+                    Edit
+                  </button>
+                  <button class="btn btn-sm btn-danger" *ngIf="can('roles.delete')" (click)="deleteRole(role)">
+                    Delete
+                  </button>
+                </div>
+              </article>
+            </div>
+
+            <div class="text-center text-muted py-5" *ngIf="loading">Loading hospital roles...</div>
+            <div class="text-center text-muted py-5" *ngIf="!loading && !visibleRoles().length">
+              No hospital roles found.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

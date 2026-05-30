@@ -181,7 +181,7 @@ export class CreateUserComponent implements OnInit, OnDestroy {
     this.rolesError = '';
 
     this.backend
-      .getRoles()
+      .getRoles({ context: 'hospital' })
       .pipe(finalize(() => (this.rolesLoading = false)))
       .subscribe({
         next: (roles) => {

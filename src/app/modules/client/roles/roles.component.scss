@@ -1,0 +1,104 @@
+.role-editor-card,
+.role-list-card {
+  min-height: 100%;
+}
+
+.permission-groups {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.permission-group {
+  border: 1px solid #e6eef5;
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.permission-group__header h6 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #3a4a63;
+}
+
+.permission-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #42526b;
+}
+
+.permission-option:last-child {
+  margin-bottom: 0;
+}
+
+.permission-option input {
+  accent-color: #29b6a8;
+}
+
+.editor-actions {
+  margin-top: 22px;
+}
+
+.role-pill-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.role-pill-card {
+  border: 1px solid #e6eef5;
+  border-radius: 18px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(41, 182, 168, 0.12), transparent 32%),
+    linear-gradient(180deg, #ffffff 0%, #f9fcff 100%);
+  box-shadow: 0 18px 38px rgba(30, 53, 87, 0.06);
+}
+
+.role-pill-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.role-pill-card__top h5 {
+  margin: 0;
+  font-weight: 800;
+  color: #1b2a41;
+}
+
+.role-pill-card__top p {
+  margin: 6px 0 0;
+  color: #6a7a92;
+  font-size: 13px;
+}
+
+.role-pill-card__permissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.permission-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #edf7f6;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.role-pill-card__actions {
+  margin-top: 16px;
+}

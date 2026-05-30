@@ -61,6 +61,10 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     return this.isOwner || this.hasPermission('hospitals.view');
   }
 
+  get canViewRoles(): boolean {
+    return this.isOwner || this.isAdmin || this.hasPermission('roles.read');
+  }
+
   constructor() {
     this.initializeCollapsedStates();
   }
