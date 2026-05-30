@@ -43,6 +43,8 @@ export class PrescriptionComponent implements OnInit {
   selectedPatientId = '';
   editingId: string | null = null;
   currentHospitalId: string | null = null;
+  currentUserId: string | null = null;
+  currentRole = '';
   routePatientId = '';
   routeDoctorId = '';
   routeAppointmentId = '';
@@ -65,9 +67,11 @@ export class PrescriptionComponent implements OnInit {
 
   ngOnInit(): void {
     const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as
-      | { hospitalId?: string | null }
+      | { _id?: string; hospitalId?: string | null; role?: { name?: string | null } | null }
       | null;
     this.currentHospitalId = currentUser?.hospitalId || null;
+    this.currentUserId = currentUser?._id || null;
+    this.currentRole = String(localStorage.getItem('role') || currentUser?.role?.name || '');
     this.route.queryParamMap.subscribe((params) => {
       this.routePatientId = params.get('patientId') || '';
       this.routeDoctorId = params.get('doctorId') || '';
@@ -107,14 +111,22 @@ export class PrescriptionComponent implements OnInit {
 
   loadLookups(): void {
     this.backend.getPatients({ limit: 100, status: 'active' }).subscribe({
-      next: (result) => (this.patients = result.items),
+      next: (result) => {
+        this.patients = result.items;
+        this.ensureDoctorPatientScope();
+      },
       error: () => (this.patients = []),
     });
     this.backend.getDoctors({ limit: 100, status: 'active' }).subscribe({
       next: (result) => (this.doctors = result.items),
       error: () => (this.doctors = []),
     });
-    this.backend.getAppointments({ limit: 100 }).subscribe({
+    this.backend
+      .getAppointments({
+        limit: 100,
+        doctorId: this.isDoctorUser() ? this.currentUserId || undefined : undefined,
+      })
+      .subscribe({
       next: (result) => (this.appointments = result.items),
       error: () => (this.appointments = []),
     });
@@ -127,6 +139,7 @@ export class PrescriptionComponent implements OnInit {
         page: this.page,
         limit: this.limit,
         patientId: this.selectedPatientId,
+        doctorId: this.isDoctorUser() ? this.currentUserId || undefined : undefined,
       })
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
@@ -242,9 +255,35 @@ export class PrescriptionComponent implements OnInit {
 
     this.prescriptionForm.patchValue({
       patientId: this.routePatientId,
-      doctorId: this.routeDoctorId,
+      doctorId: this.isDoctorUser() ? this.currentUserId || '' : this.routeDoctorId,
       appointmentId: this.routeAppointmentId,
     });
+
+    if (this.isDoctorUser()) {
+      this.prescriptionForm.get('doctorId')?.disable({ emitEvent: false });
+    } else {
+      this.prescriptionForm.get('doctorId')?.enable({ emitEvent: false });
+    }
+  }
+
+  private ensureDoctorPatientScope(): void {
+    if (!this.isDoctorUser()) {
+      return;
+    }
+
+    const activePatientId = String(this.prescriptionForm.get('patientId')?.value || '');
+    const allowedPatientIds = new Set(this.patients.map((patient) => patient._id));
+
+    if (activePatientId && !allowedPatientIds.has(activePatientId)) {
+      this.selectedPatientId = '';
+      this.routePatientId = '';
+      this.prescriptionForm.patchValue({ patientId: '', appointmentId: '' }, { emitEvent: false });
+      this.toastr.warning('Only assigned patients can be prescribed by this doctor.');
+    }
+  }
+
+  private isDoctorUser(): boolean {
+    return this.currentRole.trim().replace(/[\s_-]/g, '').toLowerCase() === 'doctor';
   }
 
   downloadPDF() {

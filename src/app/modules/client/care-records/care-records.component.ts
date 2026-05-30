@@ -168,7 +168,10 @@ export class CareRecordsComponent implements OnInit {
 
   loadLookups(): void {
     this.backend.getPatients({ limit: 100, status: 'active' }).subscribe({
-      next: (result) => (this.patients = result.items),
+      next: (result) => {
+        this.patients = result.items;
+        this.ensureDoctorPatientScope();
+      },
       error: () => (this.patients = []),
     });
 
@@ -180,7 +183,12 @@ export class CareRecordsComponent implements OnInit {
       error: () => (this.doctors = []),
     });
 
-    this.backend.getAppointments({ limit: 100 }).subscribe({
+    this.backend
+      .getAppointments({
+        limit: 100,
+        doctorId: this.isDoctorUser() ? this.currentUserId || undefined : undefined,
+      })
+      .subscribe({
       next: (result) => (this.appointments = result.items),
       error: () => (this.appointments = []),
     });
@@ -193,6 +201,7 @@ export class CareRecordsComponent implements OnInit {
         page: this.recordsPage,
         limit: this.limit,
         patientId: this.selectedPatientId || undefined,
+        doctorId: this.isDoctorUser() ? this.currentUserId || undefined : undefined,
         recordType: this.recordType,
       })
       .pipe(finalize(() => (this.loading = false)))
@@ -363,6 +372,22 @@ export class CareRecordsComponent implements OnInit {
       this.recordForm.get('doctorId')?.disable({ emitEvent: false });
     } else {
       this.recordForm.get('doctorId')?.enable({ emitEvent: false });
+    }
+  }
+
+  private ensureDoctorPatientScope(): void {
+    if (!this.isDoctorUser()) {
+      return;
+    }
+
+    const activePatientId = String(this.recordForm.get('patientId')?.value || '');
+    const allowedPatientIds = new Set(this.patients.map((patient) => patient._id));
+
+    if (activePatientId && !allowedPatientIds.has(activePatientId)) {
+      this.selectedPatientId = '';
+      this.routePatientId = '';
+      this.recordForm.patchValue({ patientId: '', appointmentId: '' }, { emitEvent: false });
+      this.toastr.warning('Doctors can manage records for assigned patients only.');
     }
   }
 
