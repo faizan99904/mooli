@@ -4,36 +4,25 @@ import {
 } from '@angular/router';
 import { inject } from '@angular/core';
 
-const normalizeAccessKey = (value: string) =>
-  value.trim().replace(/[\s_-]/g, '').toLowerCase();
+import { hasRouteAccess, readStoredPermissions, resolveDefaultRoute } from './access-control';
 
 export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
-  return () => {
+  return (_route, state) => {
     const role = localStorage.getItem('role');
-    const permissions = JSON.parse(
-      localStorage.getItem('permissions') || '[]'
-    ) as string[];
+    const permissions = readStoredPermissions();
     const router = inject(Router);
-    const normalizedRole = role ? normalizeAccessKey(role) : '';
-    const isElevated =
-      normalizedRole === 'owner' ||
-      normalizedRole === 'superadmin' ||
-      permissions.includes('*');
-    const hasAllowedRole = allowedRoles.some(
-      (allowedRole) => normalizeAccessKey(allowedRole) === normalizedRole
-    );
-    const normalizedPermissions = new Set(
-      permissions.map((permission) => normalizeAccessKey(permission))
-    );
-    const hasAllowedPermission = allowedRoles.some((allowedRole) => {
-      const normalizedAllowedRole = normalizeAccessKey(allowedRole);
-      return normalizedPermissions.has(normalizedAllowedRole);
-    });
 
-    if (isElevated || hasAllowedRole || hasAllowedPermission) {
+    if (hasRouteAccess(allowedRoles, role, permissions)) {
       return true;
-    } else {
-      return router.createUrlTree(['/dashboard']);
     }
+
+    const fallbackRoute = resolveDefaultRoute(role, permissions);
+    const currentPath = state.url.split('?')[0];
+
+    if (fallbackRoute !== currentPath) {
+      return router.parseUrl(fallbackRoute);
+    }
+
+    return router.parseUrl('/login');
   };
 };

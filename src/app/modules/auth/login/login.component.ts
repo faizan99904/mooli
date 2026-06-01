@@ -9,6 +9,7 @@ import {
 } from '@angular/forms';
 import { BackendService } from '../../../core/services/backend.service';
 import { ToastrService } from 'ngx-toastr';
+import { resolveDefaultRoute, sanitizePermissions } from '../access-control';
 
 @Component({
   selector: 'app-login',
@@ -63,7 +64,7 @@ export class LoginComponent {
         const userRole = user?.role;
         const role = userRole?.name;
         const roleId = userRole?._id;
-        const permissions = userRole?.permissions || [];
+        const permissions = sanitizePermissions(userRole?.permissions);
 
         if (!token) {
           this.toaster.error('Invalid login response');
@@ -80,7 +81,7 @@ export class LoginComponent {
 
         this.toaster.success(response?.message || 'Login Successfully');
 
-        this.router.navigateByUrl('/dashboard');
+        this.router.navigateByUrl(resolveDefaultRoute(role, permissions));
       },
 
       error: (err) => {
