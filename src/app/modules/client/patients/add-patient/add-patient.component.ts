@@ -6,7 +6,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../../core/services/backend.service';
@@ -31,10 +31,10 @@ export class AddPatientComponent implements OnInit {
     private fb: FormBuilder,
     private backend: BackendService,
     private toastr: ToastrService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     this.patientForm = this.fb.group({
-      assignedDoctorId: ['', Validators.required],
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
       email: ['', Validators.email],
@@ -48,7 +48,6 @@ export class AddPatientComponent implements OnInit {
       allergies: [''],
       chronicDiseases: [''],
       currentMedications: [''],
-      status: ['active', Validators.required],
     });
   }
 
@@ -57,6 +56,7 @@ export class AddPatientComponent implements OnInit {
     this.currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
     this.currentHospitalId = this.currentUser?.hospitalId || null;
     this.applyEditingState();
+    this.applyPhoneFromQuery();
     this.backend.getDoctors({ limit: 100, status: 'active' }).subscribe({
       next: (result) => {
         this.doctors = result.items;
@@ -81,7 +81,6 @@ export class AddPatientComponent implements OnInit {
 
     const value = this.patientForm.value;
     const payload: Record<string, unknown> = {
-      assignedDoctorId: value.assignedDoctorId,
       firstName: value.firstName,
       lastName: value.lastName,
       email: value.email || undefined,
@@ -95,7 +94,6 @@ export class AddPatientComponent implements OnInit {
       allergies: this.toArray(value.allergies),
       chronicDiseases: this.toArray(value.chronicDiseases),
       currentMedications: this.toArray(value.currentMedications),
-      status: value.status,
     };
 
     if (!this.editingPatient && this.currentHospitalId) {
@@ -126,7 +124,6 @@ export class AddPatientComponent implements OnInit {
     }
 
     this.patientForm.patchValue({
-      assignedDoctorId: this.editingPatient.assignedDoctorId,
       firstName: this.editingPatient.firstName,
       lastName: this.editingPatient.lastName,
       email: this.editingPatient.email || '',
@@ -140,7 +137,17 @@ export class AddPatientComponent implements OnInit {
       allergies: (this.editingPatient.allergies || []).join(', '),
       chronicDiseases: (this.editingPatient.chronicDiseases || []).join(', '),
       currentMedications: (this.editingPatient.currentMedications || []).join(', '),
-      status: this.editingPatient.status || 'active',
     });
+  }
+
+  private applyPhoneFromQuery(): void {
+    if (this.editingPatient) {
+      return;
+    }
+
+    const phone = this.route.snapshot.queryParamMap.get('phone');
+    if (phone) {
+      this.patientForm.patchValue({ phone });
+    }
   }
 }

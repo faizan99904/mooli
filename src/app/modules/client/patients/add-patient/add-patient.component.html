@@ -19,15 +19,6 @@
                         <form [formGroup]="patientForm" (ngSubmit)="submitPatient()">
                             <div class="row clearfix">
                                 <div class="col-md-4 form-group">
-                                    <label>Assigned Doctor</label>
-                                    <select class="form-control" formControlName="assignedDoctorId">
-                                        <option value="">Select doctor</option>
-                                        <option *ngFor="let doctor of doctors" [value]="doctor.userId">
-                                            {{ doctor.user?.name || doctor.specialization }}
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4 form-group">
                                     <label>First Name</label>
                                     <input class="form-control" formControlName="firstName">
                                 </div>
@@ -60,14 +51,6 @@
                                     <select class="form-control" formControlName="bloodGroup">
                                         <option value="">Select blood group</option>
                                         <option *ngFor="let bloodGroup of bloodGroups" [value]="bloodGroup">{{ bloodGroup }}</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4 form-group">
-                                    <label>Status</label>
-                                    <select class="form-control" formControlName="status">
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                        <option value="deceased">Deceased</option>
                                     </select>
                                 </div>
                                 <div class="col-md-12 form-group">
