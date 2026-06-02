@@ -1,147 +1,473 @@
-<div id="main-content">
-    <div class="container-fluid">
-        <div class="block-header">
-            <div class="row clearfix">
-                <div class="col-lg-4 col-md-12 col-sm-12">
-                    <h1>Prescriptions</h1>
-                    <span>Create and review prescriptions</span>
-                </div>
-            </div>
+<div id="main-content" class="prescription-page">
+  <div class="rx-workspace">
+    <aside class="appointments-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Today's Appointments</h2>
+          <span>{{ visibleAppointments().length }}</span>
+        </div>
+        <button type="button">View All</button>
+      </div>
+
+      <button class="appointment-row" type="button" *ngFor="let appointment of visibleAppointments()"
+        [class.active]="appointment._id === selectedAppointmentId" (click)="selectAppointment(appointment)">
+        <strong>{{ appointment.startTime }}</strong>
+        <span>{{ patientName(appointment.patient) }}</span>
+        <small [ngClass]="appointmentStatusClass(appointment.status)">
+          {{ appointmentStatusLabel(appointment.status) }}
+        </small>
+      </button>
+
+      <div class="patient-card" *ngIf="selectedPatient() as patient">
+        <div class="patient-identity">
+          <div class="avatar">{{ initials(patientName(patient)) }}</div>
+          <div>
+            <h3>{{ patientName(patient) }} <i class="fa fa-mars"></i></h3>
+            <p>{{ patient.patientNo }} · {{ ageLabel(patient) }}, {{ patient.gender | titlecase }} · {{ patient.phone ||
+              '-' }}</p>
+          </div>
         </div>
 
-        <div class="row clearfix">
-            <div class="col-lg-4 col-md-12">
-                <div class="card">
-                    <div class="header"><h2>{{ editingId ? 'Edit Prescription' : 'Add Prescription' }}</h2></div>
-                    <div class="body">
-                        <form [formGroup]="prescriptionForm" (ngSubmit)="submitPrescription()">
-                            <div class="form-group">
-                                <label>Patient</label>
-                                <select class="form-control" formControlName="patientId">
-                                    <option value="">Select patient</option>
-                                    <option *ngFor="let patient of patients" [value]="patient._id">{{ patientName(patient) }}</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Doctor</label>
-                                <select class="form-control" formControlName="doctorId">
-                                    <option value="">Select doctor</option>
-                                    <option *ngFor="let doctor of doctors" [value]="doctor.userId">{{ doctor.user?.name || doctor.specialization }}</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Appointment</label>
-                                <select class="form-control" formControlName="appointmentId">
-                                    <option value="">Optional</option>
-                                    <option *ngFor="let appointment of appointments" [value]="appointment._id">
-                                        {{ appointment.appointmentNo }} - {{ appointment.appointmentDate | date:'mediumDate' }}
-                                    </option>
-                                </select>
-                            </div>
+        <dl>
+          <div>
+            <dt>Address</dt>
+            <dd>{{ patient.address || '-' }}</dd>
+          </div>
+          <div>
+            <dt>Blood Group</dt>
+            <dd>{{ patient.bloodGroup || '-' }}</dd>
+          </div>
+          <div>
+            <dt>Allergies</dt>
+            <dd>{{ patient.allergies?.join(', ') || 'No known allergies' }}</dd>
+          </div>
+          <div>
+            <dt>Chronic Illness</dt>
+            <dd>{{ patient.chronicDiseases?.join(', ') || 'None' }}</dd>
+          </div>
+          <div>
+            <dt>Current Medications</dt>
+            <dd>{{ patient.currentMedications?.join(', ') || 'None' }}</dd>
+          </div>
+          <div>
+            <dt>Doctor</dt>
+            <dd>{{ selectedDoctorName() }}</dd>
+          </div>
+        </dl>
 
-                            <div formArrayName="medicines">
-                                <div class="border p-2 mb-2" *ngFor="let medicine of medicines.controls; let i = index" [formGroupName]="i">
-                                    <div class="form-group">
-                                        <label>Medicine</label>
-                                        <input class="form-control" formControlName="name">
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6 form-group">
-                                            <label>Dosage</label>
-                                            <input class="form-control" formControlName="dosage">
-                                        </div>
-                                        <div class="col-md-6 form-group">
-                                            <label>Frequency</label>
-                                            <input class="form-control" formControlName="frequency">
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Duration</label>
-                                        <input class="form-control" formControlName="duration">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Instructions</label>
-                                        <input class="form-control" formControlName="instructions">
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-danger" (click)="removeMedicine(i)">Remove</button>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-default mb-3" (click)="addMedicine()">Add Medicine</button>
-
-                            <div class="form-group">
-                                <label>Advice</label>
-                                <textarea class="form-control" formControlName="advice"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label>Follow Up Date</label>
-                                <input class="form-control" type="date" formControlName="followUpDate">
-                            </div>
-                            <button class="btn btn-primary" type="submit" [disabled]="saving">
-                                {{ saving ? 'Saving...' : editingId ? 'Update Prescription' : 'Save Prescription' }}
-                            </button>
-                            <button class="btn btn-default ml-2" type="button" *ngIf="editingId" (click)="resetForm()">Cancel</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-8 col-md-12">
-                <div class="card" #pdfContent>
-                    <div class="header">
-                        <h2>Prescription List</h2>
-                    </div>
-                    <div class="body">
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <select class="form-control" [(ngModel)]="selectedPatientId" (change)="page = 1; loadPrescriptions()">
-                                    <option value="">All patients</option>
-                                    <option *ngFor="let patient of patients" [value]="patient._id">{{ patientName(patient) }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4 text-right">
-                                <button class="btn btn-default" type="button" (click)="downloadPDF()">Download PDF</button>
-                            </div>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Patient</th>
-                                        <th>Doctor</th>
-                                        <th>Medicines</th>
-                                        <th>Follow Up</th>
-                                        <th class="text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr *ngFor="let prescription of prescriptions">
-                                        <td>{{ patientName(prescription.patient) }}</td>
-                                        <td>{{ prescription.doctor?.name || '-' }}</td>
-                                        <td>{{ prescription.medicines.length }}</td>
-                                        <td>{{ prescription.followUpDate | date:'mediumDate' }}</td>
-                                        <td class="text-right">
-                                            <button class="btn btn-sm btn-default mr-1" (click)="editPrescription(prescription)">Edit</button>
-                                            <button class="btn btn-sm btn-danger" (click)="deletePrescription(prescription._id)">Delete</button>
-                                        </td>
-                                    </tr>
-                                    <tr *ngIf="!loading && prescriptions.length === 0">
-                                        <td colspan="5" class="text-center text-muted">No prescriptions found</td>
-                                    </tr>
-                                    <tr *ngIf="loading">
-                                        <td colspan="5" class="text-center text-muted">Loading...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <button class="btn btn-default" (click)="changePage(page - 1)" [disabled]="page <= 1">Prev</button>
-                            <span>Page {{ page }} of {{ totalPages || 1 }}</span>
-                            <button class="btn btn-default" (click)="changePage(page + 1)"
-                                [disabled]="totalPages > 0 && page >= totalPages">Next</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="visit-type">
+          <label><input type="radio" checked /> OPD</label>
+          <label><input type="radio" /> Follow Up</label>
         </div>
+
+        <div class="vitals-card" [formGroup]="vitalsGroup">
+          <div class="vitals-head">
+            <strong>Vitals</strong>
+            <span>{{ currentTime() }}</span>
+          </div>
+          <label>BP <input formControlName="bp" placeholder="120/80 mmHg" /></label>
+          <label>Pulse <input formControlName="pulse" placeholder="78 /min" /></label>
+          <label>Weight <input formControlName="weight" placeholder="72 Kg" /></label>
+          <label>Temperature <input formControlName="temperature" placeholder="98.6 F" /></label>
+          <label>SpO2 <input formControlName="spo2" placeholder="98%" /></label>
+        </div>
+      </div>
+    </aside>
+
+    <main class="consultation-panel">
+      <form [formGroup]="prescriptionForm" (ngSubmit)="submitPrescription()">
+        <input type="hidden" formControlName="patientId" />
+        <input type="hidden" formControlName="doctorId" />
+        <input type="hidden" formControlName="appointmentId" />
+
+        <div class="consultation-header">
+          <div>
+            <h1>Consultation</h1>
+            <p *ngIf="selectedAppointment() as appointment">
+              {{ appointment.appointmentNo }} · {{ shortDate(appointment.appointmentDate) }} · {{ appointment.startTime
+              }} - {{ appointment.endTime }}
+            </p>
+          </div>
+          <div class="header-actions">
+            <button type="button" class="btn-light" [disabled]="saving" (click)="submitPrescription(false)">Save
+              Draft</button>
+            <button type="button" class="btn-primary" [disabled]="saving" (click)="submitPrescription(true)">
+              <i class="fa fa-print"></i>
+              {{ saving ? 'Saving...' : 'Save & Print' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="consultation-grid">
+          <label>
+            <span>Chief Complaint</span>
+            <input formControlName="chiefComplaint" placeholder="Dry cough, mild fever, weakness" />
+          </label>
+          <label>
+            <span>Diagnosis</span>
+            <input formControlName="diagnosis" placeholder="Acute Upper Respiratory Tract Infection" />
+          </label>
+          <label>
+            <span>History</span>
+            <input formControlName="history" placeholder="Cough for 3 days, no breathlessness..." />
+          </label>
+          <label>
+            <span>Advice / Notes</span>
+            <textarea formControlName="advice"
+              placeholder="Rest, plenty of fluids, take medication as prescribed."></textarea>
+          </label>
+          <label>
+            <span>Examination</span>
+            <input formControlName="examination" placeholder="Chest clear, CVS normal..." />
+          </label>
+          <label>
+            <span>Follow Up Date</span>
+            <input type="date" formControlName="followUpDate" />
+          </label>
+        </div>
+
+        <div class="rx-tabs">
+          <button type="button" [class.active]="activeTab === 'prescription'"
+            (click)="activeTab = 'prescription'">Prescription</button>
+          <button type="button" [class.active]="activeTab === 'lab'" (click)="activeTab = 'lab'">Lab Tests</button>
+          <button type="button" [class.active]="activeTab === 'iv'" (click)="activeTab = 'iv'">Drips / IV
+            Fluids</button>
+          <button type="button" [class.active]="activeTab === 'admission'" (click)="activeTab = 'admission'">Admission
+            Orders</button>
+          <button type="button" [class.active]="activeTab === 'history'"
+            (click)="activeTab = 'history'">Documents</button>
+        </div>
+
+        <div class="rx-content-grid">
+          <section class="medicines-section">
+            <div class="section-heading">
+              <h3>Medicines</h3>
+              <button type="button" (click)="addMedicine()">+ Add Medicine</button>
+            </div>
+
+            <div class="medicine-table" formArrayName="medicines">
+              <table>
+                <colgroup>
+                  <col class="col-index" />
+                  <col class="col-medicine" />
+                  <col class="col-duration" />
+                  <col class="col-take" />
+                  <col class="col-take" />
+                  <col class="col-take" />
+                  <col class="col-take" />
+                  <col class="col-take" />
+                  <col class="col-take" />
+                  <col class="col-instruction" />
+                  <col class="col-action" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th rowspan="2">#</th>
+                    <th rowspan="2">Medicine</th>
+                    <th rowspan="2">Duration</th>
+                    <th colspan="6">When to Take</th>
+                    <th rowspan="2">Instruction</th>
+                    <th rowspan="2"></th>
+                  </tr>
+                  <tr>
+                    <th>After<br />Meal</th>
+                    <th>Before<br />Meal</th>
+                    <th>Morning</th>
+                    <th>Noon</th>
+                    <th>Evening</th>
+                    <th>Night</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let medicine of medicines.controls; let i = index" [formGroupName]="i">
+                    <td class="row-number">{{ i + 1 }}</td>
+                    <td>
+                      <div class="medicine-name-cell">
+                        <input class="medicine-name-input" formControlName="name" placeholder="Tab Cough Syrup" />
+                        <input class="medicine-dose-input" formControlName="dosage" placeholder="(Panadol)" />
+                      </div>
+                    </td>
+                    <td>
+                      <select class="duration-input" formControlName="duration">
+                        <option *ngFor="let duration of durationOptions" [value]="duration">{{ duration }}</option>
+                      </select>
+                    </td>
+                    <td><label class="tick-cell"><input type="checkbox" formControlName="afterMeal" /><span></span></label></td>
+                    <td><label class="tick-cell"><input type="checkbox" formControlName="beforeMeal" /><span></span></label></td>
+                    <td><label class="tick-cell"><input type="checkbox" formControlName="morning" /><span></span></label></td>
+                    <td><label class="tick-cell"><input type="checkbox" formControlName="noon" /><span></span></label></td>
+                    <td><label class="tick-cell"><input type="checkbox" formControlName="evening" /><span></span></label></td>
+                    <td><label class="tick-cell"><input type="checkbox" formControlName="night" /><span></span></label></td>
+                    <td><textarea class="instruction-input" formControlName="instructions" placeholder="10 ml"></textarea></td>
+                    <td>
+                      <button type="button" (click)="removeMedicine(i)"><i class="fa fa-trash"></i></button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <label class="patient-note">
+              <span>Note to Patient</span>
+              <textarea formControlName="advice"></textarea>
+            </label>
+          </section>
+
+          <aside class="orders-section">
+            <section class="order-card">
+              <div class="section-heading">
+                <h3>Lab Tests</h3>
+                <button type="button" (click)="addCustomLabTest()">+ Add Test</button>
+              </div>
+              <div formArrayName="labTests">
+                <div class="lab-row lab-head"><span></span><strong>Test</strong><strong>Category</strong></div>
+                <label class="lab-row" *ngFor="let test of labTests.controls; let i = index" [formGroupName]="i">
+                  <input type="checkbox" formControlName="selected" />
+                  <input formControlName="name" />
+                  <input formControlName="category" />
+                </label>
+              </div>
+              <div class="custom-test">
+                <span>Others</span>
+                <input formControlName="customLabTest" placeholder="Type test name" />
+                <button type="button" (click)="addCustomLabTest()"><i class="fa fa-plus-circle"></i></button>
+              </div>
+            </section>
+
+            <section class="order-card" formArrayName="ivFluids">
+              <div class="section-heading">
+                <h3>Drips / IV Fluids</h3>
+                <button type="button" (click)="addIvFluid()">+ Add Drip</button>
+              </div>
+              <div class="fluid-row fluid-head"><strong>Fluid /
+                  Drip</strong><strong>Rate</strong><strong>Duration</strong><span></span></div>
+              <div class="fluid-row" *ngFor="let fluid of ivFluids.controls; let i = index" [formGroupName]="i">
+                <input formControlName="name" placeholder="DNS" />
+                <input formControlName="rate" placeholder="80 ml/hr" />
+                <input formControlName="duration" placeholder="500 ml" />
+                <button type="button" (click)="removeIvFluid(i)"><i class="fa fa-trash"></i></button>
+              </div>
+            </section>
+
+            <section class="order-card admission-card" formGroupName="admissionOrders">
+              <div class="section-heading">
+                <h3>Admission Orders</h3>
+                <button type="button">+ Add Order</button>
+              </div>
+              <div class="two-col">
+                <label>Room Type <input formControlName="roomType" /></label>
+                <label>Bed <input formControlName="bed" /></label>
+              </div>
+              <div class="check-row">
+                <label><input type="checkbox" formControlName="regularDiet" /> Regular Diet</label>
+                <label><input type="checkbox" formControlName="npo" /> NPO</label>
+              </div>
+              <label>Consultation <input formControlName="consultation" placeholder="Physiotherapy" /></label>
+              <div class="check-row" formGroupName="monitoring">
+                <label><input type="checkbox" formControlName="bp" /> BP</label>
+                <label><input type="checkbox" formControlName="pulse" /> Pulse</label>
+                <label><input type="checkbox" formControlName="spo2" /> SpO2</label>
+                <label><input type="checkbox" formControlName="rbs" /> RBS</label>
+              </div>
+              <textarea formControlName="notes" placeholder="Enter notes if any..."></textarea>
+            </section>
+          </aside>
+        </div>
+      </form>
+
+      <section class="prescription-history-panel">
+        <div class="section-heading">
+          <div>
+            <h3>Created Prescriptions</h3>
+            <p>{{ loading ? 'Loading prescriptions...' : prescriptions.length + ' prescriptions found' }}</p>
+          </div>
+          <button type="button" (click)="loadPrescriptions()">Refresh</button>
+        </div>
+
+        <div class="prescription-history-empty" *ngIf="!loading && prescriptions.length === 0">
+          No prescription created yet.
+        </div>
+
+        <div class="prescription-history-list" *ngIf="prescriptions.length > 0">
+          <article class="prescription-history-row" *ngFor="let prescription of prescriptions">
+            <div class="history-avatar">{{ initials(prescriptionPatientName(prescription)) }}</div>
+            <div class="history-main">
+              <strong>{{ prescriptionPatientName(prescription) }}</strong>
+              <span>{{ prescriptionDoctorName(prescription) }} · {{ prescriptionDate(prescription) }}</span>
+            </div>
+            <div class="history-meta">
+              <span>{{ prescriptionMedicineCount(prescription) }} medicine(s)</span>
+              <small>{{ prescription.diagnosis || prescription.chiefComplaint || 'No diagnosis added' }}</small>
+            </div>
+            <div class="history-actions">
+              <button type="button" class="btn-light" (click)="editPrescription(prescription)">Edit</button>
+              <button type="button" class="btn-primary" (click)="openPrintPreview(prescription)">
+                <i class="fa fa-print"></i>
+                Print
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="print-preview-backdrop" *ngIf="printPreviewOpen">
+    <div class="print-preview-dialog">
+      <div class="print-preview-toolbar">
+        <div>
+          <h3>Prescription Preview</h3>
+          <p>Review the prescription, then click Print.</p>
+        </div>
+        <div>
+          <button type="button" class="btn-light" (click)="closePrintPreview()">Close</button>
+          <button type="button" class="btn-primary" [disabled]="printPreviewLoading" (click)="printPrescription()">
+            <i class="fa fa-print"></i>
+            Print
+          </button>
+        </div>
+      </div>
+
+      <div class="print-preview-scroll">
+        <div class="print-preview-loading" *ngIf="printPreviewLoading">Loading prescription preview...</div>
+        <section class="prescription-print-sheet" #printContent *ngIf="!printPreviewLoading && printPreviewData as preview">
+          <header class="print-header">
+            <div class="doctor-print-left">
+              <h1>{{ preview.doctorName }}</h1>
+              <strong>{{ preview.doctorQualification }}</strong>
+              <span>Consultant Physician</span>
+              <span>MediLink City Care Hospital</span>
+            </div>
+            <div class="print-logo-mark">Rx</div>
+            <div class="doctor-print-right">
+              <h2>ڈاکٹر {{ preview.doctorName }}</h2>
+              <strong>{{ preview.doctorQualification }}</strong>
+              <span>کنسلٹنٹ فزیشن</span>
+              <span>میڈی لنک سٹی کیئر ہسپتال</span>
+            </div>
+          </header>
+
+          <div class="print-date-box">
+            <strong>DATE: {{ preview.date }}</strong>
+            <span>NOT VALID FOR COURT OF LAW.</span>
+          </div>
+
+          <table class="print-patient-table">
+            <tr>
+              <th>Patient Name</th>
+              <td>{{ preview.patientName }}</td>
+              <th>Age</th>
+              <td>{{ preview.patientAge }}</td>
+              <th>Sex</th>
+              <td>{{ preview.patientGender }}</td>
+              <th>F.No.</th>
+              <td>{{ preview.patientNo }}</td>
+            </tr>
+            <tr>
+              <th>Address</th>
+              <td colspan="3">{{ preview.patientAddress }}</td>
+              <th colspan="2">CELL NO</th>
+              <td colspan="2">{{ preview.patientPhone }}</td>
+            </tr>
+            <tr>
+              <th>Disease</th>
+              <td colspan="7">{{ preview.disease }}</td>
+            </tr>
+          </table>
+
+          <div class="print-body-grid">
+            <aside class="print-side-panel">
+              <div class="print-mini-title">O/E</div>
+              <table>
+                <tr><th>BP</th><td>{{ preview.vitals['bp'] || '-' }}</td></tr>
+                <tr><th>WT kg</th><td>{{ preview.vitals['weight'] || '-' }}</td></tr>
+                <tr><th>PR/min</th><td>{{ preview.vitals['pulse'] || '-' }}</td></tr>
+                <tr><th>TEMP</th><td>{{ preview.vitals['temperature'] || '-' }}</td></tr>
+                <tr><th>SPO2</th><td>{{ preview.vitals['spo2'] || '-' }}</td></tr>
+              </table>
+
+              <div class="print-mini-title labs-title">LAB's</div>
+              <table>
+                <tr *ngFor="let test of preview.labTests">
+                  <th>{{ test.name }}</th>
+                  <td>✓</td>
+                </tr>
+                <tr *ngIf="preview.labTests.length === 0">
+                  <th>Others</th>
+                  <td>-</td>
+                </tr>
+              </table>
+
+              <div class="follow-up-print">
+                <strong>FOLLOW UP:</strong>
+                <span>{{ preview.followUpDate }}</span>
+              </div>
+            </aside>
+
+            <main class="print-medicine-area">
+              <table class="print-medicine-table">
+                <thead>
+                  <tr>
+                    <th class="print-medicine-title" rowspan="2">Medicines<br /><span>(دوائیاں)</span></th>
+                    <th rowspan="2">مدت</th>
+                    <th rowspan="2">غذا کے بعد</th>
+                    <th rowspan="2">غذا سے پہلے</th>
+                    <th colspan="4">وقت</th>
+                  </tr>
+                  <tr>
+                    <th>صبح</th>
+                    <th>دوپہر</th>
+                    <th>شام</th>
+                    <th>رات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let medicine of preview.medicines">
+                    <td class="print-med-name">
+                      <strong>{{ medicine['name'] || 'Medicine' }}</strong>
+                      <span>{{ medicine['dosage'] || '' }}</span>
+                      <small>{{ medicine['instructions'] || '' }}</small>
+                    </td>
+                    <td>{{ medicine['duration'] || '-' }}</td>
+                    <td>{{ medicine['afterMeal'] ? '√' : '' }}</td>
+                    <td>{{ medicine['beforeMeal'] ? '√' : '' }}</td>
+                    <td>{{ medicine['morning'] ? '1' : '' }}</td>
+                    <td>{{ medicine['noon'] ? '1' : '' }}</td>
+                    <td>{{ medicine['evening'] ? '1' : '' }}</td>
+                    <td>{{ medicine['night'] ? '1' : '' }}</td>
+                  </tr>
+                  <tr *ngFor="let row of [1, 2, 3, 4, 5]">
+                    <td>&nbsp;</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="print-urdu-note">
+                بلڈ پریشر کے لئے نمک کم استعمال کریں۔ چکنائی کم کریں۔ روزانہ 30 منٹ پیدل چلیں۔
+                دوائی جاری رکھیں اور ڈاکٹر کے مشورے کے بغیر دوا بند نہ کریں۔
+              </div>
+            </main>
+
+            <aside class="print-right-note">
+              <strong>نوٹ :</strong>
+              <p>جس دوائی کے سامنے جاری رکھیں لکھا ہو اس دوائی کو جب تک ڈاکٹر سے مشورہ نہ لیں جاری رکھیں۔</p>
+            </aside>
+          </div>
+
+          <footer class="print-footer">
+            <strong>* Rx to be revised after Reports.</strong>
+            <p>For appointment and follow up, contact MediLink City Care Hospital.</p>
+            <p>Email: info&#64;medilink.local | Phone: 0300-0000000</p>
+          </footer>
+        </section>
+      </div>
     </div>
+  </div>
 </div>

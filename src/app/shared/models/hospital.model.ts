@@ -18,12 +18,27 @@ export interface User {
   companyId?: string;
   hospitalId?: string | null;
   hospital?: Hospital | null;
+  storeId?: string | null;
+  warehouseId?: string | null;
   roleId?: string;
   name: string;
   email: string;
   phone?: string | null;
   status?: string;
   role?: Role | null;
+}
+
+export interface Store {
+  _id: string;
+  companyId: string;
+  name: string;
+  code: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  managerName?: string | null;
+  isActive: boolean;
 }
 
 export interface Hospital {
@@ -127,7 +142,25 @@ export interface PrescriptionMedicine {
   dosage?: string;
   frequency?: string;
   duration?: string;
+  afterMeal?: boolean;
+  beforeMeal?: boolean;
+  morning?: boolean;
+  noon?: boolean;
+  evening?: boolean;
+  night?: boolean;
   instructions?: string;
+}
+
+export interface PrescriptionLabTest {
+  name: string;
+  category?: string;
+  selected?: boolean;
+}
+
+export interface PrescriptionIvFluid {
+  name: string;
+  rate?: string;
+  duration?: string;
 }
 
 export interface Prescription {
@@ -138,9 +171,33 @@ export interface Prescription {
   doctorId: string;
   doctor?: User | null;
   appointmentId?: string | null;
+  appointment?: Appointment | null;
   medicines: PrescriptionMedicine[];
+  chiefComplaint?: string | null;
+  history?: string | null;
+  examination?: string | null;
+  diagnosis?: string | null;
+  labTests?: PrescriptionLabTest[];
+  ivFluids?: PrescriptionIvFluid[];
+  admissionOrders?: {
+    roomType?: string;
+    bed?: string;
+    regularDiet?: boolean;
+    npo?: boolean;
+    consultation?: string;
+    monitoring?: {
+      bp?: boolean;
+      pulse?: boolean;
+      spo2?: boolean;
+      rbs?: boolean;
+    };
+    notes?: string;
+  } | null;
+  vitals?: Record<string, string> | null;
   advice?: string | null;
   followUpDate?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Room {

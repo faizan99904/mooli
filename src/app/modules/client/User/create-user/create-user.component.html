@@ -118,6 +118,27 @@
                                     </div>
                                 </div>
 
+                                <div class="col-sm-6" *ngIf="canAssignPosStore">
+                                    <div class="form-group">
+                                        <label>POS Store</label>
+                                        <select class="form-control" formControlName="storeId">
+                                            <option value="">No POS store assigned</option>
+                                            <option *ngFor="let store of stores" [value]="store._id">
+                                                {{ store.name }}{{ store.code ? ' · ' + store.code : '' }}
+                                            </option>
+                                        </select>
+                                        <small class="text-muted form-hint" *ngIf="storesLoading">
+                                            Loading POS stores...
+                                        </small>
+                                        <small class="text-danger form-hint" *ngIf="storesError">
+                                            {{ storesError }}
+                                        </small>
+                                        <small class="text-muted form-hint" *ngIf="!storesLoading && !storesError">
+                                            Assign this for pharmacy users who will dispense medicines through POS.
+                                        </small>
+                                    </div>
+                                </div>
+
                                 <div class="col-sm-6">
                                     <div class="form-group">
                                         <label>Status</label>

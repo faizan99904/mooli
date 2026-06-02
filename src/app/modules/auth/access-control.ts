@@ -24,11 +24,11 @@ const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
     path: '/clinical-records',
     access: ['owner', 'superAdmin', 'patients_history.read', 'patients_history.create'],
   },
+  { path: '/pharmacy', access: ['owner', 'superAdmin', 'pharmacy', 'products.read'] },
   {
     path: '/prescriptions',
     access: ['owner', 'superAdmin', 'prescriptions.read', 'prescriptions.create'],
   },
-  { path: '/pharmacy', access: ['owner', 'superAdmin', 'prescriptions.read', 'products.read'] },
   {
     path: '/room-allotment/alloted-rooms',
     access: ['owner', 'superAdmin', 'room_allotments.read', 'rooms.read'],

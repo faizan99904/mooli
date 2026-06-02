@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
 import { BackendService } from '../../../../core/services/backend.service';
 import { Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged, finalize, Subject, takeUntil } from 'rxjs';
-import { Hospital, Role, User } from '../../../../shared/models/hospital.model';
+import { Hospital, Role, Store, User } from '../../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-create-user',
@@ -24,15 +24,19 @@ export class CreateUserComponent implements OnInit, OnDestroy {
   userForm!: FormGroup;
   roles: Role[] = [];
   hospitals: Hospital[] = [];
+  stores: Store[] = [];
   hospitalSearchControl = new FormControl('', { nonNullable: true });
   currentUser: User | null = null;
   currentHospitalId: string | null = null;
   currentHospitalName = '';
   canSelectHospital = false;
+  canAssignPosStore = false;
   rolesLoading = false;
   rolesError = '';
   hospitalsLoading = false;
   hospitalsError = '';
+  storesLoading = false;
+  storesError = '';
   saving = false;
   editingUser: User | null = null;
   private destroy$ = new Subject<void>();
@@ -51,6 +55,7 @@ export class CreateUserComponent implements OnInit, OnDestroy {
     this.validateEditingScope();
     this.loadRoles();
     this.loadHospitalContext();
+    this.loadStores();
   }
 
   ngOnDestroy(): void {
@@ -76,6 +81,7 @@ export class CreateUserComponent implements OnInit, OnDestroy {
       email: [this.editingUser?.email || '', [Validators.required, Validators.email]],
       password: ['', this.editingUser ? [] : [Validators.required, Validators.minLength(8)]],
       phone: [this.editingUser?.phone || ''],
+      storeId: [this.editingUser?.storeId || ''],
       status: [this.editingUser?.status || 'active', Validators.required],
       isEmailVerified: [true],
     });
@@ -111,6 +117,7 @@ export class CreateUserComponent implements OnInit, OnDestroy {
       name: value.name,
       email: value.email,
       phone: value.phone || undefined,
+      storeId: value.storeId || null,
       status: value.status,
       isEmailVerified: value.isEmailVerified,
     };
@@ -143,6 +150,7 @@ export class CreateUserComponent implements OnInit, OnDestroy {
       this.userForm.invalid ||
       this.saving ||
       this.rolesLoading ||
+      (this.canAssignPosStore && this.storesLoading) ||
       (this.canSelectHospital && this.hospitalsLoading) ||
       !this.getResolvedHospitalId()
     );
@@ -159,6 +167,10 @@ export class CreateUserComponent implements OnInit, OnDestroy {
       normalizedRole === 'owner' ||
       normalizedRole === 'superadmin' ||
       permissions.includes('*');
+    this.canAssignPosStore =
+      this.canSelectHospital ||
+      permissions.includes('stores.read') ||
+      permissions.includes('stores.manage');
 
     this.currentHospitalId = this.currentUser?.hospitalId || null;
     this.currentHospitalName = this.currentUser?.hospital?.name || '';
@@ -223,6 +235,28 @@ export class CreateUserComponent implements OnInit, OnDestroy {
       next: (hospital) => (this.currentHospitalName = hospital.name),
       error: () => (this.currentHospitalName = 'Assigned hospital'),
     });
+  }
+
+  private loadStores(): void {
+    if (!this.canAssignPosStore) {
+      return;
+    }
+
+    this.storesLoading = true;
+    this.storesError = '';
+
+    this.backend
+      .getStores({ limit: 100, isActive: true })
+      .pipe(finalize(() => (this.storesLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.stores = result.items || [];
+        },
+        error: (err) => {
+          this.stores = [];
+          this.storesError = err?.error?.message || 'Unable to load POS stores.';
+        },
+      });
   }
 
   private loadHospitals(search = ''): void {

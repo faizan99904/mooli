@@ -8,6 +8,10 @@ export const CONFIG = {
     me: API_BASE_URL + '/auth/me',
   },
 
+  external: {
+    pharmacyPosUrl: 'https://frontpanel-phi.vercel.app',
+  },
+
   hospitalDashboard: {
     summary: API_BASE_URL + '/hospital-dashboard/summary',
   },
@@ -26,4 +30,5 @@ export const CONFIG = {
   payments: API_BASE_URL + '/payments',
   users: API_BASE_URL + '/users',
   roles: API_BASE_URL + '/roles',
+  stores: API_BASE_URL + '/stores',
 };

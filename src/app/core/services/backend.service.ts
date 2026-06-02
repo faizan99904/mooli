@@ -23,6 +23,7 @@ import {
   Role,
   Room,
   RoomAllotment,
+  Store,
   User,
 } from '../../shared/models/hospital.model';
 
@@ -371,6 +372,12 @@ export class BackendService {
 
   getProducts(params?: Record<string, unknown>): Observable<ListResult<ProductCatalogItem>> {
     return this.get<PaginatedResponse<ProductCatalogItem>>(CONFIG.products, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getStores(params?: Record<string, unknown>): Observable<ListResult<Store>> {
+    return this.get<PaginatedResponse<Store>>(CONFIG.stores, params).pipe(
       map((response) => this.unwrapData(response))
     );
   }

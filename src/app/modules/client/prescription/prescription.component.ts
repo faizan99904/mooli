@@ -21,6 +21,24 @@ import {
   Prescription,
 } from '../../../shared/models/hospital.model';
 
+interface PrintPreviewData {
+  patient: Patient;
+  patientName: string;
+  patientAge: string;
+  patientGender: string;
+  patientNo: string;
+  patientAddress: string;
+  patientPhone: string;
+  doctorName: string;
+  doctorQualification: string;
+  date: string;
+  disease: string;
+  vitals: Record<string, string>;
+  labTests: Array<{ name: string; category: string }>;
+  medicines: Array<Record<string, unknown>>;
+  followUpDate: string;
+}
+
 @Component({
   selector: 'app-prescription',
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
@@ -28,7 +46,7 @@ import {
   styleUrl: './prescription.component.scss',
 })
 export class PrescriptionComponent implements OnInit {
-  @ViewChild('pdfContent', { static: false }) pdfContent!: ElementRef;
+  @ViewChild('printContent', { static: false }) printContent!: ElementRef;
 
   prescriptions: Prescription[] = [];
   patients: Patient[] = [];
@@ -38,9 +56,10 @@ export class PrescriptionComponent implements OnInit {
   loading = false;
   saving = false;
   page = 1;
-  limit = 10;
+  limit = 100;
   totalPages = 0;
   selectedPatientId = '';
+  selectedAppointmentId = '';
   editingId: string | null = null;
   currentHospitalId: string | null = null;
   currentUserId: string | null = null;
@@ -48,6 +67,34 @@ export class PrescriptionComponent implements OnInit {
   routePatientId = '';
   routeDoctorId = '';
   routeAppointmentId = '';
+  activeTab = 'prescription';
+  patientSearch = '';
+  printPreviewOpen = false;
+  printPreviewLoading = false;
+  previewPrescription: Prescription | null = null;
+  printPreviewData: PrintPreviewData | null = null;
+  today = new Date();
+  readonly durationOptions = [
+    '1 Day',
+    '3 Days',
+    '5 Days',
+    '7 Days',
+    '10 Days',
+    '14 Days',
+    '1 Month',
+    '2 Months',
+    '3 Months',
+    'Continue',
+  ];
+
+  readonly labTestCatalog = [
+    { name: 'CBC', category: 'Hematology' },
+    { name: 'ESR', category: 'Hematology' },
+    { name: 'CRP', category: 'Serology' },
+    { name: 'Blood Sugar Fasting', category: 'Biochemistry' },
+    { name: 'Chest X-Ray', category: 'Radiology' },
+    { name: 'Sputum Culture', category: 'Microbiology' },
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -59,7 +106,35 @@ export class PrescriptionComponent implements OnInit {
       patientId: ['', Validators.required],
       doctorId: ['', Validators.required],
       appointmentId: [''],
+      chiefComplaint: [''],
+      history: [''],
+      examination: [''],
+      diagnosis: [''],
       medicines: this.fb.array([this.createMedicineGroup()]),
+      labTests: this.fb.array(this.labTestCatalog.map((test) => this.createLabTestGroup(test))),
+      customLabTest: [''],
+      ivFluids: this.fb.array([this.createIvFluidGroup('DNS', '80 ml/hr', '500 ml')]),
+      admissionOrders: this.fb.group({
+        roomType: ['General Ward'],
+        bed: [''],
+        regularDiet: [true],
+        npo: [false],
+        consultation: [''],
+        monitoring: this.fb.group({
+          bp: [true],
+          pulse: [true],
+          spo2: [true],
+          rbs: [true],
+        }),
+        notes: [''],
+      }),
+      vitals: this.fb.group({
+        bp: [''],
+        pulse: [''],
+        weight: [''],
+        temperature: [''],
+        spo2: [''],
+      }),
       advice: [''],
       followUpDate: [''],
     });
@@ -72,15 +147,18 @@ export class PrescriptionComponent implements OnInit {
     this.currentHospitalId = currentUser?.hospitalId || null;
     this.currentUserId = currentUser?._id || null;
     this.currentRole = String(localStorage.getItem('role') || currentUser?.role?.name || '');
+
     this.route.queryParamMap.subscribe((params) => {
       this.routePatientId = params.get('patientId') || '';
       this.routeDoctorId = params.get('doctorId') || '';
       this.routeAppointmentId = params.get('appointmentId') || '';
       this.selectedPatientId = this.routePatientId;
+      this.selectedAppointmentId = this.routeAppointmentId;
       this.applyRouteDefaults();
       this.page = 1;
       this.loadPrescriptions();
     });
+
     this.loadLookups();
     this.loadPrescriptions();
   }
@@ -89,13 +167,47 @@ export class PrescriptionComponent implements OnInit {
     return this.prescriptionForm.get('medicines') as FormArray;
   }
 
-  createMedicineGroup(): FormGroup {
+  get labTests(): FormArray {
+    return this.prescriptionForm.get('labTests') as FormArray;
+  }
+
+  get ivFluids(): FormArray {
+    return this.prescriptionForm.get('ivFluids') as FormArray;
+  }
+
+  get vitalsGroup(): FormGroup {
+    return this.prescriptionForm.get('vitals') as FormGroup;
+  }
+
+  createMedicineGroup(medicine?: Record<string, unknown>): FormGroup {
     return this.fb.group({
-      name: ['', Validators.required],
-      dosage: [''],
-      frequency: [''],
-      duration: [''],
-      instructions: [''],
+      name: [medicine?.['name'] || '', Validators.required],
+      dosage: [medicine?.['dosage'] || ''],
+      frequency: [medicine?.['frequency'] || ''],
+      duration: [medicine?.['duration'] || '1 Month'],
+      afterMeal: [Boolean(medicine?.['afterMeal'])],
+      beforeMeal: [Boolean(medicine?.['beforeMeal'])],
+      morning: [Boolean(medicine?.['morning'])],
+      noon: [Boolean(medicine?.['noon'])],
+      evening: [Boolean(medicine?.['evening'])],
+      night: [Boolean(medicine?.['night'])],
+      instructions: [medicine?.['instructions'] || ''],
+    });
+  }
+
+  createLabTestGroup(test?: { name?: string; category?: string; selected?: boolean }): FormGroup {
+    return this.fb.group({
+      selected: [Boolean(test?.selected)],
+      name: [test?.name || ''],
+      category: [test?.category || ''],
+    });
+  }
+
+  createIvFluidGroup(name = '', rate = '', duration = ''): FormGroup {
+    return this.fb.group({
+      name: [name, Validators.required],
+      rate: [rate],
+      duration: [duration],
     });
   }
 
@@ -106,6 +218,29 @@ export class PrescriptionComponent implements OnInit {
   removeMedicine(index: number): void {
     if (this.medicines.length > 1) {
       this.medicines.removeAt(index);
+      return;
+    }
+
+    this.medicines.at(index).reset({ duration: '1 Month' });
+  }
+
+  addCustomLabTest(): void {
+    const name = String(this.prescriptionForm.value.customLabTest || '').trim();
+    if (!name) {
+      return;
+    }
+
+    this.labTests.push(this.createLabTestGroup({ name, category: 'Other', selected: true }));
+    this.prescriptionForm.patchValue({ customLabTest: '' });
+  }
+
+  addIvFluid(): void {
+    this.ivFluids.push(this.createIvFluidGroup());
+  }
+
+  removeIvFluid(index: number): void {
+    if (this.ivFluids.length > 1) {
+      this.ivFluids.removeAt(index);
     }
   }
 
@@ -113,23 +248,27 @@ export class PrescriptionComponent implements OnInit {
     this.backend.getPatients({ limit: 100, status: 'active' }).subscribe({
       next: (result) => {
         this.patients = result.items;
-        this.ensureDoctorPatientScope();
       },
       error: () => (this.patients = []),
     });
+
     this.backend.getDoctors({ limit: 100, status: 'active' }).subscribe({
       next: (result) => (this.doctors = result.items),
       error: () => (this.doctors = []),
     });
+
     this.backend
       .getAppointments({
         limit: 100,
         doctorId: this.isDoctorUser() ? this.currentUserId || undefined : undefined,
       })
       .subscribe({
-      next: (result) => (this.appointments = result.items),
-      error: () => (this.appointments = []),
-    });
+        next: (result) => {
+          this.appointments = result.items;
+          this.selectInitialAppointment();
+        },
+        error: () => (this.appointments = []),
+      });
   }
 
   loadPrescriptions(): void {
@@ -154,41 +293,336 @@ export class PrescriptionComponent implements OnInit {
       });
   }
 
-  submitPrescription(): void {
+  submitPrescription(printAfterSave = false): void {
     if (this.prescriptionForm.invalid) {
       this.prescriptionForm.markAllAsTouched();
       return;
     }
 
-    const value = this.prescriptionForm.value;
+    const value = this.prescriptionForm.getRawValue();
+
+    if (this.isDoctorUser() && !value.appointmentId) {
+      this.toastr.error('Select an assigned appointment before creating prescription');
+      return;
+    }
+
+    const medicines = value.medicines.filter((medicine: Record<string, unknown>) =>
+      String(medicine['name'] || '').trim()
+    );
+
+    if (medicines.length === 0) {
+      this.toastr.error('Add at least one medicine');
+      return;
+    }
+
     const payload: Record<string, unknown> = {
-      hospitalId: this.currentHospitalId || undefined,
       patientId: value.patientId,
       doctorId: value.doctorId,
       appointmentId: value.appointmentId || undefined,
-      medicines: value.medicines,
+      chiefComplaint: value.chiefComplaint || undefined,
+      history: value.history || undefined,
+      examination: value.examination || undefined,
+      diagnosis: value.diagnosis || undefined,
+      medicines,
+      labTests: value.labTests.filter((test: Record<string, unknown>) => test['selected'] && test['name']),
+      ivFluids: value.ivFluids.filter((fluid: Record<string, unknown>) => String(fluid['name'] || '').trim()),
+      admissionOrders: value.admissionOrders,
+      vitals: value.vitals,
       advice: value.advice || undefined,
       followUpDate: value.followUpDate || undefined,
     };
+
+    if (!this.editingId) {
+      payload['hospitalId'] = this.currentHospitalId || undefined;
+    }
 
     this.saving = true;
     const request$ = this.editingId
       ? this.backend.updatePrescription(this.editingId, payload)
       : this.backend.createPrescription(payload);
-    request$
-      .pipe(finalize(() => (this.saving = false)))
-      .subscribe({
-        next: (response) => {
-          this.toastr.success(response.message);
-          this.resetForm();
-          this.loadPrescriptions();
+
+    request$.pipe(finalize(() => (this.saving = false))).subscribe({
+      next: (response) => {
+        this.toastr.success(response.message);
+        this.editingId = response.data?._id || this.editingId;
+        this.markAppointmentCompleted(response.data?.appointmentId || value.appointmentId);
+        this.loadPrescriptions();
+        if (printAfterSave) {
+          this.openPrintPreview(response.data);
+        }
+      },
+      error: (err) => this.toastr.error(err?.error?.message || 'Something went wrong'),
+    });
+  }
+
+  selectAppointment(appointment: Appointment): void {
+    this.selectedAppointmentId = appointment._id;
+    this.selectedPatientId = appointment.patientId;
+    this.prescriptionForm.patchValue({
+      patientId: appointment.patientId,
+      doctorId: appointment.doctorId,
+      appointmentId: appointment._id,
+      chiefComplaint: appointment.reason || this.prescriptionForm.value.chiefComplaint || '',
+    });
+    this.loadPrescriptions();
+  }
+
+  editPrescription(prescription: Prescription): void {
+    this.editingId = prescription._id;
+    this.selectedPatientId = prescription.patientId;
+    this.selectedAppointmentId = prescription.appointmentId || '';
+    this.prescriptionForm.patchValue({
+      patientId: prescription.patientId,
+      doctorId: prescription.doctorId,
+      appointmentId: prescription.appointmentId || '',
+      chiefComplaint: prescription.chiefComplaint || '',
+      history: prescription.history || '',
+      examination: prescription.examination || '',
+      diagnosis: prescription.diagnosis || '',
+      advice: prescription.advice || '',
+      followUpDate: prescription.followUpDate ? String(prescription.followUpDate).slice(0, 10) : '',
+      vitals: prescription.vitals || {},
+      admissionOrders: prescription.admissionOrders || {},
+    });
+
+    this.medicines.clear();
+    (prescription.medicines || []).forEach((medicine) => this.medicines.push(this.createMedicineGroup(medicine as any)));
+    if (this.medicines.length === 0) {
+      this.addMedicine();
+    }
+
+    this.labTests.clear();
+    const savedTests = prescription.labTests || [];
+    const savedNames = new Set(savedTests.map((test) => test.name));
+    this.labTestCatalog.forEach((test) => {
+      const saved = savedTests.find((item) => item.name === test.name);
+      this.labTests.push(this.createLabTestGroup({ ...test, selected: Boolean(saved) }));
+    });
+    savedTests
+      .filter((test) => !savedNames.has(test.name) || !this.labTestCatalog.some((item) => item.name === test.name))
+      .forEach((test) => this.labTests.push(this.createLabTestGroup({ ...test, selected: true })));
+
+    this.ivFluids.clear();
+    (prescription.ivFluids || []).forEach((fluid) =>
+      this.ivFluids.push(this.createIvFluidGroup(fluid.name, fluid.rate || '', fluid.duration || ''))
+    );
+    if (this.ivFluids.length === 0) {
+      this.addIvFluid();
+    }
+  }
+
+  resetForm(): void {
+    this.editingId = null;
+    this.prescriptionForm.reset({
+      admissionOrders: {
+        roomType: 'General Ward',
+        regularDiet: true,
+        monitoring: {
+          bp: true,
+          pulse: true,
+          spo2: true,
+          rbs: true,
         },
-        error: (err) => this.toastr.error(err?.error?.message || 'Something went wrong'),
-      });
+      },
+    });
+    this.medicines.clear();
+    this.addMedicine();
+    this.labTests.clear();
+    this.labTestCatalog.forEach((test) => this.labTests.push(this.createLabTestGroup(test)));
+    this.ivFluids.clear();
+    this.ivFluids.push(this.createIvFluidGroup('DNS', '80 ml/hr', '500 ml'));
+    this.applyRouteDefaults();
+    this.selectInitialAppointment();
   }
 
   patientName(patient?: Patient | null): string {
     return patient ? `${patient.firstName} ${patient.lastName}`.trim() : '-';
+  }
+
+  doctorName(doctor?: Doctor | null): string {
+    return doctor?.user?.name || doctor?.specialization || '-';
+  }
+
+  appointmentStatusLabel(status: string): string {
+    return status.replace(/_/g, ' ');
+  }
+
+  appointmentStatusClass(status: string): string {
+    return `status-${status.replace(/_/g, '-')}`;
+  }
+
+  initials(value?: string | null): string {
+    const words = String(value || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    return words.length
+      ? words
+        .slice(0, 2)
+        .map((word) => word[0])
+        .join('')
+        .toUpperCase()
+      : 'NA';
+  }
+
+  shortDate(value: string | Date): string {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? '-'
+      : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  currentTime(): string {
+    return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  ageLabel(patient?: Patient | null): string {
+    if (!patient?.dateOfBirth) {
+      return '-';
+    }
+
+    const birthDate = new Date(patient.dateOfBirth);
+    if (Number.isNaN(birthDate.getTime())) {
+      return '-';
+    }
+
+    const today = new Date();
+    let years = today.getFullYear() - birthDate.getFullYear();
+    const monthDelta = today.getMonth() - birthDate.getMonth();
+    if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birthDate.getDate())) {
+      years -= 1;
+    }
+
+    return `${Math.max(years, 0)} Y`;
+  }
+
+  selectedAppointment(): Appointment | null {
+    return this.appointments.find((appointment) => appointment._id === this.selectedAppointmentId) || null;
+  }
+
+  selectedPatient(): Patient | null {
+    const patientId = this.prescriptionForm.getRawValue().patientId || this.selectedPatientId;
+    return (
+      this.selectedAppointment()?.patient ||
+      this.patients.find((patient) => patient._id === patientId) ||
+      null
+    );
+  }
+
+  selectedDoctorName(): string {
+    const appointment = this.selectedAppointment();
+    if (appointment?.doctor?.name) {
+      return appointment.doctor.name;
+    }
+
+    const doctorId = this.prescriptionForm.getRawValue().doctorId;
+    const doctor = this.doctors.find((item) => item.userId === doctorId);
+    return this.doctorName(doctor);
+  }
+
+  selectedDoctorQualification(doctorId = this.prescriptionForm.getRawValue().doctorId): string {
+    const doctor = this.doctors.find((item) => item.userId === doctorId);
+    return doctor?.qualification || doctor?.specialization || 'M.B.B.S., F.C.P.S.';
+  }
+
+  prescriptionPatientName(prescription: Prescription): string {
+    const patient = prescription.patient || this.patients.find((item) => item._id === prescription.patientId);
+    return this.patientName(patient || null);
+  }
+
+  prescriptionDoctorName(prescription: Prescription): string {
+    if (prescription.doctor?.name) {
+      return prescription.doctor.name;
+    }
+
+    const doctor = this.doctors.find((item) => item.userId === prescription.doctorId);
+    return this.doctorName(doctor);
+  }
+
+  prescriptionDate(prescription: Prescription): string {
+    return this.shortDate(prescription.createdAt || prescription.followUpDate || new Date());
+  }
+
+  prescriptionMedicineCount(prescription: Prescription): number {
+    return prescription.medicines?.length || 0;
+  }
+
+  genderShort(patient?: Patient | null): string {
+    if (!patient?.gender) {
+      return '-';
+    }
+
+    return patient.gender.charAt(0).toUpperCase();
+  }
+
+  openPrintPreview(prescription: Prescription | null = null): void {
+    this.previewPrescription = prescription;
+    this.printPreviewData = this.buildPrintPreviewData(prescription);
+    this.printPreviewOpen = true;
+
+    if (!prescription?._id) {
+      return;
+    }
+
+    this.printPreviewLoading = true;
+    this.backend
+      .getPrescription(prescription._id)
+      .pipe(finalize(() => (this.printPreviewLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.previewPrescription = result;
+          this.printPreviewData = this.buildPrintPreviewData(result);
+        },
+        error: (err) => {
+          this.printPreviewLoading = false;
+          this.toastr.error(err?.error?.message || 'Unable to load prescription preview');
+        },
+      });
+  }
+
+  closePrintPreview(): void {
+    this.printPreviewOpen = false;
+    this.printPreviewLoading = false;
+    this.previewPrescription = null;
+    this.printPreviewData = null;
+  }
+
+  printPrescription(): void {
+    if (!this.printContent?.nativeElement) {
+      return;
+    }
+
+    html2canvas(this.printContent.nativeElement, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
+      (pdf as any).autoPrint?.();
+      const printUrl = pdf.output('bloburl');
+      window.open(printUrl, '_blank');
+    });
+  }
+
+  visibleAppointments(): Appointment[] {
+    const query = this.patientSearch.trim().toLowerCase();
+    const today = new Date().toISOString().slice(0, 10);
+    const items = this.appointments.filter((appointment) => appointment.appointmentDate.slice(0, 10) === today);
+    const source = items.length ? items : this.appointments;
+
+    if (!query) {
+      return source.slice(0, 8);
+    }
+
+    return source
+      .filter((appointment) => `${this.patientName(appointment.patient)} ${appointment.appointmentNo}`.toLowerCase().includes(query))
+      .slice(0, 8);
   }
 
   deletePrescription(id: string): void {
@@ -214,40 +648,6 @@ export class PrescriptionComponent implements OnInit {
     this.loadPrescriptions();
   }
 
-  editPrescription(prescription: Prescription): void {
-    this.editingId = prescription._id;
-    this.prescriptionForm.patchValue({
-      patientId: prescription.patientId,
-      doctorId: prescription.doctorId,
-      appointmentId: prescription.appointmentId || '',
-      advice: prescription.advice || '',
-      followUpDate: prescription.followUpDate ? String(prescription.followUpDate).slice(0, 10) : '',
-    });
-    this.medicines.clear();
-    (prescription.medicines || []).forEach((medicine) => {
-      this.medicines.push(
-        this.fb.group({
-          name: [medicine.name || '', Validators.required],
-          dosage: [medicine.dosage || ''],
-          frequency: [medicine.frequency || ''],
-          duration: [medicine.duration || ''],
-          instructions: [medicine.instructions || ''],
-        })
-      );
-    });
-    if (this.medicines.length === 0) {
-      this.addMedicine();
-    }
-  }
-
-  resetForm(): void {
-    this.editingId = null;
-    this.prescriptionForm.reset();
-    this.medicines.clear();
-    this.addMedicine();
-    this.applyRouteDefaults();
-  }
-
   private applyRouteDefaults(): void {
     if (this.editingId) {
       return;
@@ -266,19 +666,18 @@ export class PrescriptionComponent implements OnInit {
     }
   }
 
-  private ensureDoctorPatientScope(): void {
-    if (!this.isDoctorUser()) {
+  private selectInitialAppointment(): void {
+    if (this.selectedAppointmentId) {
+      const appointment = this.appointments.find((item) => item._id === this.selectedAppointmentId);
+      if (appointment) {
+        this.selectAppointment(appointment);
+      }
       return;
     }
 
-    const activePatientId = String(this.prescriptionForm.get('patientId')?.value || '');
-    const allowedPatientIds = new Set(this.patients.map((patient) => patient._id));
-
-    if (activePatientId && !allowedPatientIds.has(activePatientId)) {
-      this.selectedPatientId = '';
-      this.routePatientId = '';
-      this.prescriptionForm.patchValue({ patientId: '', appointmentId: '' }, { emitEvent: false });
-      this.toastr.warning('Only assigned patients can be prescribed by this doctor.');
+    const firstAppointment = this.visibleAppointments()[0];
+    if (firstAppointment && !this.prescriptionForm.value.patientId) {
+      this.selectAppointment(firstAppointment);
     }
   }
 
@@ -286,32 +685,105 @@ export class PrescriptionComponent implements OnInit {
     return this.currentRole.trim().replace(/[\s_-]/g, '').toLowerCase() === 'doctor';
   }
 
-  downloadPDF() {
-    const content = this.pdfContent.nativeElement;
-    html2canvas(content, { scale: 1.2 }).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+  private markAppointmentCompleted(appointmentId?: string | null): void {
+    if (!appointmentId) {
+      return;
+    }
 
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+    this.appointments = this.appointments.map((appointment) =>
+      appointment._id === appointmentId
+        ? {
+          ...appointment,
+          status: 'completed',
+        }
+        : appointment
+    );
+  }
 
-      const imgProps = {
-        width: pageWidth,
-        height: (canvas.height * pageWidth) / canvas.width,
-      };
+  private buildPrintPreviewData(prescription: Prescription | null = null): PrintPreviewData | null {
+    const source: Record<string, any> = prescription || this.prescriptionForm.getRawValue();
+    const patient = this.resolvePrintPatient(source);
 
-      let position = 0;
-      let heightLeft = imgProps.height;
-      pdf.addImage(imgData, 'PNG', 0, position, imgProps.width, imgProps.height);
-      heightLeft -= pageHeight;
-      while (heightLeft > 0) {
-        position = heightLeft - imgProps.height;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgProps.width, imgProps.height);
-        heightLeft -= pageHeight;
-      }
+    if (!patient) {
+      return null;
+    }
 
-      pdf.save('prescription.pdf');
-    });
+    const doctorId = String(source['doctorId'] || '');
+    const doctor = this.doctors.find((item) => item.userId === doctorId);
+    const createdAt = source['createdAt'] || new Date();
+    const followUpDate = source['followUpDate'];
+    const labTests = (source['labTests'] || [])
+      .filter((test: { selected?: boolean; name?: string }) => Boolean(test.name) && (prescription || test.selected))
+      .map((test: { name: string; category?: string }) => ({
+        name: test.name,
+        category: test.category || '',
+      }));
+
+    return {
+      patient,
+      patientName: this.patientName(patient),
+      patientAge: this.ageLabel(patient),
+      patientGender: this.genderShort(patient),
+      patientNo: patient.patientNo || '-',
+      patientAddress: patient.address || '-',
+      patientPhone: patient.phone || '-',
+      doctorName: source['doctor']?.name || (doctor ? this.doctorName(doctor) : this.selectedDoctorName()),
+      doctorQualification: doctor?.qualification || doctor?.specialization || 'M.B.B.S., F.C.P.S.',
+      date: this.formatPrintDate(createdAt),
+      disease: source['diagnosis'] || source['chiefComplaint'] || source['history'] || '-',
+      vitals: source['vitals'] || {},
+      labTests,
+      medicines: source['medicines'] || [],
+      followUpDate: followUpDate ? this.shortDate(followUpDate) : '-',
+    };
+  }
+
+  private resolvePrintPatient(source: Record<string, any>): Patient | null {
+    const patientId = String(source['patientId'] || '');
+    const patient =
+      this.patients.find((item) => item._id === patientId) ||
+      source['patient'] ||
+      this.selectedAppointment()?.patient ||
+      null;
+
+    if (patient) {
+      return patient as Patient;
+    }
+
+    if (!patientId) {
+      return null;
+    }
+
+    return {
+      _id: patientId,
+      hospitalId: String(source['hospitalId'] || ''),
+      patientNo: '-',
+      assignedDoctorId: '',
+      firstName: 'Patient',
+      lastName: '',
+      phone: null,
+      gender: 'other',
+      dateOfBirth: null,
+      address: null,
+      bloodGroup: null,
+      allergies: [],
+      chronicDiseases: [],
+      currentMedications: [],
+      status: 'active',
+    } as Patient;
+  }
+
+  private formatPrintDate(value: string | Date): string {
+    const date = new Date(value);
+    const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+
+    return safeDate
+      .toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+      .replace(/ /g, '-')
+      .toUpperCase();
   }
 }
