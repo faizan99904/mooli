@@ -17,6 +17,17 @@ import {
   Patient,
 } from '../../../shared/models/hospital.model';
 
+interface AppointmentToken {
+  appointmentNo: string;
+  patientName: string;
+  doctorName: string;
+  departmentName: string;
+  appointmentDate: string;
+  timeRange: string;
+  status: string;
+  printedAt: string;
+}
+
 @Component({
   selector: 'app-appointment',
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
@@ -153,6 +164,9 @@ export class AppointmentComponent implements OnInit {
     }
 
     this.saving = true;
+    const isEditing = Boolean(this.editingId);
+    const selectedPatient = this.selectedPatient;
+    const selectedDoctorForToken = selectedDoctor;
     const request$ = this.editingId
       ? this.backend.updateAppointment(this.editingId, payload)
       : this.backend.createAppointment(payload);
@@ -160,6 +174,14 @@ export class AppointmentComponent implements OnInit {
     request$.pipe(finalize(() => (this.saving = false))).subscribe({
       next: (response) => {
         this.toastr.success(response.message);
+        if (!isEditing && response.data) {
+          const appointmentToken = this.buildAppointmentToken(
+            response.data,
+            selectedPatient,
+            selectedDoctorForToken
+          );
+          this.printAppointmentToken(appointmentToken);
+        }
         this.resetForm();
         this.loadAppointments();
       },
@@ -372,6 +394,13 @@ export class AppointmentComponent implements OnInit {
     return `status-${status.replace(/_/g, '-')}`;
   }
 
+  appointmentStatusLabel(status: string): string {
+    return status
+      .split('_')
+      .map((part) => this.titleCase(part))
+      .join(' ');
+  }
+
   initials(value?: string | null): string {
     const words = String(value || '')
       .trim()
@@ -401,6 +430,186 @@ export class AppointmentComponent implements OnInit {
       month: 'short',
       year: 'numeric',
     });
+  }
+
+  formatClockTime(value?: string | null): string {
+    if (!value) {
+      return '-';
+    }
+
+    const [hourText, minuteText] = value.split(':');
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+
+    if (Number.isNaN(hour) || Number.isNaN(minute)) {
+      return value;
+    }
+
+    const normalizedHour = hour % 12 || 12;
+    const meridiem = hour >= 12 ? 'PM' : 'AM';
+    return `${normalizedHour}:${String(minute).padStart(2, '0')} ${meridiem}`;
+  }
+
+  printAppointmentToken(token: AppointmentToken): void {
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    printFrame.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(printFrame);
+
+    const printWindow = printFrame.contentWindow;
+    const printDocument = printWindow?.document;
+
+    if (!printWindow || !printDocument) {
+      printFrame.remove();
+      this.toastr.error('Unable to open print window');
+      return;
+    }
+
+    const tokenHtml = `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Appointment Token ${token.appointmentNo}</title>
+          <style>
+            @page { margin: 0; size: 80mm auto; }
+            * { box-sizing: border-box; }
+            html, body { height: auto; width: 100%; }
+            body {
+              align-items: center;
+              background: #fff;
+              color: #111827;
+              display: flex;
+              font-family: Arial, sans-serif;
+              justify-content: center;
+              margin: 0;
+              min-height: auto;
+              padding: 0;
+            }
+            .token {
+              background: #fff;
+              border: 0;
+              border-radius: 0;
+              box-shadow: none;
+              max-width: 78mm;
+              padding: 20px 14px;
+              text-align: center;
+              width: 100%;
+            }
+            .eyebrow {
+              color: #16a34a;
+              font-size: 11px;
+              font-weight: 800;
+              letter-spacing: 0.14em;
+              text-transform: uppercase;
+            }
+            h1 { font-size: 28px; line-height: 1; margin: 10px 0 8px; }
+            p { margin: 0; }
+            .sub {
+              color: #6b7280;
+              font-size: 11px;
+              margin-bottom: 16px;
+            }
+            .status-badge {
+              background: #ecfdf3;
+              border: 1px solid #bbf7d0;
+              border-radius: 999px;
+              color: #166534;
+              display: inline-block;
+              font-size: 11px;
+              font-weight: 800;
+              margin-bottom: 18px;
+              padding: 6px 10px;
+            }
+            .row {
+              align-items: flex-start;
+              display: flex;
+              gap: 10px;
+              justify-content: space-between;
+              padding: 10px 0;
+              border-top: 1px dashed #d1d5db;
+              font-size: 12px;
+              text-align: left;
+            }
+            .row:first-of-type { border-top: 0; }
+            .label {
+              color: #6b7280;
+              font-weight: 700;
+            }
+            .value {
+              font-weight: 800;
+              max-width: 54%;
+              text-align: right;
+            }
+            .footer {
+              border-top: 1px solid #e5e7eb;
+              color: #6b7280;
+              font-size: 11px;
+              margin-top: 14px;
+              padding-top: 10px;
+            }
+            @media print {
+              @page { margin: 0; size: 80mm auto; }
+              html, body {
+                height: auto;
+                width: 100%;
+              }
+              body {
+                background: #fff;
+                min-height: auto;
+                padding: 0;
+              }
+              .token {
+                max-width: none;
+                padding: 14px 12px;
+              }
+              h1 { font-size: 26px; }
+              .sub { font-size: 10px; margin-bottom: 14px; }
+              .status-badge { font-size: 10px; margin-bottom: 16px; padding: 5px 9px; }
+              .row { font-size: 11px; padding: 9px 0; }
+              .footer { font-size: 10px; margin-top: 14px; padding-top: 10px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="token">
+            <div class="eyebrow">Appointment Token</div>
+            <h1>${this.escapeHtml(token.appointmentNo)}</h1>
+            <p class="sub">Keep this token for your visit</p>
+            <div class="status-badge">${this.escapeHtml(token.status)}</div>
+            ${this.printableTokenRow('Patient', token.patientName)}
+            ${this.printableTokenRow('Doctor', token.doctorName)}
+            ${this.printableTokenRow('Department', token.departmentName)}
+            ${this.printableTokenRow('Date', token.appointmentDate)}
+            ${this.printableTokenRow('Time', token.timeRange)}
+            ${this.printableTokenRow('Printed At', token.printedAt)}
+            <div class="footer">Please wait for your turn.</div>
+          </div>
+          <script>
+            window.onload = function () {
+              setTimeout(function () {
+                window.focus();
+                window.print();
+              }, 150);
+            };
+            window.onafterprint = function () {
+              setTimeout(function () {
+                window.frameElement && window.frameElement.remove();
+              }, 0);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printDocument.open();
+    printDocument.write(tokenHtml);
+    printDocument.close();
   }
 
   openAddPatientModal(): void {
@@ -568,6 +777,46 @@ export class AppointmentComponent implements OnInit {
   private patchDepartmentFromDoctor(userId?: string | null): void {
     const departmentId = this.findDoctorByUserId(userId)?.departmentId || '';
     this.appointmentForm.patchValue({ departmentId });
+  }
+
+  private buildAppointmentToken(
+    appointment: Appointment,
+    patient?: Patient | null,
+    doctorRecord?: Doctor
+  ): AppointmentToken {
+    const resolvedPatient = appointment.patient || patient || null;
+    const resolvedDoctorName = appointment.doctor?.name || doctorRecord?.user?.name || doctorRecord?.specialization || '-';
+    const resolvedDepartment =
+      appointment.department?.name || doctorRecord?.department?.name || 'General';
+
+    return {
+      appointmentNo: appointment.appointmentNo,
+      patientName: this.patientName(resolvedPatient),
+      doctorName: resolvedDoctorName,
+      departmentName: resolvedDepartment,
+      appointmentDate: this.shortDate(appointment.appointmentDate),
+      timeRange: `${this.formatClockTime(appointment.startTime)} - ${this.formatClockTime(appointment.endTime)}`,
+      status: this.appointmentStatusLabel(appointment.status),
+      printedAt: `${this.shortDate(new Date())} ${this.formatClockTime(this.formatTime(new Date()))}`,
+    };
+  }
+
+  private printableTokenRow(label: string, value: string): string {
+    return `
+      <div class="row">
+        <span class="label">${this.escapeHtml(label)}</span>
+        <span class="value">${this.escapeHtml(value || '-')}</span>
+      </div>
+    `;
+  }
+
+  private escapeHtml(value: string): string {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   canOpenClinicalRecords(): boolean {
