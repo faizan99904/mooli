@@ -151,6 +151,15 @@ export interface PrescriptionMedicine {
   instructions?: string;
 }
 
+export interface DoctorMedicine extends PrescriptionMedicine {
+  _id: string;
+  hospitalId: string;
+  doctorId: string;
+  type?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface PrescriptionLabTest {
   name: string;
   category?: string;

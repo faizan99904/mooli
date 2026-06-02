@@ -17,6 +17,7 @@ import { BackendService } from '../../../core/services/backend.service';
 import {
   Appointment,
   Doctor,
+  DoctorMedicine,
   Patient,
   Prescription,
 } from '../../../shared/models/hospital.model';
@@ -52,7 +53,9 @@ export class PrescriptionComponent implements OnInit {
   patients: Patient[] = [];
   doctors: Doctor[] = [];
   appointments: Appointment[] = [];
+  doctorMedicines: DoctorMedicine[] = [];
   prescriptionForm: FormGroup;
+  doctorMedicineForm: FormGroup;
   loading = false;
   saving = false;
   page = 1;
@@ -73,6 +76,10 @@ export class PrescriptionComponent implements OnInit {
   printPreviewLoading = false;
   previewPrescription: Prescription | null = null;
   printPreviewData: PrintPreviewData | null = null;
+  medicineLibraryOpen = false;
+  medicineLibraryLoading = false;
+  savingDoctorMedicine = false;
+  selectedMedicineRowIndex: number | null = null;
   today = new Date();
   readonly durationOptions = [
     '1 Day',
@@ -85,6 +92,18 @@ export class PrescriptionComponent implements OnInit {
     '2 Months',
     '3 Months',
     'Continue',
+  ];
+  readonly medicineTypeOptions = [
+    'Tablet',
+    'Syrup',
+    'Capsule',
+    'Injection',
+    'Drops',
+    'Cream',
+    'Ointment',
+    'Sachet',
+    'Inhaler',
+    'Other',
   ];
 
   readonly labTestCatalog = [
@@ -115,8 +134,6 @@ export class PrescriptionComponent implements OnInit {
       customLabTest: [''],
       ivFluids: this.fb.array([this.createIvFluidGroup('DNS', '80 ml/hr', '500 ml')]),
       admissionOrders: this.fb.group({
-        roomType: ['General Ward'],
-        bed: [''],
         regularDiet: [true],
         npo: [false],
         consultation: [''],
@@ -137,6 +154,10 @@ export class PrescriptionComponent implements OnInit {
       }),
       advice: [''],
       followUpDate: [''],
+    });
+    this.doctorMedicineForm = this.fb.group({
+      name: ['', Validators.required],
+      type: ['Tablet', Validators.required],
     });
   }
 
@@ -215,6 +236,65 @@ export class PrescriptionComponent implements OnInit {
     this.medicines.push(this.createMedicineGroup());
   }
 
+  openDoctorMedicineModal(rowIndex: number | null = null): void {
+    this.selectedMedicineRowIndex = rowIndex;
+    const source =
+      rowIndex !== null ? (this.medicines.at(rowIndex)?.getRawValue() as Record<string, unknown>) : {};
+    const parsedMedicine = this.parseMedicineTypeAndName(String(source['name'] || ''));
+
+    this.doctorMedicineForm.reset({
+      name: parsedMedicine.name,
+      type: parsedMedicine.type,
+    });
+    this.medicineLibraryOpen = true;
+  }
+
+  closeDoctorMedicineModal(): void {
+    if (this.savingDoctorMedicine) {
+      return;
+    }
+
+    this.medicineLibraryOpen = false;
+    this.selectedMedicineRowIndex = null;
+  }
+
+  saveDoctorMedicine(useInPrescription = false): void {
+    if (this.doctorMedicineForm.invalid) {
+      this.doctorMedicineForm.markAllAsTouched();
+      return;
+    }
+
+    const doctorId = this.activeDoctorId();
+    if (!doctorId) {
+      this.toastr.error('Select an appointment doctor before adding medicine');
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      ...this.doctorMedicineForm.getRawValue(),
+      doctorId,
+      hospitalId: this.currentHospitalId || undefined,
+    };
+
+    this.savingDoctorMedicine = true;
+    this.backend
+      .createDoctorMedicine(payload)
+      .pipe(finalize(() => (this.savingDoctorMedicine = false)))
+      .subscribe({
+        next: (response) => {
+          const medicine = response.data;
+          this.upsertDoctorMedicine(medicine);
+          if (useInPrescription) {
+            this.useDoctorMedicine(medicine);
+          }
+          this.toastr.success(response.message || 'Medicine added successfully');
+          this.savingDoctorMedicine = false;
+          this.closeDoctorMedicineModal();
+        },
+        error: (err) => this.toastr.error(err?.error?.message || 'Unable to add medicine'),
+      });
+  }
+
   removeMedicine(index: number): void {
     if (this.medicines.length > 1) {
       this.medicines.removeAt(index);
@@ -269,6 +349,72 @@ export class PrescriptionComponent implements OnInit {
         },
         error: () => (this.appointments = []),
       });
+  }
+
+  loadDoctorMedicines(search = ''): void {
+    const doctorId = this.activeDoctorId();
+    if (!doctorId) {
+      this.doctorMedicines = [];
+      return;
+    }
+
+    this.medicineLibraryLoading = true;
+    this.backend
+      .getDoctorMedicines({
+        doctorId,
+        q: search.trim() || undefined,
+        limit: 50,
+      })
+      .pipe(finalize(() => (this.medicineLibraryLoading = false)))
+      .subscribe({
+        next: (items) => (this.doctorMedicines = items),
+        error: () => (this.doctorMedicines = []),
+      });
+  }
+
+  onMedicineNameInput(index: number): void {
+    const query = String(this.medicines.at(index).get('name')?.value || '').trim();
+    if (!query) {
+      return;
+    }
+
+    this.loadDoctorMedicines(query);
+  }
+
+  medicineSuggestions(index: number): DoctorMedicine[] {
+    const query = String(this.medicines.at(index).get('name')?.value || '')
+      .trim()
+      .toLowerCase();
+
+    if (!query) {
+      return [];
+    }
+
+    return this.doctorMedicines
+      .filter((medicine) => medicine.name.toLowerCase().startsWith(query))
+      .slice(0, 8);
+  }
+
+  applyMedicineSuggestion(index: number): void {
+    const query = String(this.medicines.at(index).get('name')?.value || '')
+      .trim()
+      .toLowerCase();
+    const medicine = this.doctorMedicines.find(
+      (item) =>
+        item.name.trim().toLowerCase() === query ||
+        this.doctorMedicineDisplayName(item).toLowerCase() === query
+    );
+
+    if (medicine) {
+      this.useDoctorMedicine(medicine, index);
+    }
+  }
+
+  doctorMedicineDisplayName(medicine: Pick<DoctorMedicine, 'name' | 'type'>): string {
+    const type = String(medicine.type || '').trim();
+    const name = String(medicine.name || '').trim();
+
+    return [type, name].filter(Boolean).join(' ');
   }
 
   loadPrescriptions(): void {
@@ -364,6 +510,7 @@ export class PrescriptionComponent implements OnInit {
       appointmentId: appointment._id,
       chiefComplaint: appointment.reason || this.prescriptionForm.value.chiefComplaint || '',
     });
+    this.loadDoctorMedicines();
     this.loadPrescriptions();
   }
 
@@ -409,13 +556,13 @@ export class PrescriptionComponent implements OnInit {
     if (this.ivFluids.length === 0) {
       this.addIvFluid();
     }
+    this.loadDoctorMedicines();
   }
 
   resetForm(): void {
     this.editingId = null;
     this.prescriptionForm.reset({
       admissionOrders: {
-        roomType: 'General Ward',
         regularDiet: true,
         monitoring: {
           bp: true,
@@ -433,6 +580,7 @@ export class PrescriptionComponent implements OnInit {
     this.ivFluids.push(this.createIvFluidGroup('DNS', '80 ml/hr', '500 ml'));
     this.applyRouteDefaults();
     this.selectInitialAppointment();
+    this.loadDoctorMedicines();
   }
 
   patientName(patient?: Patient | null): string {
@@ -664,6 +812,8 @@ export class PrescriptionComponent implements OnInit {
     } else {
       this.prescriptionForm.get('doctorId')?.enable({ emitEvent: false });
     }
+
+    this.loadDoctorMedicines();
   }
 
   private selectInitialAppointment(): void {
@@ -683,6 +833,87 @@ export class PrescriptionComponent implements OnInit {
 
   private isDoctorUser(): boolean {
     return this.currentRole.trim().replace(/[\s_-]/g, '').toLowerCase() === 'doctor';
+  }
+
+  private activeDoctorId(): string {
+    return String(
+      this.prescriptionForm.getRawValue().doctorId ||
+      (this.isDoctorUser() ? this.currentUserId : '') ||
+      ''
+    ).trim();
+  }
+
+  private upsertDoctorMedicine(medicine: DoctorMedicine): void {
+    const index = this.doctorMedicines.findIndex((item) => item._id === medicine._id);
+    if (index >= 0) {
+      this.doctorMedicines[index] = medicine;
+      this.doctorMedicines = [...this.doctorMedicines];
+      return;
+    }
+
+    this.doctorMedicines = [...this.doctorMedicines, medicine].sort((left, right) =>
+      left.name.localeCompare(right.name)
+    );
+  }
+
+  private useDoctorMedicine(medicine: DoctorMedicine, rowIndex = this.selectedMedicineRowIndex): void {
+    let targetIndex = rowIndex;
+
+    if (targetIndex === null) {
+      targetIndex = this.medicines.controls.findIndex((control) => {
+        const value = String(control.get('name')?.value || '').trim();
+        return !value;
+      });
+    }
+
+    if (targetIndex === null || targetIndex < 0) {
+      this.addMedicine();
+      targetIndex = this.medicines.length - 1;
+    }
+
+    this.medicines.at(targetIndex).patchValue({
+      name: this.doctorMedicineDisplayName(medicine),
+    });
+  }
+
+  private parseMedicineTypeAndName(value: string): { name: string; type: string } {
+    const trimmedValue = value.trim();
+    const matchedType = this.medicineTypeOptions.find((type) =>
+      trimmedValue.toLowerCase().startsWith(`${type.toLowerCase()} `)
+    );
+    const aliasMap: Record<string, string> = {
+      tab: 'Tablet',
+      tablet: 'Tablet',
+      cap: 'Capsule',
+      capsule: 'Capsule',
+      inj: 'Injection',
+      injection: 'Injection',
+      syp: 'Syrup',
+      syr: 'Syrup',
+      syrup: 'Syrup',
+      drop: 'Drops',
+      drops: 'Drops',
+    };
+    const firstWord = trimmedValue.split(/\s+/)[0]?.toLowerCase().replace(/\.$/, '');
+
+    if (!matchedType) {
+      if (firstWord && aliasMap[firstWord]) {
+        return {
+          name: trimmedValue.slice(firstWord.length).trim(),
+          type: aliasMap[firstWord],
+        };
+      }
+
+      return {
+        name: trimmedValue,
+        type: 'Tablet',
+      };
+    }
+
+    return {
+      name: trimmedValue.slice(matchedType.length).trim(),
+      type: matchedType,
+    };
   }
 
   private markAppointmentCompleted(appointmentId?: string | null): void {

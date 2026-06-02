@@ -91,7 +91,7 @@ export class PharmacyComponent implements OnInit {
   }
 
   get missingPosPermissions(): string[] {
-    return this.requiredPosPermissions.filter((permission) => !this.backend.hasPermission(permission));
+    return this.requiredPosPermissions.filter((permission) => !this.hasEffectivePosPermission(permission));
   }
 
   get canOpenPharmacyPos(): boolean {
@@ -331,6 +331,24 @@ export class PharmacyComponent implements OnInit {
     const baseUrl = CONFIG.external.pharmacyPosUrl.replace(/\/+$/, '');
 
     return `${baseUrl}/sso#${fragment.toString()}`;
+  }
+
+  private hasEffectivePosPermission(permission: string): boolean {
+    if (this.backend.hasPermission(permission)) {
+      return true;
+    }
+
+    return this.hasPharmacyPosBaseAccess() && this.requiredPosPermissions.includes(permission);
+  }
+
+  private hasPharmacyPosBaseAccess(): boolean {
+    const user = this.getStoredUser();
+    const roleName = String(localStorage.getItem('role') || user?.role?.name || '')
+      .trim()
+      .replace(/[\s_-]/g, '')
+      .toLowerCase();
+
+    return this.backend.hasPermission('products.read') || roleName.includes('pharmacy');
   }
 
   private getStoredUser(): User | null {

@@ -142,7 +142,10 @@
           <section class="medicines-section">
             <div class="section-heading">
               <h3>Medicines</h3>
-              <button type="button" (click)="addMedicine()">+ Add Medicine</button>
+              <div class="medicine-heading-actions">
+                <button type="button" (click)="openDoctorMedicineModal()">+ Library Medicine</button>
+                <button type="button" (click)="addMedicine()">+ Add Medicine</button>
+              </div>
             </div>
 
             <div class="medicine-table" formArrayName="medicines">
@@ -183,7 +186,13 @@
                     <td class="row-number">{{ i + 1 }}</td>
                     <td>
                       <div class="medicine-name-cell">
-                        <input class="medicine-name-input" formControlName="name" placeholder="Tab Cough Syrup" />
+                        <input class="medicine-name-input" formControlName="name" placeholder="Tab Cough Syrup"
+                          [attr.list]="'doctor-medicine-suggestions-' + i" (input)="onMedicineNameInput(i)"
+                          (change)="applyMedicineSuggestion(i)" />
+                        <datalist [id]="'doctor-medicine-suggestions-' + i">
+                          <option *ngFor="let item of medicineSuggestions(i)"
+                            [value]="doctorMedicineDisplayName(item)"></option>
+                        </datalist>
                         <input class="medicine-dose-input" formControlName="dosage" placeholder="(Panadol)" />
                       </div>
                     </td>
@@ -200,7 +209,14 @@
                     <td><label class="tick-cell"><input type="checkbox" formControlName="night" /><span></span></label></td>
                     <td><textarea class="instruction-input" formControlName="instructions" placeholder="10 ml"></textarea></td>
                     <td>
-                      <button type="button" (click)="removeMedicine(i)"><i class="fa fa-trash"></i></button>
+                      <div class="medicine-row-actions">
+                        <button type="button" title="Save to doctor's library" (click)="openDoctorMedicineModal(i)">
+                          <i class="fa fa-book-medical"></i>
+                        </button>
+                        <button type="button" title="Remove medicine" (click)="removeMedicine(i)">
+                          <i class="fa fa-trash"></i>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -254,10 +270,6 @@
                 <h3>Admission Orders</h3>
                 <button type="button">+ Add Order</button>
               </div>
-              <div class="two-col">
-                <label>Room Type <input formControlName="roomType" /></label>
-                <label>Bed <input formControlName="bed" /></label>
-              </div>
               <div class="check-row">
                 <label><input type="checkbox" formControlName="regularDiet" /> Regular Diet</label>
                 <label><input type="checkbox" formControlName="npo" /> NPO</label>
@@ -310,6 +322,43 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="medicineLibraryOpen">
+    <form class="medicine-library-dialog" [formGroup]="doctorMedicineForm" (ngSubmit)="saveDoctorMedicine(true)">
+      <div class="medicine-library-header">
+        <div>
+          <h3>Add Doctor Medicine</h3>
+          <p>This medicine will be available only for {{ selectedDoctorName() }}.</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeDoctorMedicineModal()">&times;</button>
+      </div>
+
+      <div class="medicine-library-grid">
+        <label>
+          <span>Medicine Name</span>
+          <input formControlName="name" placeholder="e.g. Panadol" />
+        </label>
+        <label>
+          <span>Type</span>
+          <select formControlName="type">
+            <option *ngFor="let type of medicineTypeOptions" [value]="type">{{ type }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="medicine-library-footer">
+        <span *ngIf="medicineLibraryLoading">Loading suggestions...</span>
+        <div>
+          <button type="button" class="btn-light" (click)="saveDoctorMedicine(false)" [disabled]="savingDoctorMedicine">
+            Save to Library
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="savingDoctorMedicine">
+            {{ savingDoctorMedicine ? 'Saving...' : 'Save & Use' }}
+          </button>
+        </div>
+      </div>
+    </form>
   </div>
 
   <div class="print-preview-backdrop" *ngIf="printPreviewOpen">

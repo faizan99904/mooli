@@ -13,6 +13,7 @@ import {
   DataTablesResponse,
   Department,
   Doctor,
+  DoctorMedicine,
   Hospital,
   ListResult,
   Patient,
@@ -368,6 +369,16 @@ export class BackendService {
 
   deletePrescription(id: string): Observable<ApiResponse<Prescription>> {
     return this.delete<Prescription>(`${CONFIG.prescriptions}/${id}`);
+  }
+
+  getDoctorMedicines(params?: Record<string, unknown>): Observable<DoctorMedicine[]> {
+    return this.get<DoctorMedicine[]>(`${CONFIG.prescriptions}/doctor-medicines`, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createDoctorMedicine(payload: Record<string, unknown>): Observable<ApiResponse<DoctorMedicine>> {
+    return this.post<DoctorMedicine>(`${CONFIG.prescriptions}/doctor-medicines`, payload);
   }
 
   getProducts(params?: Record<string, unknown>): Observable<ListResult<ProductCatalogItem>> {

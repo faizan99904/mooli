@@ -97,8 +97,19 @@ export class RolesComponent implements OnInit {
       ],
     },
     {
-      title: 'Pharmacy / POS Medicines',
-      permissions: [{ key: 'products.read', label: 'View POS Medicine Catalog' }],
+      title: 'Pharmacy / POS',
+      permissions: [
+        { key: 'products.read', label: 'View POS Medicine Catalog' },
+        { key: 'sales.create', label: 'Dispense Medicines / Create POS Sales' },
+        { key: 'sales.read', label: 'View POS Sales' },
+        { key: 'stores.read', label: 'View POS Stores' },
+        { key: 'customers.read', label: 'View POS Customers' },
+        { key: 'categories.read', label: 'View Medicine Categories' },
+        { key: 'inventory.read', label: 'View Medicine Stock' },
+        { key: 'register_sessions.open', label: 'Open Cash Register' },
+        { key: 'register_sessions.read', label: 'View Cash Register' },
+        { key: 'register_sessions.close', label: 'Close Cash Register' },
+      ],
     },
     {
       title: 'Rooms',
