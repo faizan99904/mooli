@@ -7,6 +7,10 @@
                     <span>Review doctor prescriptions and match them with POS medicine stock</span>
                 </div>
                 <div class="col-lg-6 col-md-12 col-sm-12 text-lg-right">
+                    <button type="button" class="btn btn-primary mr-2" *ngIf="canCreateProducts" (click)="openProductModal()">
+                        <i class="fa fa-plus"></i>
+                        Add Medicine/Product
+                    </button>
                     <button type="button" class="btn btn-success mr-2" (click)="openPharmacyPos()">
                         <i class="fa fa-shopping-cart"></i>
                         Open POS
@@ -30,7 +34,7 @@
                             <div class="col-md-8 text-md-right text-muted small">
                                 <span *ngIf="productsLoading">Refreshing POS medicine catalog...</span>
                                 <span *ngIf="!canViewProducts">This role needs <code>products.read</code> to see matched POS medicines.</span>
-                                <span *ngIf="canViewProducts && !productsLoading">{{ pharmacyPosHint }}</span>
+                                <span *ngIf="canViewProducts && !productsLoading">{{ selectedStoreLabel }} · {{ pharmacyPosHint }}</span>
                             </div>
                         </div>
 
@@ -112,6 +116,102 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="product-modal-backdrop" *ngIf="productModalOpen">
+        <div class="product-modal-dialog">
+            <div class="product-modal-header">
+                <div>
+                    <h3>Add Medicine/Product</h3>
+                    <p>Create pharmacy stock for this hospital's default store.</p>
+                </div>
+                <button type="button" class="modal-close-btn" (click)="closeProductModal()" [disabled]="savingProduct">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+
+            <div class="product-modal-body">
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label>Medicine/Product Name</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.name" placeholder="e.g. Panadol" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Type</label>
+                        <select class="form-control" [(ngModel)]="productForm.unit">
+                            <option *ngFor="let unit of productUnits" [value]="unit">{{ unit | titlecase }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>SKU</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.sku" placeholder="Auto if empty" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label>Category</label>
+                        <select class="form-control" [(ngModel)]="productForm.categoryId">
+                            <option value="">Add new category</option>
+                            <option *ngFor="let category of categories" [value]="category._id">{{ category.name }}</option>
+                        </select>
+                        <small class="text-muted" *ngIf="categoriesLoading">Loading categories...</small>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label>New Category</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            [(ngModel)]="productForm.categoryName"
+                            [disabled]="!!productForm.categoryId"
+                            placeholder="e.g. Tablets"
+                        />
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label>Store</label>
+                        <select class="form-control" [(ngModel)]="productForm.storeId">
+                            <option [value]="currentStoreId()" *ngIf="stores.length === 0">{{ selectedStoreLabel }}</option>
+                            <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+                        </select>
+                        <small class="text-muted" *ngIf="storesLoading">Loading stores...</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-3">
+                        <label>Cost Price</label>
+                        <input type="number" min="0" class="form-control" [(ngModel)]="productForm.costPrice" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Selling Price</label>
+                        <input type="number" min="0" class="form-control" [(ngModel)]="productForm.sellingPrice" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Opening Stock</label>
+                        <input type="number" min="0" step="1" class="form-control" [(ngModel)]="productForm.openingStock" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Barcode</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.barcode" placeholder="Optional" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label>Brand</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.brand" placeholder="Optional" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="product-modal-footer">
+                <button type="button" class="btn btn-default" (click)="closeProductModal()" [disabled]="savingProduct">Cancel</button>
+                <button type="button" class="btn btn-primary" (click)="saveProduct()" [disabled]="savingProduct">
+                    <i class="fa fa-spinner fa-spin" *ngIf="savingProduct"></i>
+                    Save Medicine/Product
+                </button>
             </div>
         </div>
     </div>

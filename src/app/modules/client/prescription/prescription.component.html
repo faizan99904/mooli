@@ -143,8 +143,44 @@
             <div class="section-heading">
               <h3>Medicines</h3>
               <div class="medicine-heading-actions">
-                <button type="button" (click)="openDoctorMedicineModal()">+ Library Medicine</button>
+                <button type="button" (click)="openDoctorMedicineModal()">+ Add Doctor Medicine</button>
                 <button type="button" (click)="addMedicine()">+ Add Medicine</button>
+              </div>
+            </div>
+
+            <div class="smart-medicine-panel">
+              <div class="smart-medicine-bar">
+                <input #smartMedicineInputRef type="text" name="smartMedicineInput"
+                  [(ngModel)]="smartMedicineInput" [ngModelOptions]="{ standalone: true }"
+                  placeholder="Type saved medicine name or shortcut"
+                  (input)="onSmartMedicineInputChange()" (keydown)="handleSmartMedicineKeydown($event)" />
+                <button type="button" class="btn-primary" (click)="addSmartMedicineFromInput()">Add / Enter</button>
+              </div>
+
+              <div class="smart-suggestions" *ngIf="smartMedicineSuggestions.length > 0">
+                <button type="button" class="smart-suggestion-row"
+                  *ngFor="let item of smartMedicineSuggestions; let suggestionIndex = index"
+                  [class.active]="suggestionIndex === activeMedicineSuggestionIndex"
+                  (mousedown)="addMedicineFromLibrary(item)">
+                  <strong>{{ doctorMedicineDisplayName(item) }}</strong>
+                  <span>{{ doctorMedicineMeta(item) }}</span>
+                </button>
+              </div>
+
+              <div class="medicine-shortcuts" *ngIf="favoriteDoctorMedicines().length > 0">
+                <div>
+                  <span>Saved Medicines</span>
+                  <button type="button" *ngFor="let favorite of favoriteDoctorMedicines()"
+                    (click)="addFavoriteMedicine(favorite)">{{ doctorMedicineDisplayName(favorite) }}</button>
+                </div>
+              </div>
+
+              <div class="medicine-shortcuts" *ngIf="prescriptionMedicineTemplates().length > 0">
+                <div>
+                  <span>Templates</span>
+                  <button type="button" *ngFor="let template of prescriptionMedicineTemplates()"
+                    (click)="applyTemplate(template)">{{ medicineTemplateLabel(template) }}</button>
+                </div>
               </div>
             </div>
 
@@ -153,6 +189,8 @@
                 <colgroup>
                   <col class="col-index" />
                   <col class="col-medicine" />
+                  <col class="col-dose" />
+                  <col class="col-frequency" />
                   <col class="col-duration" />
                   <col class="col-take" />
                   <col class="col-take" />
@@ -167,10 +205,12 @@
                   <tr>
                     <th rowspan="2">#</th>
                     <th rowspan="2">Medicine</th>
+                    <th rowspan="2">Dose</th>
+                    <th rowspan="2">Frequency</th>
                     <th rowspan="2">Duration</th>
                     <th colspan="6">When to Take</th>
                     <th rowspan="2">Instruction</th>
-                    <th rowspan="2"></th>
+                    <th rowspan="2">Actions</th>
                   </tr>
                   <tr>
                     <th>After<br />Meal</th>
@@ -186,16 +226,17 @@
                     <td class="row-number">{{ i + 1 }}</td>
                     <td>
                       <div class="medicine-name-cell">
-                        <input class="medicine-name-input" formControlName="name" placeholder="Tab Cough Syrup"
+                        <input #medicineNameInput class="medicine-name-input" formControlName="name" placeholder="Medicine name"
                           [attr.list]="'doctor-medicine-suggestions-' + i" (input)="onMedicineNameInput(i)"
                           (change)="applyMedicineSuggestion(i)" />
                         <datalist [id]="'doctor-medicine-suggestions-' + i">
                           <option *ngFor="let item of medicineSuggestions(i)"
                             [value]="doctorMedicineDisplayName(item)"></option>
                         </datalist>
-                        <input class="medicine-dose-input" formControlName="dosage" placeholder="(Panadol)" />
                       </div>
                     </td>
+                    <td><input class="medicine-dose-input" formControlName="dosage" placeholder="Dose" /></td>
+                    <td><input class="frequency-input" formControlName="frequency" placeholder="BD / TDS" /></td>
                     <td>
                       <select class="duration-input" formControlName="duration">
                         <option *ngFor="let duration of durationOptions" [value]="duration">{{ duration }}</option>
@@ -207,11 +248,17 @@
                     <td><label class="tick-cell"><input type="checkbox" formControlName="noon" /><span></span></label></td>
                     <td><label class="tick-cell"><input type="checkbox" formControlName="evening" /><span></span></label></td>
                     <td><label class="tick-cell"><input type="checkbox" formControlName="night" /><span></span></label></td>
-                    <td><textarea class="instruction-input" formControlName="instructions" placeholder="10 ml"></textarea></td>
+                    <td><textarea class="instruction-input" formControlName="instructions" placeholder="Instructions"></textarea></td>
                     <td>
                       <div class="medicine-row-actions">
-                        <button type="button" title="Save to doctor's library" (click)="openDoctorMedicineModal(i)">
+                        <button type="button" title="Edit medicine" (click)="focusMedicineRow(i)">
+                          <i class="fa fa-pen"></i>
+                        </button>
+                        <button type="button" title="Save doctor medicine" (click)="openDoctorMedicineModal(i)">
                           <i class="fa fa-book-medical"></i>
+                        </button>
+                        <button type="button" title="Duplicate medicine" (click)="duplicateMedicine(i)">
+                          <i class="fa fa-copy"></i>
                         </button>
                         <button type="button" title="Remove medicine" (click)="removeMedicine(i)">
                           <i class="fa fa-trash"></i>
@@ -337,21 +384,19 @@
       <div class="medicine-library-grid">
         <label>
           <span>Medicine Name</span>
-          <input formControlName="name" placeholder="e.g. Panadol" />
+          <input formControlName="name" placeholder="Medicine name" />
         </label>
         <label>
           <span>Type</span>
-          <select formControlName="type">
-            <option *ngFor="let type of medicineTypeOptions" [value]="type">{{ type }}</option>
-          </select>
+          <input formControlName="type" placeholder="Medicine type" />
         </label>
       </div>
 
       <div class="medicine-library-footer">
-        <span *ngIf="medicineLibraryLoading">Loading suggestions...</span>
+        <span *ngIf="medicineLibraryLoading">Loading medicines...</span>
         <div>
           <button type="button" class="btn-light" (click)="saveDoctorMedicine(false)" [disabled]="savingDoctorMedicine">
-            Save to Library
+            Save Medicine
           </button>
           <button type="submit" class="btn-primary" [disabled]="savingDoctorMedicine">
             {{ savingDoctorMedicine ? 'Saving...' : 'Save & Use' }}

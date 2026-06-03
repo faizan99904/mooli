@@ -31,6 +31,7 @@ export interface User {
 export interface Store {
   _id: string;
   companyId: string;
+  hospitalId?: string | null;
   name: string;
   code: string;
   phone?: string | null;
@@ -39,6 +40,16 @@ export interface Store {
   city?: string | null;
   managerName?: string | null;
   isActive: boolean;
+}
+
+export interface Category {
+  _id: string;
+  companyId: string;
+  name: string;
+  code?: string | null;
+  description?: string | null;
+  parentCategoryId?: string | null;
+  isActive?: boolean;
 }
 
 export interface Hospital {
@@ -270,14 +281,19 @@ export interface Payment {
 
 export interface ProductCatalogItem {
   _id: string;
+  companyId?: string;
+  categoryId?: string | null;
   name: string;
   sku: string;
   barcode?: string | null;
   brand?: string | null;
   unit?: string | null;
+  costPrice?: string | null;
   sellingPrice?: string | null;
   reorderLevel?: string | null;
+  storeId?: string | null;
   stockQuantity?: string | null;
+  reservedQuantity?: string | null;
   availableQuantity?: string | null;
   stockScopeCity?: string | null;
   stockLocationCount?: number;

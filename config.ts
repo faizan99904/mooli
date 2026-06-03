@@ -9,7 +9,7 @@ export const CONFIG = {
   },
 
   external: {
-    pharmacyPosUrl: 'https://frontpanel-phi.vercel.app',
+    pharmacyPosUrl: 'https://frontpanel-seven.vercel.app',
   },
 
   hospitalDashboard: {
@@ -23,7 +23,9 @@ export const CONFIG = {
   patientHistory: API_BASE_URL + '/patient-history',
   appointments: API_BASE_URL + '/appointments',
   prescriptions: API_BASE_URL + '/prescriptions',
+  categories: API_BASE_URL + '/categories',
   products: API_BASE_URL + '/products',
+  inventory: API_BASE_URL + '/inventory',
   rooms: API_BASE_URL + '/rooms',
   roomAllotments: API_BASE_URL + '/room-allotments',
   bills: API_BASE_URL + '/bills',

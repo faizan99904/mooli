@@ -2,16 +2,18 @@ import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { CONFIG } from '../../../../../config';
 import { BackendService } from '../../../core/services/backend.service';
 import {
+  Category,
   Patient,
   Prescription,
   ProductCatalogItem,
+  Store,
   User,
 } from '../../../shared/models/hospital.model';
 
@@ -33,6 +35,20 @@ interface PrintPreviewData {
   followUpDate: string;
 }
 
+interface PharmacyProductForm {
+  name: string;
+  sku: string;
+  barcode: string;
+  brand: string;
+  categoryId: string;
+  categoryName: string;
+  unit: string;
+  costPrice: string;
+  sellingPrice: string;
+  openingStock: string;
+  storeId: string;
+}
+
 @Component({
   selector: 'app-pharmacy',
   standalone: true,
@@ -45,10 +61,16 @@ export class PharmacyComponent implements OnInit {
 
   prescriptions: Prescription[] = [];
   products: ProductCatalogItem[] = [];
+  categories: Category[] = [];
+  stores: Store[] = [];
   patients: Patient[] = [];
   selectedPatientId = '';
   loading = false;
   productsLoading = false;
+  categoriesLoading = false;
+  storesLoading = false;
+  productModalOpen = false;
+  savingProduct = false;
   printPreviewOpen = false;
   printPreviewLoading = false;
   previewPrescription: Prescription | null = null;
@@ -56,6 +78,8 @@ export class PharmacyComponent implements OnInit {
   page = 1;
   limit = 10;
   totalPages = 0;
+  productUnits = ['tablet', 'capsule', 'syrup', 'injection', 'drops', 'cream', 'ointment', 'inhaler', 'pcs'];
+  productForm: PharmacyProductForm = this.getEmptyProductForm();
   private readonly requiredPosPermissions = [
     'sales.create',
     'sales.read',
@@ -83,11 +107,32 @@ export class PharmacyComponent implements OnInit {
     });
 
     this.loadPatients();
+    this.refreshCurrentUser();
+    this.loadStores();
+    this.loadCategories();
     this.loadProducts();
   }
 
   get canViewProducts(): boolean {
-    return this.backend.hasPermission('products.read');
+    return this.backend.hasPermission('products.read') || this.hasPharmacyPosBaseAccess();
+  }
+
+  get canCreateProducts(): boolean {
+    return this.backend.hasPermission('products.create') || this.hasPharmacyPosBaseAccess();
+  }
+
+  get canCreateCategories(): boolean {
+    return this.backend.hasPermission('categories.create') || this.hasPharmacyPosBaseAccess();
+  }
+
+  get canAdjustInventory(): boolean {
+    return this.backend.hasPermission('inventory.adjust') || this.hasPharmacyPosBaseAccess();
+  }
+
+  get selectedStoreLabel(): string {
+    const storeId = this.currentStoreId();
+    const store = this.stores.find((item) => item._id === storeId);
+    return store?.name || (storeId ? 'Assigned pharmacy store' : 'No store assigned');
   }
 
   get missingPosPermissions(): string[] {
@@ -110,6 +155,27 @@ export class PharmacyComponent implements OnInit {
     this.backend.getPatients({ limit: 100, status: 'active' }).subscribe({
       next: (result) => (this.patients = result.items),
       error: () => (this.patients = []),
+    });
+  }
+
+  refreshCurrentUser(): void {
+    this.backend.getMe().subscribe({
+      next: (user) => {
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('role', user.role?.name || '');
+        localStorage.setItem('permissions', JSON.stringify(user.role?.permissions || []));
+
+        if (user.storeId && !this.productForm.storeId) {
+          this.productForm.storeId = user.storeId;
+        }
+
+        this.loadStores();
+        this.loadCategories();
+        this.loadProducts();
+      },
+      error: () => {
+        // The page can still show prescriptions with the existing session cache.
+      },
     });
   }
 
@@ -142,7 +208,7 @@ export class PharmacyComponent implements OnInit {
 
     this.productsLoading = true;
     this.backend
-      .getProducts({ limit: 100, isActive: true })
+      .getProducts({ limit: 100, isActive: true, storeId: this.currentStoreId() || undefined })
       .pipe(finalize(() => (this.productsLoading = false)))
       .subscribe({
         next: (result) => {
@@ -151,6 +217,147 @@ export class PharmacyComponent implements OnInit {
         error: (err) => {
           this.products = [];
           this.toastr.error(err?.error?.message || 'Unable to load POS medicines.');
+        },
+      });
+  }
+
+  loadCategories(): void {
+    if (!this.backend.hasPermission('categories.read') && !this.hasPharmacyPosBaseAccess()) {
+      this.categories = [];
+      return;
+    }
+
+    this.categoriesLoading = true;
+    this.backend
+      .getCategories({ limit: 100, isActive: true })
+      .pipe(finalize(() => (this.categoriesLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.categories = result.items;
+        },
+        error: () => {
+          this.categories = [];
+        },
+      });
+  }
+
+  loadStores(): void {
+    const user = this.getStoredUser();
+    if (!this.backend.hasPermission('stores.read') && !this.hasPharmacyPosBaseAccess()) {
+      this.stores = [];
+      if (user?.storeId && !this.productForm.storeId) {
+        this.productForm.storeId = user.storeId;
+      }
+      return;
+    }
+
+    this.storesLoading = true;
+    this.backend
+      .getStores({
+        limit: 100,
+        isActive: true,
+        hospitalId: user?.hospitalId || undefined,
+      })
+      .pipe(finalize(() => (this.storesLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.stores = result.items;
+          const assignedStoreId = user?.storeId || '';
+          const fallbackStoreId = this.stores[0]?._id || '';
+
+          if (!this.productForm.storeId) {
+            this.productForm.storeId = assignedStoreId || fallbackStoreId;
+          }
+        },
+        error: () => {
+          this.stores = [];
+        },
+      });
+  }
+
+  openProductModal(): void {
+    if (!this.canCreateProducts) {
+      this.toastr.error('This role needs products.create to add pharmacy medicines.');
+      return;
+    }
+
+    if (!this.productForm.storeId) {
+      this.productForm.storeId = this.currentStoreId();
+    }
+
+    this.productModalOpen = true;
+  }
+
+  closeProductModal(): void {
+    if (this.savingProduct) {
+      return;
+    }
+
+    this.productModalOpen = false;
+    this.productForm = this.getEmptyProductForm();
+    this.productForm.storeId = this.currentStoreId();
+  }
+
+  saveProduct(): void {
+    if (this.savingProduct) {
+      return;
+    }
+
+    const name = this.productForm.name.trim();
+    const sellingPrice = Number(this.productForm.sellingPrice);
+    const openingStock = Number(this.productForm.openingStock || 0);
+    const storeId = this.productForm.storeId || this.currentStoreId();
+
+    if (!name) {
+      this.toastr.error('Medicine/product name is required.');
+      return;
+    }
+
+    if (!Number.isFinite(sellingPrice) || sellingPrice < 0) {
+      this.toastr.error('Enter a valid selling price.');
+      return;
+    }
+
+    if (!storeId) {
+      this.toastr.error('No pharmacy store is assigned. Login again or assign a store to this pharmacy user.');
+      return;
+    }
+
+    if (!Number.isInteger(openingStock) || openingStock < 1) {
+      this.toastr.error('Opening stock must be at least 1 to add this product to the store.');
+      return;
+    }
+
+    this.savingProduct = true;
+    this.resolveProductCategoryId()
+      .pipe(
+        switchMap((categoryId) =>
+          this.backend.createProduct({
+            categoryId,
+            name,
+            sku: this.productForm.sku.trim() || this.generateSku(name),
+            barcode: this.productForm.barcode.trim() || undefined,
+            brand: this.productForm.brand.trim() || undefined,
+            unit: this.productForm.unit || 'pcs',
+            costPrice: this.productForm.costPrice || '0',
+            sellingPrice: this.productForm.sellingPrice || '0',
+            taxRate: '0',
+            isActive: true,
+          })
+        ),
+        switchMap((response) => this.applyOpeningStock(response.data, storeId)),
+        finalize(() => (this.savingProduct = false))
+      )
+      .subscribe({
+        next: () => {
+          this.toastr.success('Medicine/product added to pharmacy store.');
+          this.productModalOpen = false;
+          this.productForm = this.getEmptyProductForm();
+          this.productForm.storeId = storeId;
+          this.loadProducts();
+        },
+        error: (err) => {
+          this.toastr.error(err?.error?.message || err?.message || 'Unable to add medicine/product.');
         },
       });
   }
@@ -302,7 +509,9 @@ export class PharmacyComponent implements OnInit {
     }
 
     const currentUser = this.getStoredUser();
-    if (!currentUser?.storeId && !this.backend.hasPermission('*')) {
+    const storeId = currentUser?.storeId || this.currentStoreId();
+
+    if (!storeId && !this.backend.hasPermission('*')) {
       this.toastr.warning('No store is assigned to this pharmacy user. POS may ask for a store or block checkout.');
     }
 
@@ -316,6 +525,10 @@ export class PharmacyComponent implements OnInit {
 
     if (prescription?.patientId) {
       redirectParams.set('patientId', prescription.patientId);
+    }
+
+    if (storeId) {
+      redirectParams.set('storeId', storeId);
     }
 
     const name = prescription?.patient ? this.patientName(prescription.patient) : '';
@@ -357,6 +570,96 @@ export class PharmacyComponent implements OnInit {
     } catch {
       return null;
     }
+  }
+
+  currentStoreId(): string {
+    const user = this.getStoredUser();
+    return user?.storeId || this.productForm.storeId || this.stores[0]?._id || '';
+  }
+
+  private getEmptyProductForm(): PharmacyProductForm {
+    return {
+      name: '',
+      sku: '',
+      barcode: '',
+      brand: '',
+      categoryId: '',
+      categoryName: '',
+      unit: 'tablet',
+      costPrice: '0',
+      sellingPrice: '0',
+      openingStock: '1',
+      storeId: this.getStoredUser()?.storeId || '',
+    };
+  }
+
+  private resolveProductCategoryId(): Observable<string> {
+    if (this.productForm.categoryId) {
+      return of(this.productForm.categoryId);
+    }
+
+    const categoryName = this.productForm.categoryName.trim();
+    if (!categoryName) {
+      return throwError(() => new Error('Select category or enter a new category name.'));
+    }
+
+    if (!this.canCreateCategories) {
+      return throwError(() => new Error('This role needs categories.create to add a new medicine category.'));
+    }
+
+    return this.backend
+      .createCategory({
+        name: categoryName,
+        code: this.generateCode(categoryName),
+        isActive: true,
+      })
+      .pipe(
+        map((response) => {
+          const category = response.data;
+          this.categories = [category, ...this.categories];
+          this.productForm.categoryId = category._id;
+          return category._id;
+        })
+      );
+  }
+
+  private applyOpeningStock(product: ProductCatalogItem, storeId: string): Observable<ProductCatalogItem> {
+    const quantity = Number(this.productForm.openingStock || 0);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return of(product);
+    }
+
+    if (!this.canAdjustInventory) {
+      this.toastr.warning('Product created, but this role needs inventory.adjust to set opening stock.');
+      return of(product);
+    }
+
+    return this.backend
+      .adjustInventory({
+        productId: product._id,
+        locationType: 'store',
+        locationId: storeId,
+        adjustmentType: 'SET',
+        quantity: String(Math.floor(quantity)),
+        reason: 'OPENING_STOCK',
+        note: 'Opening stock from Mooli pharmacy',
+      })
+      .pipe(map(() => product));
+  }
+
+  private generateSku(name: string): string {
+    const prefix = this.generateCode(name).slice(0, 18) || 'MED';
+    const suffix = Date.now().toString(36).slice(-6).toUpperCase();
+    return `${prefix}-${suffix}`;
+  }
+
+  private generateCode(value: string): string {
+    return String(value || 'MED')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 30) || 'MED';
   }
 
   private buildPrintPreviewData(prescription: Prescription): PrintPreviewData | null {

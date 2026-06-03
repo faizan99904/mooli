@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -40,6 +40,21 @@ interface PrintPreviewData {
   followUpDate: string;
 }
 
+interface ParsedMedicineCommand {
+  medicineName: string;
+  genericName: string;
+  dose: string;
+  frequency: string;
+  duration: string;
+  afterMeal: boolean;
+  beforeMeal: boolean;
+  morning: boolean;
+  noon: boolean;
+  evening: boolean;
+  night: boolean;
+  instruction: string;
+}
+
 @Component({
   selector: 'app-prescription',
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
@@ -48,6 +63,8 @@ interface PrintPreviewData {
 })
 export class PrescriptionComponent implements OnInit {
   @ViewChild('printContent', { static: false }) printContent!: ElementRef;
+  @ViewChild('smartMedicineInputRef', { static: false }) smartMedicineInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChildren('medicineNameInput') medicineNameInputs?: QueryList<ElementRef<HTMLInputElement>>;
 
   prescriptions: Prescription[] = [];
   patients: Patient[] = [];
@@ -76,6 +93,9 @@ export class PrescriptionComponent implements OnInit {
   printPreviewLoading = false;
   previewPrescription: Prescription | null = null;
   printPreviewData: PrintPreviewData | null = null;
+  smartMedicineInput = '';
+  smartMedicineSuggestions: DoctorMedicine[] = [];
+  activeMedicineSuggestionIndex = -1;
   medicineLibraryOpen = false;
   medicineLibraryLoading = false;
   savingDoctorMedicine = false;
@@ -88,22 +108,13 @@ export class PrescriptionComponent implements OnInit {
     '7 Days',
     '10 Days',
     '14 Days',
+    '1 Week',
+    '2 Weeks',
+    '4 Weeks',
     '1 Month',
     '2 Months',
     '3 Months',
     'Continue',
-  ];
-  readonly medicineTypeOptions = [
-    'Tablet',
-    'Syrup',
-    'Capsule',
-    'Injection',
-    'Drops',
-    'Cream',
-    'Ointment',
-    'Sachet',
-    'Inhaler',
-    'Other',
   ];
 
   readonly labTestCatalog = [
@@ -157,7 +168,7 @@ export class PrescriptionComponent implements OnInit {
     });
     this.doctorMedicineForm = this.fb.group({
       name: ['', Validators.required],
-      type: ['Tablet', Validators.required],
+      type: ['', Validators.required],
     });
   }
 
@@ -234,6 +245,236 @@ export class PrescriptionComponent implements OnInit {
 
   addMedicine(): void {
     this.medicines.push(this.createMedicineGroup());
+  }
+
+  onSmartMedicineInputChange(): void {
+    const query = this.extractMedicineQuery(this.smartMedicineInput);
+    if (query.length < 2) {
+      this.clearSmartMedicineSuggestions();
+      return;
+    }
+
+    this.loadDoctorMedicines(query, true);
+  }
+
+  handleSmartMedicineKeydown(event: KeyboardEvent): void {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.moveMedicineSuggestion(1);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.moveMedicineSuggestion(-1);
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      this.clearSmartMedicineSuggestions();
+      return;
+    }
+
+    if (event.key !== 'Enter') {
+      return;
+    }
+
+    event.preventDefault();
+    const selected = this.smartMedicineSuggestions[this.activeMedicineSuggestionIndex];
+    if (selected && !this.hasSmartMedicineCommand(this.smartMedicineInput)) {
+      this.addMedicineFromLibrary(selected);
+      return;
+    }
+
+    this.addSmartMedicineFromInput();
+  }
+
+  addSmartMedicineFromInput(): void {
+    const command = this.smartMedicineInput.trim();
+    if (!command) {
+      this.toastr.error('Enter medicine name or shortcut');
+      return;
+    }
+
+    const parsed = this.parseMedicineCommand(command);
+    this.appendMedicineRow(this.createMedicineRow(parsed));
+    this.resetSmartMedicineInput();
+  }
+
+  addMedicineFromLibrary(medicine: DoctorMedicine): void {
+    const parsed = this.parseMedicineCommand(this.doctorMedicineDisplayName(medicine));
+    this.appendMedicineRow(this.createMedicineRow(parsed));
+    this.resetSmartMedicineInput();
+  }
+
+  addFavoriteMedicine(medicine: DoctorMedicine): void {
+    this.addMedicineFromLibrary(medicine);
+  }
+
+  favoriteDoctorMedicines(): DoctorMedicine[] {
+    return this.doctorMedicines.slice(0, 8);
+  }
+
+  prescriptionMedicineTemplates(): Prescription[] {
+    return this.prescriptions
+      .filter((prescription) => prescription.medicines?.some((medicine) => String(medicine.name || '').trim()))
+      .slice(0, 6);
+  }
+
+  medicineTemplateLabel(prescription: Prescription): string {
+    return (
+      prescription.diagnosis ||
+      prescription.chiefComplaint ||
+      `${this.prescriptionPatientName(prescription)} - ${this.prescriptionDate(prescription)}`
+    );
+  }
+
+  applyTemplate(template: Prescription): void {
+    (template.medicines || [])
+      .filter((medicine) => String(medicine.name || '').trim())
+      .forEach((medicine) =>
+        this.appendMedicineRow({
+          name: medicine.name,
+          dosage: medicine.dosage || '',
+          frequency: medicine.frequency || '',
+          duration: medicine.duration || '1 Month',
+          afterMeal: Boolean(medicine.afterMeal),
+          beforeMeal: Boolean(medicine.beforeMeal),
+          morning: Boolean(medicine.morning),
+          noon: Boolean(medicine.noon),
+          evening: Boolean(medicine.evening),
+          night: Boolean(medicine.night),
+          instructions: medicine.instructions || '',
+        })
+      );
+  }
+
+  duplicateMedicine(index: number): void {
+    const value = this.medicines.at(index)?.getRawValue();
+    if (!value) {
+      return;
+    }
+
+    this.medicines.insert(index + 1, this.createMedicineGroup(value));
+  }
+
+  focusMedicineRow(index: number): void {
+    setTimeout(() => this.medicineNameInputs?.get(index)?.nativeElement.focus());
+  }
+
+  parseMedicineCommand(input: string): ParsedMedicineCommand {
+    const tokens = input.trim().split(/\s+/).filter(Boolean);
+    const frequencyToken = tokens.find((token) => this.mapFrequencyToTimings(token).label);
+    const mealToken = tokens.find((token) => ['pc', 'ac'].includes(token.toLowerCase()));
+    const durationToken =
+      tokens.find((token) => this.formatDuration(token)) ||
+      tokens.find((token) => token.toLowerCase() === 'continue');
+    const strengthToken = tokens.find((token) => /^\d+(\.\d+)?\s*(mg|ml|g|iu)?$/i.test(token));
+
+    // Keep medicine name parsing forgiving: remove known shortcut tokens, then use the
+    // remaining words to search the doctor's saved backend medicines; custom medicines are still allowed.
+    const medicineQuery = tokens
+      .filter((token) => {
+        const lower = token.toLowerCase();
+        return (
+          lower !== frequencyToken?.toLowerCase() &&
+          lower !== mealToken?.toLowerCase() &&
+          lower !== durationToken?.toLowerCase() &&
+          lower !== strengthToken?.toLowerCase()
+        );
+      })
+      .join(' ');
+    const savedMedicineMatch =
+      this.findDoctorMedicineMatch(medicineQuery) || this.findDoctorMedicineMatch(tokens[0] || '');
+    const timings = this.mapFrequencyToTimings(frequencyToken || '');
+    const duration = this.formatDuration(durationToken || '') || '1 Month';
+    const afterMeal = mealToken?.toLowerCase() === 'pc';
+    const beforeMeal = mealToken?.toLowerCase() === 'ac';
+    const fallbackName = this.toTitleCase(medicineQuery || input);
+    const strength = this.formatStrength(strengthToken || '');
+    const dose = this.resolveMedicineDose(savedMedicineMatch, strengthToken || '');
+    const instructions = [
+      beforeMeal ? 'Before meal' : '',
+      afterMeal ? 'After meal' : '',
+      timings.instruction,
+    ].filter(Boolean);
+
+    return {
+      medicineName: savedMedicineMatch ? this.doctorMedicineDisplayName(savedMedicineMatch) : fallbackName,
+      genericName: '',
+      dose,
+      frequency: timings.label || '',
+      duration,
+      afterMeal,
+      beforeMeal,
+      morning: timings.morning,
+      noon: timings.noon,
+      evening: timings.evening,
+      night: timings.night,
+      instruction: instructions.join('. ') || (strength ? strength : ''),
+    };
+  }
+
+  mapFrequencyToTimings(shortcut = ''): {
+    label: string;
+    instruction: string;
+    morning: boolean;
+    noon: boolean;
+    evening: boolean;
+    night: boolean;
+  } {
+    const frequency = shortcut.toLowerCase();
+    const empty = { label: '', instruction: '', morning: false, noon: false, evening: false, night: false };
+    const map: Record<string, typeof empty> = {
+      od: { label: 'Once daily (OD)', instruction: '', morning: true, noon: false, evening: false, night: false },
+      bd: { label: 'Twice daily (BD)', instruction: '', morning: true, noon: false, evening: true, night: false },
+      tds: { label: 'Three times daily (TDS)', instruction: '', morning: true, noon: true, evening: true, night: false },
+      qid: { label: 'Four times daily (QID)', instruction: '', morning: true, noon: true, evening: true, night: true },
+      hs: { label: 'At night (HS)', instruction: 'Take at night', morning: false, noon: false, evening: false, night: true },
+      am: { label: 'Morning (AM)', instruction: '', morning: true, noon: false, evening: false, night: false },
+      noon: { label: 'Noon', instruction: '', morning: false, noon: true, evening: false, night: false },
+      pm: { label: 'Evening (PM)', instruction: '', morning: false, noon: false, evening: true, night: false },
+      sos: { label: 'When needed (SOS)', instruction: 'Use when needed', morning: false, noon: false, evening: false, night: false },
+    };
+
+    return map[frequency] || empty;
+  }
+
+  formatDuration(token = ''): string {
+    const value = token.toLowerCase();
+    if (value === 'continue') {
+      return 'Continue';
+    }
+
+    const match = /^(\d+)(d|w|m)$/.exec(value);
+    if (!match) {
+      return '';
+    }
+
+    const amount = Number(match[1]);
+    const unitMap: Record<string, string> = {
+      d: amount === 1 ? 'Day' : 'Days',
+      w: amount === 1 ? 'Week' : 'Weeks',
+      m: amount === 1 ? 'Month' : 'Months',
+    };
+
+    return `${amount} ${unitMap[match[2]]}`;
+  }
+
+  createMedicineRow(parsedData: ParsedMedicineCommand): Record<string, unknown> {
+    return {
+      name: parsedData.medicineName,
+      dosage: parsedData.dose,
+      frequency: parsedData.frequency,
+      duration: parsedData.duration,
+      afterMeal: parsedData.afterMeal,
+      beforeMeal: parsedData.beforeMeal,
+      morning: parsedData.morning,
+      noon: parsedData.noon,
+      evening: parsedData.evening,
+      night: parsedData.night,
+      instructions: parsedData.instruction,
+    };
   }
 
   openDoctorMedicineModal(rowIndex: number | null = null): void {
@@ -351,10 +592,13 @@ export class PrescriptionComponent implements OnInit {
       });
   }
 
-  loadDoctorMedicines(search = ''): void {
+  loadDoctorMedicines(search = '', updateSmartSuggestions = false): void {
     const doctorId = this.activeDoctorId();
     if (!doctorId) {
       this.doctorMedicines = [];
+      if (updateSmartSuggestions) {
+        this.clearSmartMedicineSuggestions();
+      }
       return;
     }
 
@@ -367,8 +611,18 @@ export class PrescriptionComponent implements OnInit {
       })
       .pipe(finalize(() => (this.medicineLibraryLoading = false)))
       .subscribe({
-        next: (items) => (this.doctorMedicines = items),
-        error: () => (this.doctorMedicines = []),
+        next: (items) => {
+          this.doctorMedicines = this.mergeDoctorMedicines(items);
+          if (updateSmartSuggestions) {
+            this.smartMedicineSuggestions = items;
+            this.activeMedicineSuggestionIndex = items.length ? 0 : -1;
+          }
+        },
+        error: () => {
+          if (updateSmartSuggestions) {
+            this.clearSmartMedicineSuggestions();
+          }
+        },
       });
   }
 
@@ -390,9 +644,7 @@ export class PrescriptionComponent implements OnInit {
       return [];
     }
 
-    return this.doctorMedicines
-      .filter((medicine) => medicine.name.toLowerCase().startsWith(query))
-      .slice(0, 8);
+    return this.searchMedicineLibrary(query).slice(0, 8);
   }
 
   applyMedicineSuggestion(index: number): void {
@@ -415,6 +667,13 @@ export class PrescriptionComponent implements OnInit {
     const name = String(medicine.name || '').trim();
 
     return [type, name].filter(Boolean).join(' ');
+  }
+
+  doctorMedicineMeta(medicine: DoctorMedicine): string {
+    const type = String(medicine.type || '').trim();
+    const common = [medicine.dosage, medicine.frequency].filter(Boolean).join(' ');
+
+    return [type || 'Saved medicine', common ? `Common: ${common}` : ''].filter(Boolean).join(' | ');
   }
 
   loadPrescriptions(): void {
@@ -843,6 +1102,149 @@ export class PrescriptionComponent implements OnInit {
     ).trim();
   }
 
+  private mergeDoctorMedicines(items: DoctorMedicine[]): DoctorMedicine[] {
+    const map = new Map<string, DoctorMedicine>();
+    [...this.doctorMedicines, ...items].forEach((medicine) => {
+      if (medicine?._id) {
+        map.set(medicine._id, medicine);
+      }
+    });
+
+    return Array.from(map.values()).sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  private extractMedicineQuery(value: string): string {
+    return value
+      .trim()
+      .split(/\s+/)
+      .filter((token) => {
+        const lower = token.toLowerCase();
+        return (
+          !this.mapFrequencyToTimings(lower).label &&
+          !['pc', 'ac', 'continue'].includes(lower) &&
+          !this.formatDuration(lower) &&
+          !/^\d+(\.\d+)?\s*(mg|ml|g|iu)?$/i.test(token)
+        );
+      })
+      .join(' ');
+  }
+
+  private findDoctorMedicineMatch(query: string): DoctorMedicine | undefined {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return undefined;
+    }
+
+    const matches = this.searchMedicineLibrary(normalizedQuery);
+    return (
+      matches.find((medicine) =>
+        [medicine.name, this.doctorMedicineDisplayName(medicine)]
+          .filter(Boolean)
+          .some((value) => value.trim().toLowerCase() === normalizedQuery)
+      ) || matches[0]
+    );
+  }
+
+  private searchMedicineLibrary(query: string): DoctorMedicine[] {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return [];
+    }
+
+    return this.doctorMedicines.filter((medicine) => {
+      const searchText = [medicine.name, medicine.type, this.doctorMedicineDisplayName(medicine)]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchText.includes(normalizedQuery);
+    });
+  }
+
+  private appendMedicineRow(row: Record<string, unknown>): void {
+    const firstEmptyIndex = this.medicines.controls.findIndex(
+      (control) => !String(control.get('name')?.value || '').trim()
+    );
+
+    if (firstEmptyIndex >= 0) {
+      this.medicines.at(firstEmptyIndex).patchValue(row);
+      return;
+    }
+
+    this.medicines.push(this.createMedicineGroup(row));
+  }
+
+  private resetSmartMedicineInput(): void {
+    this.smartMedicineInput = '';
+    this.clearSmartMedicineSuggestions();
+    this.focusSmartMedicineInput();
+  }
+
+  private focusSmartMedicineInput(): void {
+    setTimeout(() => this.smartMedicineInputRef?.nativeElement.focus());
+  }
+
+  private clearSmartMedicineSuggestions(): void {
+    this.smartMedicineSuggestions = [];
+    this.activeMedicineSuggestionIndex = -1;
+  }
+
+  private moveMedicineSuggestion(direction: 1 | -1): void {
+    if (!this.smartMedicineSuggestions.length) {
+      return;
+    }
+
+    const nextIndex = this.activeMedicineSuggestionIndex + direction;
+    this.activeMedicineSuggestionIndex =
+      (nextIndex + this.smartMedicineSuggestions.length) % this.smartMedicineSuggestions.length;
+  }
+
+  private hasSmartMedicineCommand(value: string): boolean {
+    return value
+      .trim()
+      .split(/\s+/)
+      .some((token) => {
+        const lower = token.toLowerCase();
+        return (
+          Boolean(this.mapFrequencyToTimings(lower).label) ||
+          ['pc', 'ac', 'continue'].includes(lower) ||
+          Boolean(this.formatDuration(lower)) ||
+          /^\d+(\.\d+)?\s*(mg|ml|g|iu)?$/i.test(token)
+        );
+      });
+  }
+
+  private resolveMedicineDose(medicine: DoctorMedicine | undefined, strengthToken: string): string {
+    const strength = this.formatStrength(strengthToken);
+    if (!medicine) {
+      return strength;
+    }
+
+    const type = String(medicine.type || '').trim();
+    return [type ? `1 ${type}` : '', strength ? `(${strength})` : ''].filter(Boolean).join(' ');
+  }
+
+  private formatStrength(value: string): string {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) {
+      return '';
+    }
+
+    if (/^\d+(\.\d+)?$/i.test(trimmedValue)) {
+      return `${trimmedValue}mg`;
+    }
+
+    return trimmedValue;
+  }
+
+  private toTitleCase(value: string): string {
+    return value
+      .trim()
+      .split(/\s+/)
+      .map((word) => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word))
+      .join(' ');
+  }
+
   private upsertDoctorMedicine(medicine: DoctorMedicine): void {
     const index = this.doctorMedicines.findIndex((item) => item._id === medicine._id);
     if (index >= 0) {
@@ -878,41 +1280,23 @@ export class PrescriptionComponent implements OnInit {
 
   private parseMedicineTypeAndName(value: string): { name: string; type: string } {
     const trimmedValue = value.trim();
-    const matchedType = this.medicineTypeOptions.find((type) =>
-      trimmedValue.toLowerCase().startsWith(`${type.toLowerCase()} `)
-    );
-    const aliasMap: Record<string, string> = {
-      tab: 'Tablet',
-      tablet: 'Tablet',
-      cap: 'Capsule',
-      capsule: 'Capsule',
-      inj: 'Injection',
-      injection: 'Injection',
-      syp: 'Syrup',
-      syr: 'Syrup',
-      syrup: 'Syrup',
-      drop: 'Drops',
-      drops: 'Drops',
-    };
-    const firstWord = trimmedValue.split(/\s+/)[0]?.toLowerCase().replace(/\.$/, '');
+    const savedMedicine = this.doctorMedicines.find((medicine) => {
+      const displayName = this.doctorMedicineDisplayName(medicine).toLowerCase();
+      const medicineName = String(medicine.name || '').trim().toLowerCase();
+      const normalizedValue = trimmedValue.toLowerCase();
+      return displayName === normalizedValue || medicineName === normalizedValue;
+    });
 
-    if (!matchedType) {
-      if (firstWord && aliasMap[firstWord]) {
-        return {
-          name: trimmedValue.slice(firstWord.length).trim(),
-          type: aliasMap[firstWord],
-        };
-      }
-
+    if (savedMedicine) {
       return {
-        name: trimmedValue,
-        type: 'Tablet',
+        name: savedMedicine.name,
+        type: savedMedicine.type || '',
       };
     }
 
     return {
-      name: trimmedValue.slice(matchedType.length).trim(),
-      type: matchedType,
+      name: trimmedValue,
+      type: '',
     };
   }
 

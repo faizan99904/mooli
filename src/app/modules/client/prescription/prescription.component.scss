@@ -386,6 +386,114 @@ dd {
   justify-content: flex-end;
 }
 
+.smart-medicine-panel {
+  background: #f8fafc;
+  border: 1px solid var(--rx-soft-line);
+  border-radius: 7px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px;
+  position: relative;
+}
+
+.smart-medicine-bar {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.smart-medicine-bar input {
+  background: #fff;
+  border: 1px solid var(--rx-line);
+  border-radius: 5px;
+  color: var(--rx-ink);
+  font-size: 13px;
+  min-height: 38px;
+  outline: 0;
+  padding: 8px 11px;
+  width: 100%;
+}
+
+.smart-medicine-bar input:focus {
+  border-color: var(--rx-blue);
+  box-shadow: 0 0 0 3px rgba(17, 104, 200, 0.12);
+}
+
+.smart-suggestions {
+  background: #fff;
+  border: 1px solid var(--rx-line);
+  border-radius: 6px;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+  display: grid;
+  left: 10px;
+  max-height: 240px;
+  overflow: auto;
+  position: absolute;
+  right: 118px;
+  top: 54px;
+  z-index: 20;
+}
+
+.smart-suggestion-row {
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid var(--rx-soft-line);
+  display: grid;
+  gap: 3px;
+  padding: 9px 11px;
+  text-align: left;
+}
+
+.smart-suggestion-row:hover,
+.smart-suggestion-row.active {
+  background: var(--rx-blue-soft);
+}
+
+.smart-suggestion-row strong {
+  color: var(--rx-ink);
+  font-size: 13px;
+}
+
+.smart-suggestion-row span {
+  color: var(--rx-muted);
+  font-size: 12px;
+}
+
+.medicine-shortcuts {
+  display: grid;
+  gap: 8px;
+}
+
+.medicine-shortcuts > div {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.medicine-shortcuts span {
+  color: var(--rx-muted);
+  font-size: 12px;
+  font-weight: 800;
+  min-width: 112px;
+}
+
+.medicine-shortcuts button {
+  background: #fff;
+  border: 1px solid var(--rx-line);
+  border-radius: 999px;
+  color: var(--rx-ink);
+  font-size: 12px;
+  min-height: 28px;
+  padding: 4px 11px;
+}
+
+.medicine-shortcuts button:hover {
+  border-color: var(--rx-blue);
+  color: var(--rx-blue);
+}
+
 .medicine-table {
   border: 1px solid var(--rx-line);
   border-radius: 2px;
@@ -395,7 +503,7 @@ dd {
 
 .medicine-table table {
   border-collapse: collapse;
-  min-width: 920px;
+  min-width: 1120px;
   table-layout: fixed;
   width: 100%;
 }
@@ -439,6 +547,14 @@ dd {
   width: 190px;
 }
 
+.medicine-table .col-dose {
+  width: 126px;
+}
+
+.medicine-table .col-frequency {
+  width: 120px;
+}
+
 .medicine-table .col-duration {
   width: 110px;
 }
@@ -452,7 +568,7 @@ dd {
 }
 
 .medicine-table .col-action {
-  width: 74px;
+  width: 124px;
 }
 
 .medicine-table input,
@@ -495,6 +611,10 @@ dd {
 .duration-input {
   cursor: pointer;
   outline: 0;
+  text-align: center;
+}
+
+.frequency-input {
   text-align: center;
 }
 
@@ -544,7 +664,7 @@ dd {
 .medicine-row-actions {
   align-items: center;
   display: flex;
-  gap: 6px;
+  gap: 4px;
   justify-content: center;
 }
 
@@ -927,6 +1047,14 @@ dd {
 
   .rx-content-grid {
     padding: 10px;
+  }
+
+  .smart-medicine-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .smart-suggestions {
+    position: static;
   }
 
   .rx-tabs button {

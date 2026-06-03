@@ -9,6 +9,7 @@ import {
 import {
   Appointment,
   Bill,
+  Category,
   DashboardSummary,
   DataTablesResponse,
   Department,
@@ -381,10 +382,32 @@ export class BackendService {
     return this.post<DoctorMedicine>(`${CONFIG.prescriptions}/doctor-medicines`, payload);
   }
 
+  getCategories(params?: Record<string, unknown>): Observable<ListResult<Category>> {
+    return this.get<PaginatedResponse<Category>>(CONFIG.categories, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createCategory(payload: Record<string, unknown>): Observable<ApiResponse<Category>> {
+    return this.post<Category>(CONFIG.categories, payload);
+  }
+
   getProducts(params?: Record<string, unknown>): Observable<ListResult<ProductCatalogItem>> {
     return this.get<PaginatedResponse<ProductCatalogItem>>(CONFIG.products, params).pipe(
       map((response) => this.unwrapData(response))
     );
+  }
+
+  createProduct(payload: Record<string, unknown>): Observable<ApiResponse<ProductCatalogItem>> {
+    return this.post<ProductCatalogItem>(CONFIG.products, payload);
+  }
+
+  updateProduct(id: string, payload: Record<string, unknown>): Observable<ApiResponse<ProductCatalogItem>> {
+    return this.patch<ProductCatalogItem>(`${CONFIG.products}/${id}`, payload);
+  }
+
+  adjustInventory(payload: Record<string, unknown>): Observable<ApiResponse<unknown>> {
+    return this.post<unknown>(`${CONFIG.inventory}/adjust`, payload);
   }
 
   getStores(params?: Record<string, unknown>): Observable<ListResult<Store>> {
