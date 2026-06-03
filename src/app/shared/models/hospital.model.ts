@@ -286,6 +286,9 @@ export interface ProductCatalogItem {
   name: string;
   sku: string;
   barcode?: string | null;
+  description?: string | null;
+  strengthValue?: string | null;
+  strengthUnit?: string | null;
   brand?: string | null;
   unit?: string | null;
   costPrice?: string | null;

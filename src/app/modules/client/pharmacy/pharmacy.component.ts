@@ -43,6 +43,8 @@ interface PharmacyProductForm {
   categoryId: string;
   categoryName: string;
   unit: string;
+  strengthValue: string;
+  strengthUnit: string;
   costPrice: string;
   sellingPrice: string;
   openingStock: string;
@@ -79,6 +81,7 @@ export class PharmacyComponent implements OnInit {
   limit = 10;
   totalPages = 0;
   productUnits = ['tablet', 'capsule', 'syrup', 'injection', 'drops', 'cream', 'ointment', 'inhaler', 'pcs'];
+  strengthUnits = ['mg', 'ml', 'g', 'mcg', 'IU', '%', 'mg/ml', 'mg/5ml', 'mcg/ml'];
   productForm: PharmacyProductForm = this.getEmptyProductForm();
   private readonly requiredPosPermissions = [
     'sales.create',
@@ -339,6 +342,8 @@ export class PharmacyComponent implements OnInit {
             barcode: this.productForm.barcode.trim() || undefined,
             brand: this.productForm.brand.trim() || undefined,
             unit: this.productForm.unit || 'pcs',
+            strengthValue: this.productForm.strengthValue.trim() || undefined,
+            strengthUnit: this.productForm.strengthUnit || undefined,
             costPrice: this.productForm.costPrice || '0',
             sellingPrice: this.productForm.sellingPrice || '0',
             taxRate: '0',
@@ -586,6 +591,8 @@ export class PharmacyComponent implements OnInit {
       categoryId: '',
       categoryName: '',
       unit: 'tablet',
+      strengthValue: '',
+      strengthUnit: 'mg',
       costPrice: '0',
       sellingPrice: '0',
       openingStock: '1',

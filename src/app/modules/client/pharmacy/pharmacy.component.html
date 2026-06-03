@@ -151,6 +151,19 @@
                 </div>
 
                 <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label>Dosage / Strength</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.strengthValue" placeholder="e.g. 500, 120/5" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Strength Unit</label>
+                        <select class="form-control" [(ngModel)]="productForm.strengthUnit">
+                            <option *ngFor="let unit of strengthUnits" [value]="unit">{{ unit }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
                     <div class="form-group col-md-4">
                         <label>Category</label>
                         <select class="form-control" [(ngModel)]="productForm.categoryId">
