@@ -477,6 +477,16 @@ export class PharmacyComponent implements OnInit {
     this.printPreviewData = null;
   }
 
+  slotDose(medicine: Prescription['medicines'][number] | null | undefined, slot: 'morning' | 'noon' | 'evening' | 'night'): string {
+    const doseKey = `${slot}Dose` as 'morningDose' | 'noonDose' | 'eveningDose' | 'nightDose';
+    const dose = String(medicine?.[doseKey] || '').trim();
+    if (dose) {
+      return dose;
+    }
+
+    return medicine?.[slot] ? '1' : '';
+  }
+
   printPrescription(): void {
     if (!this.printContent?.nativeElement) {
       return;

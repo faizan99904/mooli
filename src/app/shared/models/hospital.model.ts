@@ -156,9 +156,13 @@ export interface PrescriptionMedicine {
   afterMeal?: boolean;
   beforeMeal?: boolean;
   morning?: boolean;
+  morningDose?: string;
   noon?: boolean;
+  noonDose?: string;
   evening?: boolean;
+  eveningDose?: string;
   night?: boolean;
+  nightDose?: string;
   instructions?: string;
 }
 

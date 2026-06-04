@@ -503,7 +503,7 @@ dd {
 
 .medicine-table table {
   border-collapse: collapse;
-  min-width: 1120px;
+  min-width: 1240px;
   table-layout: fixed;
   width: 100%;
 }
@@ -536,7 +536,7 @@ dd {
 }
 
 .medicine-table tbody td {
-  height: 58px;
+  height: 68px;
 }
 
 .medicine-table .col-index {
@@ -560,7 +560,7 @@ dd {
 }
 
 .medicine-table .col-take {
-  width: 64px;
+  width: 82px;
 }
 
 .medicine-table .col-instruction {
@@ -652,6 +652,29 @@ dd {
 
 .tick-cell input:checked + span::before {
   content: "\2713";
+}
+
+.slot-dose-cell {
+  align-items: center;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+.slot-dose-input {
+  background: #fff !important;
+  border: 1px solid var(--rx-soft-line) !important;
+  border-radius: 4px !important;
+  color: var(--rx-ink) !important;
+  font-size: 11px !important;
+  min-height: 24px !important;
+  padding: 3px 5px !important;
+  text-align: center;
+}
+
+.slot-dose-input:focus {
+  border-color: var(--rx-blue) !important;
+  box-shadow: 0 0 0 2px rgba(17, 104, 200, 0.1);
 }
 
 .medicine-table button,

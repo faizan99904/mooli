@@ -40,6 +40,8 @@ interface PrintPreviewData {
   followUpDate: string;
 }
 
+type DoseSlot = 'morning' | 'noon' | 'evening' | 'night';
+
 interface ParsedMedicineCommand {
   medicineName: string;
   genericName: string;
@@ -49,9 +51,13 @@ interface ParsedMedicineCommand {
   afterMeal: boolean;
   beforeMeal: boolean;
   morning: boolean;
+  morningDose: string;
   noon: boolean;
+  noonDose: string;
   evening: boolean;
+  eveningDose: string;
   night: boolean;
+  nightDose: string;
   instruction: string;
 }
 
@@ -212,6 +218,11 @@ export class PrescriptionComponent implements OnInit {
   }
 
   createMedicineGroup(medicine?: Record<string, unknown>): FormGroup {
+    const morningDose = String(medicine?.['morningDose'] || '').trim();
+    const noonDose = String(medicine?.['noonDose'] || '').trim();
+    const eveningDose = String(medicine?.['eveningDose'] || '').trim();
+    const nightDose = String(medicine?.['nightDose'] || '').trim();
+
     return this.fb.group({
       name: [medicine?.['name'] || '', Validators.required],
       dosage: [medicine?.['dosage'] || ''],
@@ -219,10 +230,14 @@ export class PrescriptionComponent implements OnInit {
       duration: [medicine?.['duration'] || '1 Month'],
       afterMeal: [Boolean(medicine?.['afterMeal'])],
       beforeMeal: [Boolean(medicine?.['beforeMeal'])],
-      morning: [Boolean(medicine?.['morning'])],
-      noon: [Boolean(medicine?.['noon'])],
-      evening: [Boolean(medicine?.['evening'])],
-      night: [Boolean(medicine?.['night'])],
+      morning: [Boolean(medicine?.['morning']) || Boolean(morningDose)],
+      morningDose: [morningDose],
+      noon: [Boolean(medicine?.['noon']) || Boolean(noonDose)],
+      noonDose: [noonDose],
+      evening: [Boolean(medicine?.['evening']) || Boolean(eveningDose)],
+      eveningDose: [eveningDose],
+      night: [Boolean(medicine?.['night']) || Boolean(nightDose)],
+      nightDose: [nightDose],
       instructions: [medicine?.['instructions'] || ''],
     });
   }
@@ -341,9 +356,13 @@ export class PrescriptionComponent implements OnInit {
           afterMeal: Boolean(medicine.afterMeal),
           beforeMeal: Boolean(medicine.beforeMeal),
           morning: Boolean(medicine.morning),
+          morningDose: medicine.morningDose || '',
           noon: Boolean(medicine.noon),
+          noonDose: medicine.noonDose || '',
           evening: Boolean(medicine.evening),
+          eveningDose: medicine.eveningDose || '',
           night: Boolean(medicine.night),
+          nightDose: medicine.nightDose || '',
           instructions: medicine.instructions || '',
         })
       );
@@ -393,6 +412,7 @@ export class PrescriptionComponent implements OnInit {
     const fallbackName = this.toTitleCase(medicineQuery || input);
     const strength = this.formatStrength(strengthToken || '');
     const dose = this.resolveMedicineDose(savedMedicineMatch, strengthToken || '');
+    const defaultSlotDose = this.defaultSlotDose(savedMedicineMatch);
     const instructions = [
       beforeMeal ? 'Before meal' : '',
       afterMeal ? 'After meal' : '',
@@ -408,9 +428,13 @@ export class PrescriptionComponent implements OnInit {
       afterMeal,
       beforeMeal,
       morning: timings.morning,
+      morningDose: timings.morning ? defaultSlotDose : '',
       noon: timings.noon,
+      noonDose: timings.noon ? defaultSlotDose : '',
       evening: timings.evening,
+      eveningDose: timings.evening ? defaultSlotDose : '',
       night: timings.night,
+      nightDose: timings.night ? defaultSlotDose : '',
       instruction: instructions.join('. ') || (strength ? strength : ''),
     };
   }
@@ -470,9 +494,13 @@ export class PrescriptionComponent implements OnInit {
       afterMeal: parsedData.afterMeal,
       beforeMeal: parsedData.beforeMeal,
       morning: parsedData.morning,
+      morningDose: parsedData.morningDose,
       noon: parsedData.noon,
+      noonDose: parsedData.noonDose,
       evening: parsedData.evening,
+      eveningDose: parsedData.eveningDose,
       night: parsedData.night,
+      nightDose: parsedData.nightDose,
       instructions: parsedData.instruction,
     };
   }
@@ -542,7 +570,39 @@ export class PrescriptionComponent implements OnInit {
       return;
     }
 
-    this.medicines.at(index).reset({ duration: '1 Month' });
+    this.medicines.at(index).reset({
+      duration: '1 Month',
+      morningDose: '',
+      noonDose: '',
+      eveningDose: '',
+      nightDose: '',
+    });
+  }
+
+  slotDose(medicine: Record<string, unknown> | null | undefined, slot: DoseSlot): string {
+    const dose = String(medicine?.[`${slot}Dose`] || '').trim();
+    if (dose) {
+      return dose;
+    }
+
+    return medicine?.[slot] ? '1' : '';
+  }
+
+  onSlotDoseInput(index: number, slot: DoseSlot): void {
+    const group = this.medicines.at(index);
+    const dose = String(group.get(`${slot}Dose`)?.value || '').trim();
+
+    if (dose && !group.get(slot)?.value) {
+      group.get(slot)?.setValue(true, { emitEvent: false });
+    }
+  }
+
+  onSlotToggle(index: number, slot: DoseSlot): void {
+    const group = this.medicines.at(index);
+
+    if (!group.get(slot)?.value) {
+      group.get(`${slot}Dose`)?.setValue('');
+    }
   }
 
   addCustomLabTest(): void {
@@ -711,9 +771,7 @@ export class PrescriptionComponent implements OnInit {
       return;
     }
 
-    const medicines = value.medicines.filter((medicine: Record<string, unknown>) =>
-      String(medicine['name'] || '').trim()
-    );
+    const medicines = this.normalizeMedicinesForSave(value.medicines);
 
     if (medicines.length === 0) {
       this.toastr.error('Add at least one medicine');
@@ -1174,6 +1232,24 @@ export class PrescriptionComponent implements OnInit {
     this.medicines.push(this.createMedicineGroup(row));
   }
 
+  private normalizeMedicinesForSave(rawMedicines: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+    return rawMedicines
+      .filter((medicine) => String(medicine['name'] || '').trim())
+      .map((medicine) => {
+        const normalized = { ...medicine };
+
+        (['morning', 'noon', 'evening', 'night'] as DoseSlot[]).forEach((slot) => {
+          const doseKey = `${slot}Dose`;
+          const dose = String(normalized[doseKey] || '').trim();
+
+          normalized[doseKey] = dose;
+          normalized[slot] = Boolean(normalized[slot]) || Boolean(dose);
+        });
+
+        return normalized;
+      });
+  }
+
   private resetSmartMedicineInput(): void {
     this.smartMedicineInput = '';
     this.clearSmartMedicineSuggestions();
@@ -1222,6 +1298,11 @@ export class PrescriptionComponent implements OnInit {
 
     const type = String(medicine.type || '').trim();
     return [type ? `1 ${type}` : '', strength ? `(${strength})` : ''].filter(Boolean).join(' ');
+  }
+
+  private defaultSlotDose(medicine: Pick<DoctorMedicine, 'type'> | undefined): string {
+    const type = String(medicine?.type || '').trim();
+    return type ? `1 ${type}` : '';
   }
 
   private formatStrength(value: string): string {
@@ -1273,8 +1354,16 @@ export class PrescriptionComponent implements OnInit {
       targetIndex = this.medicines.length - 1;
     }
 
-    this.medicines.at(targetIndex).patchValue({
+    const control = this.medicines.at(targetIndex);
+    const current = control.getRawValue() as Record<string, unknown>;
+    const defaultDose = this.defaultSlotDose(medicine);
+
+    control.patchValue({
       name: this.doctorMedicineDisplayName(medicine),
+      morningDose: current['morning'] && !current['morningDose'] ? defaultDose : current['morningDose'],
+      noonDose: current['noon'] && !current['noonDose'] ? defaultDose : current['noonDose'],
+      eveningDose: current['evening'] && !current['eveningDose'] ? defaultDose : current['eveningDose'],
+      nightDose: current['night'] && !current['nightDose'] ? defaultDose : current['nightDose'],
     });
   }
 

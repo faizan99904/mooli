@@ -348,10 +348,10 @@
                                         <td>{{ medicine.duration || '-' }}</td>
                                         <td>{{ medicine.afterMeal ? '√' : '' }}</td>
                                         <td>{{ medicine.beforeMeal ? '√' : '' }}</td>
-                                        <td>{{ medicine.morning ? '1' : '' }}</td>
-                                        <td>{{ medicine.noon ? '1' : '' }}</td>
-                                        <td>{{ medicine.evening ? '1' : '' }}</td>
-                                        <td>{{ medicine.night ? '1' : '' }}</td>
+                                        <td>{{ slotDose(medicine, 'morning') }}</td>
+                                        <td>{{ slotDose(medicine, 'noon') }}</td>
+                                        <td>{{ slotDose(medicine, 'evening') }}</td>
+                                        <td>{{ slotDose(medicine, 'night') }}</td>
                                     </tr>
                                     <tr *ngFor="let row of [1, 2, 3, 4, 5]">
                                         <td>&nbsp;</td>

@@ -244,10 +244,30 @@
                     </td>
                     <td><label class="tick-cell"><input type="checkbox" formControlName="afterMeal" /><span></span></label></td>
                     <td><label class="tick-cell"><input type="checkbox" formControlName="beforeMeal" /><span></span></label></td>
-                    <td><label class="tick-cell"><input type="checkbox" formControlName="morning" /><span></span></label></td>
-                    <td><label class="tick-cell"><input type="checkbox" formControlName="noon" /><span></span></label></td>
-                    <td><label class="tick-cell"><input type="checkbox" formControlName="evening" /><span></span></label></td>
-                    <td><label class="tick-cell"><input type="checkbox" formControlName="night" /><span></span></label></td>
+                    <td>
+                      <div class="slot-dose-cell">
+                        <label class="tick-cell"><input type="checkbox" formControlName="morning" (change)="onSlotToggle(i, 'morning')" /><span></span></label>
+                        <input class="slot-dose-input" formControlName="morningDose" placeholder="Quantity" aria-label="Morning dose quantity" (input)="onSlotDoseInput(i, 'morning')" />
+                      </div>
+                    </td>
+                    <td>
+                      <div class="slot-dose-cell">
+                        <label class="tick-cell"><input type="checkbox" formControlName="noon" (change)="onSlotToggle(i, 'noon')" /><span></span></label>
+                        <input class="slot-dose-input" formControlName="noonDose" placeholder="Quantity" aria-label="Noon dose quantity" (input)="onSlotDoseInput(i, 'noon')" />
+                      </div>
+                    </td>
+                    <td>
+                      <div class="slot-dose-cell">
+                        <label class="tick-cell"><input type="checkbox" formControlName="evening" (change)="onSlotToggle(i, 'evening')" /><span></span></label>
+                        <input class="slot-dose-input" formControlName="eveningDose" placeholder="Quantity" aria-label="Evening dose quantity" (input)="onSlotDoseInput(i, 'evening')" />
+                      </div>
+                    </td>
+                    <td>
+                      <div class="slot-dose-cell">
+                        <label class="tick-cell"><input type="checkbox" formControlName="night" (change)="onSlotToggle(i, 'night')" /><span></span></label>
+                        <input class="slot-dose-input" formControlName="nightDose" placeholder="Quantity" aria-label="Night dose quantity" (input)="onSlotDoseInput(i, 'night')" />
+                      </div>
+                    </td>
                     <td><textarea class="instruction-input" formControlName="instructions" placeholder="Instructions"></textarea></td>
                     <td>
                       <div class="medicine-row-actions">
@@ -525,10 +545,10 @@
                     <td>{{ medicine['duration'] || '-' }}</td>
                     <td>{{ medicine['afterMeal'] ? '√' : '' }}</td>
                     <td>{{ medicine['beforeMeal'] ? '√' : '' }}</td>
-                    <td>{{ medicine['morning'] ? '1' : '' }}</td>
-                    <td>{{ medicine['noon'] ? '1' : '' }}</td>
-                    <td>{{ medicine['evening'] ? '1' : '' }}</td>
-                    <td>{{ medicine['night'] ? '1' : '' }}</td>
+                    <td>{{ slotDose(medicine, 'morning') }}</td>
+                    <td>{{ slotDose(medicine, 'noon') }}</td>
+                    <td>{{ slotDose(medicine, 'evening') }}</td>
+                    <td>{{ slotDose(medicine, 'night') }}</td>
                   </tr>
                   <tr *ngFor="let row of [1, 2, 3, 4, 5]">
                     <td>&nbsp;</td>
