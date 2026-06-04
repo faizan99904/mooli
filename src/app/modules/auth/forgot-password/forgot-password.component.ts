@@ -244,7 +244,7 @@ export class ForgotPasswordComponent implements OnInit, AfterViewInit {
           this.toaster.success(
             response?.message || 'OTP verified successfully!'
           );
-          this.router.navigateByUrl('/login');
+          this.router.navigateByUrl('/login/access');
         },
         error: (err) => {
           this.verLoader = false;
