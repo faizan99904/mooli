@@ -441,7 +441,43 @@ export class PharmacyComponent implements OnInit {
   }
 
   openPharmacyPos(prescription?: Prescription): void {
-    const posUrl = this.buildPharmacyPosUrl(prescription);
+    if (prescription?._id) {
+      const popup = window.open('', '_blank');
+
+      this.backend.getPrescription(prescription._id).subscribe({
+        next: (fullPrescription) => {
+          const posUrl = this.buildPharmacyPosUrl(fullPrescription);
+          if (!posUrl) {
+            popup?.close();
+            return;
+          }
+
+          if (popup) {
+            popup.location.href = posUrl;
+            return;
+          }
+
+          window.open(posUrl, '_blank', 'noopener');
+        },
+        error: () => {
+          const posUrl = this.buildPharmacyPosUrl(prescription);
+          if (!posUrl) {
+            popup?.close();
+            return;
+          }
+
+          if (popup) {
+            popup.location.href = posUrl;
+            return;
+          }
+
+          window.open(posUrl, '_blank', 'noopener');
+        },
+      });
+      return;
+    }
+
+    const posUrl = this.buildPharmacyPosUrl();
 
     if (!posUrl) {
       return;
@@ -557,6 +593,10 @@ export class PharmacyComponent implements OnInit {
       redirectParams.set('patientName', name);
     }
 
+    if (prescription?._id) {
+      redirectParams.set('rx', this.encodePrescriptionForPos(prescription));
+    }
+
     const redirect = `/app/pos?${redirectParams.toString()}`;
     const fragment = new URLSearchParams({
       token,
@@ -565,6 +605,39 @@ export class PharmacyComponent implements OnInit {
     const baseUrl = CONFIG.external.pharmacyPosUrl.replace(/\/+$/, '');
 
     return `${baseUrl}/sso#${fragment.toString()}`;
+  }
+
+  private encodePrescriptionForPos(prescription: Prescription): string {
+    const payload = {
+      _id: prescription._id,
+      patientId: prescription.patientId,
+      patient: prescription.patient
+        ? {
+            firstName: prescription.patient.firstName,
+            lastName: prescription.patient.lastName,
+            phone: prescription.patient.phone || null,
+          }
+        : null,
+      medicines: (prescription.medicines || []).map((medicine) => ({
+        name: medicine.name,
+        dosage: medicine.dosage || '',
+        duration: medicine.duration || '',
+        morning: Boolean(medicine.morning),
+        morningDose: medicine.morningDose || '',
+        noon: Boolean(medicine.noon),
+        noonDose: medicine.noonDose || '',
+        evening: Boolean(medicine.evening),
+        eveningDose: medicine.eveningDose || '',
+        night: Boolean(medicine.night),
+        nightDose: medicine.nightDose || '',
+      })),
+    };
+
+    const utf8 = encodeURIComponent(JSON.stringify(payload)).replace(/%([0-9A-F]{2})/g, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16))
+    );
+
+    return btoa(utf8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   }
 
   private hasEffectivePosPermission(permission: string): boolean {
