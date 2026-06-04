@@ -332,6 +332,13 @@ export class PharmacyComponent implements OnInit {
     }
 
     this.savingProduct = true;
+    const strengthDescription = [
+      this.productForm.strengthValue.trim(),
+      this.productForm.strengthUnit,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
     this.resolveProductCategoryId()
       .pipe(
         switchMap((categoryId) =>
@@ -342,8 +349,7 @@ export class PharmacyComponent implements OnInit {
             barcode: this.productForm.barcode.trim() || undefined,
             brand: this.productForm.brand.trim() || undefined,
             unit: this.productForm.unit || 'pcs',
-            strengthValue: this.productForm.strengthValue.trim() || undefined,
-            strengthUnit: this.productForm.strengthUnit || undefined,
+            description: strengthDescription || undefined,
             costPrice: this.productForm.costPrice || '0',
             sellingPrice: this.productForm.sellingPrice || '0',
             taxRate: '0',
