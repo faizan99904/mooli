@@ -38,6 +38,35 @@
   padding: 15px;
 }
 
+.navbar-nav .icon-menu-bar.pos-open-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: #ffffff;
+  padding: 10px 16px;
+  margin: 7px 8px 7px 0;
+  box-shadow: 0 10px 24px rgba(20, 184, 166, 0.2);
+}
+
+.navbar-nav .icon-menu-bar.pos-open-link:hover {
+  color: #ffffff;
+  background: linear-gradient(135deg, #0d9488, #2dd4bf);
+  transform: translateY(-1px);
+}
+
+.navbar-nav .icon-menu-bar.pos-open-link i {
+  font-size: 14px;
+}
+
+.navbar-nav .icon-menu-bar.pos-open-link span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .icon-menu::before {
   content: none !important;
 }

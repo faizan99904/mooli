@@ -150,6 +150,13 @@
                                     src="assets/images/flag/france.svg" alt="French"> French</a>
                         </div>
                     </li>
+                    <li *ngIf="canOpenPos" class="hidden-xs">
+                        <a href="javascript:void(0);" (click)="openPos()" class="icon-menu-bar pos-open-link"
+                            title="Open POS">
+                            <i class="fa fa-shopping-cart"></i>
+                            <span>Open POS</span>
+                        </a>
+                    </li>
                     <li><a href="javascript:void(0);" (click)="openRightMenu()" class="right_toggle icon-menu-bar"
                             title="Right Menu"><i class="fa fa-comments-o"></i></a></li>
                     <li class="hidden-xs">

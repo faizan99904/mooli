@@ -1,9 +1,11 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { CONFIG } from '../../../../../config';
 import { BackendService } from '../../../core/services/backend.service';
 import { FormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
+import { User } from '../../../shared/models/hospital.model';
 
 @Component({
   selector: 'app-header',
@@ -18,6 +20,7 @@ export class HeaderComponent implements OnInit {
   chatTab: boolean = true;
   noteText: string = '';
   notesList: any[] = [];
+  private readonly posPermission = 'sales.create';
   constructor(
     private router: Router,
     private backend: BackendService,
@@ -128,6 +131,49 @@ export class HeaderComponent implements OnInit {
       this.groupTab = true;
     } else if (number == '3') {
       this.contactTab = true;
+    }
+  }
+
+  get canOpenPos(): boolean {
+    return this.backend.hasPermission('*') || this.backend.hasPermission(this.posPermission);
+  }
+
+  openPos(): void {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      this.toaster.error('Please login again before opening POS.');
+      return;
+    }
+
+    if (!this.canOpenPos) {
+      this.toaster.error('This user does not have permission to open POS.');
+      return;
+    }
+
+    const currentUser = this.getStoredUser();
+    const redirectParams = new URLSearchParams({
+      source: 'mooli-header',
+    });
+
+    if (currentUser?.storeId) {
+      redirectParams.set('storeId', currentUser.storeId);
+    }
+
+    const redirect = `/app/pos?${redirectParams.toString()}`;
+    const fragment = new URLSearchParams({
+      token,
+      redirect,
+    });
+    const baseUrl = CONFIG.external.pharmacyPosUrl.replace(/\/+$/, '');
+
+    window.open(`${baseUrl}/sso#${fragment.toString()}`, '_blank', 'noopener');
+  }
+
+  private getStoredUser(): User | null {
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null') as User | null;
+    } catch {
+      return null;
     }
   }
 
