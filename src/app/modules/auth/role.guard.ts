@@ -23,6 +23,6 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
       return router.parseUrl(fallbackRoute);
     }
 
-    return router.parseUrl('/login');
+    return router.parseUrl('/login/access');
   };
 };

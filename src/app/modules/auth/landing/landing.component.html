@@ -1,0 +1,150 @@
+<section class="landing-shell">
+  <div class="landing-orb landing-orb-a"></div>
+  <div class="landing-orb landing-orb-b"></div>
+  <div class="landing-grid"></div>
+
+  <header class="landing-nav">
+    <a routerLink="/login" class="landing-brand">
+      <span class="landing-brand-mark">M</span>
+      <div>
+        <strong>Mooli Hospital</strong>
+        <span>Luxury operations platform</span>
+      </div>
+    </a>
+
+    <nav class="landing-links">
+      <a href="#showcase">Showcase</a>
+      <a href="#projects">Projects</a>
+      <a href="#journey">Experience</a>
+    </nav>
+
+    <div class="landing-actions">
+      <a routerLink="/login/access" class="landing-btn landing-btn-ghost">Login</a>
+      <a routerLink="/signup" class="landing-btn landing-btn-primary">Sign Up</a>
+    </div>
+  </header>
+
+  <main class="landing-main">
+    <section class="hero-panel">
+      <div class="hero-copy">
+        <span class="hero-kicker">Mooli Public Showcase</span>
+        <h1>Hospital elegance with POS power in one polished experience.</h1>
+        <p>
+          This is the public front door for Mooli Hospital and its connected POS ecosystem. It gives
+          users a premium first impression before they enter the platform.
+        </p>
+
+        <div class="hero-actions">
+          <a routerLink="/login/access" class="landing-btn landing-btn-primary">Login to Platform</a>
+          <a routerLink="/signup" class="landing-btn landing-btn-secondary">Create Workspace</a>
+        </div>
+
+        <div class="hero-pill-row">
+          <span>Hospital Suite</span>
+          <span>Pharmacy Flow</span>
+          <span>Commercial POS</span>
+          <span>Executive Reporting</span>
+        </div>
+      </div>
+
+      <aside class="hero-showcase" id="showcase">
+        <div class="showcase-card" [ngClass]="'showcase-' + activeSlide.accent">
+          <div class="showcase-head">
+            <div>
+              <span>{{ activeSlide.eyebrow }}</span>
+              <strong>{{ activeSlide.title }}</strong>
+            </div>
+            <b>{{ activeSlide.badge }}</b>
+          </div>
+
+          <p>{{ activeSlide.summary }}</p>
+
+          <div class="showcase-metrics">
+            <article *ngFor="let metric of activeSlide.metrics">
+              <span>{{ metric.label }}</span>
+              <strong>{{ metric.value }}</strong>
+            </article>
+          </div>
+
+          <div class="showcase-feature-list">
+            <div *ngFor="let feature of activeSlide.features">
+              <i class="fa fa-circle"></i>
+              <span>{{ feature }}</span>
+            </div>
+          </div>
+
+          <div class="showcase-controls">
+            <button type="button" (click)="previousSlide()" aria-label="Previous showcase">
+              <i class="fa fa-arrow-left"></i>
+            </button>
+
+            <div class="showcase-dots">
+              <button
+                *ngFor="let slide of showcaseSlides; let index = index"
+                type="button"
+                [class.active]="index === activeSlideIndex"
+                (click)="jumpToSlide(index)"
+                [attr.aria-label]="'Open slide ' + (index + 1)"
+              ></button>
+            </div>
+
+            <button type="button" (click)="nextSlide()" aria-label="Next showcase">
+              <i class="fa fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="project-rail">
+      <div class="project-rail-track">
+        <span *ngFor="let item of marquee">{{ item }}</span>
+        <span *ngFor="let item of marquee">{{ item }}</span>
+      </div>
+    </section>
+
+    <section class="platform-section" id="projects">
+      <div class="section-heading">
+        <span>Project Family</span>
+        <h2>The full Mooli ecosystem, showcased before login like a flagship product.</h2>
+      </div>
+
+      <div class="platform-grid">
+        <article class="platform-card" *ngFor="let card of projectCards">
+          <span>{{ card.tag }}</span>
+          <strong>{{ card.title }}</strong>
+          <p>{{ card.description }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="journey-section" id="journey">
+      <div class="journey-panel">
+        <div class="section-heading">
+          <span>Premium Entry</span>
+          <h2>A beautiful, responsive introduction for hospitals, pharmacy teams, and POS operators.</h2>
+        </div>
+
+        <div class="journey-list">
+          <div *ngFor="let highlight of highlights">
+            <i class="fa fa-star"></i>
+            <p>{{ highlight }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="journey-cta">
+        <span>Choose your path</span>
+        <strong>Start at the showcase, then continue into hospital or POS workflows.</strong>
+        <p>
+          Existing users can log in immediately. New users can sign up from the same polished entry
+          point.
+        </p>
+        <div class="journey-actions">
+          <a routerLink="/login/access" class="landing-btn landing-btn-primary">Login</a>
+          <a routerLink="/signup" class="landing-btn landing-btn-secondary">Sign Up</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</section>

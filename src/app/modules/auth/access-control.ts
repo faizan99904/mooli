@@ -114,6 +114,6 @@ export const resolveDefaultRoute = (
   return (
     DEFAULT_ROUTE_ACCESS.find((routeAccess) =>
       hasRouteAccess(routeAccess.access, role || null, permissions)
-    )?.path || '/login'
+    )?.path || '/login/access'
   );
 };

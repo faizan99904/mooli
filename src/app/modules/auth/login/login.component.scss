@@ -36,6 +36,21 @@
   vertical-align: middle;
 }
 
+.auth_backlink {
+  margin: 18px 0 0;
+}
+
+.auth_backlink a {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth_backlink i {
+  margin-right: 8px;
+}
+
 @keyframes spin {
   0% {
     transform: rotate(0deg);
