@@ -22,6 +22,9 @@
                 <button type="button" class="storepos-icon-btn" title="New sale" (click)="clearSale()">
                     <i class="fa fa-refresh"></i>
                 </button>
+                <button type="button" class="storepos-icon-btn" title="Sale history" (click)="openSaleHistory()">
+                    <i class="fa fa-clock-o"></i>
+                </button>
                 <button
                     type="button"
                     class="storepos-icon-btn storepos-warn"
@@ -91,6 +94,9 @@
         </div>
         <div class="storepos-message warning" *ngIf="!canCreateSale">
             Missing POS permission: <strong>sales.create</strong>
+        </div>
+        <div class="storepos-message warning" *ngIf="!canReadSales">
+            Missing POS permission: <strong>sales.read</strong>. Sale history will not be visible.
         </div>
         <div class="storepos-message warning" *ngIf="!canReadRegister">
             Missing POS permission: <strong>register_sessions.read</strong>
@@ -232,6 +238,47 @@
             </div>
         </div>
     </section>
+</div>
+
+<div class="modern-modal-backdrop" *ngIf="saleHistoryOpen">
+    <div class="modern-register-modal sale-history-modal">
+        <div class="modern-register-head">
+            <div class="modern-register-badge">
+                <i class="fa fa-clock-o"></i>
+            </div>
+            <div>
+                <strong>Sale History</strong>
+                <span *ngIf="registerOpened">Current register sales for {{ selectedStoreLabel }}</span>
+                <span *ngIf="!registerOpened">Latest store sales for {{ selectedStoreLabel }}</span>
+            </div>
+            <button type="button" class="modal-close" (click)="closeSaleHistory()">×</button>
+        </div>
+
+        <div class="modern-register-body">
+            <div class="history-loading" *ngIf="saleHistoryLoading">Loading sale history...</div>
+            <div class="history-loading" *ngIf="!saleHistoryLoading && !canReadSales">Missing permission: sales.read</div>
+            <div class="history-loading" *ngIf="!saleHistoryLoading && canReadSales && recentSales.length === 0">No sales found.</div>
+
+            <div class="history-table" *ngIf="!saleHistoryLoading && recentSales.length">
+                <div class="history-head">
+                    <span>Invoice</span>
+                    <span>Date</span>
+                    <span>Items</span>
+                    <span>Status</span>
+                    <span>Total</span>
+                    <span>Paid</span>
+                </div>
+                <div class="history-row" *ngFor="let sale of recentSales">
+                    <strong>{{ sale.invoiceNo }}</strong>
+                    <span>{{ sale.saleDate | date:'short' }}</span>
+                    <span>{{ saleItemsSummary(sale) }}</span>
+                    <span class="status-pill">{{ sale.paymentStatus }}</span>
+                    <span>{{ formatCurrency(sale.total) }}</span>
+                    <span>{{ formatCurrency(sale.paidAmount) }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modern-modal-backdrop" *ngIf="!registerOpened && !registerClosed">

@@ -11,6 +11,7 @@ import {
   PrescriptionMedicine,
   ProductCatalogItem,
   RegisterSession,
+  Sale,
   SalePaymentMethod,
   Store,
   User,
@@ -63,6 +64,9 @@ export class PharmacyPosComponent implements OnInit {
   registerLoading = false;
   closeRegisterOpen = false;
   closeRegisterSaving = false;
+  saleHistoryOpen = false;
+  saleHistoryLoading = false;
+  recentSales: Sale[] = [];
   openingAmount: number | null = null;
   openingNote = '';
   closingAmount: number | null = null;
@@ -98,6 +102,10 @@ export class PharmacyPosComponent implements OnInit {
 
   get canCreateSale(): boolean {
     return this.backend.hasPermission('sales.create');
+  }
+
+  get canReadSales(): boolean {
+    return this.backend.hasPermission('sales.read');
   }
 
   get canReadRegister(): boolean {
@@ -292,6 +300,7 @@ export class PharmacyPosComponent implements OnInit {
           if (registerSession?.status === 'open') {
             this.openingAmount = Number(registerSession.openingAmount || 0);
           }
+          this.loadRecentSales();
         },
         error: () => {
           this.registerSession = null;
@@ -332,6 +341,7 @@ export class PharmacyPosComponent implements OnInit {
           this.registerSession = response.data?.registerSession || null;
           this.registerOpened = this.registerSession?.status === 'open';
           this.registerClosed = false;
+          this.loadRecentSales();
           this.showPosMessage(
             `Register opened with ${this.formatCurrency(this.registerSession?.openingAmount || this.openingAmount || 0)}.`,
             'success'
@@ -394,6 +404,7 @@ export class PharmacyPosComponent implements OnInit {
           this.registerClosed = true;
           this.closeRegisterOpen = false;
           this.clearSale();
+          this.loadRecentSales();
           this.showPosMessage('Register closed successfully.', 'success');
           this.toastr.success('Register closed successfully.');
         },
@@ -435,6 +446,55 @@ export class PharmacyPosComponent implements OnInit {
     this.paidAmount = '0';
     this.cashReceivedAmount = '0';
     this.posMessage = '';
+  }
+
+  openSaleHistory(): void {
+    this.saleHistoryOpen = true;
+    this.loadRecentSales();
+  }
+
+  closeSaleHistory(): void {
+    this.saleHistoryOpen = false;
+  }
+
+  loadRecentSales(): void {
+    if (!this.canReadSales) {
+      this.recentSales = [];
+      return;
+    }
+
+    const storeId = this.currentStoreId();
+    if (!storeId) {
+      this.recentSales = [];
+      return;
+    }
+
+    this.saleHistoryLoading = true;
+    this.backend
+      .getSales({
+        limit: 20,
+        storeId,
+        registerSessionId: this.registerSession?.status === 'open' ? this.registerSession._id : undefined,
+      })
+      .pipe(finalize(() => (this.saleHistoryLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.recentSales = result.items || [];
+        },
+        error: () => {
+          this.recentSales = [];
+        },
+      });
+  }
+
+  saleItemsSummary(sale: Sale): string {
+    const count = sale.items?.length || 0;
+    if (!count) {
+      return 'No items';
+    }
+
+    const firstItem = sale.items[0]?.name || sale.items[0]?.sku || 'Item';
+    return count === 1 ? firstItem : `${firstItem} +${count - 1} more`;
   }
 
   filteredProducts(): ProductCatalogItem[] {

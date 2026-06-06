@@ -31,6 +31,7 @@ import {
   Role,
   Room,
   RoomAllotment,
+  Sale,
   Store,
   User,
 } from '../../shared/models/hospital.model';
@@ -430,6 +431,12 @@ export class BackendService {
 
   createSale(payload: CreateSalePayload): Observable<ApiResponse<CreateSaleResponse>> {
     return this.post<CreateSaleResponse>(CONFIG.sales, payload);
+  }
+
+  getSales(params?: Record<string, unknown>): Observable<ListResult<Sale>> {
+    return this.get<PaginatedResponse<Sale>>(CONFIG.sales, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
   }
 
   getCurrentRegister(params?: Record<string, unknown>): Observable<RegisterSession | null> {

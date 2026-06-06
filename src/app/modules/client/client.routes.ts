@@ -72,6 +72,7 @@ const PHARMACY_ACCESS = [
   'prescriptions.read',
   'products.read',
   'sales.create',
+  'sales.read',
   'register_sessions.open',
   'register_sessions.read',
   'register_sessions.close',

@@ -84,6 +84,7 @@ export class PharmacyComponent implements OnInit {
   productForm: PharmacyProductForm = this.getEmptyProductForm();
   private readonly requiredPosPermissions = [
     'sales.create',
+    'sales.read',
     'products.read',
     'register_sessions.open',
     'register_sessions.read',

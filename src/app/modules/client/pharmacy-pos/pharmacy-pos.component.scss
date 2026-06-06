@@ -624,6 +624,10 @@
   width: 100%;
 }
 
+.sale-history-modal {
+  max-width: 880px;
+}
+
 .modern-register-head {
   align-items: center;
   border-bottom: 1px solid #e2e8f0;
@@ -753,6 +757,61 @@
 .permission-hint {
   color: #dc2626;
   font-weight: 800;
+}
+
+.history-loading {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  font-weight: 800;
+  padding: 18px;
+  text-align: center;
+}
+
+.history-table {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.history-head,
+.history-row {
+  display: grid;
+  grid-template-columns: 120px 145px minmax(190px, 1fr) 90px 110px 110px;
+  min-width: 760px;
+}
+
+.history-head {
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.history-head span,
+.history-row > * {
+  border-right: 1px solid #e2e8f0;
+  padding: 10px;
+}
+
+.history-row {
+  border-top: 1px solid #e2e8f0;
+  font-size: 12px;
+}
+
+.history-row strong,
+.history-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-pill {
+  color: #047857;
+  font-weight: 900;
+  text-transform: capitalize;
 }
 
 @media (max-width: 1320px) {
