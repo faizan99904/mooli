@@ -49,6 +49,10 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     return this.normalizeRole(this.role) === 'owner';
   }
 
+  get isDoctor(): boolean {
+    return this.normalizeRole(this.role) === 'doctor';
+  }
+
   get canViewAllRoutes(): boolean {
     return this.isAdmin || this.isOwner || this.isSuperAdmin || this.hasWildcardPermission;
   }
@@ -78,6 +82,10 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewAppointments(): boolean {
+    if (this.isDoctor) {
+      return false;
+    }
+
     return this.canViewAllRoutes || this.hasPermission('appointments.read');
   }
 

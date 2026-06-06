@@ -3,11 +3,12 @@ const ELEVATED_ROLES = new Set(['owner', 'superadmin', 'admin']);
 type RouteAccess = {
   path: string;
   access: string[];
+  deniedRoles?: string[];
 };
 
 const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
   { path: '/dashboard', access: ['owner', 'superAdmin', 'hospital_dashboard.read'] },
-  { path: '/appointments', access: ['owner', 'superAdmin', 'appointments.read'] },
+  { path: '/appointments', access: ['owner', 'superAdmin', 'appointments.read'], deniedRoles: ['doctor'] },
   { path: '/patients/all-patients', access: ['owner', 'superAdmin', 'patients.read'] },
   {
     path: '/patients/add-patient',
@@ -83,12 +84,18 @@ export const readStoredPermissions = (): string[] => {
 export const hasRouteAccess = (
   allowedAccess: string[],
   role: string | null,
-  permissions: string[]
+  permissions: string[],
+  deniedRoles: string[] = []
 ): boolean => {
   const normalizedRole = role ? normalizeAccessKey(role) : '';
+  const normalizedDeniedRoles = new Set(deniedRoles.map((deniedRole) => normalizeAccessKey(deniedRole)));
   const normalizedPermissions = new Set(
     permissions.map((permission) => normalizeAccessKey(permission))
   );
+
+  if (normalizedDeniedRoles.has(normalizedRole)) {
+    return false;
+  }
 
   if (
     ELEVATED_ROLES.has(normalizedRole) ||
@@ -113,7 +120,7 @@ export const resolveDefaultRoute = (
 ): string => {
   return (
     DEFAULT_ROUTE_ACCESS.find((routeAccess) =>
-      hasRouteAccess(routeAccess.access, role || null, permissions)
+      hasRouteAccess(routeAccess.access, role || null, permissions, routeAccess.deniedRoles)
     )?.path || '/login/access'
   );
 };

@@ -6,13 +6,13 @@ import { inject } from '@angular/core';
 
 import { hasRouteAccess, readStoredPermissions, resolveDefaultRoute } from './access-control';
 
-export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
+export const roleGuard = (allowedRoles: string[], deniedRoles: string[] = []): CanActivateFn => {
   return (_route, state) => {
     const role = localStorage.getItem('role');
     const permissions = readStoredPermissions();
     const router = inject(Router);
 
-    if (hasRouteAccess(allowedRoles, role, permissions)) {
+    if (hasRouteAccess(allowedRoles, role, permissions, deniedRoles)) {
       return true;
     }
 

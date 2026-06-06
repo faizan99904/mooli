@@ -255,7 +255,7 @@ export const clientRoutes: Routes = [
         path: 'appointments',
         component: AppointmentComponent,
         data: { title: 'Mooli | Appointment' },
-        canActivate: [roleGuard(APPOINTMENT_ACCESS)],
+        canActivate: [roleGuard(APPOINTMENT_ACCESS, ['doctor'])],
       },
       {
         path: 'clinical-records',
