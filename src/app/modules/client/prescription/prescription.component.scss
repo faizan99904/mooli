@@ -11,10 +11,10 @@
   background: #fbfcfe;
   box-sizing: border-box;
   color: #1f2937;
-  font-size: 13px;
+  font-size: 12px;
   min-height: 100vh;
   overflow-x: hidden;
-  padding: 18px !important;
+  padding: 10px 12px !important;
   width: 100%;
 }
 
@@ -31,10 +31,10 @@
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
   display: grid;
   gap: 0;
-  grid-template-columns: clamp(280px, 21vw, 330px) minmax(0, 1fr);
+  grid-template-columns: clamp(260px, 20vw, 310px) minmax(0, 1fr);
   margin: 0 auto;
   max-width: 100%;
-  min-height: calc(100vh - 112px);
+  min-height: calc(100vh - 76px);
   min-width: 0;
   overflow: hidden;
   width: 100%;
@@ -44,7 +44,7 @@
   background: var(--rx-panel);
   border-right: 1px solid var(--rx-line);
   min-width: 0;
-  padding: 20px 16px;
+  padding: 12px;
 }
 
 .panel-heading,
@@ -53,26 +53,39 @@
 .vitals-head {
   align-items: center;
   display: flex;
+  gap: 10px;
   justify-content: space-between;
 }
 
 .panel-heading {
-  margin-bottom: 10px;
+  border-bottom: 1px solid var(--rx-soft-line);
+  gap: 12px;
+  margin-bottom: 6px;
+  padding-bottom: 8px;
 }
 
 .panel-heading > div {
   align-items: center;
   display: flex;
-  gap: 12px;
+  flex: 1 1 auto;
+  gap: 9px;
+  min-width: 0;
 }
 
 .panel-heading h2,
 .consultation-header h1,
 .section-heading h3 {
   color: var(--rx-ink);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   margin: 0;
+  min-width: 0;
+}
+
+.panel-heading h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel-heading span {
@@ -81,10 +94,12 @@
   border-radius: 999px;
   color: #fff;
   display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
   font-weight: 700;
-  height: 28px;
+  height: 24px;
   justify-content: center;
-  width: 28px;
+  width: 24px;
 }
 
 .panel-heading button {
@@ -92,9 +107,11 @@
   border: 1px solid #0f77bd;
   border-radius: 5px;
   color: #0f77bd;
+  flex: 0 0 auto;
   font-size: 12px;
-  min-height: 30px;
-  padding: 0 16px;
+  min-height: 28px;
+  padding: 0 12px;
+  white-space: nowrap;
 }
 
 .appointment-row {
@@ -103,9 +120,9 @@
   border: 0;
   border-bottom: 1px solid var(--rx-soft-line);
   display: grid;
-  gap: 10px;
-  grid-template-columns: 64px minmax(0, 1fr) 70px;
-  padding: 11px 6px;
+  gap: 8px;
+  grid-template-columns: 56px minmax(0, 1fr) 68px;
+  padding: 8px 6px;
   text-align: left;
   transition: background-color 0.15s ease, color 0.15s ease;
   width: 100%;
@@ -123,11 +140,11 @@
 .appointment-row strong,
 .appointment-row span {
   color: var(--rx-ink);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .appointment-row small {
-  font-size: 12px;
+  font-size: 11px;
   text-align: right;
   text-transform: capitalize;
 }
@@ -147,15 +164,15 @@
 
 .patient-card {
   border-top: 1px solid var(--rx-line);
-  margin-top: 16px;
-  padding-top: 18px;
+  margin-top: 10px;
+  padding-top: 12px;
 }
 
 .patient-identity {
   align-items: center;
   display: flex;
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .avatar {
@@ -165,17 +182,17 @@
   color: #0f5ea8;
   display: inline-flex;
   flex: 0 0 auto;
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 700;
-  height: 54px;
+  height: 44px;
   justify-content: center;
-  width: 54px;
+  width: 44px;
 }
 
 .patient-identity h3 {
   color: var(--rx-ink);
-  font-size: 16px;
-  margin: 0 0 6px;
+  font-size: 14px;
+  margin: 0 0 4px;
 }
 
 .patient-identity h3 i {
@@ -185,33 +202,33 @@
 
 .patient-identity p {
   color: var(--rx-muted);
-  font-size: 13px;
+  font-size: 12px;
   margin: 0;
 }
 
 dl {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   margin: 0;
 }
 
 dl div {
   display: grid;
-  gap: 8px;
-  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 6px;
+  grid-template-columns: 84px minmax(0, 1fr);
 }
 
 dt,
 .consultation-grid span,
 .patient-note span {
   color: var(--rx-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 dd {
   color: var(--rx-ink);
-  font-size: 13px;
+  font-size: 12px;
   margin: 0;
 }
 
@@ -222,7 +239,7 @@ dd {
 }
 
 .visit-type {
-  margin: 16px 0;
+  margin: 10px 0;
 }
 
 .visit-type label,
@@ -236,7 +253,7 @@ dd {
 .order-card {
   border: 1px solid var(--rx-line);
   border-radius: 6px;
-  padding: 12px;
+  padding: 9px;
 }
 
 .vitals-card label {
@@ -244,7 +261,7 @@ dd {
   border-top: 1px solid var(--rx-soft-line);
   display: grid;
   grid-template-columns: 1fr 1.3fr;
-  padding: 7px 0;
+  padding: 5px 0;
 }
 
 .vitals-card input,
@@ -257,10 +274,10 @@ dd {
   border: 1px solid var(--rx-line);
   border-radius: 3px;
   color: var(--rx-ink);
-  font-size: 13px;
-  min-height: 32px;
+  font-size: 12px;
+  min-height: 29px;
   outline: 0;
-  padding: 7px 10px;
+  padding: 5px 8px;
   width: 100%;
 }
 
@@ -277,7 +294,7 @@ dd {
 .consultation-panel {
   min-width: 0;
   overflow: hidden;
-  padding: 18px 18px 20px;
+  padding: 12px 12px 14px;
 }
 
 .consultation-panel form,
@@ -288,12 +305,13 @@ dd {
 }
 
 .consultation-header {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .consultation-header p {
   color: var(--rx-muted);
-  margin: 6px 0 0;
+  font-size: 12px;
+  margin: 3px 0 0;
 }
 
 .header-actions {
@@ -306,9 +324,9 @@ dd {
 .section-heading button {
   border: 1px solid var(--rx-line);
   border-radius: 4px;
-  font-size: 13px;
-  min-height: 34px;
-  padding: 7px 16px;
+  font-size: 12px;
+  min-height: 30px;
+  padding: 5px 12px;
 }
 
 .btn-light,
@@ -325,17 +343,17 @@ dd {
 
 .consultation-grid {
   display: grid;
-  gap: 10px 14px;
+  gap: 7px 12px;
   grid-template-columns: 1fr 1fr;
 }
 
 .consultation-grid label {
   display: grid;
-  gap: 7px;
+  gap: 4px;
 }
 
 .consultation-grid textarea {
-  min-height: 72px;
+  min-height: 52px;
   resize: vertical;
 }
 
@@ -344,7 +362,7 @@ dd {
   border: 1px solid var(--rx-line);
   border-radius: 6px 6px 0 0;
   display: flex;
-  margin-top: 14px;
+  margin-top: 10px;
   overflow-x: auto;
 }
 
@@ -353,8 +371,9 @@ dd {
   border: 0;
   border-bottom: 2px solid transparent;
   color: #374151;
-  min-height: 40px;
-  padding: 0 18px;
+  font-size: 12px;
+  min-height: 34px;
+  padding: 0 14px;
   white-space: nowrap;
 }
 
@@ -369,20 +388,20 @@ dd {
   border: 1px solid var(--rx-line);
   border-top: 0;
   display: grid;
-  gap: 14px;
-  grid-template-columns: minmax(0, 1fr) clamp(300px, 27vw, 390px);
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) clamp(286px, 25vw, 360px);
   min-width: 0;
-  padding: 12px;
+  padding: 9px;
 }
 
 .medicines-section .section-heading {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .medicine-heading-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   justify-content: flex-end;
 }
 
@@ -391,15 +410,15 @@ dd {
   border: 1px solid var(--rx-soft-line);
   border-radius: 7px;
   display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-  padding: 10px;
+  gap: 7px;
+  margin-bottom: 8px;
+  padding: 8px;
   position: relative;
 }
 
 .smart-medicine-bar {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
@@ -408,10 +427,10 @@ dd {
   border: 1px solid var(--rx-line);
   border-radius: 5px;
   color: var(--rx-ink);
-  font-size: 13px;
-  min-height: 38px;
+  font-size: 12px;
+  min-height: 32px;
   outline: 0;
-  padding: 8px 11px;
+  padding: 6px 9px;
   width: 100%;
 }
 
@@ -426,12 +445,12 @@ dd {
   border-radius: 6px;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
   display: grid;
-  left: 10px;
-  max-height: 240px;
+  left: 8px;
+  max-height: 210px;
   overflow: auto;
   position: absolute;
-  right: 118px;
-  top: 54px;
+  right: 104px;
+  top: 44px;
   z-index: 20;
 }
 
@@ -441,7 +460,7 @@ dd {
   border-bottom: 1px solid var(--rx-soft-line);
   display: grid;
   gap: 3px;
-  padding: 9px 11px;
+  padding: 7px 9px;
   text-align: left;
 }
 
@@ -462,14 +481,14 @@ dd {
 
 .medicine-shortcuts {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .medicine-shortcuts > div {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 5px;
 }
 
 .medicine-shortcuts span {
@@ -484,9 +503,9 @@ dd {
   border: 1px solid var(--rx-line);
   border-radius: 999px;
   color: var(--rx-ink);
-  font-size: 12px;
-  min-height: 28px;
-  padding: 4px 11px;
+  font-size: 11px;
+  min-height: 24px;
+  padding: 3px 9px;
 }
 
 .medicine-shortcuts button:hover {
@@ -503,7 +522,7 @@ dd {
 
 .medicine-table table {
   border-collapse: collapse;
-  min-width: 1240px;
+  min-width: 1180px;
   table-layout: fixed;
   width: 100%;
 }
@@ -513,7 +532,7 @@ dd {
   border: 1px solid var(--rx-line);
   color: var(--rx-ink);
   font-size: 12px;
-  padding: 8px 10px;
+  padding: 5px 7px;
   text-align: center;
   vertical-align: middle;
 }
@@ -526,17 +545,17 @@ dd {
 }
 
 .medicine-table thead tr:first-child th {
-  height: 34px;
+  height: 28px;
 }
 
 .medicine-table thead tr:last-child th {
   font-size: 11px;
   font-weight: 600;
-  height: 40px;
+  height: 32px;
 }
 
 .medicine-table tbody td {
-  height: 68px;
+  height: 54px;
 }
 
 .medicine-table .col-index {
@@ -544,31 +563,31 @@ dd {
 }
 
 .medicine-table .col-medicine {
-  width: 190px;
+  width: 180px;
 }
 
 .medicine-table .col-dose {
-  width: 126px;
+  width: 118px;
 }
 
 .medicine-table .col-frequency {
-  width: 120px;
+  width: 112px;
 }
 
 .medicine-table .col-duration {
-  width: 110px;
+  width: 104px;
 }
 
 .medicine-table .col-take {
-  width: 82px;
+  width: 76px;
 }
 
 .medicine-table .col-instruction {
-  width: 150px;
+  width: 140px;
 }
 
 .medicine-table .col-action {
-  width: 124px;
+  width: 116px;
 }
 
 .medicine-table input,
@@ -578,7 +597,7 @@ dd {
   border: 0;
   color: var(--rx-ink);
   font-size: 12px;
-  min-height: 28px;
+  min-height: 24px;
   outline: 0;
   padding: 0;
   resize: none;
@@ -643,11 +662,11 @@ dd {
   align-items: center;
   color: var(--rx-green);
   display: inline-flex;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 800;
-  height: 20px;
+  height: 18px;
   justify-content: center;
-  width: 20px;
+  width: 18px;
 }
 
 .tick-cell input:checked + span::before {
@@ -657,7 +676,7 @@ dd {
 .slot-dose-cell {
   align-items: center;
   display: grid;
-  gap: 4px;
+  gap: 3px;
   justify-items: center;
 }
 
@@ -667,8 +686,8 @@ dd {
   border-radius: 4px !important;
   color: var(--rx-ink) !important;
   font-size: 11px !important;
-  min-height: 24px !important;
-  padding: 3px 5px !important;
+  min-height: 21px !important;
+  padding: 2px 4px !important;
   text-align: center;
 }
 
@@ -687,7 +706,7 @@ dd {
 .medicine-row-actions {
   align-items: center;
   display: flex;
-  gap: 4px;
+  gap: 3px;
   justify-content: center;
 }
 
@@ -695,9 +714,9 @@ dd {
   align-items: center;
   border-radius: 4px;
   display: inline-flex;
-  height: 26px;
+  height: 23px;
   justify-content: center;
-  width: 26px;
+  width: 23px;
 }
 
 .medicine-row-actions button:hover {
@@ -707,21 +726,21 @@ dd {
 
 .patient-note {
   display: grid;
-  gap: 8px;
-  margin-top: 14px;
+  gap: 5px;
+  margin-top: 9px;
 }
 
 .patient-note textarea {
   border: 1px solid var(--rx-line);
   border-radius: 3px;
-  min-height: 72px;
-  padding: 10px;
+  min-height: 52px;
+  padding: 7px 9px;
   resize: vertical;
 }
 
 .orders-section {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .lab-row {
@@ -730,7 +749,7 @@ dd {
   display: grid;
   gap: 6px;
   grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr);
-  min-height: 32px;
+  min-height: 27px;
 }
 
 .lab-head {
@@ -740,7 +759,7 @@ dd {
 
 .lab-row input {
   border: 0;
-  min-height: 28px;
+  min-height: 24px;
   min-width: 0;
 }
 
@@ -748,9 +767,9 @@ dd {
   align-items: center;
   border-top: 1px solid var(--rx-soft-line);
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: auto minmax(0, 1fr) 28px;
-  padding-top: 8px;
+  padding-top: 6px;
 }
 
 .custom-test button {
@@ -764,7 +783,7 @@ dd {
   display: grid;
   gap: 6px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.8fr) 28px;
-  min-height: 36px;
+  min-height: 30px;
 }
 
 .fluid-head {
@@ -779,17 +798,17 @@ dd {
 
 .admission-card {
   display: grid;
-  gap: 10px;
+  gap: 7px;
 }
 
 .admission-card label {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
 .admission-card textarea {
-  min-height: 56px;
+  min-height: 42px;
   resize: vertical;
 }
 
@@ -797,12 +816,19 @@ dd {
   background: var(--rx-panel);
   border: 1px solid var(--rx-line);
   border-radius: 8px;
-  margin-top: 18px;
-  padding: 14px;
+  margin-top: 12px;
+  padding: 10px;
 }
 
 .prescription-history-panel .section-heading {
-  margin-bottom: 12px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.prescription-history-panel .section-heading > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 
 .prescription-history-panel p {
@@ -815,13 +841,13 @@ dd {
   border: 1px dashed var(--rx-line);
   border-radius: 6px;
   color: var(--rx-muted);
-  padding: 18px;
+  padding: 12px;
   text-align: center;
 }
 
 .prescription-history-list {
   display: grid;
-  gap: 10px;
+  gap: 7px;
 }
 
 .prescription-history-row {
@@ -829,9 +855,9 @@ dd {
   border: 1px solid var(--rx-soft-line);
   border-radius: 7px;
   display: grid;
-  gap: 12px;
-  grid-template-columns: 42px minmax(150px, 1fr) minmax(150px, 0.9fr) auto;
-  padding: 11px 12px;
+  gap: 9px;
+  grid-template-columns: 34px minmax(150px, 1fr) minmax(150px, 0.9fr) auto;
+  padding: 8px 10px;
 }
 
 .history-avatar {
@@ -841,9 +867,9 @@ dd {
   color: var(--rx-blue);
   display: inline-flex;
   font-weight: 800;
-  height: 42px;
+  height: 34px;
   justify-content: center;
-  width: 42px;
+  width: 34px;
 }
 
 .history-main,
@@ -871,13 +897,13 @@ dd {
 
 .history-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .history-actions .btn-light,
 .history-actions .btn-primary {
-  min-height: 32px;
-  padding: 6px 12px;
+  min-height: 28px;
+  padding: 5px 10px;
   white-space: nowrap;
 }
 
