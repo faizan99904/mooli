@@ -19,8 +19,14 @@
                 <a [routerLink]="['/pharmacy']" class="storepos-icon-btn" title="Back to pharmacy">
                     <i class="fa fa-arrow-left"></i>
                 </a>
+                <a [routerLink]="['/pharmacy/products']" class="storepos-icon-btn" title="Product management">
+                    <i class="fa fa-cubes"></i>
+                </a>
                 <button type="button" class="storepos-icon-btn" title="New sale" (click)="clearSale()">
                     <i class="fa fa-refresh"></i>
+                </button>
+                <button type="button" class="storepos-icon-btn" title="Invoice preview" [disabled]="billLines.length === 0" (click)="openCurrentBillPreview()">
+                    <i class="fa fa-file-text-o"></i>
                 </button>
                 <button type="button" class="storepos-icon-btn" title="Sale history" (click)="openSaleHistory()">
                     <i class="fa fa-clock-o"></i>
@@ -267,6 +273,7 @@
                     <span>Status</span>
                     <span>Total</span>
                     <span>Paid</span>
+                    <span>Action</span>
                 </div>
                 <div class="history-row" *ngFor="let sale of recentSales">
                     <strong>{{ sale.invoiceNo }}</strong>
@@ -275,7 +282,84 @@
                     <span class="status-pill">{{ sale.paymentStatus }}</span>
                     <span>{{ formatCurrency(sale.total) }}</span>
                     <span>{{ formatCurrency(sale.paidAmount) }}</span>
+                    <div class="history-action-cell">
+                        <button type="button" class="history-print" (click)="openSaleReceipt(sale)">
+                            <i class="fa fa-print"></i>
+                            Print
+                        </button>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modern-modal-backdrop" *ngIf="receiptPreviewOpen && receiptPreview as receipt">
+    <div class="modern-register-modal receipt-modal">
+        <div class="modern-register-head">
+            <div class="modern-register-badge">
+                <i class="fa fa-print"></i>
+            </div>
+            <div>
+                <strong>Receipt Preview</strong>
+                <span>{{ receipt.reference }} · {{ receipt.saleDate | date:'short' }}</span>
+            </div>
+            <button type="button" class="modal-close" (click)="closeReceiptPreview()">×</button>
+        </div>
+
+        <div class="modern-register-body">
+            <section class="receipt-preview-card">
+                <div class="receipt-preview-head">
+                    <h2>{{ receipt.storeName }}</h2>
+                    <p>{{ receipt.storeAddress || 'Mooli Pharmacy' }}</p>
+                    <strong>Bill / Receipt</strong>
+                </div>
+
+                <div class="receipt-preview-meta">
+                    <div><span>Invoice</span><strong>{{ receipt.reference }}</strong></div>
+                    <div><span>Date</span><strong>{{ receipt.saleDate | date:'short' }}</strong></div>
+                    <div><span>Cashier</span><strong>{{ receipt.cashierName }}</strong></div>
+                    <div><span>Patient</span><strong>{{ receipt.customerName }}</strong></div>
+                </div>
+
+                <table class="receipt-preview-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Qty</th>
+                            <th>Rate</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let item of receipt.items">
+                            <td>
+                                <strong>{{ item.name }}</strong>
+                                <small>{{ item.sku }}</small>
+                            </td>
+                            <td>{{ item.qty }}</td>
+                            <td>{{ formatCurrency(item.unitPrice) }}</td>
+                            <td>{{ formatCurrency(item.total) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="receipt-preview-totals">
+                    <div><span>Subtotal</span><strong>{{ formatCurrency(receipt.subtotal) }}</strong></div>
+                    <div><span>Discount</span><strong>{{ formatCurrency(receipt.discount) }}</strong></div>
+                    <div class="grand"><span>Total</span><strong>{{ formatCurrency(receipt.total) }}</strong></div>
+                    <div><span>Paid</span><strong>{{ formatCurrency(receipt.paidAmount) }}</strong></div>
+                    <div><span>Change</span><strong>{{ formatCurrency(receipt.changeDueAmount) }}</strong></div>
+                    <div><span>Status</span><strong>{{ receipt.paymentStatus }}</strong></div>
+                </div>
+            </section>
+
+            <div class="receipt-actions">
+                <button type="button" class="btn btn-default" (click)="closeReceiptPreview()">Close</button>
+                <button type="button" class="btn btn-primary" (click)="printReceipt()">
+                    <i class="fa fa-print"></i>
+                    Print Bill
+                </button>
             </div>
         </div>
     </div>

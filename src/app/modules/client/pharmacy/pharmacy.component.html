@@ -7,10 +7,10 @@
                     <span>Review doctor prescriptions and match them with POS medicine stock</span>
                 </div>
                 <div class="col-lg-6 col-md-12 col-sm-12 text-lg-right">
-                    <button type="button" class="btn btn-primary mr-2" *ngIf="canCreateProducts" (click)="openProductModal()">
-                        <i class="fa fa-plus"></i>
-                        Add Medicine/Product
-                    </button>
+                    <a class="btn btn-primary mr-2" [routerLink]="['/pharmacy/products']">
+                        <i class="fa fa-cubes"></i>
+                        Product Management
+                    </a>
                     <button type="button" class="btn btn-success mr-2" (click)="openPharmacyPos()">
                         <i class="fa fa-shopping-cart"></i>
                         Open Mooli POS

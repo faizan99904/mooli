@@ -46,6 +46,7 @@ import { RolesComponent } from './roles/roles.component';
 import { CareRecordsComponent } from './care-records/care-records.component';
 import { PrescriptionComponent } from './prescription/prescription.component';
 import { PharmacyComponent } from './pharmacy/pharmacy.component';
+import { PharmacyProductsComponent } from './pharmacy-products/pharmacy-products.component';
 import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
 
 const HOSPITAL_DASHBOARD_ACCESS = ['owner', 'superAdmin', 'hospital_dashboard.read'];
@@ -306,6 +307,12 @@ export const clientRoutes: Routes = [
         component: PrescriptionComponent,
         data: { title: 'Mooli | Prescriptions' },
         canActivate: [roleGuard(PRESCRIPTION_ACCESS)],
+      },
+      {
+        path: 'pharmacy/products',
+        component: PharmacyProductsComponent,
+        data: { title: 'Mooli | Product Management' },
+        canActivate: [roleGuard(PHARMACY_ACCESS)],
       },
       {
         path: 'pharmacy/pos',

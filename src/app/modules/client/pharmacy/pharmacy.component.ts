@@ -72,6 +72,7 @@ export class PharmacyComponent implements OnInit {
   storesLoading = false;
   productModalOpen = false;
   savingProduct = false;
+  deletingProductId = '';
   printPreviewOpen = false;
   printPreviewLoading = false;
   previewPrescription: Prescription | null = null;
@@ -103,6 +104,10 @@ export class PharmacyComponent implements OnInit {
       this.selectedPatientId = params.get('patientId') || '';
       this.page = 1;
       this.loadPrescriptions();
+
+      if (params.get('productModal') === '1') {
+        setTimeout(() => this.openProductModal());
+      }
     });
 
     this.loadPatients();
@@ -118,6 +123,10 @@ export class PharmacyComponent implements OnInit {
 
   get canCreateProducts(): boolean {
     return this.backend.hasPermission('products.create') || this.hasPharmacyPosBaseAccess();
+  }
+
+  get canDeleteProducts(): boolean {
+    return this.backend.hasPermission('products.delete') || this.hasPharmacyPosBaseAccess();
   }
 
   get canCreateCategories(): boolean {
@@ -369,6 +378,32 @@ export class PharmacyComponent implements OnInit {
       });
   }
 
+  deleteProduct(product: ProductCatalogItem): void {
+    if (!this.canDeleteProducts) {
+      this.toastr.error('This role needs products.delete to remove pharmacy medicines.');
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete ${product.name} from product management?`);
+    if (!confirmed) {
+      return;
+    }
+
+    this.deletingProductId = product._id;
+    this.backend
+      .deleteProduct(product._id)
+      .pipe(finalize(() => (this.deletingProductId = '')))
+      .subscribe({
+        next: () => {
+          this.products = this.products.filter((item) => item._id !== product._id);
+          this.toastr.success('Medicine/product deleted.');
+        },
+        error: (err) => {
+          this.toastr.error(err?.error?.message || 'Unable to delete medicine/product.');
+        },
+      });
+  }
+
   patientName(patient?: Patient | null): string {
     return patient ? `${patient.firstName} ${patient.lastName}`.trim() : '-';
   }
@@ -425,6 +460,14 @@ export class PharmacyComponent implements OnInit {
         );
       })
       .slice(0, 3);
+  }
+
+  productStrength(product: ProductCatalogItem): string {
+    return [product.strengthValue, product.strengthUnit].filter(Boolean).join(' ') || '-';
+  }
+
+  productStock(product: ProductCatalogItem): string {
+    return String(product.availableQuantity ?? product.stockQuantity ?? '0');
   }
 
   changePage(nextPage: number): void {

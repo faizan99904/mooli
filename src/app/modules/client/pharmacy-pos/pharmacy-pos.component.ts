@@ -33,6 +33,34 @@ interface UnavailableMedicine {
   reason: string;
 }
 
+interface ReceiptPreviewLine {
+  name: string;
+  sku: string;
+  qty: number;
+  unitPrice: number;
+  discount: number;
+  total: number;
+}
+
+interface ReceiptPreviewData {
+  reference: string;
+  saleDate: string;
+  storeName: string;
+  storeAddress: string;
+  cashierName: string;
+  customerName: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  items: ReceiptPreviewLine[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  paidAmount: number;
+  cashReceivedAmount: number;
+  changeDueAmount: number;
+  note: string;
+}
+
 @Component({
   selector: 'app-pharmacy-pos',
   standalone: true,
@@ -67,6 +95,8 @@ export class PharmacyPosComponent implements OnInit {
   saleHistoryOpen = false;
   saleHistoryLoading = false;
   recentSales: Sale[] = [];
+  receiptPreviewOpen = false;
+  receiptPreview: ReceiptPreviewData | null = null;
   openingAmount: number | null = null;
   openingNote = '';
   closingAmount: number | null = null;
@@ -457,6 +487,34 @@ export class PharmacyPosComponent implements OnInit {
     this.saleHistoryOpen = false;
   }
 
+  openCurrentBillPreview(): void {
+    if (!this.billLines.some((line) => line.billQty > 0)) {
+      this.toastr.info('Add at least one medicine before previewing bill.');
+      return;
+    }
+
+    this.receiptPreview = this.buildReceiptFromCurrentCart();
+    this.receiptPreviewOpen = true;
+  }
+
+  openSaleReceipt(sale: Sale): void {
+    this.receiptPreview = this.buildReceiptFromSale(sale);
+    this.receiptPreviewOpen = true;
+  }
+
+  closeReceiptPreview(): void {
+    this.receiptPreviewOpen = false;
+    this.receiptPreview = null;
+  }
+
+  printReceipt(): void {
+    if (!this.receiptPreview) {
+      return;
+    }
+
+    this.openReceiptPrintWindow(this.receiptPreview);
+  }
+
   loadRecentSales(): void {
     if (!this.canReadSales) {
       this.recentSales = [];
@@ -600,6 +658,11 @@ export class PharmacyPosComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.saleInvoiceNo = response.data?.sale?.invoiceNo || '';
+          const completedSale = response.data?.sale || null;
+          if (completedSale) {
+            this.receiptPreview = this.buildReceiptFromSale(completedSale);
+            this.receiptPreviewOpen = true;
+          }
           this.showPosMessage(
             this.saleInvoiceNo ? `Sale completed: ${this.saleInvoiceNo}` : 'Sale completed successfully.',
             'success'
@@ -647,6 +710,166 @@ export class PharmacyPosComponent implements OnInit {
   productDisplay(product: ProductCatalogItem): string {
     const strength = [product.strengthValue, product.strengthUnit].filter(Boolean).join(' ');
     return [product.name, strength ? `(${strength})` : ''].filter(Boolean).join(' ');
+  }
+
+  private buildReceiptFromCurrentCart(): ReceiptPreviewData {
+    const rawSubtotal = this.billLines.reduce(
+      (sum, line) => sum + Number(line.billQty || 0) * Number(line.unitPrice || 0),
+      0
+    );
+    const paidAmount = Number(this.paidAmount || this.subtotal || 0);
+    const cashReceived = this.paymentMethod === 'cash'
+      ? Math.max(Number(this.cashReceivedAmount || paidAmount), paidAmount)
+      : paidAmount;
+
+    return {
+      reference: 'Preview',
+      saleDate: new Date().toISOString(),
+      storeName: this.selectedStoreLabel,
+      storeAddress: this.currentStoreAddress(),
+      cashierName: this.cashierName,
+      customerName: this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
+      paymentMethod: this.paymentMethod,
+      paymentStatus: paidAmount >= this.subtotal ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid',
+      items: this.billLines
+        .filter((line) => line.billQty > 0)
+        .map((line) => ({
+          name: this.productDisplay(line.product),
+          sku: line.product.sku || '',
+          qty: Number(line.billQty || 0),
+          unitPrice: Number(line.unitPrice || 0),
+          discount: Number(line.discount || 0),
+          total: this.lineTotal(line),
+        })),
+      subtotal: rawSubtotal,
+      discount: this.totalDiscount,
+      total: this.subtotal,
+      paidAmount,
+      cashReceivedAmount: cashReceived,
+      changeDueAmount: this.paymentMethod === 'cash' ? Math.max(cashReceived - this.subtotal, 0) : 0,
+      note: this.prescription ? `Prescription ${this.prescription._id}` : 'POS sale preview',
+    };
+  }
+
+  private buildReceiptFromSale(sale: Sale): ReceiptPreviewData {
+    const store = this.stores.find((item) => item._id === sale.storeId);
+    const paidAmount = Number(sale.paidAmount || 0);
+
+    return {
+      reference: sale.invoiceNo || sale._id,
+      saleDate: sale.saleDate || sale.createdAt || new Date().toISOString(),
+      storeName: store?.name || this.selectedStoreLabel,
+      storeAddress: [store?.address, store?.city].filter(Boolean).join(', '),
+      cashierName: this.cashierName,
+      customerName: this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
+      paymentMethod: sale.paymentStatus,
+      paymentStatus: sale.paymentStatus,
+      items: (sale.items || []).map((item) => ({
+        name: item.name || 'Product',
+        sku: item.sku || '',
+        qty: Number(item.qty || 0),
+        unitPrice: Number(item.unitPrice || 0),
+        discount: Number(item.discount || 0),
+        total: Number(item.total || 0),
+      })),
+      subtotal: Number(sale.subtotal || 0),
+      discount: Number(sale.discount || 0),
+      total: Number(sale.total || 0),
+      paidAmount,
+      cashReceivedAmount: paidAmount,
+      changeDueAmount: 0,
+      note: sale.note || '',
+    };
+  }
+
+  private openReceiptPrintWindow(receipt: ReceiptPreviewData): void {
+    const popup = window.open('', '_blank', 'width=420,height=760,noopener');
+    if (!popup) {
+      this.toastr.error('Allow popups to print the receipt.');
+      return;
+    }
+
+    popup.document.write(this.receiptHtml(receipt));
+    popup.document.close();
+    popup.focus();
+    setTimeout(() => popup.print(), 250);
+  }
+
+  private receiptHtml(receipt: ReceiptPreviewData): string {
+    const rows = receipt.items
+      .map((item) => `
+        <tr>
+          <td>
+            <strong>${this.escapeHtml(item.name)}</strong>
+            <small>${this.escapeHtml(item.sku)}</small>
+          </td>
+          <td>${item.qty}</td>
+          <td>${this.formatCurrency(item.unitPrice)}</td>
+          <td>${this.formatCurrency(item.total)}</td>
+        </tr>
+      `)
+      .join('');
+
+    return `
+      <!doctype html>
+      <html>
+        <head>
+          <title>${this.escapeHtml(receipt.reference)}</title>
+          <style>
+            @page { margin: 8mm; size: 80mm auto; }
+            * { box-sizing: border-box; }
+            body { color: #111827; font-family: Arial, sans-serif; font-size: 12px; margin: 0; }
+            .receipt { margin: 0 auto; max-width: 320px; padding: 8px; }
+            .center { text-align: center; }
+            h1 { font-size: 18px; margin: 0 0 4px; }
+            p { margin: 2px 0; }
+            .meta { border-bottom: 1px dashed #9ca3af; border-top: 1px dashed #9ca3af; margin: 10px 0; padding: 8px 0; }
+            .meta div, .totals div { display: flex; justify-content: space-between; gap: 10px; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border-bottom: 1px solid #e5e7eb; padding: 6px 2px; text-align: left; vertical-align: top; }
+            th:nth-child(2), td:nth-child(2) { text-align: center; }
+            th:nth-child(3), th:nth-child(4), td:nth-child(3), td:nth-child(4) { text-align: right; }
+            small { color: #6b7280; display: block; margin-top: 2px; }
+            .totals { border-top: 1px dashed #9ca3af; margin-top: 8px; padding-top: 8px; }
+            .grand { font-size: 15px; font-weight: 800; }
+            .foot { border-top: 1px dashed #9ca3af; margin-top: 12px; padding-top: 8px; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <section class="receipt">
+            <div class="center">
+              <h1>${this.escapeHtml(receipt.storeName)}</h1>
+              <p>${this.escapeHtml(receipt.storeAddress || 'Mooli Pharmacy')}</p>
+              <p>Bill / Receipt</p>
+            </div>
+            <div class="meta">
+              <div><span>Invoice</span><strong>${this.escapeHtml(receipt.reference)}</strong></div>
+              <div><span>Date</span><strong>${new Date(receipt.saleDate).toLocaleString()}</strong></div>
+              <div><span>Cashier</span><strong>${this.escapeHtml(receipt.cashierName)}</strong></div>
+              <div><span>Patient</span><strong>${this.escapeHtml(receipt.customerName)}</strong></div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+            <div class="totals">
+              <div><span>Subtotal</span><strong>${this.formatCurrency(receipt.subtotal)}</strong></div>
+              <div><span>Discount</span><strong>${this.formatCurrency(receipt.discount)}</strong></div>
+              <div class="grand"><span>Total</span><strong>${this.formatCurrency(receipt.total)}</strong></div>
+              <div><span>Paid</span><strong>${this.formatCurrency(receipt.paidAmount)}</strong></div>
+              <div><span>Change</span><strong>${this.formatCurrency(receipt.changeDueAmount)}</strong></div>
+              <div><span>Status</span><strong>${this.escapeHtml(receipt.paymentStatus)}</strong></div>
+            </div>
+            <div class="foot">
+              <p>${this.escapeHtml(receipt.note || 'Thank you')}</p>
+              <p>Powered by Mooli</p>
+            </div>
+          </section>
+        </body>
+      </html>
+    `;
   }
 
   private rebuildPrescriptionBill(): void {
@@ -768,6 +991,20 @@ export class PharmacyPosComponent implements OnInit {
   private showPosMessage(message: string, type: 'success' | 'warning' | 'danger' | 'info'): void {
     this.posMessage = message;
     this.posMessageType = type;
+  }
+
+  private currentStoreAddress(): string {
+    const store = this.stores.find((item) => item._id === this.currentStoreId());
+    return [store?.address, store?.city].filter(Boolean).join(', ');
+  }
+
+  private escapeHtml(value: unknown): string {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   private productSearchText(product: ProductCatalogItem): string {

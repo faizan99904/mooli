@@ -1,0 +1,235 @@
+<div id="main-content">
+    <div class="container-fluid pharmacy-products-page">
+        <div class="block-header">
+            <div class="row clearfix align-items-center">
+                <div class="col-lg-6 col-md-12 col-sm-12">
+                    <h1>Product Management</h1>
+                    <span>Add, review, and remove pharmacy medicines for the assigned store</span>
+                </div>
+                <div class="col-lg-6 col-md-12 col-sm-12 text-lg-right">
+                    <a class="btn btn-default mr-2" [routerLink]="['/pharmacy']">
+                        <i class="fa fa-arrow-left"></i>
+                        Pharmacy Queue
+                    </a>
+                    <a class="btn btn-success mr-2" [routerLink]="['/pharmacy/pos']">
+                        <i class="fa fa-shopping-cart"></i>
+                        Open POS
+                    </a>
+                    <button type="button" class="btn btn-primary" *ngIf="canCreateProducts" (click)="openProductModal()">
+                        <i class="fa fa-plus"></i>
+                        Add Medicine
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="product-toolbar">
+            <label class="product-search">
+                <i class="fa fa-search"></i>
+                <input type="search" [(ngModel)]="productSearch" placeholder="Search medicine name, SKU, barcode, type..." />
+            </label>
+
+            <label class="store-filter">
+                <span>Store</span>
+                <select [(ngModel)]="productForm.storeId" (change)="onStoreChange()">
+                    <option [value]="currentStoreId()" *ngIf="stores.length === 0">{{ selectedStoreLabel }}</option>
+                    <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+                </select>
+            </label>
+
+            <button type="button" class="btn btn-default" (click)="loadProducts()" [disabled]="productsLoading">
+                <i class="fa fa-refresh" [class.fa-spin]="productsLoading"></i>
+                Refresh
+            </button>
+        </div>
+
+        <div class="product-summary-grid">
+            <div>
+                <span>Store</span>
+                <strong>{{ selectedStoreLabel }}</strong>
+            </div>
+            <div>
+                <span>Active Products</span>
+                <strong>{{ products.length }}</strong>
+            </div>
+            <div>
+                <span>Visible</span>
+                <strong>{{ filteredProducts.length }}</strong>
+            </div>
+            <div>
+                <span>Status</span>
+                <strong *ngIf="canViewProducts">Ready</strong>
+                <strong *ngIf="!canViewProducts">No Access</strong>
+            </div>
+        </div>
+
+        <div class="card product-card">
+            <div class="body p-0">
+                <div class="product-empty" *ngIf="productsLoading">Loading products...</div>
+                <div class="product-empty" *ngIf="!productsLoading && !canViewProducts">
+                    This role needs <code>products.read</code> to view product management.
+                </div>
+                <div class="product-empty" *ngIf="!productsLoading && canViewProducts && filteredProducts.length === 0">
+                    No products found.
+                </div>
+
+                <div class="product-table" *ngIf="!productsLoading && canViewProducts && filteredProducts.length">
+                    <div class="product-row product-head">
+                        <span>Medicine/Product</span>
+                        <span>SKU</span>
+                        <span>Type</span>
+                        <span>Strength</span>
+                        <span>Stock</span>
+                        <span>Cost</span>
+                        <span>Price</span>
+                        <span>Action</span>
+                    </div>
+                    <div class="product-row" *ngFor="let product of filteredProducts">
+                        <strong>{{ product.name }}</strong>
+                        <span>{{ product.sku || '-' }}</span>
+                        <span>{{ product.unit || '-' }}</span>
+                        <span>{{ productStrength(product) }}</span>
+                        <span>{{ productStock(product) }}</span>
+                        <span>{{ product.costPrice || '0' }}</span>
+                        <span>{{ product.sellingPrice || '0' }}</span>
+                        <span class="product-actions">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                *ngIf="canUpdateProducts"
+                                [disabled]="deletingProductId === product._id"
+                                (click)="openEditProduct(product)"
+                            >
+                                <i class="fa fa-pencil"></i>
+                                Edit
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-danger"
+                                *ngIf="canDeleteProducts"
+                                [disabled]="deletingProductId === product._id"
+                                (click)="deleteProduct(product)"
+                            >
+                                <i class="fa fa-spinner fa-spin" *ngIf="deletingProductId === product._id"></i>
+                                <i class="fa fa-trash" *ngIf="deletingProductId !== product._id"></i>
+                                Delete
+                            </button>
+                            <small class="text-muted" *ngIf="!canDeleteProducts">No delete access</small>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="product-modal-backdrop" *ngIf="productModalOpen">
+        <div class="product-modal-dialog">
+            <div class="product-modal-header">
+                <div>
+                    <h3>{{ editingProductId ? 'Edit Medicine/Product' : 'Add Medicine/Product' }}</h3>
+                    <p *ngIf="!editingProductId">Create pharmacy stock for this hospital store.</p>
+                    <p *ngIf="editingProductId">Update product details used by pharmacy POS.</p>
+                </div>
+                <button type="button" class="modal-close-btn" (click)="closeProductModal()" [disabled]="savingProduct">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+
+            <div class="product-modal-body">
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label>Medicine/Product Name</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.name" placeholder="e.g. Panadol" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Type</label>
+                        <select class="form-control" [(ngModel)]="productForm.unit">
+                            <option *ngFor="let unit of productUnits" [value]="unit">{{ unit | titlecase }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>SKU</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.sku" placeholder="Auto if empty" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label>Dosage / Strength</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.strengthValue" placeholder="e.g. 500, 120/5" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Strength Unit</label>
+                        <select class="form-control" [(ngModel)]="productForm.strengthUnit">
+                            <option *ngFor="let unit of strengthUnits" [value]="unit">{{ unit }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label>Category</label>
+                        <select class="form-control" [(ngModel)]="productForm.categoryId">
+                            <option value="">Add new category</option>
+                            <option *ngFor="let category of categories" [value]="category._id">{{ category.name }}</option>
+                        </select>
+                        <small class="text-muted" *ngIf="categoriesLoading">Loading categories...</small>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label>New Category</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            [(ngModel)]="productForm.categoryName"
+                            [disabled]="!!productForm.categoryId"
+                            placeholder="e.g. Tablets"
+                        />
+                    </div>
+                    <div class="form-group col-md-4" *ngIf="!editingProductId">
+                        <label>Store</label>
+                        <select class="form-control" [(ngModel)]="productForm.storeId">
+                            <option [value]="currentStoreId()" *ngIf="stores.length === 0">{{ selectedStoreLabel }}</option>
+                            <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+                        </select>
+                        <small class="text-muted" *ngIf="storesLoading">Loading stores...</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-3">
+                        <label>Cost Price</label>
+                        <input type="number" min="0" class="form-control" [(ngModel)]="productForm.costPrice" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Selling Price</label>
+                        <input type="number" min="0" class="form-control" [(ngModel)]="productForm.sellingPrice" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>{{ editingProductId ? 'Stock Quantity' : 'Opening Stock' }}</label>
+                        <input type="number" min="0" step="1" class="form-control" [(ngModel)]="productForm.openingStock" />
+                        <small class="text-muted" *ngIf="editingProductId && !canAdjustInventory">Needs inventory.adjust permission</small>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>Barcode</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.barcode" placeholder="Optional" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label>Brand</label>
+                        <input type="text" class="form-control" [(ngModel)]="productForm.brand" placeholder="Optional" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="product-modal-footer">
+                <button type="button" class="btn btn-default" (click)="closeProductModal()" [disabled]="savingProduct">Cancel</button>
+                <button type="button" class="btn btn-primary" (click)="saveProduct()" [disabled]="savingProduct">
+                    <i class="fa fa-spinner fa-spin" *ngIf="savingProduct"></i>
+                    {{ editingProductId ? 'Save Changes' : 'Save Medicine/Product' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

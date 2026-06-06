@@ -1,0 +1,272 @@
+.pharmacy-products-page {
+  color: #172033;
+}
+
+.product-toolbar,
+.product-summary-grid,
+.product-card {
+  min-width: 0;
+}
+
+.product-toolbar {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 320px) auto;
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.product-search,
+.store-filter {
+  align-items: center;
+  display: flex;
+  margin: 0;
+  min-width: 0;
+}
+
+.product-search {
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.product-search i {
+  color: #64748b;
+}
+
+.product-search input {
+  border: 0;
+  flex: 1;
+  font-weight: 700;
+  min-height: 38px;
+  min-width: 0;
+  outline: 0;
+}
+
+.store-filter {
+  display: grid;
+  gap: 5px;
+}
+
+.store-filter span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.store-filter select {
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  min-height: 38px;
+  padding: 6px 10px;
+  width: 100%;
+}
+
+.product-summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.product-summary-grid div {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.product-summary-grid span,
+.product-summary-grid strong {
+  display: block;
+}
+
+.product-summary-grid span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.product-summary-grid strong {
+  color: #111827;
+  font-size: 18px;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.product-empty {
+  color: #64748b;
+  font-weight: 800;
+  padding: 22px;
+  text-align: center;
+}
+
+.product-table {
+  overflow-x: auto;
+}
+
+.product-row {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  display: grid;
+  grid-template-columns: minmax(210px, 1.4fr) 140px 90px 120px 90px 90px 95px 178px;
+  min-width: 1020px;
+}
+
+.product-row > * {
+  border-right: 1px solid #e2e8f0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 10px 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-head {
+  background: #eef2f7;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.product-actions {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.product-actions .btn {
+  align-items: center;
+  display: inline-flex;
+  gap: 5px;
+  justify-content: center;
+}
+
+.product-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.58);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 1060;
+}
+
+.product-modal-dialog {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+  max-height: calc(100vh - 36px);
+  max-width: 860px;
+  overflow: auto;
+  width: 100%;
+}
+
+.product-modal-header,
+.product-modal-footer {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 16px 18px;
+}
+
+.product-modal-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.product-modal-header h3 {
+  color: #111827;
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.product-modal-header p {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.modal-close-btn {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #374151;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.product-modal-body {
+  padding: 18px;
+}
+
+.product-modal-body label {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.product-modal-footer {
+  border-top: 1px solid #e5e7eb;
+}
+
+.product-modal-footer .btn {
+  min-width: 138px;
+}
+
+@media (max-width: 992px) {
+  .product-toolbar,
+  .product-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-toolbar {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .block-header .text-lg-right {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .product-modal-backdrop {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .product-modal-header,
+  .product-modal-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .product-modal-footer .btn {
+    width: 100%;
+  }
+}

@@ -419,6 +419,10 @@ export class BackendService {
     return this.patch<ProductCatalogItem>(`${CONFIG.products}/${id}`, payload);
   }
 
+  deleteProduct(id: string): Observable<ApiResponse<ProductCatalogItem>> {
+    return this.delete<ProductCatalogItem>(`${CONFIG.products}/${id}`);
+  }
+
   adjustInventory(payload: Record<string, unknown>): Observable<ApiResponse<unknown>> {
     return this.post<unknown>(`${CONFIG.inventory}/adjust`, payload);
   }

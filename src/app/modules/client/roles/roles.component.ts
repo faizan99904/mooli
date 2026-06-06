@@ -102,6 +102,7 @@ export class RolesComponent implements OnInit {
         { key: 'products.read', label: 'View POS Medicine Catalog' },
         { key: 'products.create', label: 'Add POS Medicines' },
         { key: 'products.update', label: 'Update POS Medicines' },
+        { key: 'products.delete', label: 'Delete POS Medicines' },
         { key: 'sales.create', label: 'Dispense Medicines / Create POS Sales' },
         { key: 'sales.read', label: 'View POS Sales' },
         { key: 'stores.read', label: 'View POS Stores' },
