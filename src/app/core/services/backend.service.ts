@@ -398,6 +398,12 @@ export class BackendService {
     );
   }
 
+  getPrescriptionProductSuggestions(params?: Record<string, unknown>): Observable<ListResult<ProductCatalogItem>> {
+    return this.get<PaginatedResponse<ProductCatalogItem>>(`${CONFIG.products}/prescription-suggestions`, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
   createProduct(payload: Record<string, unknown>): Observable<ApiResponse<ProductCatalogItem>> {
     return this.post<ProductCatalogItem>(CONFIG.products, payload);
   }

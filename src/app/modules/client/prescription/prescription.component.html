@@ -153,7 +153,8 @@
                 <input #smartMedicineInputRef type="text" name="smartMedicineInput"
                   [(ngModel)]="smartMedicineInput" [ngModelOptions]="{ standalone: true }"
                   placeholder="Type saved medicine name or shortcut"
-                  (input)="onSmartMedicineInputChange()" (keydown)="handleSmartMedicineKeydown($event)" />
+                  (input)="onSmartMedicineInputChange()" (focus)="cancelSmartMedicineBlurClose()"
+                  (blur)="scheduleSmartMedicineBlurClose()" (keydown)="handleSmartMedicineKeydown($event)" />
                 <button type="button" class="btn-primary" (click)="addSmartMedicineFromInput()">Add / Enter</button>
               </div>
 
@@ -161,9 +162,9 @@
                 <button type="button" class="smart-suggestion-row"
                   *ngFor="let item of smartMedicineSuggestions; let suggestionIndex = index"
                   [class.active]="suggestionIndex === activeMedicineSuggestionIndex"
-                  (mousedown)="addMedicineFromLibrary(item)">
-                  <strong>{{ doctorMedicineDisplayName(item) }}</strong>
-                  <span>{{ doctorMedicineMeta(item) }}</span>
+                  (mousedown)="addMedicineFromSuggestion(item)">
+                  <strong>{{ item.value }}</strong>
+                  <span>{{ item.meta }}</span>
                 </button>
               </div>
 
@@ -230,8 +231,8 @@
                           [attr.list]="'doctor-medicine-suggestions-' + i" (input)="onMedicineNameInput(i)"
                           (change)="applyMedicineSuggestion(i)" />
                         <datalist [id]="'doctor-medicine-suggestions-' + i">
-                          <option *ngFor="let item of medicineSuggestions(i)"
-                            [value]="doctorMedicineDisplayName(item)"></option>
+                          <option *ngFor="let item of medicineRowSuggestions[i] || []"
+                            [value]="item.value">{{ item.meta }}</option>
                         </datalist>
                       </div>
                     </td>

@@ -19,6 +19,7 @@ import {
   Doctor,
   DoctorMedicine,
   Patient,
+  ProductCatalogItem,
   Prescription,
 } from '../../../shared/models/hospital.model';
 
@@ -61,6 +62,14 @@ interface ParsedMedicineCommand {
   instruction: string;
 }
 
+interface MedicineSuggestionOption {
+  source: 'doctor' | 'store';
+  value: string;
+  meta: string;
+  doctorMedicine?: DoctorMedicine;
+  storeMedicine?: ProductCatalogItem;
+}
+
 @Component({
   selector: 'app-prescription',
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
@@ -77,6 +86,9 @@ export class PrescriptionComponent implements OnInit {
   doctors: Doctor[] = [];
   appointments: Appointment[] = [];
   doctorMedicines: DoctorMedicine[] = [];
+  storeMedicines: ProductCatalogItem[] = [];
+  storeMedicineSearchDisabled = false;
+  medicineRowSuggestions: Record<number, MedicineSuggestionOption[]> = {};
   prescriptionForm: FormGroup;
   doctorMedicineForm: FormGroup;
   loading = false;
@@ -100,13 +112,16 @@ export class PrescriptionComponent implements OnInit {
   previewPrescription: Prescription | null = null;
   printPreviewData: PrintPreviewData | null = null;
   smartMedicineInput = '';
-  smartMedicineSuggestions: DoctorMedicine[] = [];
+  smartMedicineSuggestions: MedicineSuggestionOption[] = [];
   activeMedicineSuggestionIndex = -1;
   medicineLibraryOpen = false;
   medicineLibraryLoading = false;
   savingDoctorMedicine = false;
   selectedMedicineRowIndex: number | null = null;
   today = new Date();
+  private medicineInputSearchTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private smartMedicineSearchTimer: ReturnType<typeof setTimeout> | null = null;
+  private smartMedicineBlurTimer: ReturnType<typeof setTimeout> | null = null;
   readonly durationOptions = [
     '1 Day',
     '3 Days',
@@ -263,13 +278,46 @@ export class PrescriptionComponent implements OnInit {
   }
 
   onSmartMedicineInputChange(): void {
+    this.cancelSmartMedicineBlurClose();
     const query = this.extractMedicineQuery(this.smartMedicineInput);
-    if (query.length < 2) {
+    if (this.smartMedicineSearchTimer) {
+      clearTimeout(this.smartMedicineSearchTimer);
+      this.smartMedicineSearchTimer = null;
+    }
+
+    if (!query) {
       this.clearSmartMedicineSuggestions();
       return;
     }
 
-    this.loadDoctorMedicines(query, true);
+    this.refreshSmartMedicineSuggestions(query);
+    this.smartMedicineSearchTimer = setTimeout(() => {
+      this.smartMedicineSearchTimer = null;
+      const latestQuery = this.extractMedicineQuery(this.smartMedicineInput);
+      if (latestQuery !== query) {
+        return;
+      }
+
+      this.loadDoctorMedicines(query, true);
+      this.loadStoreMedicines(query, true);
+    }, 250);
+  }
+
+  scheduleSmartMedicineBlurClose(): void {
+    this.cancelSmartMedicineBlurClose();
+    this.smartMedicineBlurTimer = setTimeout(() => {
+      this.smartMedicineBlurTimer = null;
+      this.clearSmartMedicineSuggestions();
+    }, 120);
+  }
+
+  cancelSmartMedicineBlurClose(): void {
+    if (!this.smartMedicineBlurTimer) {
+      return;
+    }
+
+    clearTimeout(this.smartMedicineBlurTimer);
+    this.smartMedicineBlurTimer = null;
   }
 
   handleSmartMedicineKeydown(event: KeyboardEvent): void {
@@ -297,7 +345,7 @@ export class PrescriptionComponent implements OnInit {
     event.preventDefault();
     const selected = this.smartMedicineSuggestions[this.activeMedicineSuggestionIndex];
     if (selected && !this.hasSmartMedicineCommand(this.smartMedicineInput)) {
-      this.addMedicineFromLibrary(selected);
+      this.addMedicineFromSuggestion(selected);
       return;
     }
 
@@ -320,6 +368,22 @@ export class PrescriptionComponent implements OnInit {
     const parsed = this.parseMedicineCommand(this.doctorMedicineDisplayName(medicine));
     this.appendMedicineRow(this.createMedicineRow(parsed));
     this.resetSmartMedicineInput();
+  }
+
+  addMedicineFromSuggestion(suggestion: MedicineSuggestionOption): void {
+    if (suggestion.doctorMedicine) {
+      this.addMedicineFromLibrary(suggestion.doctorMedicine);
+      return;
+    }
+
+    if (suggestion.storeMedicine) {
+      this.appendMedicineRow({
+        name: this.storeMedicineDisplayName(suggestion.storeMedicine),
+        dosage: this.defaultStoreMedicineDose(suggestion.storeMedicine),
+        duration: '1 Month',
+      });
+      this.resetSmartMedicineInput();
+    }
   }
 
   addFavoriteMedicine(medicine: DoctorMedicine): void {
@@ -565,6 +629,8 @@ export class PrescriptionComponent implements OnInit {
   }
 
   removeMedicine(index: number): void {
+    this.clearMedicineRowSuggestion(index);
+
     if (this.medicines.length > 1) {
       this.medicines.removeAt(index);
       return;
@@ -652,7 +718,7 @@ export class PrescriptionComponent implements OnInit {
       });
   }
 
-  loadDoctorMedicines(search = '', updateSmartSuggestions = false): void {
+  loadDoctorMedicines(search = '', updateSmartSuggestions = false, afterLoad?: () => void): void {
     const doctorId = this.activeDoctorId();
     if (!doctorId) {
       this.doctorMedicines = [];
@@ -674,51 +740,165 @@ export class PrescriptionComponent implements OnInit {
         next: (items) => {
           this.doctorMedicines = this.mergeDoctorMedicines(items);
           if (updateSmartSuggestions) {
-            this.smartMedicineSuggestions = items;
-            this.activeMedicineSuggestionIndex = items.length ? 0 : -1;
+            this.refreshSmartMedicineSuggestions(search);
           }
+          afterLoad?.();
         },
         error: () => {
           if (updateSmartSuggestions) {
             this.clearSmartMedicineSuggestions();
           }
+          afterLoad?.();
+        },
+      });
+  }
+
+  loadStoreMedicines(search = '', updateSmartSuggestions = false, afterLoad?: () => void): void {
+    if (this.storeMedicineSearchDisabled) {
+      afterLoad?.();
+      return;
+    }
+
+    this.backend
+      .getPrescriptionProductSuggestions({
+        limit: 50,
+        isActive: true,
+        search: search.trim() || undefined,
+      })
+      .subscribe({
+        next: (result) => {
+          this.storeMedicines = result.items;
+          if (updateSmartSuggestions) {
+            this.refreshSmartMedicineSuggestions(search);
+          }
+          afterLoad?.();
+        },
+        error: (err) => {
+          this.storeMedicines = [];
+          if (err?.status === 403) {
+            this.storeMedicineSearchDisabled = true;
+          }
+          afterLoad?.();
         },
       });
   }
 
   onMedicineNameInput(index: number): void {
     const query = String(this.medicines.at(index).get('name')?.value || '').trim();
+    const existingTimer = this.medicineInputSearchTimers.get(index);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
     if (!query) {
+      this.clearMedicineRowSuggestion(index);
       return;
     }
 
-    this.loadDoctorMedicines(query);
+    this.refreshMedicineRowSuggestions(index, query);
+    const timer = setTimeout(() => {
+      this.medicineInputSearchTimers.delete(index);
+      const latestQuery = String(this.medicines.at(index)?.get('name')?.value || '').trim();
+      if (latestQuery !== query) {
+        return;
+      }
+
+      this.loadDoctorMedicines(query, false, () => this.refreshMedicineRowSuggestions(index, query));
+      this.loadStoreMedicines(query, false, () => this.refreshMedicineRowSuggestions(index, query));
+    }, 250);
+
+    this.medicineInputSearchTimers.set(index, timer);
   }
 
-  medicineSuggestions(index: number): DoctorMedicine[] {
-    const query = String(this.medicines.at(index).get('name')?.value || '')
-      .trim()
-      .toLowerCase();
+  private buildMedicineSuggestionOptions(query: string, limit = 10): MedicineSuggestionOption[] {
+    const suggestions: MedicineSuggestionOption[] = [];
+    const seen = new Set<string>();
 
+    this.searchMedicineLibrary(query).forEach((medicine) => {
+      const value = this.doctorMedicineDisplayName(medicine);
+      const key = this.normalizeMedicineSuggestionKey(value);
+      if (seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      suggestions.push({
+        source: 'doctor',
+        value,
+        meta: this.doctorMedicineMeta(medicine),
+        doctorMedicine: medicine,
+      });
+    });
+
+    this.searchStoreMedicines(query).forEach((medicine) => {
+      const value = this.storeMedicineDisplayName(medicine);
+      const key = this.normalizeMedicineSuggestionKey(value);
+      if (seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      suggestions.push({
+        source: 'store',
+        value,
+        meta: this.storeMedicineMeta(medicine),
+        storeMedicine: medicine,
+      });
+    });
+
+    return suggestions.slice(0, limit);
+  }
+
+  private refreshSmartMedicineSuggestions(search: string): void {
+    const query = this.extractMedicineQuery(search);
+    this.smartMedicineSuggestions = this.buildMedicineSuggestionOptions(query, 8);
+    this.activeMedicineSuggestionIndex = this.smartMedicineSuggestions.length ? 0 : -1;
+  }
+
+  private refreshMedicineRowSuggestions(index: number, search: string): void {
+    const query = search.trim();
     if (!query) {
-      return [];
+      this.clearMedicineRowSuggestion(index);
+      return;
     }
 
-    return this.searchMedicineLibrary(query).slice(0, 8);
+    this.medicineRowSuggestions = {
+      ...this.medicineRowSuggestions,
+      [index]: this.buildMedicineSuggestionOptions(query, 10),
+    };
+  }
+
+  private clearMedicineRowSuggestion(index: number): void {
+    const timer = this.medicineInputSearchTimers.get(index);
+    if (timer) {
+      clearTimeout(timer);
+      this.medicineInputSearchTimers.delete(index);
+    }
+
+    if (!this.medicineRowSuggestions[index]) {
+      return;
+    }
+
+    const nextSuggestions = { ...this.medicineRowSuggestions };
+    delete nextSuggestions[index];
+    this.medicineRowSuggestions = nextSuggestions;
   }
 
   applyMedicineSuggestion(index: number): void {
     const query = String(this.medicines.at(index).get('name')?.value || '')
       .trim()
       .toLowerCase();
-    const medicine = this.doctorMedicines.find(
-      (item) =>
-        item.name.trim().toLowerCase() === query ||
-        this.doctorMedicineDisplayName(item).toLowerCase() === query
+    const suggestion = (this.medicineRowSuggestions[index] || this.buildMedicineSuggestionOptions(query, 10)).find(
+      (item) => item.value.trim().toLowerCase() === query
     );
 
-    if (medicine) {
-      this.useDoctorMedicine(medicine, index);
+    if (suggestion?.doctorMedicine) {
+      this.useDoctorMedicine(suggestion.doctorMedicine, index);
+      return;
+    }
+
+    if (suggestion?.storeMedicine) {
+      this.useStoreMedicine(suggestion.storeMedicine, index);
     }
   }
 
@@ -734,6 +914,29 @@ export class PrescriptionComponent implements OnInit {
     const common = [medicine.dosage, medicine.frequency].filter(Boolean).join(' ');
 
     return [type || 'Saved medicine', common ? `Common: ${common}` : ''].filter(Boolean).join(' | ');
+  }
+
+  storeMedicineDisplayName(medicine: ProductCatalogItem): string {
+    const unit = String(medicine.unit || '').trim();
+    const name = String(medicine.name || '').trim();
+    const strength = this.storeMedicineStrength(medicine);
+
+    return [unit, name, strength ? `(${strength})` : ''].filter(Boolean).join(' ');
+  }
+
+  storeMedicineMeta(medicine: ProductCatalogItem): string {
+    const brand = String(medicine.brand || '').trim();
+    const sku = String(medicine.sku || '').trim();
+    const stock = String(medicine.availableQuantity ?? medicine.stockQuantity ?? '').trim();
+
+    return [
+      'Hospital store',
+      brand,
+      sku ? `SKU: ${sku}` : '',
+      stock ? `Stock: ${stock}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | ');
   }
 
   loadPrescriptions(): void {
@@ -1219,6 +1422,49 @@ export class PrescriptionComponent implements OnInit {
     });
   }
 
+  private searchStoreMedicines(query: string): ProductCatalogItem[] {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return [];
+    }
+
+    return this.storeMedicines.filter((medicine) => {
+      const searchText = [
+        medicine.name,
+        medicine.unit,
+        medicine.brand,
+        medicine.sku,
+        medicine.barcode,
+        medicine.strengthValue,
+        medicine.strengthUnit,
+        this.storeMedicineDisplayName(medicine),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchText.includes(normalizedQuery);
+    });
+  }
+
+  private storeMedicineStrength(medicine: Pick<ProductCatalogItem, 'strengthValue' | 'strengthUnit'>): string {
+    const value = String(medicine.strengthValue || '').trim();
+    const unit = String(medicine.strengthUnit || '').trim();
+
+    return [value, unit].filter(Boolean).join(' ');
+  }
+
+  private defaultStoreMedicineDose(medicine: ProductCatalogItem): string {
+    const unit = String(medicine.unit || '').trim();
+    const strength = this.storeMedicineStrength(medicine);
+
+    return [unit ? `1 ${unit}` : '', strength ? `(${strength})` : ''].filter(Boolean).join(' ');
+  }
+
+  private normalizeMedicineSuggestionKey(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
   private appendMedicineRow(row: Record<string, unknown>): void {
     const firstEmptyIndex = this.medicines.controls.findIndex(
       (control) => !String(control.get('name')?.value || '').trim()
@@ -1360,6 +1606,35 @@ export class PrescriptionComponent implements OnInit {
 
     control.patchValue({
       name: this.doctorMedicineDisplayName(medicine),
+      morningDose: current['morning'] && !current['morningDose'] ? defaultDose : current['morningDose'],
+      noonDose: current['noon'] && !current['noonDose'] ? defaultDose : current['noonDose'],
+      eveningDose: current['evening'] && !current['eveningDose'] ? defaultDose : current['eveningDose'],
+      nightDose: current['night'] && !current['nightDose'] ? defaultDose : current['nightDose'],
+    });
+  }
+
+  private useStoreMedicine(medicine: ProductCatalogItem, rowIndex = this.selectedMedicineRowIndex): void {
+    let targetIndex = rowIndex;
+
+    if (targetIndex === null) {
+      targetIndex = this.medicines.controls.findIndex((control) => {
+        const value = String(control.get('name')?.value || '').trim();
+        return !value;
+      });
+    }
+
+    if (targetIndex === null || targetIndex < 0) {
+      this.addMedicine();
+      targetIndex = this.medicines.length - 1;
+    }
+
+    const control = this.medicines.at(targetIndex);
+    const current = control.getRawValue() as Record<string, unknown>;
+    const defaultDose = this.defaultStoreMedicineDose(medicine);
+
+    control.patchValue({
+      name: this.storeMedicineDisplayName(medicine),
+      dosage: current['dosage'] || defaultDose,
       morningDose: current['morning'] && !current['morningDose'] ? defaultDose : current['morningDose'],
       noonDose: current['noon'] && !current['noonDose'] ? defaultDose : current['noonDose'],
       eveningDose: current['evening'] && !current['eveningDose'] ? defaultDose : current['eveningDose'],
