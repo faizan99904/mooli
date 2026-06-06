@@ -307,6 +307,111 @@ export interface ProductCatalogItem {
   isActive?: boolean;
 }
 
+export type SalePaymentMethod = 'cash' | 'card' | 'bank' | 'online' | 'wallet' | 'check';
+export type SaleStatus = 'draft' | 'quotation' | 'suspended' | 'completed' | 'cancelled' | 'returned';
+
+export interface SaleItem {
+  productId: string;
+  name?: string;
+  sku?: string;
+  qty: string | number;
+  unitPrice?: string | number;
+  discount?: string | number;
+  tax?: string | number;
+  total?: string | number;
+}
+
+export interface Sale {
+  _id: string;
+  companyId?: string;
+  storeId: string;
+  customerId?: string | null;
+  userId?: string;
+  registerSessionId?: string | null;
+  invoiceNo: string;
+  saleDate: string;
+  items: SaleItem[];
+  subtotal: string;
+  discount: string;
+  tax: string;
+  total: string;
+  paidAmount: string;
+  paymentStatus: 'unpaid' | 'partial' | 'paid';
+  status: SaleStatus;
+  note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateSalePayload {
+  storeId: string;
+  customerId?: string;
+  saleDate: string;
+  items: SaleItem[];
+  status?: 'draft' | 'quotation' | 'suspended' | 'completed';
+  registerSessionId?: string;
+  paidAmount?: string | number;
+  paymentMethod?: SalePaymentMethod;
+  paymentReferenceNo?: string;
+  note?: string;
+}
+
+export interface CreateSaleResponse {
+  sale: Sale;
+  payment?: Payment | null;
+  payments?: Payment[];
+}
+
+export interface RegisterSessionSummary {
+  salesCount: number;
+  totalSales: number | string;
+  cashSales: number | string;
+  cardSales: number | string;
+  checkSales: number | string;
+  bankSales: number | string;
+  onlineSales: number | string;
+  walletSales: number | string;
+  creditSales: number | string;
+  partialSales: number | string;
+  totalPaid: number | string;
+  totalUnpaidBalance: number | string;
+  totalExpenses: number | string;
+  cashExpenses: number | string;
+  expectedCashInDrawer: number | string;
+}
+
+export interface RegisterSession {
+  _id: string;
+  companyId: string;
+  storeId: string;
+  cashierId: string;
+  businessDate: string;
+  openingAmount: number | string;
+  openingNote?: string | null;
+  openedAt: string;
+  status: 'open' | 'closed';
+  closingAmount?: number | string | null;
+  expectedCashAmount?: number | string | null;
+  cashDifference?: number | string | null;
+  closeNote?: string | null;
+  closedAt?: string | null;
+  summary?: RegisterSessionSummary;
+  store?: Pick<Store, '_id' | 'name' | 'code' | 'phone' | 'email' | 'address' | 'city'> | null;
+  cashier?: Pick<User, '_id' | 'name' | 'email' | 'phone'> | null;
+}
+
+export interface OpenRegisterPayload {
+  storeId: string;
+  businessDate?: string;
+  openingAmount: number;
+  openingNote?: string;
+}
+
+export interface CloseRegisterPayload {
+  closingAmount: number;
+  closeNote?: string;
+}
+
 export interface DashboardSummary {
   totalPatients: number;
   totalDoctors: number;

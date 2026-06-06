@@ -1,0 +1,338 @@
+<div id="main-content">
+    <section class="mooli-pos-shell">
+        <div class="storepos-command-strip">
+            <div class="storepos-search-box">
+                <span>Search:</span>
+                <label>
+                    <i class="fa fa-search"></i>
+                    <input
+                        type="search"
+                        [(ngModel)]="productSearch"
+                        placeholder="Product name / SKU / scan barcode"
+                        (keydown.enter)="handleProductSearchEnter($event)"
+                    />
+                    <i class="fa fa-barcode"></i>
+                </label>
+            </div>
+
+            <div class="storepos-toolbar-icons">
+                <a [routerLink]="['/pharmacy']" class="storepos-icon-btn" title="Back to pharmacy">
+                    <i class="fa fa-arrow-left"></i>
+                </a>
+                <button type="button" class="storepos-icon-btn" title="New sale" (click)="clearSale()">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button
+                    type="button"
+                    class="storepos-icon-btn storepos-warn"
+                    title="Close register"
+                    [disabled]="!registerOpened || !canCloseRegister"
+                    (click)="openCloseRegister()"
+                >
+                    <i class="fa fa-lock"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="storepos-stock-line">
+            <div>
+                <i class="fa fa-hospital-o"></i>
+                <strong>{{ selectedStoreLabel }}</strong>
+            </div>
+            <span>|</span>
+            <div>
+                <i class="fa fa-user-md"></i>
+                <strong>Cashier: {{ cashierName }}</strong>
+            </div>
+            <span>|</span>
+            <div class="register-status" [class.open]="registerOpened" [class.closed]="registerClosed">
+                <i class="fa fa-circle"></i>
+                <strong *ngIf="registerLoading">Checking register...</strong>
+                <strong *ngIf="!registerLoading && registerOpened">Register Open</strong>
+                <strong *ngIf="!registerLoading && registerClosed">Register Closed</strong>
+                <strong *ngIf="!registerLoading && !registerOpened && !registerClosed">Open Register First</strong>
+            </div>
+        </div>
+
+        <div class="storepos-invoice-panel">
+            <div class="storepos-invoice-grid">
+                <label class="storepos-field">
+                    <span>Store</span>
+                    <select [(ngModel)]="selectedStoreId" (change)="onStoreChange()" [disabled]="registerOpened">
+                        <option value="" disabled>Select store</option>
+                        <option *ngFor="let store of stores" [value]="store._id">{{ store.name }} · {{ store.code }}</option>
+                        <option [value]="selectedStoreId" *ngIf="stores.length === 0 && selectedStoreId">{{ selectedStoreLabel }}</option>
+                    </select>
+                </label>
+
+                <label class="storepos-field">
+                    <span>Date</span>
+                    <input type="text" [value]="prescription?.createdAt ? (prescription?.createdAt | date:'yyyy-MM-dd') : ''" readonly />
+                </label>
+
+                <label class="storepos-field">
+                    <span>Customer / Patient</span>
+                    <input type="text" [value]="patientName() === '-' ? 'Walk-in Customer' : patientName()" readonly />
+                </label>
+            </div>
+
+            <div class="storepos-total-display">
+                <span>{{ formatCurrency(subtotal) }}</span>
+                <small>{{ totalQuantity | number:'1.0-2' }} qty</small>
+            </div>
+        </div>
+
+        <div class="storepos-message" [class]="posMessageType" *ngIf="posMessage">{{ posMessage }}</div>
+        <div class="storepos-message success" *ngIf="saleInvoiceNo">
+            Sale completed. Invoice No: <strong>{{ saleInvoiceNo }}</strong>
+        </div>
+        <div class="storepos-message warning" *ngIf="!canReadProducts">
+            Missing POS permission: <strong>products.read</strong>
+        </div>
+        <div class="storepos-message warning" *ngIf="!canCreateSale">
+            Missing POS permission: <strong>sales.create</strong>
+        </div>
+        <div class="storepos-message warning" *ngIf="!canReadRegister">
+            Missing POS permission: <strong>register_sessions.read</strong>
+        </div>
+
+        <div class="prescription-banner" *ngIf="prescription || prescriptionLoading">
+            <div>
+                <span>Prescription</span>
+                <strong *ngIf="prescription">{{ prescription._id }}</strong>
+                <strong *ngIf="prescriptionLoading">Loading...</strong>
+            </div>
+            <div>
+                <span>Patient</span>
+                <strong>{{ patientName() }}</strong>
+            </div>
+            <div>
+                <span>Doctor</span>
+                <strong>{{ doctorName() }}</strong>
+            </div>
+            <div>
+                <span>Auto matched</span>
+                <strong>{{ billLines.length }} item(s)</strong>
+            </div>
+        </div>
+
+        <div class="storepos-main-grid">
+            <section class="storepos-cart-panel">
+                <div class="storepos-table-head">
+                    <span>Product Name</span>
+                    <span>Unit</span>
+                    <span>Need</span>
+                    <span>Stock</span>
+                    <span>Qty</span>
+                    <span>Price</span>
+                    <span>Discount</span>
+                    <span>Total</span>
+                    <span></span>
+                </div>
+
+                <div class="storepos-empty-table" *ngIf="billLines.length === 0">
+                    <i class="fa fa-shopping-cart"></i>
+                    <p>Scan, search, or open from a prescription to start billing.</p>
+                </div>
+
+                <div class="storepos-table-body" *ngIf="billLines.length">
+                    <div class="storepos-table-row" *ngFor="let line of billLines; let i = index">
+                        <div class="storepos-product-cell">
+                            <p>{{ productDisplay(line.product) }}</p>
+                            <small>{{ line.product.sku || 'No SKU' }} · {{ line.sourceMedicineName }}</small>
+                        </div>
+                        <span>{{ line.product.unit || 'unit' }}</span>
+                        <span>{{ line.requestedQty }}</span>
+                        <span>{{ line.availableQty }}</span>
+                        <div class="qty-stepper">
+                            <button type="button" (click)="line.billQty = line.billQty - 1; onQtyChange(line)">-</button>
+                            <input type="number" min="0" step="0.1" [(ngModel)]="line.billQty" (ngModelChange)="onQtyChange(line)" />
+                            <button type="button" (click)="line.billQty = line.billQty + 1; onQtyChange(line)">+</button>
+                        </div>
+                        <input type="number" min="0" [(ngModel)]="line.unitPrice" (ngModelChange)="refreshPaidAmount()" />
+                        <input type="number" min="0" [(ngModel)]="line.discount" (ngModelChange)="refreshPaidAmount()" />
+                        <strong>{{ formatCurrency(lineTotal(line)) }}</strong>
+                        <button type="button" class="storepos-line-remove" (click)="removeLine(i)">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="unavailable-panel" *ngIf="unavailableMedicines.length">
+                    <h3>Unavailable from selected store</h3>
+                    <div *ngFor="let item of unavailableMedicines">
+                        <span>{{ item.medicineName }}</span>
+                        <small>Need {{ item.requestedQty }} · {{ item.reason }}</small>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="storepos-catalog-panel">
+                <div class="catalog-title">
+                    <div>
+                        <h2>Medicine Catalog</h2>
+                        <span>{{ filteredProducts().length }} visible</span>
+                    </div>
+                    <small *ngIf="productsLoading">Loading...</small>
+                </div>
+
+                <div class="catalog-grid">
+                    <button type="button" class="catalog-card" *ngFor="let product of filteredProducts()" (click)="addProduct(product)">
+                        <strong>{{ productDisplay(product) }}</strong>
+                        <span>{{ product.sku }} · {{ product.unit || 'unit' }}</span>
+                        <em [class.out]="productAvailableQty(product) <= 0">Stock {{ stockLabel(product) }}</em>
+                        <b>{{ formatCurrency(product.sellingPrice || 0) }}</b>
+                    </button>
+                </div>
+
+                <div class="catalog-empty" *ngIf="!productsLoading && filteredProducts().length === 0">
+                    No medicine found in this store.
+                </div>
+            </aside>
+        </div>
+
+        <div class="storepos-dock">
+            <div class="dock-summary">
+                <span>Subtotal <strong>{{ formatCurrency(subtotal + totalDiscount) }}</strong></span>
+                <span>Discount <strong>{{ formatCurrency(totalDiscount) }}</strong></span>
+                <span>Total <strong>{{ formatCurrency(subtotal) }}</strong></span>
+            </div>
+
+            <div class="dock-payment">
+                <label>
+                    Payment
+                    <select [(ngModel)]="paymentMethod">
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="bank">Bank</option>
+                        <option value="online">Online</option>
+                        <option value="wallet">Wallet</option>
+                        <option value="check">Check</option>
+                    </select>
+                </label>
+                <label>
+                    Paid
+                    <input type="number" min="0" [(ngModel)]="paidAmount" />
+                </label>
+                <label *ngIf="paymentMethod === 'cash'">
+                    Cash Received
+                    <input type="number" min="0" [(ngModel)]="cashReceivedAmount" />
+                </label>
+                <div class="change-due" *ngIf="paymentMethod === 'cash'">
+                    Change <strong>{{ formatCurrency(changeDueAmount) }}</strong>
+                </div>
+            </div>
+
+            <div class="dock-actions">
+                <button type="button" class="cash-btn" [disabled]="!canCheckout" (click)="checkoutWith('cash')">Cash</button>
+                <button type="button" class="pay-btn" [disabled]="!canCheckout" (click)="confirmBilling()">
+                    <i class="fa fa-spinner fa-spin" *ngIf="saleSaving"></i>
+                    Confirm Sale
+                </button>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="modern-modal-backdrop" *ngIf="!registerOpened && !registerClosed">
+    <div class="modern-register-modal">
+        <div class="modern-register-head">
+            <div class="modern-register-badge">
+                <i class="fa fa-calculator"></i>
+            </div>
+            <div>
+                <strong>Open Register</strong>
+                <span>Opening balance is required before POS billing.</span>
+            </div>
+        </div>
+
+        <div class="modern-register-body">
+            <div class="modern-register-summary">
+                <div>
+                    <span>Store</span>
+                    <strong>{{ selectedStoreLabel }}</strong>
+                </div>
+                <div>
+                    <span>Cashier</span>
+                    <strong>{{ cashierName }}</strong>
+                </div>
+            </div>
+
+            <label class="modern-register-field">
+                <span>Store</span>
+                <select [(ngModel)]="selectedStoreId" [disabled]="stores.length === 0 || registerOpening">
+                    <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+                    <option [value]="selectedStoreId" *ngIf="stores.length === 0 && selectedStoreId">{{ selectedStoreLabel }}</option>
+                </select>
+            </label>
+
+            <label class="modern-register-field">
+                <span>Opening Balance</span>
+                <div class="modern-register-input">
+                    <b>Rs</b>
+                    <input type="number" min="0" step="1" [(ngModel)]="openingAmount" placeholder="0.00" />
+                </div>
+            </label>
+
+            <label class="modern-register-field">
+                <span>Opening Note</span>
+                <input type="text" [(ngModel)]="openingNote" placeholder="Optional opening note" />
+            </label>
+
+            <button type="button" class="modern-register-submit" [disabled]="registerOpening || !canOpenRegister" (click)="openRegister()">
+                {{ registerOpening ? 'Opening register...' : 'Open Register' }}
+            </button>
+
+            <small class="permission-hint" *ngIf="!canOpenRegister">Missing permission: register_sessions.open</small>
+        </div>
+    </div>
+</div>
+
+<div class="modern-modal-backdrop" *ngIf="closeRegisterOpen">
+    <div class="modern-register-modal">
+        <div class="modern-register-head">
+            <div class="modern-register-badge danger">
+                <i class="fa fa-lock"></i>
+            </div>
+            <div>
+                <strong>Close Register</strong>
+                <span>Count drawer cash and close this shift.</span>
+            </div>
+            <button type="button" class="modal-close" (click)="closeCloseRegister()">×</button>
+        </div>
+
+        <div class="modern-register-body">
+            <div class="modern-register-summary">
+                <div>
+                    <span>Opening Cash</span>
+                    <strong>{{ formatCurrency(registerSession?.openingAmount || 0) }}</strong>
+                </div>
+                <div>
+                    <span>Expected Cash</span>
+                    <strong>{{ formatCurrency(expectedClosingAmount) }}</strong>
+                </div>
+                <div>
+                    <span>Cash Sales</span>
+                    <strong>{{ formatCurrency(registerSession?.summary?.cashSales || 0) }}</strong>
+                </div>
+            </div>
+
+            <label class="modern-register-field">
+                <span>Closing Cash</span>
+                <div class="modern-register-input">
+                    <b>Rs</b>
+                    <input type="number" min="0" step="1" [(ngModel)]="closingAmount" placeholder="0.00" />
+                </div>
+            </label>
+
+            <label class="modern-register-field">
+                <span>Close Note</span>
+                <input type="text" [(ngModel)]="closeNote" placeholder="Optional close note" />
+            </label>
+
+            <button type="button" class="modern-register-submit danger" [disabled]="closeRegisterSaving" (click)="confirmCloseRegister()">
+                {{ closeRegisterSaving ? 'Closing register...' : 'Close Register' }}
+            </button>
+        </div>
+    </div>
+</div>

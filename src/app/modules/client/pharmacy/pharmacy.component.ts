@@ -1,12 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { CONFIG } from '../../../../../config';
 import { BackendService } from '../../../core/services/backend.service';
 import {
   Category,
@@ -85,12 +84,7 @@ export class PharmacyComponent implements OnInit {
   productForm: PharmacyProductForm = this.getEmptyProductForm();
   private readonly requiredPosPermissions = [
     'sales.create',
-    'sales.read',
-    'stores.read',
-    'customers.read',
-    'categories.read',
     'products.read',
-    'inventory.read',
     'register_sessions.open',
     'register_sessions.read',
     'register_sessions.close',
@@ -98,6 +92,7 @@ export class PharmacyComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private backend: BackendService,
     private toastr: ToastrService
   ) {}
@@ -441,49 +436,22 @@ export class PharmacyComponent implements OnInit {
   }
 
   openPharmacyPos(prescription?: Prescription): void {
+    const queryParams: Record<string, string> = {};
+    const storeId = this.currentStoreId();
+
+    if (storeId) {
+      queryParams['storeId'] = storeId;
+    }
+
     if (prescription?._id) {
-      const popup = window.open('', '_blank');
-
-      this.backend.getPrescription(prescription._id).subscribe({
-        next: (fullPrescription) => {
-          const posUrl = this.buildPharmacyPosUrl(fullPrescription);
-          if (!posUrl) {
-            popup?.close();
-            return;
-          }
-
-          if (popup) {
-            popup.location.href = posUrl;
-            return;
-          }
-
-          window.open(posUrl, '_blank', 'noopener');
-        },
-        error: () => {
-          const posUrl = this.buildPharmacyPosUrl(prescription);
-          if (!posUrl) {
-            popup?.close();
-            return;
-          }
-
-          if (popup) {
-            popup.location.href = posUrl;
-            return;
-          }
-
-          window.open(posUrl, '_blank', 'noopener');
-        },
-      });
-      return;
+      queryParams['prescriptionId'] = prescription._id;
     }
 
-    const posUrl = this.buildPharmacyPosUrl();
-
-    if (!posUrl) {
-      return;
+    if (prescription?.patientId) {
+      queryParams['patientId'] = prescription.patientId;
     }
 
-    window.open(posUrl, '_blank', 'noopener');
+    this.router.navigate(['/pharmacy/pos'], { queryParams });
   }
 
   openPrintPreview(prescription: Prescription): void {
@@ -552,100 +520,8 @@ export class PharmacyComponent implements OnInit {
       .trim();
   }
 
-  private buildPharmacyPosUrl(prescription?: Prescription): string {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      this.toastr.error('Please login again before opening POS.');
-      return '';
-    }
-
-    if (!this.canOpenPharmacyPos) {
-      this.toastr.error(this.pharmacyPosHint);
-      return '';
-    }
-
-    const currentUser = this.getStoredUser();
-    const storeId = currentUser?.storeId || this.currentStoreId();
-
-    if (!storeId && !this.backend.hasPermission('*')) {
-      this.toastr.warning('No store is assigned to this pharmacy user. POS may ask for a store or block checkout.');
-    }
-
-    const redirectParams = new URLSearchParams({
-      source: 'mooli-pharmacy',
-    });
-
-    if (prescription?._id) {
-      redirectParams.set('prescriptionId', prescription._id);
-    }
-
-    if (prescription?.patientId) {
-      redirectParams.set('patientId', prescription.patientId);
-    }
-
-    if (storeId) {
-      redirectParams.set('storeId', storeId);
-    }
-
-    const name = prescription?.patient ? this.patientName(prescription.patient) : '';
-    if (name) {
-      redirectParams.set('patientName', name);
-    }
-
-    if (prescription?._id) {
-      redirectParams.set('rx', this.encodePrescriptionForPos(prescription));
-    }
-
-    const redirect = `/app/pos?${redirectParams.toString()}`;
-    const fragment = new URLSearchParams({
-      token,
-      redirect,
-    });
-    const baseUrl = CONFIG.external.pharmacyPosUrl.replace(/\/+$/, '');
-
-    return `${baseUrl}/sso#${fragment.toString()}`;
-  }
-
-  private encodePrescriptionForPos(prescription: Prescription): string {
-    const payload = {
-      _id: prescription._id,
-      patientId: prescription.patientId,
-      patient: prescription.patient
-        ? {
-            firstName: prescription.patient.firstName,
-            lastName: prescription.patient.lastName,
-            phone: prescription.patient.phone || null,
-          }
-        : null,
-      medicines: (prescription.medicines || []).map((medicine) => ({
-        name: medicine.name,
-        dosage: medicine.dosage || '',
-        duration: medicine.duration || '',
-        morning: Boolean(medicine.morning),
-        morningDose: medicine.morningDose || '',
-        noon: Boolean(medicine.noon),
-        noonDose: medicine.noonDose || '',
-        evening: Boolean(medicine.evening),
-        eveningDose: medicine.eveningDose || '',
-        night: Boolean(medicine.night),
-        nightDose: medicine.nightDose || '',
-      })),
-    };
-
-    const utf8 = encodeURIComponent(JSON.stringify(payload)).replace(/%([0-9A-F]{2})/g, (_, hex) =>
-      String.fromCharCode(parseInt(hex, 16))
-    );
-
-    return btoa(utf8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-  }
-
   private hasEffectivePosPermission(permission: string): boolean {
-    if (this.backend.hasPermission(permission)) {
-      return true;
-    }
-
-    return this.hasPharmacyPosBaseAccess() && this.requiredPosPermissions.includes(permission);
+    return this.backend.hasPermission(permission);
   }
 
   private hasPharmacyPosBaseAccess(): boolean {

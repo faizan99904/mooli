@@ -10,6 +10,9 @@ import {
   Appointment,
   Bill,
   Category,
+  CloseRegisterPayload,
+  CreateSalePayload,
+  CreateSaleResponse,
   DashboardSummary,
   DataTablesResponse,
   Department,
@@ -22,6 +25,9 @@ import {
   Payment,
   ProductCatalogItem,
   Prescription,
+  OpenRegisterPayload,
+  RegisterSession,
+  RegisterSessionSummary,
   Role,
   Room,
   RoomAllotment,
@@ -419,6 +425,30 @@ export class BackendService {
   getStores(params?: Record<string, unknown>): Observable<ListResult<Store>> {
     return this.get<PaginatedResponse<Store>>(CONFIG.stores, params).pipe(
       map((response) => this.unwrapData(response))
+    );
+  }
+
+  createSale(payload: CreateSalePayload): Observable<ApiResponse<CreateSaleResponse>> {
+    return this.post<CreateSaleResponse>(CONFIG.sales, payload);
+  }
+
+  getCurrentRegister(params?: Record<string, unknown>): Observable<RegisterSession | null> {
+    return this.get<{ registerSession: RegisterSession | null }>(`${CONFIG.registerSessions}/current`, params).pipe(
+      map((response) => response.data?.registerSession || null)
+    );
+  }
+
+  openRegister(payload: OpenRegisterPayload): Observable<ApiResponse<{ registerSession: RegisterSession }>> {
+    return this.post<{ registerSession: RegisterSession }>(`${CONFIG.registerSessions}/open`, payload);
+  }
+
+  closeRegister(
+    id: string,
+    payload: CloseRegisterPayload
+  ): Observable<ApiResponse<{ registerSession: RegisterSession; summary?: RegisterSessionSummary }>> {
+    return this.post<{ registerSession: RegisterSession; summary?: RegisterSessionSummary }>(
+      `${CONFIG.registerSessions}/${id}/close`,
+      payload
     );
   }
 

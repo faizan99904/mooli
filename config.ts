@@ -8,10 +8,6 @@ export const CONFIG = {
     me: API_BASE_URL + '/auth/me',
   },
 
-  external: {
-    pharmacyPosUrl: 'https://frontpanel-seven.vercel.app',
-  },
-
   hospitalDashboard: {
     summary: API_BASE_URL + '/hospital-dashboard/summary',
   },
@@ -30,6 +26,8 @@ export const CONFIG = {
   roomAllotments: API_BASE_URL + '/room-allotments',
   bills: API_BASE_URL + '/bills',
   payments: API_BASE_URL + '/payments',
+  sales: API_BASE_URL + '/sales',
+  registerSessions: API_BASE_URL + '/register-sessions',
   users: API_BASE_URL + '/users',
   roles: API_BASE_URL + '/roles',
   stores: API_BASE_URL + '/stores',

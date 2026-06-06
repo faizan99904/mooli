@@ -46,6 +46,7 @@ import { RolesComponent } from './roles/roles.component';
 import { CareRecordsComponent } from './care-records/care-records.component';
 import { PrescriptionComponent } from './prescription/prescription.component';
 import { PharmacyComponent } from './pharmacy/pharmacy.component';
+import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
 
 const HOSPITAL_DASHBOARD_ACCESS = ['owner', 'superAdmin', 'hospital_dashboard.read'];
 const DOCTOR_READ_ACCESS = ['owner', 'superAdmin', 'doctors.read'];
@@ -65,7 +66,16 @@ const HOSPITAL_MANAGE_ACCESS = ['owner', 'superAdmin', 'hospitals.create', 'hosp
 const ROLE_READ_ACCESS = ['owner', 'superAdmin', 'roles.read'];
 const HISTORY_ACCESS = ['owner', 'superAdmin', 'patients_history.read', 'patients_history.create'];
 const PRESCRIPTION_ACCESS = ['owner', 'superAdmin', 'prescriptions.read', 'prescriptions.create'];
-const PHARMACY_ACCESS = ['owner', 'superAdmin', 'prescriptions.read', 'products.read'];
+const PHARMACY_ACCESS = [
+  'owner',
+  'superAdmin',
+  'prescriptions.read',
+  'products.read',
+  'sales.create',
+  'register_sessions.open',
+  'register_sessions.read',
+  'register_sessions.close',
+];
 const LABORATORY_ACCESS = ['owner', 'superAdmin', 'patients.read', 'patients_history.read'];
 const WARD_ADMIN_ACCESS = ['owner', 'superAdmin', 'room_allotments.read', 'patients_history.read'];
 
@@ -295,6 +305,12 @@ export const clientRoutes: Routes = [
         component: PrescriptionComponent,
         data: { title: 'Mooli | Prescriptions' },
         canActivate: [roleGuard(PRESCRIPTION_ACCESS)],
+      },
+      {
+        path: 'pharmacy/pos',
+        component: PharmacyPosComponent,
+        data: { title: 'Mooli | Pharmacy POS' },
+        canActivate: [roleGuard(PHARMACY_ACCESS)],
       },
       {
         path: 'pharmacy',

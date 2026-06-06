@@ -1,0 +1,807 @@
+.mooli-pos-shell {
+  background: #eef3f6;
+  color: #172033;
+  display: grid;
+  gap: 10px;
+  min-height: calc(100vh - 72px);
+  padding: 12px;
+}
+
+.storepos-command-strip,
+.storepos-stock-line,
+.storepos-invoice-panel,
+.storepos-main-grid,
+.storepos-dock,
+.prescription-banner,
+.modern-register-summary {
+  min-width: 0;
+}
+
+.storepos-command-strip {
+  align-items: center;
+  background: #0f2832;
+  border: 1px solid #173846;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 40, 50, 0.16);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 10px;
+}
+
+.storepos-search-box {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.storepos-search-box > span {
+  color: #d8eef1;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.storepos-search-box label {
+  align-items: center;
+  background: #fff7e9;
+  border: 1px solid #b8c4cc;
+  border-radius: 7px;
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.storepos-search-box i {
+  color: #287173;
+  font-size: 13px;
+}
+
+.storepos-search-box input {
+  background: transparent;
+  border: 0;
+  color: #15212c;
+  flex: 1;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 40px;
+  min-width: 0;
+  outline: 0;
+}
+
+.storepos-toolbar-icons {
+  display: flex;
+  gap: 8px;
+}
+
+.storepos-icon-btn {
+  align-items: center;
+  background: linear-gradient(#fff, #e5edf1);
+  border: 1px solid #b7c6cf;
+  border-radius: 7px;
+  color: #18313b;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 42px;
+}
+
+.storepos-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.storepos-warn {
+  color: #8a3b11;
+}
+
+.storepos-stock-line {
+  align-items: center;
+  background: #f8fbfc;
+  border: 1px solid #d8e2e8;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  padding: 9px 12px;
+}
+
+.storepos-stock-line div {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.storepos-stock-line strong {
+  display: block;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.storepos-stock-line i {
+  color: #0f766e;
+}
+
+.register-status {
+  margin-left: auto;
+}
+
+.register-status i {
+  color: #d97706;
+  font-size: 8px;
+}
+
+.register-status.open i {
+  color: #16a34a;
+}
+
+.register-status.closed i {
+  color: #dc2626;
+}
+
+.storepos-invoice-panel {
+  align-items: stretch;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 310px;
+}
+
+.storepos-invoice-grid {
+  background: #fff;
+  border: 1px solid #d8e2e8;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 12px;
+}
+
+.storepos-field {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+}
+
+.storepos-field span {
+  color: #526273;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.storepos-field input,
+.storepos-field select,
+.dock-payment input,
+.dock-payment select {
+  background: #fff8ec;
+  border: 1px solid #aebdca;
+  border-radius: 6px;
+  color: #172033;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 38px;
+  outline: 0;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.storepos-total-display {
+  align-items: end;
+  background: #102a43;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: #86efac;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 14px 18px;
+  text-align: right;
+}
+
+.storepos-total-display span {
+  font-family: "Courier New", monospace;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.storepos-total-display small {
+  color: #cbd5e1;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.storepos-message {
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 12px;
+}
+
+.storepos-message.success {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.storepos-message.warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.storepos-message.danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.storepos-message.info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.prescription-banner {
+  background: #f6fbff;
+  border: 1px solid #cfe5ff;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1.4fr 1fr 1fr 0.8fr;
+  padding: 10px 12px;
+}
+
+.prescription-banner span,
+.prescription-banner strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prescription-banner span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.prescription-banner strong {
+  font-size: 13px;
+}
+
+.storepos-main-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.storepos-cart-panel,
+.storepos-catalog-panel {
+  background: #fff;
+  border: 1px solid #d8e2e8;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.storepos-table-head,
+.storepos-table-row {
+  display: grid;
+  gap: 0;
+  grid-template-columns: minmax(190px, 1.5fr) 78px 62px 70px 130px 92px 90px 105px 42px;
+  min-width: 980px;
+}
+
+.storepos-table-head {
+  background: #eef3f7;
+  border-bottom: 1px solid #d8e2e8;
+}
+
+.storepos-table-head span {
+  border-right: 1px solid #d8e2e8;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 10px 8px;
+  text-transform: uppercase;
+}
+
+.storepos-table-body {
+  max-height: calc(100vh - 410px);
+  min-height: 280px;
+  overflow: auto;
+}
+
+.storepos-table-row {
+  align-items: center;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.storepos-table-row > * {
+  border-right: 1px solid #edf2f7;
+  min-width: 0;
+  padding: 8px;
+}
+
+.storepos-product-cell p,
+.storepos-product-cell small {
+  display: block;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.storepos-product-cell p {
+  color: #101827;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.storepos-product-cell small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.storepos-table-row input {
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 32px;
+  padding: 5px 7px;
+  text-align: center;
+  width: 100%;
+}
+
+.qty-stepper {
+  align-items: center;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 28px minmax(0, 1fr) 28px;
+}
+
+.qty-stepper button,
+.storepos-line-remove {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  color: #334155;
+  min-height: 32px;
+}
+
+.storepos-line-remove {
+  color: #dc2626;
+  width: 32px;
+}
+
+.storepos-empty-table {
+  align-items: center;
+  color: #64748b;
+  display: grid;
+  justify-content: center;
+  min-height: 260px;
+  text-align: center;
+}
+
+.storepos-empty-table i {
+  color: #94a3b8;
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.unavailable-panel {
+  background: #fff7ed;
+  border-top: 1px solid #fed7aa;
+  padding: 12px;
+}
+
+.unavailable-panel h3 {
+  color: #9a3412;
+  font-size: 14px;
+  font-weight: 900;
+  margin: 0 0 8px;
+}
+
+.unavailable-panel div {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.unavailable-panel small {
+  color: #9a3412;
+}
+
+.storepos-catalog-panel {
+  padding: 12px;
+}
+
+.catalog-title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.catalog-title h2 {
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.catalog-title span,
+.catalog-title small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.catalog-grid {
+  display: grid;
+  gap: 8px;
+  max-height: calc(100vh - 382px);
+  overflow-y: auto;
+}
+
+.catalog-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #172033;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  text-align: left;
+}
+
+.catalog-card:hover {
+  background: #ecfeff;
+  border-color: #67e8f9;
+}
+
+.catalog-card strong,
+.catalog-card span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-card strong {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.catalog-card span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.catalog-card em {
+  color: #047857;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.catalog-card em.out {
+  color: #dc2626;
+}
+
+.catalog-card b {
+  color: #1d4ed8;
+  font-size: 13px;
+}
+
+.catalog-empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  padding: 20px;
+  text-align: center;
+}
+
+.storepos-dock {
+  align-items: center;
+  background: #0f2832;
+  border-radius: 8px;
+  bottom: 0;
+  box-shadow: 0 -10px 24px rgba(15, 40, 50, 0.18);
+  color: #e2f6f4;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(260px, 1fr) minmax(360px, 0.9fr) auto;
+  padding: 12px;
+  position: sticky;
+  z-index: 5;
+}
+
+.dock-summary,
+.dock-payment,
+.dock-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.dock-summary span,
+.change-due {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  color: #cde9ea;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 8px 10px;
+}
+
+.dock-summary strong,
+.change-due strong {
+  color: #fff;
+  display: block;
+  font-size: 14px;
+}
+
+.dock-payment label {
+  color: #d8eef1;
+  display: grid;
+  font-size: 11px;
+  font-weight: 900;
+  gap: 5px;
+  margin: 0;
+  min-width: 120px;
+  text-transform: uppercase;
+}
+
+.dock-payment input,
+.dock-payment select {
+  min-height: 34px;
+}
+
+.dock-actions {
+  justify-content: end;
+}
+
+.cash-btn,
+.pay-btn,
+.modern-register-submit {
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 900;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.cash-btn {
+  background: #059669;
+}
+
+.pay-btn,
+.modern-register-submit {
+  background: #0f766e;
+}
+
+.pay-btn:disabled,
+.cash-btn:disabled,
+.modern-register-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.modern-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 2000;
+}
+
+.modern-register-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.25);
+  max-height: calc(100vh - 36px);
+  max-width: 520px;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.modern-register-head {
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+}
+
+.modern-register-head strong,
+.modern-register-head span {
+  display: block;
+}
+
+.modern-register-head strong {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.modern-register-head span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.modern-register-badge {
+  align-items: center;
+  background: #ecfdf5;
+  border-radius: 50%;
+  color: #047857;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 18px;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.modern-register-badge.danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.modal-close {
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  font-size: 28px;
+  margin-left: auto;
+}
+
+.modern-register-body {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.modern-register-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.modern-register-summary div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.modern-register-summary span,
+.modern-register-field > span {
+  color: #64748b;
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.modern-register-summary strong {
+  color: #111827;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modern-register-field {
+  display: grid;
+  margin: 0;
+}
+
+.modern-register-field input,
+.modern-register-field select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  min-height: 42px;
+  outline: 0;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.modern-register-input {
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  overflow: hidden;
+}
+
+.modern-register-input b {
+  background: #f1f5f9;
+  border-right: 1px solid #cbd5e1;
+  color: #334155;
+  min-height: 42px;
+  padding: 12px;
+}
+
+.modern-register-input input {
+  border: 0;
+  border-radius: 0;
+}
+
+.modern-register-submit.danger {
+  background: #dc2626;
+}
+
+.permission-hint {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+@media (max-width: 1320px) {
+  .storepos-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 320px;
+  }
+}
+
+@media (max-width: 992px) {
+  .storepos-command-strip,
+  .storepos-invoice-panel,
+  .storepos-dock {
+    grid-template-columns: 1fr;
+  }
+
+  .storepos-stock-line,
+  .dock-summary,
+  .dock-payment,
+  .dock-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .register-status {
+    margin-left: 0;
+  }
+
+  .storepos-invoice-grid,
+  .prescription-banner,
+  .modern-register-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .mooli-pos-shell {
+    padding: 8px;
+  }
+
+  .catalog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .storepos-toolbar-icons {
+    flex-wrap: wrap;
+  }
+}
