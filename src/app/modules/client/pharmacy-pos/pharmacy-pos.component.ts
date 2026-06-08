@@ -736,6 +736,16 @@ export class PharmacyPosComponent implements OnInit {
     return [product.name, strength ? `(${strength})` : ''].filter(Boolean).join(' ');
   }
 
+  productBatchExpiryLabel(product: ProductCatalogItem): string {
+    const parts = [
+      product.batchNumber ? `Batch ${product.batchNumber}` : '',
+      product.mfdDate ? `MFD ${this.formatProductDate(product.mfdDate)}` : '',
+      product.expiryDate ? `Exp ${this.formatProductDate(product.expiryDate)}` : '',
+    ];
+
+    return parts.filter(Boolean).join(' · ');
+  }
+
   private buildReceiptFromCurrentCart(): ReceiptPreviewData {
     const rawSubtotal = this.billLines.reduce(
       (sum, line) => sum + Number(line.billQty || 0) * Number(line.unitPrice || 0),
@@ -1251,12 +1261,29 @@ export class PharmacyPosComponent implements OnInit {
         product.name,
         product.sku,
         product.barcode,
+        product.batchNumber,
         product.brand,
         product.unit,
         product.strengthValue,
         product.strengthUnit,
       ].join(' ')
     );
+  }
+
+  private formatProductDate(value?: string | null): string {
+    if (!value) {
+      return '-';
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private normalizeText(value: string): string {

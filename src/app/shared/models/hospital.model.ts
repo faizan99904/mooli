@@ -290,6 +290,9 @@ export interface ProductCatalogItem {
   name: string;
   sku: string;
   barcode?: string | null;
+  batchNumber?: string | null;
+  expiryDate?: string | null;
+  mfdDate?: string | null;
   description?: string | null;
   strengthValue?: string | null;
   strengthUnit?: string | null;

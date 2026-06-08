@@ -199,6 +199,9 @@
                     <button type="button" class="catalog-card" *ngFor="let product of filteredProducts()" (click)="addProduct(product)">
                         <strong>{{ productDisplay(product) }}</strong>
                         <span>{{ product.sku }} · {{ product.unit || 'unit' }}</span>
+                        <span *ngIf="productBatchExpiryLabel(product)" class="catalog-meta">
+                            {{ productBatchExpiryLabel(product) }}
+                        </span>
                         <em [class.out]="productAvailableQty(product) <= 0">Stock {{ stockLabel(product) }}</em>
                         <b>{{ formatCurrency(product.sellingPrice || 0) }}</b>
                     </button>

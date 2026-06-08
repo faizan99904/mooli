@@ -38,6 +38,9 @@ interface PharmacyProductForm {
   name: string;
   sku: string;
   barcode: string;
+  batchNumber: string;
+  expiryDate: string;
+  mfdDate: string;
   brand: string;
   categoryId: string;
   categoryName: string;
@@ -352,6 +355,9 @@ export class PharmacyComponent implements OnInit {
             name,
             sku: this.productForm.sku.trim() || this.generateSku(name),
             barcode: this.productForm.barcode.trim() || undefined,
+            batchNumber: this.productForm.batchNumber.trim() || undefined,
+            expiryDate: this.normalizeDateForPayload(this.productForm.expiryDate) || undefined,
+            mfdDate: this.normalizeDateForPayload(this.productForm.mfdDate) || undefined,
             brand: this.productForm.brand.trim() || undefined,
             unit: this.productForm.unit || 'pcs',
             description: strengthDescription || undefined,
@@ -452,7 +458,7 @@ export class PharmacyComponent implements OnInit {
     return this.products
       .filter((product) => {
         const haystack = this.normalizeText(
-          [product.name, product.sku, product.barcode, product.brand].join(' ')
+          [product.name, product.sku, product.barcode, product.batchNumber, product.brand].join(' ')
         );
         return (
           haystack.includes(normalizedMedicine) ||
@@ -596,6 +602,9 @@ export class PharmacyComponent implements OnInit {
       name: '',
       sku: '',
       barcode: '',
+      batchNumber: '',
+      expiryDate: '',
+      mfdDate: '',
       brand: '',
       categoryId: '',
       categoryName: '',
@@ -667,6 +676,30 @@ export class PharmacyComponent implements OnInit {
     const prefix = this.generateCode(name).slice(0, 18) || 'MED';
     const suffix = Date.now().toString(36).slice(-6).toUpperCase();
     return `${prefix}-${suffix}`;
+  }
+
+  private toDateInputValue(value?: string | null): string {
+    if (!value) {
+      return '';
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return value;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private normalizeDateForPayload(value?: string | null): string {
+    return this.toDateInputValue(value);
   }
 
   private generateCode(value: string): string {

@@ -16,6 +16,9 @@ interface ProductForm {
   name: string;
   sku: string;
   barcode: string;
+  batchNumber: string;
+  expiryDate: string;
+  mfdDate: string;
   brand: string;
   categoryId: string;
   categoryName: string;
@@ -108,7 +111,14 @@ export class PharmacyProductsComponent implements OnInit {
     }
 
     return this.products.filter((product) =>
-      this.normalizeText([product.name, product.sku, product.barcode, product.brand, product.unit].join(' ')).includes(query)
+      this.normalizeText([
+        product.name,
+        product.sku,
+        product.barcode,
+        product.batchNumber,
+        product.brand,
+        product.unit,
+      ].join(' ')).includes(query)
     );
   }
 
@@ -240,6 +250,9 @@ export class PharmacyProductsComponent implements OnInit {
       name: product.name || '',
       sku: product.sku || '',
       barcode: product.barcode || '',
+      batchNumber: product.batchNumber || '',
+      expiryDate: this.toDateInputValue(product.expiryDate),
+      mfdDate: this.toDateInputValue(product.mfdDate),
       brand: product.brand || '',
       categoryId: product.categoryId || '',
       categoryName: '',
@@ -335,6 +348,9 @@ export class PharmacyProductsComponent implements OnInit {
             name,
             sku: sku || this.generateSku(name),
             barcode: this.productForm.barcode.trim() || undefined,
+            batchNumber: this.productForm.batchNumber.trim() || undefined,
+            expiryDate: this.normalizeDateForPayload(this.productForm.expiryDate) || undefined,
+            mfdDate: this.normalizeDateForPayload(this.productForm.mfdDate) || undefined,
             brand: this.productForm.brand.trim() || undefined,
             unit: this.productForm.unit || 'pcs',
             strengthValue: this.productForm.strengthValue.trim() || undefined,
@@ -421,6 +437,35 @@ export class PharmacyProductsComponent implements OnInit {
 
   productStock(product: ProductCatalogItem): string {
     return String(product.availableQuantity ?? product.stockQuantity ?? '0');
+  }
+
+  formatProductDate(value?: string | null): string {
+    if (!value) {
+      return '-';
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    return parsed.toLocaleDateString();
+  }
+
+  expiryLabel(product: ProductCatalogItem): string {
+    if (!product.expiryDate) {
+      return 'No expiry';
+    }
+
+    return this.isExpired(product.expiryDate) ? 'Expired' : 'Valid';
+  }
+
+  expiryBadgeClass(product: ProductCatalogItem): string {
+    if (!product.expiryDate) {
+      return 'badge-secondary';
+    }
+
+    return this.isExpired(product.expiryDate) ? 'badge-danger' : 'badge-success';
   }
 
   currentStoreId(): string {
@@ -518,6 +563,9 @@ export class PharmacyProductsComponent implements OnInit {
       name: '',
       sku: '',
       barcode: '',
+      batchNumber: '',
+      expiryDate: '',
+      mfdDate: '',
       brand: '',
       categoryId: '',
       categoryName: '',
@@ -536,6 +584,42 @@ export class PharmacyProductsComponent implements OnInit {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, ' ')
       .trim();
+  }
+
+  private toDateInputValue(value?: string | null): string {
+    if (!value) {
+      return '';
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return value;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private normalizeDateForPayload(value?: string | null): string {
+    return this.toDateInputValue(value);
+  }
+
+  private isExpired(value?: string | null): boolean {
+    const normalized = this.toDateInputValue(value);
+    if (!normalized) {
+      return false;
+    }
+
+    const expiry = new Date(`${normalized}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return expiry < today;
   }
 
   private generateSku(name: string): string {
