@@ -16,6 +16,13 @@
             </div>
 
             <div class="storepos-toolbar-icons">
+                <span class="storepos-connection-pill" [class.offline]="offline.statusTone() === 'offline'" [class.syncing]="offline.statusTone() === 'syncing'" [class.failed]="offline.statusTone() === 'failed'">
+                    <i class="fa fa-circle"></i>
+                    {{ offline.statusLabel() }}
+                </span>
+                <button type="button" class="storepos-icon-btn" title="Sync offline work" [disabled]="!offline.online() || offline.syncing() || offline.pendingCount() === 0" (click)="syncOfflineWork()">
+                    <i class="fa fa-refresh"></i>
+                </button>
                 <a [routerLink]="['/pharmacy']" class="storepos-icon-btn" title="Back to pharmacy">
                     <i class="fa fa-arrow-left"></i>
                 </a>

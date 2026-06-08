@@ -1,0 +1,30 @@
+{
+  "name": "Mooli Hospital POS",
+  "short_name": "Mooli",
+  "description": "Offline-capable hospital appointments, prescriptions, patients, and pharmacy POS workspace.",
+  "theme_color": "#16a34a",
+  "background_color": "#f8fafc",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "/",
+  "start_url": "/pharmacy/pos",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Pharmacy POS",
+      "short_name": "POS",
+      "url": "/pharmacy/pos"
+    },
+    {
+      "name": "Appointments",
+      "short_name": "Appointments",
+      "url": "/appointments"
+    }
+  ]
+}

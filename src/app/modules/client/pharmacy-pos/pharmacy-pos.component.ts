@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
+import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/mooli-offline.service';
 import {
   CreateSalePayload,
   Prescription,
@@ -107,6 +108,7 @@ export class PharmacyPosComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private backend: BackendService,
+    readonly offline: MooliOfflineService,
     private toastr: ToastrService
   ) {}
 
@@ -124,6 +126,7 @@ export class PharmacyPosComponent implements OnInit {
     });
 
     this.refreshCurrentUser();
+    void this.syncOfflineWork(false);
   }
 
   get canReadProducts(): boolean {
@@ -224,6 +227,7 @@ export class PharmacyPosComponent implements OnInit {
       .subscribe({
         next: (result) => {
           this.stores = result.items || [];
+          void this.offline.cacheValue(this.storesCacheKey(), this.stores);
           if (!this.selectedStoreId) {
             this.selectedStoreId = user?.storeId || this.stores[0]?._id || '';
             this.loadProducts();
@@ -231,10 +235,7 @@ export class PharmacyPosComponent implements OnInit {
           }
         },
         error: () => {
-          this.stores = [];
-          if (!this.selectedStoreId && user?.storeId) {
-            this.selectedStoreId = user.storeId;
-          }
+          void this.loadCachedStores(user?.storeId || '');
         },
       });
   }
@@ -260,14 +261,13 @@ export class PharmacyPosComponent implements OnInit {
       .subscribe({
         next: (result) => {
           this.products = result.items || [];
+          void this.offline.cacheValue(this.productsCacheKey(storeId), this.products);
           if (!this.saleInvoiceNo) {
             this.rebuildPrescriptionBill();
           }
         },
         error: (err) => {
-          this.products = [];
-          this.rebuildPrescriptionBill();
-          this.toastr.error(err?.error?.message || 'Unable to load pharmacy store products.');
+          void this.loadCachedProducts(storeId, err);
         },
       });
   }
@@ -280,20 +280,19 @@ export class PharmacyPosComponent implements OnInit {
       .subscribe({
         next: (prescription) => {
           this.prescription = prescription;
+          void this.offline.cacheValue(this.prescriptionCacheKey(id), prescription);
           this.rebuildPrescriptionBill();
         },
         error: (err) => {
-          this.prescription = null;
-          this.rebuildPrescriptionBill();
-          this.toastr.error(err?.error?.message || 'Unable to load prescription for billing.');
+          void this.loadCachedPrescription(id, err);
         },
       });
   }
 
   refreshCurrentUser(): void {
     this.backend.getMe().subscribe({
-      next: (user) => {
-        localStorage.setItem('user', JSON.stringify(user));
+        next: (user) => {
+          localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('role', user.role?.name || '');
         localStorage.setItem('permissions', JSON.stringify(user.role?.permissions || []));
 
@@ -302,11 +301,11 @@ export class PharmacyPosComponent implements OnInit {
           this.loadProducts();
           this.refreshRegisterState();
         }
-      },
-      error: () => {
-        // Cached session data is enough to keep the POS page usable.
-      },
-    });
+        },
+        error: () => {
+          // Cached session data is enough to keep the POS page usable.
+        },
+      });
   }
 
   refreshRegisterState(): void {
@@ -327,15 +326,14 @@ export class PharmacyPosComponent implements OnInit {
           this.registerSession = registerSession;
           this.registerOpened = registerSession?.status === 'open';
           this.registerClosed = registerSession?.status === 'closed';
+          void this.offline.cacheValue(this.registerCacheKey(storeId), registerSession);
           if (registerSession?.status === 'open') {
             this.openingAmount = Number(registerSession.openingAmount || 0);
           }
           this.loadRecentSales();
         },
         error: () => {
-          this.registerSession = null;
-          this.registerOpened = false;
-          this.registerClosed = false;
+          void this.loadCachedRegisterState(storeId);
         },
       });
   }
@@ -404,7 +402,7 @@ export class PharmacyPosComponent implements OnInit {
     this.closeRegisterOpen = false;
   }
 
-  confirmCloseRegister(): void {
+  async confirmCloseRegister(): Promise<void> {
     if (!this.canCloseRegister) {
       this.toastr.error('Missing POS permission: register_sessions.close');
       return;
@@ -420,6 +418,20 @@ export class PharmacyPosComponent implements OnInit {
       return;
     }
 
+    const queuedSales = (await this.offline.getQueuedWork('sale')).filter(
+      (entry) => (entry.payload as unknown as CreateSalePayload).storeId === this.currentStoreId(),
+    );
+    if (queuedSales.length > 0) {
+      this.toastr.error('Sync queued offline POS sales before closing register.');
+      void this.syncOfflineWork(false);
+      return;
+    }
+
+    if (!this.offline.online()) {
+      this.toastr.error('Register can be closed after internet returns.');
+      return;
+    }
+
     this.closeRegisterSaving = true;
     this.backend
       .closeRegister(this.registerSession._id, {
@@ -430,6 +442,7 @@ export class PharmacyPosComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.registerSession = response.data?.registerSession || this.registerSession;
+          void this.offline.cacheValue(this.registerCacheKey(this.currentStoreId()), this.registerSession);
           this.registerOpened = false;
           this.registerClosed = true;
           this.closeRegisterOpen = false;
@@ -537,10 +550,11 @@ export class PharmacyPosComponent implements OnInit {
       .pipe(finalize(() => (this.saleHistoryLoading = false)))
       .subscribe({
         next: (result) => {
-          this.recentSales = result.items || [];
+          void this.offline.cacheValue(this.recentSalesCacheKey(storeId), result.items || []);
+          void this.applyRecentSales(result.items || []);
         },
         error: () => {
-          this.recentSales = [];
+          void this.loadCachedRecentSales(storeId);
         },
       });
   }
@@ -651,6 +665,11 @@ export class PharmacyPosComponent implements OnInit {
         : 'Mooli pharmacy POS bill',
     };
 
+    if (!this.offline.online()) {
+      void this.queueOfflineSale(payload);
+      return;
+    }
+
     this.saleSaving = true;
     this.backend
       .createSale(payload)
@@ -676,6 +695,11 @@ export class PharmacyPosComponent implements OnInit {
           this.refreshRegisterState();
         },
         error: (err) => {
+          if (this.offline.shouldQueue(err)) {
+            void this.queueOfflineSale(payload);
+            return;
+          }
+
           const message = err?.error?.message || 'Unable to confirm pharmacy bill.';
           if (String(message).toLowerCase().includes('register')) {
             this.toastr.error('Open an active cash register for this store before confirming the bill.');
@@ -870,6 +894,220 @@ export class PharmacyPosComponent implements OnInit {
         </body>
       </html>
     `;
+  }
+
+  async syncOfflineWork(showToast = true): Promise<void> {
+    if (!this.offline.online()) {
+      if (showToast) {
+        this.toastr.info('POS sales will sync when internet is back.');
+      }
+      return;
+    }
+
+    const result = await this.offline.syncQueuedWork();
+    if (result.syncedCount > 0) {
+      this.loadProducts();
+      this.refreshRegisterState();
+      this.loadRecentSales();
+      if (showToast) {
+        this.toastr.success(`${result.syncedCount} offline item(s) synced.`);
+      }
+    } else if (showToast) {
+      this.toastr.info('No offline POS sales are waiting to sync.');
+    }
+  }
+
+  private async loadCachedStores(userStoreId = ''): Promise<void> {
+    this.stores = await this.offline.readCachedValue<Store[]>(this.storesCacheKey(), []);
+    if (!this.selectedStoreId) {
+      this.selectedStoreId = userStoreId || this.stores[0]?._id || '';
+    }
+  }
+
+  private async loadCachedProducts(storeId: string, error: unknown): Promise<void> {
+    this.products = await this.offline.readCachedValue<ProductCatalogItem[]>(
+      this.productsCacheKey(storeId),
+      [],
+    );
+    this.rebuildPrescriptionBill();
+
+    if (!this.offline.shouldQueue(error) && this.products.length === 0) {
+      this.toastr.error(
+        (error as { error?: { message?: string } })?.error?.message ||
+          'Unable to load pharmacy store products.',
+      );
+    }
+  }
+
+  private async loadCachedPrescription(id: string, error: unknown): Promise<void> {
+    this.prescription = await this.offline.readCachedValue<Prescription | null>(
+      this.prescriptionCacheKey(id),
+      null,
+    );
+    this.rebuildPrescriptionBill();
+
+    if (!this.offline.shouldQueue(error) && !this.prescription) {
+      this.toastr.error(
+        (error as { error?: { message?: string } })?.error?.message ||
+          'Unable to load prescription for billing.',
+      );
+    }
+  }
+
+  private async loadCachedRegisterState(storeId: string): Promise<void> {
+    this.registerSession = await this.offline.readCachedValue<RegisterSession | null>(
+      this.registerCacheKey(storeId),
+      null,
+    );
+    this.registerOpened = this.registerSession?.status === 'open';
+    this.registerClosed = this.registerSession?.status === 'closed';
+    if (this.registerSession?.status === 'open') {
+      this.openingAmount = Number(this.registerSession.openingAmount || 0);
+    }
+    this.loadRecentSales();
+  }
+
+  private async loadCachedRecentSales(storeId: string): Promise<void> {
+    const cached = await this.offline.readCachedValue<Sale[]>(this.recentSalesCacheKey(storeId), []);
+    await this.applyRecentSales(cached);
+  }
+
+  private async applyRecentSales(items: Sale[]): Promise<void> {
+    this.recentSales = this.mergeSales([...(await this.localQueuedSales()), ...items]);
+  }
+
+  private async queueOfflineSale(payload: CreateSalePayload): Promise<void> {
+    this.saleSaving = true;
+    const localId = this.offline.buildLocalId('sale');
+    const invoiceNo = `OFF-${localId.slice(-6).toUpperCase()}`;
+    const receipt = {
+      ...this.buildReceiptFromCurrentCart(),
+      reference: invoiceNo,
+      note: `${this.prescription ? `Prescription ${this.prescription._id}. ` : ''}Saved offline`,
+    };
+    const sale = this.buildLocalSale(localId, invoiceNo, payload, receipt);
+
+    await this.offline.enqueueWork({
+      id: localId,
+      entity: 'sale',
+      operation: 'create',
+      localId,
+      payload,
+      meta: { sale, receipt },
+    });
+
+    this.recentSales = this.mergeSales([sale, ...this.recentSales]);
+    this.saleInvoiceNo = invoiceNo;
+    this.receiptPreview = receipt;
+    this.receiptPreviewOpen = true;
+    this.billLines = [];
+    this.unavailableMedicines = [];
+    this.paidAmount = '0';
+    this.cashReceivedAmount = '0';
+    this.saleSaving = false;
+    this.showPosMessage(`Sale saved offline: ${invoiceNo}`, 'success');
+    this.toastr.success('POS sale saved offline and queued for sync.');
+  }
+
+  private buildLocalSale(
+    localId: string,
+    invoiceNo: string,
+    payload: CreateSalePayload,
+    receipt: ReceiptPreviewData,
+  ): Sale {
+    return {
+      _id: localId,
+      storeId: payload.storeId,
+      registerSessionId: payload.registerSessionId || null,
+      invoiceNo,
+      saleDate: payload.saleDate,
+      items: payload.items.map((item, index) => ({
+        ...item,
+        name: receipt.items[index]?.name || 'Product',
+        sku: receipt.items[index]?.sku || '',
+        total: receipt.items[index]?.total || 0,
+      })),
+      subtotal: String(receipt.subtotal),
+      discount: String(receipt.discount),
+      tax: '0',
+      total: String(receipt.total),
+      paidAmount: String(receipt.paidAmount),
+      paymentStatus: receipt.paymentStatus as Sale['paymentStatus'],
+      status: 'completed',
+      note: payload.note || 'Offline Mooli pharmacy POS bill',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  private async localQueuedSales(): Promise<Sale[]> {
+    const storeId = this.currentStoreId();
+    const entries = await this.offline.getQueuedWork('sale');
+    return entries
+      .filter((entry) => (entry.payload as unknown as CreateSalePayload).storeId === storeId)
+      .map((entry) => this.saleFromQueuedWork(entry));
+  }
+
+  private saleFromQueuedWork(entry: MooliQueuedWork): Sale {
+    const metaSale = entry.meta?.['sale'] as Sale | undefined;
+    if (metaSale) {
+      return metaSale;
+    }
+
+    const payload = entry.payload as unknown as CreateSalePayload;
+    const localId = entry.localId || entry.id;
+    const invoiceNo = `OFF-${localId.slice(-6).toUpperCase()}`;
+
+    return {
+      _id: localId,
+      storeId: payload.storeId,
+      registerSessionId: payload.registerSessionId || null,
+      invoiceNo,
+      saleDate: payload.saleDate,
+      items: payload.items,
+      subtotal: '0',
+      discount: '0',
+      tax: '0',
+      total: String(payload.paidAmount || 0),
+      paidAmount: String(payload.paidAmount || 0),
+      paymentStatus: Number(payload.paidAmount || 0) > 0 ? 'paid' : 'unpaid',
+      status: 'completed',
+      note: payload.note || 'Offline Mooli pharmacy POS bill',
+      createdAt: entry.createdAt,
+      updatedAt: entry.createdAt,
+    };
+  }
+
+  private mergeSales(items: Sale[]): Sale[] {
+    const map = new Map<string, Sale>();
+    items.forEach((item) => {
+      if (item?._id) {
+        map.set(item._id, item);
+      }
+    });
+    return Array.from(map.values()).sort((first, second) =>
+      String(second.createdAt || second.saleDate || '').localeCompare(String(first.createdAt || first.saleDate || '')),
+    );
+  }
+
+  private storesCacheKey(): string {
+    return this.offline.cacheKey('pos-stores');
+  }
+
+  private productsCacheKey(storeId: string): string {
+    return this.offline.cacheKey('pos-products', storeId || 'store');
+  }
+
+  private prescriptionCacheKey(id: string): string {
+    return this.offline.cacheKey('pos-prescription', id || 'prescription');
+  }
+
+  private registerCacheKey(storeId: string): string {
+    return this.offline.cacheKey('pos-register', storeId || 'store');
+  }
+
+  private recentSalesCacheKey(storeId: string): string {
+    return this.offline.cacheKey('pos-recent-sales', storeId || 'store', this.registerSession?._id || 'register');
   }
 
   private rebuildPrescriptionBill(): void {

@@ -89,6 +89,13 @@
             </p>
           </div>
           <div class="header-actions">
+            <span class="offline-pill" [class.offline]="offline.statusTone() === 'offline'" [class.syncing]="offline.statusTone() === 'syncing'" [class.failed]="offline.statusTone() === 'failed'">
+              <i class="fa fa-circle"></i>
+              {{ offline.statusLabel() }}
+            </span>
+            <button type="button" class="btn-light" [disabled]="!offline.online() || offline.syncing() || offline.pendingCount() === 0" (click)="syncOfflineWork()">
+              Sync
+            </button>
             <button type="button" class="btn-light" [disabled]="saving" (click)="submitPrescription(false)">Save
               Draft</button>
             <button type="button" class="btn-primary" [disabled]="saving" (click)="submitPrescription(true)">

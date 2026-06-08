@@ -11,6 +11,7 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
+import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/mooli-offline.service';
 import {
   Appointment,
   Doctor,
@@ -64,6 +65,7 @@ export class AppointmentComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private backend: BackendService,
+    readonly offline: MooliOfflineService,
     private toastr: ToastrService
   ) {
     this.appointmentForm = this.fb.group({
@@ -71,8 +73,8 @@ export class AppointmentComponent implements OnInit {
       doctorId: ['', Validators.required],
       departmentId: [''],
       appointmentDate: [this.todayValue(), Validators.required],
-      startTime: ['', Validators.required],
-      endTime: ['', Validators.required],
+      startTime: [''],
+      endTime: [''],
       reason: [''],
       status: ['confirmed', Validators.required],
       notes: [''],
@@ -100,15 +102,19 @@ export class AppointmentComponent implements OnInit {
     this.currentHospitalId = currentUser?.hospitalId || null;
     this.loadLookups();
     this.loadAppointments();
+    void this.syncOfflineWork(false);
   }
 
   loadLookups(): void {
     this.backend.getDoctors({ limit: 100, status: 'active' }).subscribe({
       next: (result) => {
         this.doctors = result.items;
+        void this.offline.cacheValue(this.doctorsCacheKey(), this.doctors);
         this.patchDepartmentFromDoctor(this.appointmentForm.value.doctorId);
       },
-      error: () => (this.doctors = []),
+      error: () => {
+        void this.loadCachedDoctors();
+      },
     });
   }
 
@@ -125,14 +131,22 @@ export class AppointmentComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (result) => {
-          this.appointments = result.items;
+          void this.offline.cacheValue(this.appointmentsCacheKey(), {
+            items: result.items,
+            totalPages: result.pagination.totalPages,
+          });
+          void this.applyAppointmentList(result.items, result.pagination.totalPages);
           this.totalPages = result.pagination.totalPages;
         },
         error: (err) => {
-          this.appointments = [];
-          this.toastr.error(err?.error?.message || 'Something went wrong');
+          void this.loadCachedAppointments(err);
         },
       });
+  }
+
+  applyAppointmentFilters(): void {
+    this.page = 1;
+    this.loadAppointments();
   }
 
   submitAppointment(): void {
@@ -148,7 +162,7 @@ export class AppointmentComponent implements OnInit {
     }
 
     const value = this.appointmentForm.value;
-    if (value.startTime >= value.endTime) {
+    if (value.startTime && value.endTime && value.startTime >= value.endTime) {
       this.toastr.error('Start time must be before end time');
       return;
     }
@@ -158,15 +172,22 @@ export class AppointmentComponent implements OnInit {
       ...value,
       departmentId: selectedDoctor?.departmentId || value.departmentId || undefined,
     };
+    this.removeEmptyTimeFields(payload);
 
     if (!this.editingId && this.currentHospitalId) {
       payload['hospitalId'] = this.currentHospitalId;
     }
 
-    this.saving = true;
     const isEditing = Boolean(this.editingId);
     const selectedPatient = this.selectedPatient;
     const selectedDoctorForToken = selectedDoctor;
+
+    if (!this.offline.online() && !isEditing) {
+      void this.queueAppointment(payload, selectedPatient, selectedDoctorForToken);
+      return;
+    }
+
+    this.saving = true;
     const request$ = this.editingId
       ? this.backend.updateAppointment(this.editingId, payload)
       : this.backend.createAppointment(payload);
@@ -185,7 +206,14 @@ export class AppointmentComponent implements OnInit {
         this.resetForm();
         this.loadAppointments();
       },
-      error: (err) => this.toastr.error(err?.error?.message || 'Something went wrong'),
+      error: (err) => {
+        if (!isEditing && this.offline.shouldQueue(err)) {
+          void this.queueAppointment(payload, selectedPatient, selectedDoctorForToken);
+          return;
+        }
+
+        this.toastr.error(err?.error?.message || 'Something went wrong');
+      },
     });
   }
 
@@ -276,12 +304,6 @@ export class AppointmentComponent implements OnInit {
     ).length;
   }
 
-  get appointmentRangeLabel(): string {
-    const start = this.dateFrom || this.appointmentForm.value.appointmentDate || new Date();
-    const end = this.dateTo || start;
-    return `${this.shortDate(start)} - ${this.shortDate(end)}`;
-  }
-
   get timeSlots(): string[] {
     const firstSlot = this.nextAvailableHalfHour(new Date());
 
@@ -325,6 +347,7 @@ export class AppointmentComponent implements OnInit {
 
           this.phoneMatchedPatients = matchedPatients;
           this.patients = matchedPatients;
+          void this.offline.mergeCachedList(this.patientsCacheKey(), matchedPatients);
           this.phoneMatchedTotal = matchedPatients.length;
           this.phoneLookupPerformed = true;
 
@@ -333,8 +356,7 @@ export class AppointmentComponent implements OnInit {
           }
         },
         error: (err) => {
-          this.phoneLookupPerformed = true;
-          this.toastr.error(err?.error?.message || 'Unable to search patients');
+          void this.loadCachedPatientsByPhone(normalizedPhone, err);
         },
       });
   }
@@ -399,6 +421,25 @@ export class AppointmentComponent implements OnInit {
       .split('_')
       .map((part) => this.titleCase(part))
       .join(' ');
+  }
+
+  appointmentTimeRange(appointment: Appointment): string {
+    const start = this.formatClockTime(appointment.startTime);
+    const end = this.formatClockTime(appointment.endTime);
+
+    if (start === '-' && end === '-') {
+      return 'No time set';
+    }
+
+    if (start === '-') {
+      return end;
+    }
+
+    if (end === '-') {
+      return start;
+    }
+
+    return `${start} - ${end}`;
   }
 
   initials(value?: string | null): string {
@@ -666,6 +707,11 @@ export class AppointmentComponent implements OnInit {
       payload['hospitalId'] = this.currentHospitalId;
     }
 
+    if (!this.offline.online()) {
+      void this.queuePatientFromModal(payload);
+      return;
+    }
+
     this.patientSaving = true;
     this.backend
       .createPatient(payload)
@@ -678,17 +724,45 @@ export class AppointmentComponent implements OnInit {
           this.patientPhone = patient.phone || this.patientPhone;
           this.phoneLookupPerformed = true;
           this.phoneMatchedPatients = [patient, ...this.phoneMatchedPatients];
+          void this.offline.mergeCachedList(this.patientsCacheKey(), [patient]);
           this.patients = this.phoneMatchedPatients;
           this.phoneMatchedTotal = this.phoneMatchedPatients.length;
           this.selectPatient(patient);
         },
-        error: (err) => this.toastr.error(err?.error?.message || 'Unable to add patient'),
+        error: (err) => {
+          if (this.offline.shouldQueue(err)) {
+            void this.queuePatientFromModal(payload);
+            return;
+          }
+
+          this.toastr.error(err?.error?.message || 'Unable to add patient');
+        },
       });
   }
 
   clearSelectedPatient(): void {
     this.selectedPatient = null;
     this.appointmentForm.patchValue({ patientId: '' });
+  }
+
+  async syncOfflineWork(showToast = true): Promise<void> {
+    if (!this.offline.online()) {
+      if (showToast) {
+        this.toastr.info('Appointments will sync when internet is back.');
+      }
+      return;
+    }
+
+    const result = await this.offline.syncQueuedWork();
+    if (result.syncedCount > 0) {
+      this.loadLookups();
+      this.loadAppointments();
+      if (showToast) {
+        this.toastr.success(`${result.syncedCount} offline item(s) synced.`);
+      }
+    } else if (showToast) {
+      this.toastr.info('No offline appointments are waiting to sync.');
+    }
   }
 
   private toArray(value: string): string[] {
@@ -698,6 +772,251 @@ export class AppointmentComponent implements OnInit {
           .map((item) => item.trim())
           .filter(Boolean)
       : [];
+  }
+
+  private async loadCachedDoctors(): Promise<void> {
+    this.doctors = await this.offline.readCachedValue<Doctor[]>(this.doctorsCacheKey(), []);
+    this.patchDepartmentFromDoctor(this.appointmentForm.value.doctorId);
+  }
+
+  private async loadCachedAppointments(error: unknown): Promise<void> {
+    const cached = await this.offline.readCachedValue<{ items: Appointment[]; totalPages: number }>(
+      this.appointmentsCacheKey(),
+      { items: [], totalPages: 0 },
+    );
+    await this.applyAppointmentList(cached.items, cached.totalPages);
+    if (!this.offline.shouldQueue(error) && cached.items.length === 0) {
+      this.toastr.error((error as { error?: { message?: string } })?.error?.message || 'Something went wrong');
+    }
+  }
+
+  private async applyAppointmentList(items: Appointment[], totalPages: number): Promise<void> {
+    this.appointments = this.mergeAppointments([...(await this.localQueuedAppointments()), ...items])
+      .filter((appointment) => this.appointmentMatchesFilters(appointment));
+    this.totalPages = totalPages;
+  }
+
+  private async loadCachedPatientsByPhone(normalizedPhone: string, error: unknown): Promise<void> {
+    const cachedPatients = await this.cachedPatientsWithLocal();
+    const matchedPatients = cachedPatients.filter((patient) =>
+      this.normalizePhone(patient.phone || '').includes(normalizedPhone),
+    );
+
+    this.phoneMatchedPatients = matchedPatients;
+    this.patients = matchedPatients;
+    this.phoneMatchedTotal = matchedPatients.length;
+    this.phoneLookupPerformed = true;
+    this.phoneLookupLoading = false;
+
+    if (matchedPatients.length === 0 && !this.offline.shouldQueue(error)) {
+      this.toastr.error((error as { error?: { message?: string } })?.error?.message || 'Unable to search patients');
+    } else if (matchedPatients.length === 0) {
+      this.toastr.info('No cached patient found. You can add a new patient offline.');
+    }
+  }
+
+  private async cachedPatientsWithLocal(): Promise<Patient[]> {
+    const cached = await this.offline.readCachedValue<Patient[]>(this.patientsCacheKey(), []);
+    const localPatients = (await this.offline.getQueuedWork('patient'))
+      .filter((entry) => entry.operation === 'create')
+      .map((entry) => this.patientFromQueuedWork(entry));
+
+    return this.mergePatients([...localPatients, ...cached]);
+  }
+
+  private async queuePatientFromModal(payload: Record<string, unknown>): Promise<void> {
+    this.patientSaving = true;
+    const localId = this.offline.buildLocalId('patient');
+    const patient = this.buildLocalPatient(localId, payload);
+
+    await this.offline.enqueueWork({
+      id: localId,
+      entity: 'patient',
+      operation: 'create',
+      localId,
+      payload,
+      meta: { patient },
+    });
+    await this.offline.mergeCachedList(this.patientsCacheKey(), [patient]);
+
+    this.patientSaving = false;
+    this.addPatientModalOpen = false;
+    this.patientPhone = patient.phone || this.patientPhone;
+    this.phoneLookupPerformed = true;
+    this.phoneMatchedPatients = this.mergePatients([patient, ...this.phoneMatchedPatients]);
+    this.patients = this.phoneMatchedPatients;
+    this.phoneMatchedTotal = this.phoneMatchedPatients.length;
+    this.selectPatient(patient);
+    this.toastr.success('Patient saved offline and queued for sync.');
+  }
+
+  private async queueAppointment(
+    payload: Record<string, unknown>,
+    patient?: Patient | null,
+    doctor?: Doctor,
+  ): Promise<void> {
+    this.saving = true;
+    const localId = this.offline.buildLocalId('appointment');
+    const appointment = this.buildLocalAppointment(localId, payload, patient, doctor);
+
+    await this.offline.enqueueWork({
+      id: localId,
+      entity: 'appointment',
+      operation: 'create',
+      localId,
+      payload,
+      meta: { appointment, patient: patient || appointment.patient || null },
+    });
+
+    this.appointments = this.mergeAppointments([appointment, ...this.appointments]);
+    this.saving = false;
+    this.toastr.success('Appointment saved offline and queued for sync.');
+    this.printAppointmentToken(this.buildAppointmentToken(appointment, patient, doctor));
+    this.resetForm();
+  }
+
+  private buildLocalPatient(localId: string, payload: Record<string, unknown>): Patient {
+    return {
+      _id: localId,
+      hospitalId: String(payload['hospitalId'] || this.currentHospitalId || ''),
+      patientNo: `OFF-${localId.slice(-6).toUpperCase()}`,
+      assignedDoctorId: String(payload['assignedDoctorId'] || ''),
+      firstName: String(payload['firstName'] || ''),
+      lastName: String(payload['lastName'] || ''),
+      email: (payload['email'] as string | undefined) || null,
+      phone: (payload['phone'] as string | undefined) || null,
+      gender: (payload['gender'] as Patient['gender']) || 'other',
+      dateOfBirth: (payload['dateOfBirth'] as string | undefined) || null,
+      bloodGroup: (payload['bloodGroup'] as string | undefined) || null,
+      address: (payload['address'] as string | undefined) || null,
+      emergencyContactName: (payload['emergencyContactName'] as string | undefined) || null,
+      emergencyContactPhone: (payload['emergencyContactPhone'] as string | undefined) || null,
+      allergies: (payload['allergies'] as string[]) || [],
+      chronicDiseases: (payload['chronicDiseases'] as string[]) || [],
+      currentMedications: (payload['currentMedications'] as string[]) || [],
+      status: 'active',
+    };
+  }
+
+  private buildLocalAppointment(
+    localId: string,
+    payload: Record<string, unknown>,
+    patient?: Patient | null,
+    doctor?: Doctor,
+  ): Appointment {
+    return {
+      _id: localId,
+      hospitalId: String(payload['hospitalId'] || this.currentHospitalId || ''),
+      appointmentNo: `OFF-${localId.slice(-6).toUpperCase()}`,
+      patientId: String(payload['patientId'] || patient?._id || ''),
+      patient: patient || null,
+      doctorId: String(payload['doctorId'] || ''),
+      doctor: doctor?.user || null,
+      departmentId: String(payload['departmentId'] || doctor?.departmentId || ''),
+      department: doctor?.department || null,
+      appointmentDate: String(payload['appointmentDate'] || this.todayValue()),
+      startTime: String(payload['startTime'] || ''),
+      endTime: String(payload['endTime'] || ''),
+      reason: (payload['reason'] as string | undefined) || null,
+      status: (payload['status'] as Appointment['status']) || 'confirmed',
+      notes: (payload['notes'] as string | undefined) || 'Saved offline',
+    };
+  }
+
+  private async localQueuedAppointments(): Promise<Appointment[]> {
+    const entries = await this.offline.getQueuedWork('appointment');
+    return entries
+      .filter((entry) => entry.operation === 'create')
+      .map((entry) => {
+        const metaAppointment = entry.meta?.['appointment'] as Appointment | undefined;
+        if (metaAppointment) {
+          return metaAppointment;
+        }
+
+        return this.buildLocalAppointment(
+          entry.localId || entry.id,
+          entry.payload as Record<string, unknown>,
+          entry.meta?.['patient'] as Patient | null,
+          this.findDoctorByUserId(String((entry.payload as Record<string, unknown>)['doctorId'] || '')),
+        );
+      });
+  }
+
+  private patientFromQueuedWork(entry: MooliQueuedWork): Patient {
+    const metaPatient = entry.meta?.['patient'] as Patient | undefined;
+    if (metaPatient) {
+      return metaPatient;
+    }
+
+    return this.buildLocalPatient(entry.localId || entry.id, entry.payload as Record<string, unknown>);
+  }
+
+  private mergePatients(items: Patient[]): Patient[] {
+    const map = new Map<string, Patient>();
+    items.forEach((item) => {
+      if (item?._id) {
+        map.set(item._id, item);
+      }
+    });
+    return Array.from(map.values());
+  }
+
+  private mergeAppointments(items: Appointment[]): Appointment[] {
+    const map = new Map<string, Appointment>();
+    items.forEach((item) => {
+      if (item?._id) {
+        map.set(item._id, item);
+      }
+    });
+    return Array.from(map.values()).sort((first, second) =>
+      `${second.appointmentDate} ${second.startTime}`.localeCompare(`${first.appointmentDate} ${first.startTime}`),
+    );
+  }
+
+  private appointmentMatchesFilters(appointment: Appointment): boolean {
+    if (this.status && appointment.status !== this.status) {
+      return false;
+    }
+
+    const appointmentDate = appointment.appointmentDate.slice(0, 10);
+    if (this.dateFrom && appointmentDate < this.dateFrom) {
+      return false;
+    }
+
+    if (this.dateTo && appointmentDate > this.dateTo) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private doctorsCacheKey(): string {
+    return this.offline.cacheKey('appointment-doctors');
+  }
+
+  private appointmentsCacheKey(): string {
+    return this.offline.cacheKey(
+      'appointments',
+      this.page,
+      this.limit,
+      this.status || 'all',
+      this.dateFrom || 'from',
+      this.dateTo || 'to',
+    );
+  }
+
+  private removeEmptyTimeFields(payload: Record<string, unknown>): void {
+    if (!payload['startTime']) {
+      delete payload['startTime'];
+    }
+
+    if (!payload['endTime']) {
+      delete payload['endTime'];
+    }
+  }
+
+  private patientsCacheKey(): string {
+    return this.offline.cacheKey('patients');
   }
 
   private normalizePhone(value: string): string {
@@ -795,7 +1114,7 @@ export class AppointmentComponent implements OnInit {
       doctorName: resolvedDoctorName,
       departmentName: resolvedDepartment,
       appointmentDate: this.shortDate(appointment.appointmentDate),
-      timeRange: `${this.formatClockTime(appointment.startTime)} - ${this.formatClockTime(appointment.endTime)}`,
+      timeRange: this.appointmentTimeRange(appointment),
       status: this.appointmentStatusLabel(appointment.status),
       printedAt: `${this.shortDate(new Date())} ${this.formatClockTime(this.formatTime(new Date()))}`,
     };

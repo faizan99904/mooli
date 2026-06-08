@@ -10,6 +10,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../../core/services/backend.service';
+import { MooliOfflineService } from '../../../../core/services/mooli-offline.service';
 import { Doctor, Patient, User } from '../../../../shared/models/hospital.model';
 
 @Component({
@@ -30,6 +31,7 @@ export class AddPatientComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private backend: BackendService,
+    readonly offline: MooliOfflineService,
     private toastr: ToastrService,
     private router: Router,
     private route: ActivatedRoute
@@ -60,9 +62,10 @@ export class AddPatientComponent implements OnInit {
     this.backend.getDoctors({ limit: 100, status: 'active' }).subscribe({
       next: (result) => {
         this.doctors = result.items;
+        void this.offline.cacheValue(this.doctorsCacheKey(), this.doctors);
       },
       error: () => {
-        this.doctors = [];
+        void this.loadCachedDoctors();
       },
     });
   }
@@ -100,6 +103,11 @@ export class AddPatientComponent implements OnInit {
       payload['hospitalId'] = this.currentHospitalId;
     }
 
+    if (!this.offline.online() && !this.editingPatient) {
+      void this.queuePatient(payload);
+      return;
+    }
+
     this.saving = true;
     const request$ = this.editingPatient
       ? this.backend.updatePatient(this.editingPatient._id, payload)
@@ -110,9 +118,17 @@ export class AddPatientComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.toastr.success(response.message);
+          if (response.data) {
+            void this.offline.mergeCachedList(this.patientsCacheKey(), [response.data]);
+          }
           this.router.navigateByUrl('/patients/all-patients');
         },
         error: (err) => {
+          if (!this.editingPatient && this.offline.shouldQueue(err)) {
+            void this.queuePatient(payload);
+            return;
+          }
+
           this.toastr.error(err?.error?.message || 'Something went wrong');
         },
       });
@@ -149,5 +165,60 @@ export class AddPatientComponent implements OnInit {
     if (phone) {
       this.patientForm.patchValue({ phone });
     }
+  }
+
+  private async loadCachedDoctors(): Promise<void> {
+    this.doctors = await this.offline.readCachedValue<Doctor[]>(this.doctorsCacheKey(), []);
+  }
+
+  private async queuePatient(payload: Record<string, unknown>): Promise<void> {
+    this.saving = true;
+    const localId = this.offline.buildLocalId('patient');
+    const patient = this.buildLocalPatient(localId, payload);
+
+    await this.offline.enqueueWork({
+      id: localId,
+      entity: 'patient',
+      operation: 'create',
+      localId,
+      payload,
+      meta: { patient },
+    });
+    await this.offline.mergeCachedList(this.patientsCacheKey(), [patient]);
+
+    this.saving = false;
+    this.toastr.success('Patient saved offline and queued for sync.');
+    this.router.navigateByUrl('/patients/all-patients');
+  }
+
+  private buildLocalPatient(localId: string, payload: Record<string, unknown>): Patient {
+    return {
+      _id: localId,
+      hospitalId: String(payload['hospitalId'] || this.currentHospitalId || ''),
+      patientNo: `OFF-${localId.slice(-6).toUpperCase()}`,
+      assignedDoctorId: String(payload['assignedDoctorId'] || ''),
+      firstName: String(payload['firstName'] || ''),
+      lastName: String(payload['lastName'] || ''),
+      email: (payload['email'] as string | undefined) || null,
+      phone: (payload['phone'] as string | undefined) || null,
+      gender: (payload['gender'] as Patient['gender']) || 'other',
+      dateOfBirth: (payload['dateOfBirth'] as string | undefined) || null,
+      bloodGroup: (payload['bloodGroup'] as string | undefined) || null,
+      address: (payload['address'] as string | undefined) || null,
+      emergencyContactName: (payload['emergencyContactName'] as string | undefined) || null,
+      emergencyContactPhone: (payload['emergencyContactPhone'] as string | undefined) || null,
+      allergies: (payload['allergies'] as string[]) || [],
+      chronicDiseases: (payload['chronicDiseases'] as string[]) || [],
+      currentMedications: (payload['currentMedications'] as string[]) || [],
+      status: 'active',
+    };
+  }
+
+  private doctorsCacheKey(): string {
+    return this.offline.cacheKey('patient-form-doctors');
+  }
+
+  private patientsCacheKey(): string {
+    return this.offline.cacheKey('patients');
   }
 }

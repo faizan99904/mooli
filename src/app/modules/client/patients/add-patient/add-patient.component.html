@@ -11,6 +11,10 @@
 
         <div class="row clearfix">
             <div class="col-lg-12">
+                <div class="alert alert-warning" *ngIf="!offline.online() || offline.pendingCount() > 0">
+                    <strong>{{ offline.statusLabel() }}.</strong>
+                    New patients will be saved locally and synced when internet returns.
+                </div>
                 <div class="card">
                     <div class="header">
                         <h2>Patient Information</h2>

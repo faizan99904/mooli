@@ -14,6 +14,7 @@ import { ToastrService } from 'ngx-toastr';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { BackendService } from '../../../core/services/backend.service';
+import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/mooli-offline.service';
 import {
   Appointment,
   Doctor,
@@ -151,6 +152,7 @@ export class PrescriptionComponent implements OnInit {
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private backend: BackendService,
+    readonly offline: MooliOfflineService,
     private toastr: ToastrService
   ) {
     this.prescriptionForm = this.fb.group({
@@ -214,6 +216,7 @@ export class PrescriptionComponent implements OnInit {
 
     this.loadLookups();
     this.loadPrescriptions();
+    void this.syncOfflineWork(false);
   }
 
   get medicines(): FormArray {
@@ -695,13 +698,21 @@ export class PrescriptionComponent implements OnInit {
     this.backend.getPatients({ limit: 100, status: 'active' }).subscribe({
       next: (result) => {
         this.patients = result.items;
+        void this.offline.cacheValue(this.patientsCacheKey(), this.patients);
       },
-      error: () => (this.patients = []),
+      error: () => {
+        void this.loadCachedPatients();
+      },
     });
 
     this.backend.getDoctors({ limit: 100, status: 'active' }).subscribe({
-      next: (result) => (this.doctors = result.items),
-      error: () => (this.doctors = []),
+      next: (result) => {
+        this.doctors = result.items;
+        void this.offline.cacheValue(this.doctorsCacheKey(), this.doctors);
+      },
+      error: () => {
+        void this.loadCachedDoctors();
+      },
     });
 
     this.backend
@@ -711,10 +722,13 @@ export class PrescriptionComponent implements OnInit {
       })
       .subscribe({
         next: (result) => {
-          this.appointments = result.items;
+          void this.offline.cacheValue(this.appointmentsCacheKey(), result.items);
+          void this.applyAppointmentList(result.items);
           this.selectInitialAppointment();
         },
-        error: () => (this.appointments = []),
+        error: () => {
+          void this.loadCachedAppointments();
+        },
       });
   }
 
@@ -739,16 +753,14 @@ export class PrescriptionComponent implements OnInit {
       .subscribe({
         next: (items) => {
           this.doctorMedicines = this.mergeDoctorMedicines(items);
+          void this.offline.cacheValue(this.doctorMedicinesCacheKey(search), this.doctorMedicines);
           if (updateSmartSuggestions) {
             this.refreshSmartMedicineSuggestions(search);
           }
           afterLoad?.();
         },
         error: () => {
-          if (updateSmartSuggestions) {
-            this.clearSmartMedicineSuggestions();
-          }
-          afterLoad?.();
+          void this.loadCachedDoctorMedicines(search, updateSmartSuggestions, afterLoad);
         },
       });
   }
@@ -768,17 +780,17 @@ export class PrescriptionComponent implements OnInit {
       .subscribe({
         next: (result) => {
           this.storeMedicines = result.items;
+          void this.offline.cacheValue(this.storeMedicinesCacheKey(search), this.storeMedicines);
           if (updateSmartSuggestions) {
             this.refreshSmartMedicineSuggestions(search);
           }
           afterLoad?.();
         },
         error: (err) => {
-          this.storeMedicines = [];
+          void this.loadCachedStoreMedicines(search, updateSmartSuggestions, afterLoad);
           if (err?.status === 403) {
             this.storeMedicineSearchDisabled = true;
           }
-          afterLoad?.();
         },
       });
   }
@@ -951,12 +963,15 @@ export class PrescriptionComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (result) => {
-          this.prescriptions = result.items;
+          void this.offline.cacheValue(this.prescriptionsCacheKey(), {
+            items: result.items,
+            totalPages: result.pagination.totalPages,
+          });
+          void this.applyPrescriptionList(result.items, result.pagination.totalPages);
           this.totalPages = result.pagination.totalPages;
         },
         error: (err) => {
-          this.prescriptions = [];
-          this.toastr.error(err?.error?.message || 'Something went wrong');
+          void this.loadCachedPrescriptions(err);
         },
       });
   }
@@ -1002,6 +1017,11 @@ export class PrescriptionComponent implements OnInit {
       payload['hospitalId'] = this.currentHospitalId || undefined;
     }
 
+    if (!this.offline.online() && !this.editingId) {
+      void this.queuePrescription(payload, printAfterSave);
+      return;
+    }
+
     this.saving = true;
     const request$ = this.editingId
       ? this.backend.updatePrescription(this.editingId, payload)
@@ -1017,7 +1037,14 @@ export class PrescriptionComponent implements OnInit {
           this.openPrintPreview(response.data);
         }
       },
-      error: (err) => this.toastr.error(err?.error?.message || 'Something went wrong'),
+      error: (err) => {
+        if (!this.editingId && this.offline.shouldQueue(err)) {
+          void this.queuePrescription(payload, printAfterSave);
+          return;
+        }
+
+        this.toastr.error(err?.error?.message || 'Something went wrong');
+      },
     });
   }
 
@@ -1229,7 +1256,7 @@ export class PrescriptionComponent implements OnInit {
     this.printPreviewData = this.buildPrintPreviewData(prescription);
     this.printPreviewOpen = true;
 
-    if (!prescription?._id) {
+    if (!prescription?._id || prescription._id.startsWith('local-')) {
       return;
     }
 
@@ -1314,6 +1341,298 @@ export class PrescriptionComponent implements OnInit {
 
     this.page = nextPage;
     this.loadPrescriptions();
+  }
+
+  async syncOfflineWork(showToast = true): Promise<void> {
+    if (!this.offline.online()) {
+      if (showToast) {
+        this.toastr.info('Prescriptions will sync when internet is back.');
+      }
+      return;
+    }
+
+    const result = await this.offline.syncQueuedWork();
+    if (result.syncedCount > 0) {
+      this.loadLookups();
+      this.loadPrescriptions();
+      if (showToast) {
+        this.toastr.success(`${result.syncedCount} offline item(s) synced.`);
+      }
+    } else if (showToast) {
+      this.toastr.info('No offline prescriptions are waiting to sync.');
+    }
+  }
+
+  private async loadCachedPatients(): Promise<void> {
+    const cached = await this.offline.readCachedValue<Patient[]>(this.patientsCacheKey(), []);
+    const localPatients = (await this.offline.getQueuedWork('patient'))
+      .filter((entry) => entry.operation === 'create')
+      .map((entry) => this.patientFromQueuedWork(entry));
+    this.patients = this.mergePatients([...localPatients, ...cached]);
+  }
+
+  private async loadCachedDoctors(): Promise<void> {
+    this.doctors = await this.offline.readCachedValue<Doctor[]>(this.doctorsCacheKey(), []);
+  }
+
+  private async loadCachedAppointments(): Promise<void> {
+    const cached = await this.offline.readCachedValue<Appointment[]>(this.appointmentsCacheKey(), []);
+    await this.applyAppointmentList(cached);
+    this.selectInitialAppointment();
+  }
+
+  private async applyAppointmentList(items: Appointment[]): Promise<void> {
+    const localAppointments = await this.localQueuedAppointments();
+    this.appointments = this.mergeAppointments([...localAppointments, ...items]);
+  }
+
+  private async loadCachedDoctorMedicines(
+    search: string,
+    updateSmartSuggestions: boolean,
+    afterLoad?: () => void,
+  ): Promise<void> {
+    const cached = await this.offline.readCachedValue<DoctorMedicine[]>(
+      this.doctorMedicinesCacheKey(search),
+      [],
+    );
+    this.doctorMedicines = this.mergeDoctorMedicines(cached);
+    if (updateSmartSuggestions) {
+      if (cached.length) {
+        this.refreshSmartMedicineSuggestions(search);
+      } else {
+        this.clearSmartMedicineSuggestions();
+      }
+    }
+    afterLoad?.();
+  }
+
+  private async loadCachedStoreMedicines(
+    search: string,
+    updateSmartSuggestions: boolean,
+    afterLoad?: () => void,
+  ): Promise<void> {
+    this.storeMedicines = await this.offline.readCachedValue<ProductCatalogItem[]>(
+      this.storeMedicinesCacheKey(search),
+      [],
+    );
+    if (updateSmartSuggestions) {
+      this.refreshSmartMedicineSuggestions(search);
+    }
+    afterLoad?.();
+  }
+
+  private async loadCachedPrescriptions(error: unknown): Promise<void> {
+    const cached = await this.offline.readCachedValue<{ items: Prescription[]; totalPages: number }>(
+      this.prescriptionsCacheKey(),
+      { items: [], totalPages: 0 },
+    );
+    await this.applyPrescriptionList(cached.items, cached.totalPages);
+    if (!this.offline.shouldQueue(error) && cached.items.length === 0) {
+      this.toastr.error((error as { error?: { message?: string } })?.error?.message || 'Something went wrong');
+    }
+  }
+
+  private async applyPrescriptionList(items: Prescription[], totalPages: number): Promise<void> {
+    const localPrescriptions = await this.localQueuedPrescriptions();
+    this.prescriptions = this.mergePrescriptions([...localPrescriptions, ...items]);
+    this.totalPages = totalPages;
+  }
+
+  private async queuePrescription(payload: Record<string, unknown>, printAfterSave: boolean): Promise<void> {
+    this.saving = true;
+    const localId = this.offline.buildLocalId('prescription');
+    const prescription = this.buildLocalPrescription(localId, payload);
+
+    await this.offline.enqueueWork({
+      id: localId,
+      entity: 'prescription',
+      operation: 'create',
+      localId,
+      payload,
+      meta: { prescription },
+    });
+
+    this.prescriptions = this.mergePrescriptions([prescription, ...this.prescriptions]);
+    this.editingId = localId;
+    this.markAppointmentCompleted(prescription.appointmentId);
+    this.saving = false;
+    this.toastr.success('Prescription saved offline and queued for sync.');
+    if (printAfterSave) {
+      this.openPrintPreview(prescription);
+    }
+  }
+
+  private buildLocalPrescription(localId: string, payload: Record<string, unknown>): Prescription {
+    const appointment = this.selectedAppointment();
+    const patient = this.selectedPatient();
+
+    return {
+      _id: localId,
+      hospitalId: String(payload['hospitalId'] || this.currentHospitalId || ''),
+      patientId: String(payload['patientId'] || patient?._id || ''),
+      patient,
+      doctorId: String(payload['doctorId'] || ''),
+      doctor: appointment?.doctor || null,
+      appointmentId: (payload['appointmentId'] as string | undefined) || null,
+      appointment,
+      medicines: (payload['medicines'] as Prescription['medicines']) || [],
+      chiefComplaint: (payload['chiefComplaint'] as string | undefined) || null,
+      history: (payload['history'] as string | undefined) || null,
+      examination: (payload['examination'] as string | undefined) || null,
+      diagnosis: (payload['diagnosis'] as string | undefined) || null,
+      labTests: (payload['labTests'] as Prescription['labTests']) || [],
+      ivFluids: (payload['ivFluids'] as Prescription['ivFluids']) || [],
+      admissionOrders: (payload['admissionOrders'] as Prescription['admissionOrders']) || null,
+      vitals: (payload['vitals'] as Record<string, string> | undefined) || {},
+      advice: (payload['advice'] as string | undefined) || null,
+      followUpDate: (payload['followUpDate'] as string | undefined) || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  private async localQueuedAppointments(): Promise<Appointment[]> {
+    const entries = await this.offline.getQueuedWork('appointment');
+    return entries
+      .filter((entry) => entry.operation === 'create')
+      .map((entry) => this.appointmentFromQueuedWork(entry));
+  }
+
+  private appointmentFromQueuedWork(entry: MooliQueuedWork): Appointment {
+    const metaAppointment = entry.meta?.['appointment'] as Appointment | undefined;
+    if (metaAppointment) {
+      return metaAppointment;
+    }
+
+    const payload = entry.payload as Record<string, unknown>;
+    const doctor = this.doctors.find((item) => item.userId === payload['doctorId']);
+    const patient = (entry.meta?.['patient'] as Patient | null) ||
+      this.patients.find((item) => item._id === payload['patientId']) ||
+      null;
+
+    return {
+      _id: entry.localId || entry.id,
+      hospitalId: String(payload['hospitalId'] || this.currentHospitalId || ''),
+      appointmentNo: `OFF-${(entry.localId || entry.id).slice(-6).toUpperCase()}`,
+      patientId: String(payload['patientId'] || ''),
+      patient,
+      doctorId: String(payload['doctorId'] || ''),
+      doctor: doctor?.user || null,
+      departmentId: String(payload['departmentId'] || doctor?.departmentId || ''),
+      department: doctor?.department || null,
+      appointmentDate: String(payload['appointmentDate'] || new Date().toISOString()),
+      startTime: String(payload['startTime'] || ''),
+      endTime: String(payload['endTime'] || ''),
+      reason: (payload['reason'] as string | undefined) || null,
+      status: (payload['status'] as Appointment['status']) || 'confirmed',
+      notes: (payload['notes'] as string | undefined) || 'Saved offline',
+    };
+  }
+
+  private async localQueuedPrescriptions(): Promise<Prescription[]> {
+    const entries = await this.offline.getQueuedWork('prescription');
+    return entries
+      .filter((entry) => entry.operation === 'create')
+      .map((entry) => {
+        const metaPrescription = entry.meta?.['prescription'] as Prescription | undefined;
+        return metaPrescription || this.buildLocalPrescription(entry.localId || entry.id, entry.payload as Record<string, unknown>);
+      });
+  }
+
+  private patientFromQueuedWork(entry: MooliQueuedWork): Patient {
+    const metaPatient = entry.meta?.['patient'] as Patient | undefined;
+    if (metaPatient) {
+      return metaPatient;
+    }
+
+    const payload = entry.payload as Record<string, unknown>;
+    return {
+      _id: entry.localId || entry.id,
+      hospitalId: String(payload['hospitalId'] || this.currentHospitalId || ''),
+      patientNo: `OFF-${(entry.localId || entry.id).slice(-6).toUpperCase()}`,
+      assignedDoctorId: String(payload['assignedDoctorId'] || ''),
+      firstName: String(payload['firstName'] || ''),
+      lastName: String(payload['lastName'] || ''),
+      email: (payload['email'] as string | undefined) || null,
+      phone: (payload['phone'] as string | undefined) || null,
+      gender: (payload['gender'] as Patient['gender']) || 'other',
+      dateOfBirth: (payload['dateOfBirth'] as string | undefined) || null,
+      bloodGroup: (payload['bloodGroup'] as string | undefined) || null,
+      address: (payload['address'] as string | undefined) || null,
+      emergencyContactName: (payload['emergencyContactName'] as string | undefined) || null,
+      emergencyContactPhone: (payload['emergencyContactPhone'] as string | undefined) || null,
+      allergies: (payload['allergies'] as string[]) || [],
+      chronicDiseases: (payload['chronicDiseases'] as string[]) || [],
+      currentMedications: (payload['currentMedications'] as string[]) || [],
+      status: 'active',
+    };
+  }
+
+  private mergePatients(items: Patient[]): Patient[] {
+    const map = new Map<string, Patient>();
+    items.forEach((item) => {
+      if (item?._id) {
+        map.set(item._id, item);
+      }
+    });
+    return Array.from(map.values());
+  }
+
+  private mergeAppointments(items: Appointment[]): Appointment[] {
+    const map = new Map<string, Appointment>();
+    items.forEach((item) => {
+      if (item?._id) {
+        map.set(item._id, item);
+      }
+    });
+    return Array.from(map.values()).sort((first, second) =>
+      `${first.appointmentDate} ${first.startTime}`.localeCompare(`${second.appointmentDate} ${second.startTime}`),
+    );
+  }
+
+  private mergePrescriptions(items: Prescription[]): Prescription[] {
+    const map = new Map<string, Prescription>();
+    items.forEach((item) => {
+      if (item?._id) {
+        map.set(item._id, item);
+      }
+    });
+    return Array.from(map.values()).sort((first, second) =>
+      String(second.createdAt || '').localeCompare(String(first.createdAt || '')),
+    );
+  }
+
+  private patientsCacheKey(): string {
+    return this.offline.cacheKey('patients');
+  }
+
+  private doctorsCacheKey(): string {
+    return this.offline.cacheKey('prescription-doctors');
+  }
+
+  private appointmentsCacheKey(): string {
+    return this.offline.cacheKey(
+      'prescription-appointments',
+      this.isDoctorUser() ? this.currentUserId || 'doctor' : 'all',
+    );
+  }
+
+  private prescriptionsCacheKey(): string {
+    return this.offline.cacheKey(
+      'prescriptions',
+      this.page,
+      this.limit,
+      this.selectedPatientId || 'all',
+      this.isDoctorUser() ? this.currentUserId || 'doctor' : 'all',
+    );
+  }
+
+  private doctorMedicinesCacheKey(search = ''): string {
+    return this.offline.cacheKey('doctor-medicines', this.activeDoctorId() || 'doctor', search.trim() || 'all');
+  }
+
+  private storeMedicinesCacheKey(search = ''): string {
+    return this.offline.cacheKey('store-medicine-suggestions', search.trim() || 'all');
   }
 
   private applyRouteDefaults(): void {

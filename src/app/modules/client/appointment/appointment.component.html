@@ -5,9 +5,19 @@
         <h1>Appointments</h1>
         <p>Create and manage patient appointments</p>
       </div>
-      <button class="icon-action" type="button" (click)="openAddPatientModal()" title="Add patient">
-        <i class="fa fa-plus"></i>
-      </button>
+      <div class="offline-actions">
+        <span class="offline-pill" [class.offline]="offline.statusTone() === 'offline'" [class.syncing]="offline.statusTone() === 'syncing'" [class.failed]="offline.statusTone() === 'failed'">
+          <i class="fa fa-circle"></i>
+          {{ offline.statusLabel() }}
+        </span>
+        <button class="sync-action" type="button" [disabled]="!offline.online() || offline.syncing() || offline.pendingCount() === 0" (click)="syncOfflineWork()">
+          <i class="fa fa-refresh"></i>
+          Sync
+        </button>
+        <button class="icon-action" type="button" (click)="openAddPatientModal()" title="Add patient">
+          <i class="fa fa-plus"></i>
+        </button>
+      </div>
     </div>
 
     <div class="stats-grid">
@@ -150,11 +160,11 @@
               </select>
             </label>
             <label>
-              <span>Start Time *</span>
+              <span>Start Time</span>
               <input type="time" formControlName="startTime" />
             </label>
             <label>
-              <span>End Time *</span>
+              <span>End Time</span>
               <input type="time" formControlName="endTime" />
             </label>
             <label>
@@ -218,8 +228,7 @@
         </div>
 
         <div class="filters-row">
-          <div class="date-filter">{{ appointmentRangeLabel }} <i class="fa fa-calendar-o"></i></div>
-          <select [(ngModel)]="status">
+          <select [ngModel]="status" (ngModelChange)="status = $event; applyAppointmentFilters()">
             <option value="">All Status</option>
             <option value="pending">Pending</option>
             <option value="confirmed">Confirmed</option>
@@ -229,7 +238,7 @@
           </select>
           <input type="date" [(ngModel)]="dateFrom" />
           <input type="date" [(ngModel)]="dateTo" />
-          <button type="button" (click)="page = 1; loadAppointments()">
+          <button type="button" (click)="applyAppointmentFilters()">
             <i class="fa fa-filter"></i>
             Filter
           </button>
@@ -270,7 +279,7 @@
                   </div>
                 </td>
                 <td>{{ appointment.department?.name || '-' }}</td>
-                <td>{{ shortDate(appointment.appointmentDate) }}<br />{{ appointment.startTime }} - {{ appointment.endTime }}</td>
+                <td>{{ shortDate(appointment.appointmentDate) }}<br />{{ appointmentTimeRange(appointment) }}</td>
                 <td>
                   <span class="status-pill" [ngClass]="appointmentStatusClass(appointment.status)">
                     {{ appointment.status.replace('_', ' ') }}
