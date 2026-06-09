@@ -1,9 +1,9 @@
 .navbar-nav .icon-menu-bar .notification-dot.msg {
-  background: #82b440 !important;
+  background: #019C9D !important;
 }
 
 .navbar-nav .icon-menu-bar .notification-dot.info {
-  background: #0392cf !important;
+  background: #003E86 !important;
 }
 
 .notification-dot {
@@ -43,16 +43,16 @@
   align-items: center;
   gap: 8px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  background: linear-gradient(135deg, #019C9D, #003E86);
   color: #ffffff;
   padding: 10px 16px;
   margin: 7px 8px 7px 0;
-  box-shadow: 0 10px 24px rgba(20, 184, 166, 0.2);
+  box-shadow: 0 10px 24px rgba(1, 156, 157, 0.2);
 }
 
 .navbar-nav .icon-menu-bar.pos-open-link:hover {
   color: #ffffff;
-  background: linear-gradient(135deg, #0d9488, #2dd4bf);
+  background: linear-gradient(135deg, #003E86, #019C9D);
   transform: translateY(-1px);
 }
 
@@ -91,7 +91,7 @@ ul li a:hover {
 }
 
 .theme-bg.gradient {
-  background: linear-gradient(45deg, #82b440, #5db440) !important;
+  background: linear-gradient(45deg, #019C9D, #003E86) !important;
 }
 
 .note-body .card {

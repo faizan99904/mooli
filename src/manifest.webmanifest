@@ -2,7 +2,7 @@
   "name": "Mooli Hospital POS",
   "short_name": "Mooli",
   "description": "Offline-capable hospital appointments, prescriptions, patients, and pharmacy POS workspace.",
-  "theme_color": "#16a34a",
+  "theme_color": "#019C9D",
   "background_color": "#f8fafc",
   "display": "standalone",
   "orientation": "any",

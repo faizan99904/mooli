@@ -91,7 +91,7 @@ export class FullcalenderComponent implements OnInit {
       title: `${patientName} with ${doctorName}`,
       start: `${day}T${appointment.startTime}:00`,
       end: `${day}T${appointment.endTime}:00`,
-      color: appointment.status === 'completed' ? '#28a745' : '#17a2b8',
+      color: appointment.status === 'completed' ? '#019C9D' : '#003E86',
       extendedProps: {
         status: appointment.status,
         reason: appointment.reason,

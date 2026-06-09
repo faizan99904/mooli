@@ -543,7 +543,7 @@ export class AppointmentComponent implements OnInit {
               width: 100%;
             }
             .eyebrow {
-              color: #16a34a;
+              color: #019C9D;
               font-size: 11px;
               font-weight: 800;
               letter-spacing: 0.14em;
@@ -557,10 +557,10 @@ export class AppointmentComponent implements OnInit {
               margin-bottom: 16px;
             }
             .status-badge {
-              background: #ecfdf3;
-              border: 1px solid #bbf7d0;
+              background: #e8f7f7;
+              border: 1px solid #b9e8e8;
               border-radius: 999px;
-              color: #166534;
+              color: #003E86;
               display: inline-block;
               font-size: 11px;
               font-weight: 800;

@@ -78,8 +78,8 @@
 .catalog-card.keyboard-active,
 .storepos-table-row.keyboard-active,
 .dock-actions button.keyboard-active {
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.22);
-  outline: 2px solid #14b8a6;
+  box-shadow: 0 0 0 3px rgba(1, 156, 157, 0.22);
+  outline: 2px solid #019C9D;
   outline-offset: 2px;
 }
 
@@ -91,10 +91,10 @@
 
 .storepos-connection-pill {
   align-items: center;
-  background: #ecfdf3;
-  border: 1px solid #86efac;
+  background: #e8f7f7;
+  border: 1px solid #b9e8e8;
   border-radius: 999px;
-  color: #166534;
+  color: #003E86;
   display: inline-flex;
   font-size: 11px;
   font-weight: 900;
@@ -173,7 +173,7 @@
 }
 
 .storepos-stock-line i {
-  color: #0f766e;
+  color: #019C9D;
 }
 
 .register-status {
@@ -186,7 +186,7 @@
 }
 
 .register-status.open i {
-  color: #16a34a;
+  color: #019C9D;
 }
 
 .register-status.closed i {
@@ -245,7 +245,7 @@
   background: #102a43;
   border-radius: 7px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  color: #86efac;
+  color: #019C9D;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -274,9 +274,9 @@
 }
 
 .storepos-message.success {
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background: #e8f7f7;
+  border: 1px solid #b9e8e8;
+  color: #003E86;
 }
 
 .storepos-message.warning {
@@ -523,7 +523,7 @@
 
 .catalog-card.keyboard-active {
   background: #ecfeff;
-  border-color: #14b8a6;
+  border-color: #019C9D;
 }
 
 .catalog-card strong,
@@ -544,12 +544,12 @@
 }
 
 .catalog-card .catalog-meta {
-  color: #0f766e;
+  color: #003E86;
   font-weight: 800;
 }
 
 .catalog-card em {
-  color: #047857;
+  color: #019C9D;
   font-size: 11px;
   font-style: normal;
   font-weight: 900;
@@ -693,12 +693,12 @@
 }
 
 .cash-btn {
-  background: #059669;
+  background: #019C9D;
 }
 
 .pay-btn,
 .modern-register-submit {
-  background: #0f766e;
+  background: #003E86;
 }
 
 .pay-btn:disabled,
@@ -758,9 +758,9 @@
 
 .modern-register-badge {
   align-items: center;
-  background: #ecfdf5;
+  background: #e8f7f7;
   border-radius: 50%;
-  color: #047857;
+  color: #003E86;
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 18px;
@@ -938,7 +938,7 @@
 }
 
 .status-pill {
-  color: #047857;
+  color: #003E86;
   font-weight: 900;
   text-transform: capitalize;
 }
