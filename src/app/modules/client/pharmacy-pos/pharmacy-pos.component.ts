@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -62,6 +62,15 @@ interface ReceiptPreviewData {
   note: string;
 }
 
+interface PosShortcutDefinition {
+  id: string;
+  label: string;
+  description: string;
+  defaultCombo: string;
+}
+
+type PosKeyboardZone = 'search' | 'products' | 'cart' | 'actions';
+
 @Component({
   selector: 'app-pharmacy-pos',
   standalone: true,
@@ -98,12 +107,74 @@ export class PharmacyPosComponent implements OnInit {
   recentSales: Sale[] = [];
   receiptPreviewOpen = false;
   receiptPreview: ReceiptPreviewData | null = null;
+  shortcutInfoOpen = false;
+  keyboardZone: PosKeyboardZone = 'search';
+  selectedProductIndex = 0;
+  selectedCartIndex = 0;
+  selectedCartCellIndex = 0;
+  selectedDockIndex = 0;
   openingAmount: number | null = null;
   openingNote = '';
   closingAmount: number | null = null;
   closeNote = '';
   posMessage = '';
   posMessageType: 'success' | 'warning' | 'danger' | 'info' = 'info';
+  readonly shortcutDefinitions: PosShortcutDefinition[] = [
+    {
+      id: 'focusSearch',
+      label: 'Focus Product Search',
+      description: 'Jump to the search box to scan or search medicines.',
+      defaultCombo: 'F2',
+    },
+    {
+      id: 'focusProducts',
+      label: 'Focus Catalog',
+      description: 'Move keyboard control to the medicine catalog.',
+      defaultCombo: 'F3',
+    },
+    {
+      id: 'newSale',
+      label: 'New Sale',
+      description: 'Clear the current bill and start fresh.',
+      defaultCombo: 'F6',
+    },
+    {
+      id: 'recentTransactions',
+      label: 'Sale History',
+      description: 'Open the sale history panel.',
+      defaultCombo: 'F7',
+    },
+    {
+      id: 'cashPayment',
+      label: 'Cash Payment',
+      description: 'Set payment to cash and fill payable amount.',
+      defaultCombo: 'F9',
+    },
+    {
+      id: 'print',
+      label: 'Print Receipt',
+      description: 'Print the open receipt preview.',
+      defaultCombo: 'F10',
+    },
+    {
+      id: 'preview',
+      label: 'Receipt Preview',
+      description: 'Open receipt preview for the current bill.',
+      defaultCombo: 'F12',
+    },
+    {
+      id: 'closeRegister',
+      label: 'Close Register',
+      description: 'Open the close register dialog.',
+      defaultCombo: 'Ctrl+Shift+L',
+    },
+    {
+      id: 'shortcutInfo',
+      label: 'Shortcut Help',
+      description: 'Show keyboard controls.',
+      defaultCombo: 'Ctrl+/',
+    },
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -127,6 +198,33 @@ export class PharmacyPosComponent implements OnInit {
 
     this.refreshCurrentUser();
     void this.syncOfflineWork(false);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardShortcuts(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeShortcutInfo();
+      this.closeReceiptPreview();
+      this.closeSaleHistory();
+      this.closeCloseRegister();
+      return;
+    }
+
+    if (this.handleOverlayEnter(event)) {
+      return;
+    }
+
+    const action = this.findShortcutAction(event);
+    if (action) {
+      event.preventDefault();
+      this.runShortcutAction(action);
+      return;
+    }
+
+    if (this.handleKeyboardNavigation(event)) {
+      return;
+    }
   }
 
   get canReadProducts(): boolean {
@@ -520,6 +618,14 @@ export class PharmacyPosComponent implements OnInit {
     this.receiptPreview = null;
   }
 
+  openShortcutInfo(): void {
+    this.shortcutInfoOpen = true;
+  }
+
+  closeShortcutInfo(): void {
+    this.shortcutInfoOpen = false;
+  }
+
   printReceipt(): void {
     if (!this.receiptPreview) {
       return;
@@ -605,6 +711,26 @@ export class PharmacyPosComponent implements OnInit {
   removeLine(index: number): void {
     this.billLines.splice(index, 1);
     this.refreshPaidAmount();
+  }
+
+  incrementLineQty(index: number): void {
+    const line = this.billLines[index];
+    if (!line) {
+      return;
+    }
+
+    line.billQty = Number(line.billQty || 0) + 1;
+    this.onQtyChange(line);
+  }
+
+  decrementLineQty(index: number): void {
+    const line = this.billLines[index];
+    if (!line) {
+      return;
+    }
+
+    line.billQty = Number(line.billQty || 0) - 1;
+    this.onQtyChange(line);
   }
 
   onQtyChange(line: PharmacyBillLine): void {
@@ -1244,6 +1370,592 @@ export class PharmacyPosComponent implements OnInit {
   private currentStoreAddress(): string {
     const store = this.stores.find((item) => item._id === this.currentStoreId());
     return [store?.address, store?.city].filter(Boolean).join(', ');
+  }
+
+  private runShortcutAction(action: string): void {
+    switch (action) {
+      case 'focusSearch':
+        this.focusProductSearch(true);
+        return;
+      case 'focusProducts':
+        this.focusProductCard(this.selectedProductIndex || 0);
+        return;
+      case 'newSale':
+        this.clearSale();
+        this.focusProductSearch(true);
+        return;
+      case 'recentTransactions':
+        this.openSaleHistory();
+        return;
+      case 'cashPayment':
+        if (this.canCheckout) {
+          this.checkoutWith('cash');
+        } else {
+          this.toastr.info('Add bill items and open register before cash checkout.');
+        }
+        return;
+      case 'print':
+        if (this.receiptPreviewOpen && this.receiptPreview) {
+          this.printReceipt();
+        } else {
+          this.openCurrentBillPreview();
+        }
+        return;
+      case 'preview':
+        this.openCurrentBillPreview();
+        return;
+      case 'closeRegister':
+        this.openCloseRegister();
+        return;
+      case 'shortcutInfo':
+        this.openShortcutInfo();
+        return;
+    }
+  }
+
+  private handleKeyboardNavigation(event: KeyboardEvent): boolean {
+    if (this.anyOverlayOpen()) {
+      return false;
+    }
+
+    if (event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
+      if (event.key === '1') {
+        event.preventDefault();
+        this.focusProductSearch(true);
+        return true;
+      }
+      if (event.key === '2') {
+        event.preventDefault();
+        this.focusProductCard(this.selectedProductIndex || 0);
+        return true;
+      }
+      if (event.key === '3') {
+        event.preventDefault();
+        this.focusCartRow(this.selectedCartIndex);
+        return true;
+      }
+      if (event.key === '4') {
+        event.preventDefault();
+        this.focusActionDockButton(this.selectedDockIndex);
+        return true;
+      }
+    }
+
+    if (this.isSearchInputTarget(event.target)) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.focusProductCard(this.selectedProductIndex || 0);
+        return true;
+      }
+
+      return false;
+    }
+
+    if (this.isEditableTarget(event.target) && !this.isCartKeyboardTarget(event.target)) {
+      return false;
+    }
+
+    switch (this.keyboardZone) {
+      case 'products':
+        return this.handleProductsZoneNavigation(event);
+      case 'cart':
+        return this.handleCartZoneNavigation(event);
+      case 'actions':
+        return this.handleActionsZoneNavigation(event);
+      default:
+        return false;
+    }
+  }
+
+  private handleProductsZoneNavigation(event: KeyboardEvent): boolean {
+    const products = this.filteredProducts();
+    if (!products.length) {
+      return false;
+    }
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        event.preventDefault();
+        this.focusProductCard(this.selectedProductIndex + 1);
+        return true;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        event.preventDefault();
+        if (this.selectedProductIndex > 0) {
+          this.focusProductCard(this.selectedProductIndex - 1);
+        } else {
+          this.focusProductSearch(true);
+        }
+        return true;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        {
+          const product = products[this.selectedProductIndex];
+          if (product) {
+            this.addProduct(product);
+            this.focusProductCard(this.selectedProductIndex, false);
+          }
+        }
+        return true;
+      case 'Tab':
+        if (!event.shiftKey) {
+          event.preventDefault();
+          this.focusCartRow(this.selectedCartIndex);
+          return true;
+        }
+        return false;
+      default:
+        return false;
+    }
+  }
+
+  private handleCartZoneNavigation(event: KeyboardEvent): boolean {
+    const cartIndexes = this.availableCartIndexes();
+    if (!cartIndexes.length) {
+      return false;
+    }
+
+    const currentPosition = Math.max(cartIndexes.indexOf(this.selectedCartIndex), 0);
+    switch (event.key) {
+      case 'ArrowRight':
+        event.preventDefault();
+        this.focusCartCell(this.selectedCartIndex, this.selectedCartCellIndex + 1);
+        return true;
+      case 'ArrowLeft':
+        event.preventDefault();
+        this.focusCartCell(this.selectedCartIndex, this.selectedCartCellIndex - 1);
+        return true;
+      case 'ArrowDown':
+        event.preventDefault();
+        this.focusCartRow(
+          cartIndexes[Math.min(currentPosition + 1, cartIndexes.length - 1)],
+          true,
+          this.selectedCartCellIndex,
+        );
+        return true;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.focusCartRow(
+          cartIndexes[Math.max(currentPosition - 1, 0)],
+          true,
+          this.selectedCartCellIndex,
+        );
+        return true;
+      case '+':
+      case '=':
+        event.preventDefault();
+        this.incrementLineQty(this.selectedCartIndex);
+        this.focusCartRow(this.selectedCartIndex, false, this.selectedCartCellIndex);
+        return true;
+      case '-':
+        event.preventDefault();
+        this.decrementLineQty(this.selectedCartIndex);
+        this.focusCartRow(this.selectedCartIndex, false, this.selectedCartCellIndex);
+        return true;
+      case 'Delete':
+        event.preventDefault();
+        {
+          const nextIndex =
+            cartIndexes[Math.min(currentPosition + 1, cartIndexes.length - 1)] ??
+            cartIndexes[currentPosition - 1];
+          this.removeLine(this.selectedCartIndex);
+          window.setTimeout(() => {
+            const available = this.availableCartIndexes();
+            if (available.length) {
+              this.focusCartRow(
+                available.includes(nextIndex) ? nextIndex : available[0],
+                true,
+                this.selectedCartCellIndex,
+              );
+            } else {
+              this.focusProductCard(this.selectedProductIndex || 0);
+            }
+          });
+        }
+        return true;
+      case 'Enter':
+        event.preventDefault();
+        this.focusCartCell(this.selectedCartIndex, this.selectedCartCellIndex);
+        return true;
+      case 'Tab':
+        event.preventDefault();
+        if (event.shiftKey) {
+          this.focusCartRow(cartIndexes[Math.max(currentPosition - 1, 0)], true, this.selectedCartCellIndex);
+        } else if (currentPosition < cartIndexes.length - 1) {
+          this.focusCartRow(cartIndexes[currentPosition + 1], true, this.selectedCartCellIndex);
+        } else {
+          this.focusActionDockButton(this.selectedDockIndex);
+        }
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  private handleActionsZoneNavigation(event: KeyboardEvent): boolean {
+    const dockIndexes = this.availableActionDockIndexes();
+    if (!dockIndexes.length) {
+      return false;
+    }
+
+    const currentPosition = Math.max(dockIndexes.indexOf(this.selectedDockIndex), 0);
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        event.preventDefault();
+        this.focusActionDockButton(dockIndexes[Math.min(currentPosition + 1, dockIndexes.length - 1)]);
+        return true;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        event.preventDefault();
+        if (currentPosition > 0) {
+          this.focusActionDockButton(dockIndexes[currentPosition - 1]);
+        } else {
+          this.focusCartRow(this.selectedCartIndex);
+        }
+        return true;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        this.triggerActiveActionDockButton();
+        return true;
+      case 'Tab':
+        if (!event.shiftKey) {
+          event.preventDefault();
+          this.focusProductSearch(true);
+          return true;
+        }
+        return false;
+      default:
+        return false;
+    }
+  }
+
+  private focusElement(selector: string): void {
+    const element = document.querySelector(selector) as HTMLElement | null;
+    element?.focus();
+  }
+
+  private focusProductSearch(selectText = false): void {
+    this.keyboardZone = 'search';
+    this.clampKeyboardNavigationState();
+    window.setTimeout(() => {
+      const input = document.querySelector('.storepos-search-box input[type="search"]') as HTMLInputElement | null;
+      input?.focus();
+      if (selectText) {
+        input?.select();
+      }
+    });
+  }
+
+  private focusProductCard(index: number, focus = true): void {
+    const products = this.filteredProducts();
+    if (!products.length) {
+      this.focusProductSearch(true);
+      return;
+    }
+
+    this.keyboardZone = 'products';
+    this.selectedProductIndex = Math.min(Math.max(index, 0), products.length - 1);
+    const targetIndex = this.selectedProductIndex;
+    this.clampKeyboardNavigationState();
+
+    if (!focus) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      const element = document.querySelector(`[data-kb-product-index="${targetIndex}"]`) as HTMLElement | null;
+      element?.focus();
+      element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  }
+
+  private focusCartRow(index: number, focus = true, preferredCellIndex = 0): void {
+    const cartIndexes = this.availableCartIndexes();
+    if (!cartIndexes.length) {
+      this.focusProductCard(this.selectedProductIndex || 0);
+      return;
+    }
+
+    const resolvedIndex = cartIndexes.includes(index) ? index : cartIndexes[0];
+    this.keyboardZone = 'cart';
+    this.selectedCartIndex = resolvedIndex;
+    this.selectedCartCellIndex = Math.min(
+      Math.max(preferredCellIndex, 0),
+      Math.max(this.cartCellElements(resolvedIndex).length - 1, 0),
+    );
+
+    if (!focus) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      const element =
+        this.cartCellElements(resolvedIndex)[this.selectedCartCellIndex] ||
+        (document.querySelector(`[data-kb-cart-index="${resolvedIndex}"]`) as HTMLElement | null);
+      element?.focus();
+      element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  }
+
+  private focusCartCell(index: number, cellIndex: number): void {
+    const cells = this.cartCellElements(index);
+    if (!cells.length) {
+      this.focusCartRow(index);
+      return;
+    }
+
+    this.keyboardZone = 'cart';
+    this.selectedCartIndex = index;
+    this.selectedCartCellIndex = Math.min(Math.max(cellIndex, 0), cells.length - 1);
+
+    window.setTimeout(() => {
+      const element = this.cartCellElements(index)[this.selectedCartCellIndex];
+      element?.focus();
+      if (element instanceof HTMLInputElement) {
+        element.select();
+      }
+      element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  }
+
+  private focusActionDockButton(index: number, focus = true): void {
+    const dockIndexes = this.availableActionDockIndexes();
+    if (!dockIndexes.length) {
+      return;
+    }
+
+    const resolvedIndex = dockIndexes.includes(index) ? index : dockIndexes[0];
+    this.keyboardZone = 'actions';
+    this.selectedDockIndex = resolvedIndex;
+
+    if (!focus) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      const element = document.querySelector(`[data-kb-dock-index="${resolvedIndex}"]`) as HTMLElement | null;
+      element?.focus();
+      element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  }
+
+  setKeyboardZone(zone: PosKeyboardZone, index?: number): void {
+    this.keyboardZone = zone;
+    if (zone === 'products' && typeof index === 'number') {
+      this.selectedProductIndex = index;
+    }
+    if (zone === 'cart' && typeof index === 'number') {
+      this.selectedCartIndex = index;
+    }
+    if (zone === 'actions' && typeof index === 'number') {
+      this.selectedDockIndex = index;
+    }
+    this.clampKeyboardNavigationState();
+  }
+
+  setCartCellFocus(index: number, cellIndex: number): void {
+    this.keyboardZone = 'cart';
+    this.selectedCartIndex = index;
+    this.selectedCartCellIndex = cellIndex;
+    this.clampKeyboardNavigationState();
+  }
+
+  private availableCartIndexes(): number[] {
+    return this.billLines.map((_, index) => index);
+  }
+
+  private availableActionDockIndexes(): number[] {
+    return Array.from(document.querySelectorAll<HTMLElement>('[data-kb-dock-index]'))
+      .map((element) => Number(element.dataset['kbDockIndex']))
+      .filter((index) => Number.isFinite(index))
+      .sort((first, second) => first - second);
+  }
+
+  private cartCellElements(index: number): HTMLElement[] {
+    return Array.from(
+      document.querySelectorAll<HTMLElement>(`[data-kb-cart-index="${index}"] [data-kb-cart-cell]`),
+    );
+  }
+
+  private clampKeyboardNavigationState(): void {
+    const products = this.filteredProducts();
+    this.selectedProductIndex = products.length
+      ? Math.min(Math.max(this.selectedProductIndex, 0), products.length - 1)
+      : 0;
+
+    const cartIndexes = this.availableCartIndexes();
+    if (cartIndexes.length) {
+      if (!cartIndexes.includes(this.selectedCartIndex)) {
+        this.selectedCartIndex = cartIndexes[0];
+      }
+      const cellCount = this.cartCellElements(this.selectedCartIndex).length;
+      this.selectedCartCellIndex = Math.min(
+        Math.max(this.selectedCartCellIndex, 0),
+        Math.max(cellCount - 1, 0),
+      );
+    } else {
+      this.selectedCartIndex = 0;
+      this.selectedCartCellIndex = 0;
+      if (this.keyboardZone === 'cart') {
+        this.keyboardZone = products.length ? 'products' : 'search';
+      }
+    }
+
+    const dockIndexes = this.availableActionDockIndexes();
+    if (dockIndexes.length && !dockIndexes.includes(this.selectedDockIndex)) {
+      this.selectedDockIndex = dockIndexes[0];
+    }
+  }
+
+  private triggerActiveActionDockButton(): void {
+    const element = document.querySelector(
+      `[data-kb-dock-index="${this.selectedDockIndex}"]`,
+    ) as HTMLElement | null;
+    element?.click();
+  }
+
+  private handleOverlayEnter(event: KeyboardEvent): boolean {
+    if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
+      return false;
+    }
+
+    if (!this.anyOverlayOpen()) {
+      return false;
+    }
+
+    const target = event.target as HTMLElement | null;
+    const tagName = target?.tagName.toLowerCase();
+    if (target?.isContentEditable || tagName === 'textarea' || tagName === 'button' || tagName === 'a') {
+      return false;
+    }
+
+    event.preventDefault();
+
+    if (this.receiptPreviewOpen && this.receiptPreview) {
+      this.printReceipt();
+      return true;
+    }
+    if (this.closeRegisterOpen) {
+      void this.confirmCloseRegister();
+      return true;
+    }
+    if (this.shortcutInfoOpen) {
+      this.closeShortcutInfo();
+      return true;
+    }
+    if (!this.registerOpened && !this.registerClosed) {
+      this.openRegister();
+      return true;
+    }
+
+    return false;
+  }
+
+  private anyOverlayOpen(): boolean {
+    return (
+      this.saleHistoryOpen ||
+      this.receiptPreviewOpen ||
+      this.closeRegisterOpen ||
+      this.shortcutInfoOpen ||
+      (!this.registerOpened && !this.registerClosed)
+    );
+  }
+
+  private isEditableTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    if (!element) {
+      return false;
+    }
+
+    const tagName = element.tagName.toLowerCase();
+    return (
+      element.isContentEditable ||
+      tagName === 'textarea' ||
+      tagName === 'select' ||
+      (tagName === 'input' &&
+        !['button', 'checkbox', 'radio', 'range', 'file', 'color'].includes((element as HTMLInputElement).type))
+    );
+  }
+
+  private isSearchInputTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    return Boolean(element?.matches?.('.storepos-search-box input[type="search"]'));
+  }
+
+  private isCartKeyboardTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    return Boolean(element?.closest?.('[data-kb-cart-index]'));
+  }
+
+  private eventShortcutCombo(event: KeyboardEvent): string {
+    const segments: string[] = [];
+    if (event.ctrlKey) segments.push('Ctrl');
+    if (event.shiftKey) segments.push('Shift');
+    if (event.altKey) segments.push('Alt');
+    if (event.metaKey) segments.push('Meta');
+    segments.push(this.normalizeShortcutKey(event.key));
+    return segments.join('+');
+  }
+
+  private findShortcutAction(event: KeyboardEvent): string | undefined {
+    const combo = this.eventShortcutCombo(event);
+    return this.shortcutDefinitions.find(
+      (definition) => this.normalizeShortcutCombo(definition.defaultCombo) === combo,
+    )?.id;
+  }
+
+  private normalizeShortcutCombo(value: string): string {
+    const raw = String(value || '').trim().replace(/\s+/g, '');
+    if (!raw) {
+      return '';
+    }
+
+    const segments = raw.split('+').filter(Boolean);
+    const modifiers = new Set(segments.slice(0, -1).map((segment) => segment.toLowerCase()));
+    const key = (segments.at(-1) || '').toLowerCase();
+    const ordered: string[] = [];
+
+    if (modifiers.has('ctrl') || modifiers.has('control')) ordered.push('Ctrl');
+    if (modifiers.has('shift')) ordered.push('Shift');
+    if (modifiers.has('alt')) ordered.push('Alt');
+    if (modifiers.has('meta') || modifiers.has('cmd') || modifiers.has('command')) ordered.push('Meta');
+
+    ordered.push(this.normalizeShortcutKey(key));
+    return ordered.filter(Boolean).join('+');
+  }
+
+  private normalizeShortcutKey(key: string): string {
+    const normalized = String(key || '').trim().toLowerCase();
+    if (!normalized) {
+      return '';
+    }
+
+    const aliases: Record<string, string> = {
+      esc: 'Escape',
+      del: 'Delete',
+      return: 'Enter',
+      spacebar: 'Space',
+      ' ': 'Space',
+      slash: '/',
+    };
+
+    if (aliases[normalized]) {
+      return aliases[normalized];
+    }
+
+    if (/^f\d{1,2}$/.test(normalized)) {
+      return normalized.toUpperCase();
+    }
+
+    if (normalized.length === 1) {
+      return normalized.toUpperCase();
+    }
+
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
   }
 
   private escapeHtml(value: unknown): string {

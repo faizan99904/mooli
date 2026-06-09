@@ -9,6 +9,8 @@
                         type="search"
                         [(ngModel)]="productSearch"
                         placeholder="Product name / SKU / scan barcode"
+                        [class.keyboard-active]="keyboardZone === 'search'"
+                        (focus)="setKeyboardZone('search')"
                         (keydown.enter)="handleProductSearchEnter($event)"
                     />
                     <i class="fa fa-barcode"></i>
@@ -155,7 +157,14 @@
                 </div>
 
                 <div class="storepos-table-body" *ngIf="billLines.length">
-                    <div class="storepos-table-row" *ngFor="let line of billLines; let i = index">
+                    <div
+                        class="storepos-table-row"
+                        *ngFor="let line of billLines; let i = index"
+                        tabindex="0"
+                        [attr.data-kb-cart-index]="i"
+                        [class.keyboard-active]="keyboardZone === 'cart' && selectedCartIndex === i"
+                        (focus)="setKeyboardZone('cart', i)"
+                    >
                         <div class="storepos-product-cell">
                             <p>{{ productDisplay(line.product) }}</p>
                             <small>{{ line.product.sku || 'No SKU' }} · {{ line.sourceMedicineName }}</small>
@@ -164,14 +173,14 @@
                         <span>{{ line.requestedQty }}</span>
                         <span>{{ line.availableQty }}</span>
                         <div class="qty-stepper">
-                            <button type="button" (click)="line.billQty = line.billQty - 1; onQtyChange(line)">-</button>
-                            <input type="number" min="0" step="0.1" [(ngModel)]="line.billQty" (ngModelChange)="onQtyChange(line)" />
-                            <button type="button" (click)="line.billQty = line.billQty + 1; onQtyChange(line)">+</button>
+                            <button type="button" data-kb-cart-cell (focus)="setCartCellFocus(i, 0)" (click)="decrementLineQty(i)">-</button>
+                            <input type="number" min="0" step="0.1" data-kb-cart-cell (focus)="setCartCellFocus(i, 1)" [(ngModel)]="line.billQty" (ngModelChange)="onQtyChange(line)" />
+                            <button type="button" data-kb-cart-cell (focus)="setCartCellFocus(i, 2)" (click)="incrementLineQty(i)">+</button>
                         </div>
-                        <input type="number" min="0" [(ngModel)]="line.unitPrice" (ngModelChange)="refreshPaidAmount()" />
-                        <input type="number" min="0" [(ngModel)]="line.discount" (ngModelChange)="refreshPaidAmount()" />
+                        <input type="number" min="0" data-kb-cart-cell (focus)="setCartCellFocus(i, 3)" [(ngModel)]="line.unitPrice" (ngModelChange)="refreshPaidAmount()" />
+                        <input type="number" min="0" data-kb-cart-cell (focus)="setCartCellFocus(i, 4)" [(ngModel)]="line.discount" (ngModelChange)="refreshPaidAmount()" />
                         <strong>{{ formatCurrency(lineTotal(line)) }}</strong>
-                        <button type="button" class="storepos-line-remove" (click)="removeLine(i)">
+                        <button type="button" class="storepos-line-remove" data-kb-cart-cell (focus)="setCartCellFocus(i, 5)" (click)="removeLine(i)">
                             <i class="fa fa-trash"></i>
                         </button>
                     </div>
@@ -196,7 +205,15 @@
                 </div>
 
                 <div class="catalog-grid">
-                    <button type="button" class="catalog-card" *ngFor="let product of filteredProducts()" (click)="addProduct(product)">
+                    <button
+                        type="button"
+                        class="catalog-card"
+                        *ngFor="let product of filteredProducts(); let i = index"
+                        [attr.data-kb-product-index]="i"
+                        [class.keyboard-active]="keyboardZone === 'products' && selectedProductIndex === i"
+                        (focus)="setKeyboardZone('products', i)"
+                        (click)="addProduct(product)"
+                    >
                         <strong>{{ productDisplay(product) }}</strong>
                         <span>{{ product.sku }} · {{ product.unit || 'unit' }}</span>
                         <span *ngIf="productBatchExpiryLabel(product)" class="catalog-meta">
@@ -246,14 +263,55 @@
             </div>
 
             <div class="dock-actions">
-                <button type="button" class="cash-btn" [disabled]="!canCheckout" (click)="checkoutWith('cash')">Cash</button>
-                <button type="button" class="pay-btn" [disabled]="!canCheckout" (click)="confirmBilling()">
+                <button type="button" class="cash-btn" data-kb-dock-index="0" [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 0" (focus)="setKeyboardZone('actions', 0)" [disabled]="!canCheckout" (click)="checkoutWith('cash')">Cash</button>
+                <button type="button" class="pay-btn" data-kb-dock-index="1" [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 1" (focus)="setKeyboardZone('actions', 1)" [disabled]="!canCheckout" (click)="confirmBilling()">
                     <i class="fa fa-spinner fa-spin" *ngIf="saleSaving"></i>
                     Confirm Sale
                 </button>
             </div>
         </div>
     </section>
+</div>
+
+<div class="modern-modal-backdrop" *ngIf="shortcutInfoOpen" (click)="closeShortcutInfo()">
+    <div class="modern-register-modal shortcut-modal" (click)="$event.stopPropagation()">
+        <div class="modern-register-head">
+            <div class="modern-register-badge">
+                <i class="fa fa-keyboard-o"></i>
+            </div>
+            <div>
+                <strong>Keyboard Shortcuts</strong>
+                <span>Frontpanel-style POS controls for hospital pharmacy billing.</span>
+            </div>
+            <button type="button" class="modal-close" (click)="closeShortcutInfo()">×</button>
+        </div>
+
+        <div class="modern-register-body">
+            <div class="shortcut-grid">
+                <div class="shortcut-card" *ngFor="let shortcut of shortcutDefinitions">
+                    <div>
+                        <strong>{{ shortcut.label }}</strong>
+                        <span>{{ shortcut.description }}</span>
+                    </div>
+                    <kbd>{{ shortcut.defaultCombo }}</kbd>
+                </div>
+                <div class="shortcut-card">
+                    <div>
+                        <strong>Zone Navigation</strong>
+                        <span>Use Ctrl+1 Search, Ctrl+2 Catalog, Ctrl+3 Cart, Ctrl+4 Actions.</span>
+                    </div>
+                    <kbd>Ctrl+1..4</kbd>
+                </div>
+                <div class="shortcut-card">
+                    <div>
+                        <strong>Move / Select</strong>
+                        <span>Use arrows to move, Enter/Space to select, +/- for quantity, Delete to remove.</span>
+                    </div>
+                    <kbd>Arrows</kbd>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modern-modal-backdrop" *ngIf="saleHistoryOpen">

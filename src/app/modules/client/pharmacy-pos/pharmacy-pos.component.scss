@@ -74,6 +74,15 @@
   outline: 0;
 }
 
+.storepos-search-box input.keyboard-active,
+.catalog-card.keyboard-active,
+.storepos-table-row.keyboard-active,
+.dock-actions button.keyboard-active {
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.22);
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
 .storepos-toolbar-icons {
   align-items: center;
   display: flex;
@@ -512,6 +521,11 @@
   border-color: #67e8f9;
 }
 
+.catalog-card.keyboard-active {
+  background: #ecfeff;
+  border-color: #14b8a6;
+}
+
 .catalog-card strong,
 .catalog-card span {
   overflow: hidden;
@@ -548,6 +562,54 @@
 .catalog-card b {
   color: #1d4ed8;
   font-size: 12px;
+}
+
+.shortcut-modal {
+  max-width: 760px;
+}
+
+.shortcut-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shortcut-card {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 11px 12px;
+}
+
+.shortcut-card strong,
+.shortcut-card span {
+  display: block;
+}
+
+.shortcut-card strong {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.shortcut-card span {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.shortcut-card kbd {
+  background: #0f2832;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 6px 8px;
+  white-space: nowrap;
 }
 
 .catalog-empty {
