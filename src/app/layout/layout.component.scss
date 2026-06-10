@@ -1,9 +1,28 @@
 .wrapper {
   display: flex;
+  min-height: 100vh;
+
   .sidebar {
     max-width: 270px;
     z-index: 11;
   }
+}
+
+.layout-main,
+.pos-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.wrapper.pos-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.pos-content {
+  height: 100vh;
+  overflow: hidden;
 }
 
 .toggle_menu_active .sidebar:hover {

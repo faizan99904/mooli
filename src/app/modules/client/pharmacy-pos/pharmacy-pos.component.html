@@ -40,6 +40,9 @@
                 <button type="button" class="storepos-icon-btn" title="Sale history" (click)="openSaleHistory()">
                     <i class="fa fa-clock-o"></i>
                 </button>
+                <button type="button" class="storepos-icon-btn" title="Pharmacy reports" (click)="openReports()">
+                    <i class="fa fa-bar-chart"></i>
+                </button>
                 <button
                     type="button"
                     class="storepos-icon-btn storepos-warn"
@@ -69,6 +72,15 @@
                 <strong *ngIf="!registerLoading && registerOpened">Register Open</strong>
                 <strong *ngIf="!registerLoading && registerClosed">Register Closed</strong>
                 <strong *ngIf="!registerLoading && !registerOpened && !registerClosed">Open Register First</strong>
+            </div>
+            <span>|</span>
+            <div class="storepos-stock-metric">
+                <i class="fa fa-cubes"></i>
+                <strong>Stock {{ formatCompactNumber(totalStockUnits) }}</strong>
+            </div>
+            <div class="storepos-stock-metric">
+                <i class="fa fa-line-chart"></i>
+                <strong>Value {{ formatCurrency(totalStockRetailValue) }}</strong>
             </div>
         </div>
 
@@ -171,7 +183,7 @@
                         </div>
                         <span>{{ line.product.unit || 'unit' }}</span>
                         <span>{{ line.requestedQty }}</span>
-                        <span>{{ line.availableQty }}</span>
+                        <span class="storepos-stock-cell">{{ formatCompactNumber(line.availableQty) }}</span>
                         <div class="qty-stepper">
                             <button type="button" data-kb-cart-cell (focus)="setCartCellFocus(i, 0)" (click)="decrementLineQty(i)">-</button>
                             <input type="number" min="0" step="0.1" data-kb-cart-cell (focus)="setCartCellFocus(i, 1)" [(ngModel)]="line.billQty" (ngModelChange)="onQtyChange(line)" />
@@ -271,6 +283,50 @@
             </div>
         </div>
     </section>
+</div>
+
+<div class="modern-modal-backdrop" *ngIf="reportsOpen">
+    <div class="modern-register-modal sale-history-modal">
+        <div class="modern-register-head">
+            <div class="modern-register-badge">
+                <i class="fa fa-bar-chart"></i>
+            </div>
+            <div>
+                <strong>Pharmacy Reports</strong>
+                <span>Stock, profit/loss, and register performance for {{ selectedStoreLabel }}</span>
+            </div>
+            <button type="button" class="modal-close" (click)="closeReports()">×</button>
+        </div>
+
+        <div class="modern-register-body">
+            <div class="reports-card-grid">
+                <div class="report-card" *ngFor="let card of pharmacyReportCards" [class.good]="card.tone === 'good'" [class.warn]="card.tone === 'warn'">
+                    <span>{{ card.label }}</span>
+                    <strong>{{ card.value }}</strong>
+                    <small>{{ card.note }}</small>
+                </div>
+            </div>
+
+            <div class="modern-register-summary reports-summary-grid">
+                <div>
+                    <span>Sales count</span>
+                    <strong>{{ registerSalesCount }}</strong>
+                </div>
+                <div>
+                    <span>Cash sales</span>
+                    <strong>{{ formatCurrency(registerCashSales) }}</strong>
+                </div>
+                <div>
+                    <span>Expected drawer</span>
+                    <strong>{{ formatCurrency(registerExpectedDrawer) }}</strong>
+                </div>
+                <div>
+                    <span>Cost to retail spread</span>
+                    <strong>{{ formatCurrency(totalPotentialProfit) }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modern-modal-backdrop" *ngIf="shortcutInfoOpen" (click)="closeShortcutInfo()">

@@ -71,6 +71,13 @@ interface PosShortcutDefinition {
 
 type PosKeyboardZone = 'search' | 'products' | 'cart' | 'actions';
 
+interface PharmacyReportCard {
+  label: string;
+  value: string;
+  tone?: 'neutral' | 'good' | 'warn';
+  note?: string;
+}
+
 @Component({
   selector: 'app-pharmacy-pos',
   standalone: true,
@@ -104,6 +111,7 @@ export class PharmacyPosComponent implements OnInit {
   closeRegisterSaving = false;
   saleHistoryOpen = false;
   saleHistoryLoading = false;
+  reportsOpen = false;
   recentSales: Sale[] = [];
   receiptPreviewOpen = false;
   receiptPreview: ReceiptPreviewData | null = null;
@@ -143,6 +151,12 @@ export class PharmacyPosComponent implements OnInit {
       label: 'Sale History',
       description: 'Open the sale history panel.',
       defaultCombo: 'F7',
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      description: 'Open pharmacy profit, loss, and stock summary.',
+      defaultCombo: 'F8',
     },
     {
       id: 'cashPayment',
@@ -204,6 +218,7 @@ export class PharmacyPosComponent implements OnInit {
   handleKeyboardShortcuts(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault();
+      this.closeReports();
       this.closeShortcutInfo();
       this.closeReceiptPreview();
       this.closeSaleHistory();
@@ -306,6 +321,101 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     return Math.max(Number(this.cashReceivedAmount || this.paidAmount || 0) - this.subtotal, 0);
+  }
+
+  get totalStockUnits(): number {
+    return this.products.reduce((sum, product) => sum + this.productAvailableQty(product), 0);
+  }
+
+  get totalStockCostValue(): number {
+    return this.products.reduce(
+      (sum, product) => sum + this.productAvailableQty(product) * this.productCost(product),
+      0,
+    );
+  }
+
+  get totalStockRetailValue(): number {
+    return this.products.reduce(
+      (sum, product) => sum + this.productAvailableQty(product) * this.productPrice(product),
+      0,
+    );
+  }
+
+  get totalPotentialProfit(): number {
+    return this.totalStockRetailValue - this.totalStockCostValue;
+  }
+
+  get registerSalesTotal(): number {
+    return Number(this.registerSession?.summary?.totalSales || 0) || 0;
+  }
+
+  get registerCashSales(): number {
+    return Number(this.registerSession?.summary?.cashSales || 0) || 0;
+  }
+
+  get registerSalesCount(): number {
+    return Number(this.registerSession?.summary?.salesCount || 0) || 0;
+  }
+
+  get registerExpectedDrawer(): number {
+    return Number(
+      this.registerSession?.summary?.expectedCashInDrawer ||
+        this.registerSession?.expectedCashAmount ||
+        0,
+    );
+  }
+
+  get grossProfitEstimate(): number {
+    return this.recentSales.reduce((sum, sale) => {
+      return (
+        sum +
+        (sale.items || []).reduce((saleSum, item) => {
+          const matchedProduct = this.products.find((product) => product._id === item.productId);
+          const qty = Number(item.qty || 0) || 0;
+          const unitPrice = Number(item.unitPrice || 0) || 0;
+          const costPrice = matchedProduct ? this.productCost(matchedProduct) : 0;
+          return saleSum + qty * Math.max(unitPrice - costPrice, 0);
+        }, 0)
+      );
+    }, 0);
+  }
+
+  get pharmacyReportCards(): PharmacyReportCard[] {
+    return [
+      {
+        label: 'Available stock units',
+        value: this.formatCompactNumber(this.totalStockUnits),
+        note: 'Across the current pharmacy store catalog.',
+      },
+      {
+        label: 'Stock cost value',
+        value: this.formatCurrency(this.totalStockCostValue),
+        note: 'Current medicine cost in hand.',
+      },
+      {
+        label: 'Stock retail value',
+        value: this.formatCurrency(this.totalStockRetailValue),
+        tone: 'good',
+        note: 'Selling value of the available stock.',
+      },
+      {
+        label: 'Potential profit',
+        value: this.formatCurrency(this.totalPotentialProfit),
+        tone: this.totalPotentialProfit >= 0 ? 'good' : 'warn',
+        note: 'Retail value minus cost value.',
+      },
+      {
+        label: 'Register sales total',
+        value: this.formatCurrency(this.registerSalesTotal),
+        note: 'Based on the current register summary.',
+      },
+      {
+        label: 'Gross profit estimate',
+        value: this.formatCurrency(this.grossProfitEstimate),
+        tone: this.grossProfitEstimate >= 0 ? 'good' : 'warn',
+        note: 'Estimated from sales lines and product cost price.',
+      },
+    ];
   }
 
   loadStores(): void {
@@ -598,6 +708,17 @@ export class PharmacyPosComponent implements OnInit {
     this.saleHistoryOpen = false;
   }
 
+  openReports(): void {
+    this.reportsOpen = true;
+    if (!this.recentSales.length && this.canReadSales) {
+      this.loadRecentSales();
+    }
+  }
+
+  closeReports(): void {
+    this.reportsOpen = false;
+  }
+
   openCurrentBillPreview(): void {
     if (!this.billLines.some((line) => line.billQty > 0)) {
       this.toastr.info('Add at least one medicine before previewing bill.');
@@ -847,7 +968,7 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   stockLabel(product: ProductCatalogItem): string {
-    return String(product.availableQuantity ?? product.stockQuantity ?? '0');
+    return this.formatCompactNumber(this.productAvailableQty(product));
   }
 
   formatCurrency(value: unknown): string {
@@ -855,6 +976,28 @@ export class PharmacyPosComponent implements OnInit {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+  }
+
+  formatCompactNumber(value: unknown): string {
+    const amount = Number(value || 0);
+    if (!Number.isFinite(amount)) {
+      return '0';
+    }
+
+    const absolute = Math.abs(amount);
+    if (absolute >= 100000) {
+      const lacValue = absolute / 100000;
+      const formatted = lacValue >= 10 ? lacValue.toFixed(1) : lacValue.toFixed(2);
+      const cleaned = formatted
+        .replace(/\.0+$/, '')
+        .replace(/(\.\d*[1-9])0+$/, '$1');
+      return `${amount < 0 ? '-' : ''}${cleaned} Lac`;
+    }
+
+    return amount.toLocaleString('en-PK', {
+      minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
   }
 
   productDisplay(product: ProductCatalogItem): string {
@@ -1347,6 +1490,10 @@ export class PharmacyPosComponent implements OnInit {
     return Number(product.availableQuantity ?? product.stockQuantity ?? 0) || 0;
   }
 
+  private productCost(product: ProductCatalogItem): number {
+    return Number(product.costPrice || 0) || 0;
+  }
+
   private productPrice(product: ProductCatalogItem): number {
     return Number(product.sellingPrice || 0) || 0;
   }
@@ -1386,6 +1533,9 @@ export class PharmacyPosComponent implements OnInit {
         return;
       case 'recentTransactions':
         this.openSaleHistory();
+        return;
+      case 'reports':
+        this.openReports();
         return;
       case 'cashPayment':
         if (this.canCheckout) {
@@ -1857,6 +2007,7 @@ export class PharmacyPosComponent implements OnInit {
 
   private anyOverlayOpen(): boolean {
     return (
+      this.reportsOpen ||
       this.saleHistoryOpen ||
       this.receiptPreviewOpen ||
       this.closeRegisterOpen ||

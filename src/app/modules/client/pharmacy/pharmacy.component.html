@@ -11,7 +11,7 @@
                         <i class="fa fa-cubes"></i>
                         Product Management
                     </a>
-                    <button type="button" class="btn btn-success mr-2" (click)="openPharmacyPos()">
+                    <button type="button" class="btn btn-success mr-2" *ngIf="canOpenPharmacyPos" (click)="openPharmacyPos()">
                         <i class="fa fa-shopping-cart"></i>
                         Open Mooli POS
                     </button>
@@ -88,7 +88,7 @@
 	                                        </td>
 	                                        <td>{{ prescription.followUpDate | date:'mediumDate' }}</td>
 	                                        <td class="text-right">
-                                                <button type="button" class="btn btn-sm btn-success mr-2" (click)="openPharmacyPos(prescription)">
+                                                <button type="button" class="btn btn-sm btn-success mr-2" *ngIf="canOpenPharmacyPos" (click)="openPharmacyPos(prescription)">
                                                     <i class="fa fa-shopping-cart"></i>
                                                     Prepare Bill
                                                 </button>

@@ -1,9 +1,12 @@
 .mooli-pos-shell {
   background: #eef3f6;
   color: #172033;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 7px;
-  min-height: calc(100vh - 64px);
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
   padding: 8px;
 }
 
@@ -79,7 +82,7 @@
 .storepos-table-row.keyboard-active,
 .dock-actions button.keyboard-active {
   box-shadow: 0 0 0 3px rgba(1, 156, 157, 0.22);
-  outline: 2px solid #019C9D;
+  outline: 2px solid #019c9d;
   outline-offset: 2px;
 }
 
@@ -94,7 +97,7 @@
   background: #e8f7f7;
   border: 1px solid #b9e8e8;
   border-radius: 999px;
-  color: #003E86;
+  color: #003e86;
   display: inline-flex;
   font-size: 11px;
   font-weight: 900;
@@ -153,6 +156,7 @@
   border: 1px solid #d8e2e8;
   border-radius: 7px;
   display: flex;
+  flex-wrap: wrap;
   gap: 9px;
   padding: 6px 10px;
 }
@@ -167,17 +171,25 @@
 .storepos-stock-line strong {
   display: block;
   font-size: 11px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .storepos-stock-line i {
-  color: #019C9D;
+  color: #019c9d;
 }
 
 .register-status {
   margin-left: auto;
+}
+
+.storepos-stock-metric {
+  background: #eef6f7;
+  border: 1px solid #d4e3e8;
+  border-radius: 999px;
+  padding: 4px 10px;
 }
 
 .register-status i {
@@ -186,7 +198,7 @@
 }
 
 .register-status.open i {
-  color: #019C9D;
+  color: #019c9d;
 }
 
 .register-status.closed i {
@@ -245,7 +257,7 @@
   background: #102a43;
   border-radius: 7px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  color: #019C9D;
+  color: #019c9d;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -276,7 +288,7 @@
 .storepos-message.success {
   background: #e8f7f7;
   border: 1px solid #b9e8e8;
-  color: #003E86;
+  color: #003e86;
 }
 
 .storepos-message.warning {
@@ -328,8 +340,11 @@
 
 .storepos-main-grid {
   display: grid;
+  flex: 1 1 auto;
   gap: 8px;
   grid-template-columns: minmax(0, 1fr) 330px;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .storepos-cart-panel,
@@ -338,6 +353,8 @@
   border: 1px solid #d8e2e8;
   border-radius: 7px;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   overflow: hidden;
 }
@@ -346,7 +363,9 @@
 .storepos-table-row {
   display: grid;
   gap: 0;
-  grid-template-columns: minmax(180px, 1.5fr) 66px 56px 64px 118px 84px 82px 96px 38px;
+  grid-template-columns:
+    minmax(180px, 1.5fr)
+    66px 56px 64px 118px 84px 82px 96px 38px;
   min-width: 900px;
 }
 
@@ -365,7 +384,7 @@
 }
 
 .storepos-table-body {
-  max-height: calc(100vh - 332px);
+  flex: 1;
   min-height: 230px;
   overflow: auto;
 }
@@ -400,6 +419,11 @@
   color: #64748b;
   font-size: 11px;
   font-weight: 700;
+}
+
+.storepos-stock-cell {
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .storepos-table-row input {
@@ -479,6 +503,7 @@
 }
 
 .catalog-title {
+  flex: 0 0 auto;
   align-items: center;
   display: flex;
   justify-content: space-between;
@@ -500,8 +525,10 @@
 
 .catalog-grid {
   display: grid;
+  flex: 1;
   gap: 6px;
-  max-height: calc(100vh - 330px);
+  min-height: 0;
+  align-content: start;
   overflow-y: auto;
 }
 
@@ -523,7 +550,7 @@
 
 .catalog-card.keyboard-active {
   background: #ecfeff;
-  border-color: #019C9D;
+  border-color: #019c9d;
 }
 
 .catalog-card strong,
@@ -544,15 +571,16 @@
 }
 
 .catalog-card .catalog-meta {
-  color: #003E86;
+  color: #003e86;
   font-weight: 800;
 }
 
 .catalog-card em {
-  color: #019C9D;
+  color: #019c9d;
   font-size: 11px;
   font-style: normal;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .catalog-card em.out {
@@ -566,6 +594,59 @@
 
 .shortcut-modal {
   max-width: 760px;
+}
+
+.reports-card-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.report-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.report-card span,
+.report-card small {
+  color: #64748b;
+  display: block;
+}
+
+.report-card span {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.report-card strong {
+  color: #111827;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.report-card small {
+  font-size: 12px;
+}
+
+.report-card.good {
+  background: #ecfeff;
+  border-color: #a5f3fc;
+}
+
+.report-card.warn {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.reports-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .shortcut-grid {
@@ -624,14 +705,14 @@
   align-items: center;
   background: #0f2832;
   border-radius: 7px;
-  bottom: 0;
+  flex: 0 0 auto;
+  margin-top: auto;
   box-shadow: 0 -10px 24px rgba(15, 40, 50, 0.18);
   color: #e2f6f4;
   display: grid;
   gap: 8px;
   grid-template-columns: minmax(240px, 1fr) minmax(320px, 0.9fr) auto;
   padding: 8px;
-  position: sticky;
   z-index: 5;
 }
 
@@ -641,6 +722,11 @@
   align-items: center;
   display: flex;
   gap: 8px;
+  justify-content: end;
+}
+
+.dock-summary {
+  justify-content: start;
 }
 
 .dock-summary span,
@@ -652,6 +738,7 @@
   font-size: 12px;
   font-weight: 800;
   padding: 6px 8px;
+  white-space: nowrap;
 }
 
 .dock-summary strong,
@@ -693,12 +780,12 @@
 }
 
 .cash-btn {
-  background: #019C9D;
+  background: #019c9d;
 }
 
 .pay-btn,
 .modern-register-submit {
-  background: #003E86;
+  background: #003e86;
 }
 
 .pay-btn:disabled,
@@ -760,7 +847,7 @@
   align-items: center;
   background: #e8f7f7;
   border-radius: 50%;
-  color: #003E86;
+  color: #003e86;
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 18px;
@@ -938,7 +1025,7 @@
 }
 
 .status-pill {
-  color: #003E86;
+  color: #003e86;
   font-weight: 900;
   text-transform: capitalize;
 }
@@ -1073,8 +1160,13 @@
 
   .storepos-invoice-grid,
   .prescription-banner,
-  .modern-register-summary {
+  .modern-register-summary,
+  .reports-card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .reports-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
