@@ -19,12 +19,13 @@ async function warmMooliCaches(): Promise<void> {
     return;
   }
 
-  const cache = await caches.open('mooli-offline-shell-v1');
+  const cache = await caches.open('mooli-offline-shell-v2');
   const assetUrls = new Set<string>([
     `${window.location.origin}/`,
     `${window.location.origin}/index.html`,
     `${window.location.origin}/manifest.webmanifest`,
-    `${window.location.origin}/favicon.ico`,
+    `${window.location.origin}/favicon.png`,
+    `${window.location.origin}/assets/hisar1.png`,
   ]);
 
   document.querySelectorAll<HTMLScriptElement>('script[src]').forEach((script) => {

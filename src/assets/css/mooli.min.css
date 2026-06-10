@@ -2262,6 +2262,17 @@ html.fullscreen-bg #wrapper {
 .toggle_menu_active .sidebar .navbar-brand {
   text-align: right;
 }
+.toggle_menu_active .sidebar .navbar-brand a {
+  width: 42px;
+  height: 42px;
+}
+.toggle_menu_active .sidebar .navbar-brand .logo {
+  flex: 0 0 auto;
+  width: 126px;
+  height: 42px;
+  object-fit: contain;
+  object-position: left center;
+}
 .toggle_menu_active .sidebar .navbar-brand span {
   display: none;
 }
@@ -2522,11 +2533,21 @@ html.fullscreen-bg #wrapper {
   line-height: 0.7;
 }
 .navbar-fixed-top .navbar-btn .logo {
-  width: 30px;
+  width: 132px;
+  height: 42px;
+  margin-right: 10px;
+  object-fit: contain;
+  object-position: center;
+  vertical-align: middle;
 }
 @media screen and (max-width: 640px) {
   .navbar-fixed-top .navbar-btn {
     margin-left: 0;
+  }
+  .navbar-fixed-top .navbar-btn .logo {
+    width: 100px;
+    height: 38px;
+    margin-right: 6px;
   }
 }
 @media screen and (max-width: 1280px) {
@@ -2817,8 +2838,17 @@ html.fullscreen-bg #wrapper {
   padding: 0 0 16px 0;
   margin: 15px 20px 0 20px;
 }
+.sidebar .navbar-brand a {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+}
 .sidebar .navbar-brand .logo {
-  width: 30px;
+  width: 184px;
+  height: 62px;
+  object-fit: contain;
+  object-position: center;
 }
 .sidebar .navbar-brand span {
   display: inline-block;
@@ -3557,10 +3587,24 @@ select.form-control:not([size]):not([multiple]) {
   border: 0;
 }
 .auth-main .auth_brand .navbar-brand {
+  display: inline-flex;
+  align-items: center;
   color: var(--dark-color);
   font-size: 35px;
   margin: 0;
   padding: 0;
+}
+.auth-main .auth_brand .brand-logo {
+  width: 260px;
+  height: 100px;
+  object-fit: contain;
+  object-position: center;
+}
+@media screen and (max-width: 640px) {
+  .auth-main .auth_brand .brand-logo {
+    width: 220px;
+    height: 84px;
+  }
 }
 .auth-main .form-auth-small .element-left {
   float: left;

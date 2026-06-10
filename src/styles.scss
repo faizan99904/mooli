@@ -2311,6 +2311,7 @@ html.fullscreen-bg #wrapper {
   flex: 0 0 auto;
   width: 126px;
   height: 42px;
+  object-fit: contain;
   object-position: left center;
 }
 
@@ -2587,7 +2588,7 @@ html.fullscreen-bg #wrapper {
   width: 132px;
   height: 42px;
   margin-right: 10px;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   vertical-align: middle;
 }
@@ -2898,7 +2899,7 @@ html.fullscreen-bg #wrapper {
 .sidebar .navbar-brand .logo {
   width: 184px;
   height: 62px;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
 }
 .sidebar .navbar-brand span {
@@ -3648,7 +3649,7 @@ select.form-control:not([size]):not([multiple]) {
 .auth-main .auth_brand .brand-logo {
   width: 260px;
   height: 100px;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
 }
 @media screen and (max-width: 640px) {

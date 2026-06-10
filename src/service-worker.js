@@ -1,9 +1,10 @@
-const CACHE_NAME = 'mooli-offline-shell-v1';
+const CACHE_NAME = 'mooli-offline-shell-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/favicon.ico',
+  '/favicon.png',
+  '/assets/hisar1.png',
 ];
 
 self.addEventListener('install', (event) => {
