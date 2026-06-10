@@ -45,8 +45,8 @@ export class AppointmentComponent implements OnInit {
   saving = false;
   patientSaving = false;
   status = '';
-  dateFrom = '';
-  dateTo = '';
+  dateFrom = this.todayValue();
+  dateTo = this.todayValue();
   page = 1;
   limit = 10;
   totalPages = 0;
@@ -172,13 +172,16 @@ export class AppointmentComponent implements OnInit {
       ...value,
       departmentId: selectedDoctor?.departmentId || value.departmentId || undefined,
     };
+    const isEditing = Boolean(this.editingId);
     this.removeEmptyTimeFields(payload);
+    if (!isEditing) {
+      this.removeEmptyOptionalTextFields(payload, ['reason', 'notes']);
+    }
 
     if (!this.editingId && this.currentHospitalId) {
       payload['hospitalId'] = this.currentHospitalId;
     }
 
-    const isEditing = Boolean(this.editingId);
     const selectedPatient = this.selectedPatient;
     const selectedDoctorForToken = selectedDoctor;
 
@@ -1015,6 +1018,14 @@ export class AppointmentComponent implements OnInit {
     }
   }
 
+  private removeEmptyOptionalTextFields(payload: Record<string, unknown>, fields: string[]): void {
+    fields.forEach((field) => {
+      if (String(payload[field] || '').trim() === '') {
+        delete payload[field];
+      }
+    });
+  }
+
   private patientsCacheKey(): string {
     return this.offline.cacheKey('patients');
   }
@@ -1086,7 +1097,12 @@ export class AppointmentComponent implements OnInit {
   }
 
   private todayValue(): string {
-    return new Date().toISOString().slice(0, 10);
+    const today = new Date();
+    return [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
   }
 
   private findDoctorByUserId(userId?: string | null): Doctor | undefined {

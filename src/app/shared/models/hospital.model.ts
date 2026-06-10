@@ -120,6 +120,7 @@ export interface PatientHistory {
   doctorId: string;
   doctor?: User | null;
   appointmentId?: string | null;
+  sourcePrescriptionId?: string | null;
   recordType?: 'clinical' | 'laboratory' | 'ward';
   title?: string | null;
   diagnosis?: string | null;

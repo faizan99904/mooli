@@ -13,6 +13,8 @@ import { Appointment, Doctor, Patient } from '../../../../shared/models/hospital
   styleUrl: './doctors-profile.component.scss'
 })
 export class DoctorsProfileComponent implements OnInit {
+  readonly days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
   basicTab: boolean = true;
   accountTab!: boolean;
   generalTab!: boolean;
@@ -75,6 +77,15 @@ export class DoctorsProfileComponent implements OnInit {
 
   patientName(patient?: Patient | null): string {
     return patient ? `${patient.firstName} ${patient.lastName}`.trim() : '-';
+  }
+
+  availableDaysLabel(days?: string[] | null): string {
+    const selected = new Set(days || []);
+    const labels = this.days
+      .filter((day) => selected.has(day))
+      .map((day) => day.charAt(0).toUpperCase() + day.slice(1));
+
+    return labels.length ? labels.join(', ') : '-';
   }
 
   fullScreenSection(number:any) {

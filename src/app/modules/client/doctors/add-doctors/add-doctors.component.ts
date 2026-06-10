@@ -142,9 +142,15 @@ export class AddDoctorsComponent implements OnInit {
   toggleDay(day: string, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
 
-    this.selectedDays = checked
+    const nextDays = checked
       ? [...this.selectedDays, day]
       : this.selectedDays.filter((item) => item !== day);
+
+    this.selectedDays = this.normalizeDays(nextDays);
+  }
+
+  isDaySelected(day: string): boolean {
+    return this.selectedDays.includes(day);
   }
 
   submitDoctor(): void {
@@ -165,7 +171,7 @@ export class AddDoctorsComponent implements OnInit {
       qualification: value.qualification || undefined,
       experienceYears: Number(value.experienceYears || 0),
       consultationFee: Number(value.consultationFee || 0),
-      availableDays: this.selectedDays,
+      availableDays: this.normalizeDays(this.selectedDays),
       availableSlots:
         value.startTime && value.endTime
           ? [
@@ -208,7 +214,7 @@ export class AddDoctorsComponent implements OnInit {
       return;
     }
 
-    this.selectedDays = [...(this.editingDoctor.availableDays || [])];
+    this.selectedDays = this.normalizeDays(this.editingDoctor.availableDays || []);
     const primarySlot = this.editingDoctor.availableSlots?.[0];
 
     this.doctorForm.patchValue({
@@ -222,7 +228,7 @@ export class AddDoctorsComponent implements OnInit {
       qualification: this.editingDoctor.qualification || '',
       experienceYears: this.editingDoctor.experienceYears || 0,
       consultationFee: this.editingDoctor.consultationFee || 0,
-      slotDay: primarySlot?.day || this.editingDoctor.availableDays?.[0] || 'monday',
+      slotDay: primarySlot?.day || this.selectedDays[0] || 'monday',
       startTime: primarySlot?.startTime || '09:00',
       endTime: primarySlot?.endTime || '13:00',
       status: this.editingDoctor.status || 'active',
@@ -230,5 +236,10 @@ export class AddDoctorsComponent implements OnInit {
 
     this.doctorForm.get('password')?.clearValidators();
     this.doctorForm.get('password')?.updateValueAndValidity();
+  }
+
+  private normalizeDays(days: string[]): string[] {
+    const selected = new Set(days);
+    return this.days.filter((day) => selected.has(day));
   }
 }

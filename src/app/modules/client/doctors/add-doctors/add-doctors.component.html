@@ -117,7 +117,8 @@
                                     <label>Available Days</label>
                                     <div class="d-flex flex-wrap">
                                         <label class="fancy-checkbox mr-3" *ngFor="let day of days">
-                                            <input type="checkbox" (change)="toggleDay(day, $event)">
+                                            <input type="checkbox" [checked]="isDaySelected(day)"
+                                                (change)="toggleDay(day, $event)">
                                             <span class="text-capitalize">{{ day }}</span>
                                         </label>
                                     </div>

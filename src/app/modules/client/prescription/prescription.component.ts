@@ -166,7 +166,7 @@ export class PrescriptionComponent implements OnInit {
       medicines: this.fb.array([this.createMedicineGroup()]),
       labTests: this.fb.array(this.labTestCatalog.map((test) => this.createLabTestGroup(test))),
       customLabTest: [''],
-      ivFluids: this.fb.array([this.createIvFluidGroup('DNS', '80 ml/hr', '500 ml')]),
+      ivFluids: this.fb.array([this.createIvFluidGroup()]),
       admissionOrders: this.fb.group({
         regularDiet: [true],
         npo: [false],
@@ -270,7 +270,7 @@ export class PrescriptionComponent implements OnInit {
 
   createIvFluidGroup(name = '', rate = '', duration = ''): FormGroup {
     return this.fb.group({
-      name: [name, Validators.required],
+      name: [name],
       rate: [rate],
       duration: [duration],
     });
@@ -715,10 +715,14 @@ export class PrescriptionComponent implements OnInit {
       },
     });
 
+    const appointmentDate = this.todayValue();
+
     this.backend
       .getAppointments({
         limit: 100,
         doctorId: this.isDoctorUser() ? this.currentUserId || undefined : undefined,
+        dateFrom: appointmentDate,
+        dateTo: appointmentDate,
       })
       .subscribe({
         next: (result) => {
@@ -1124,7 +1128,7 @@ export class PrescriptionComponent implements OnInit {
     this.labTests.clear();
     this.labTestCatalog.forEach((test) => this.labTests.push(this.createLabTestGroup(test)));
     this.ivFluids.clear();
-    this.ivFluids.push(this.createIvFluidGroup('DNS', '80 ml/hr', '500 ml'));
+    this.ivFluids.push(this.createIvFluidGroup());
     this.applyRouteDefaults();
     this.selectInitialAppointment();
     this.loadDoctorMedicines();
@@ -1307,9 +1311,7 @@ export class PrescriptionComponent implements OnInit {
 
   visibleAppointments(): Appointment[] {
     const query = this.patientSearch.trim().toLowerCase();
-    const today = new Date().toISOString().slice(0, 10);
-    const items = this.appointments.filter((appointment) => appointment.appointmentDate.slice(0, 10) === today);
-    const source = items.length ? items : this.appointments;
+    const source = this.appointments.filter((appointment) => this.isTodayAppointment(appointment));
 
     if (!query) {
       return source.slice(0, 8);
@@ -1383,7 +1385,9 @@ export class PrescriptionComponent implements OnInit {
 
   private async applyAppointmentList(items: Appointment[]): Promise<void> {
     const localAppointments = await this.localQueuedAppointments();
-    this.appointments = this.mergeAppointments([...localAppointments, ...items]);
+    this.appointments = this.mergeAppointments([...localAppointments, ...items]).filter((appointment) =>
+      this.isTodayAppointment(appointment),
+    );
   }
 
   private async loadCachedDoctorMedicines(
@@ -1614,6 +1618,7 @@ export class PrescriptionComponent implements OnInit {
     return this.offline.cacheKey(
       'prescription-appointments',
       this.isDoctorUser() ? this.currentUserId || 'doctor' : 'all',
+      this.todayValue(),
     );
   }
 
@@ -1668,6 +1673,36 @@ export class PrescriptionComponent implements OnInit {
     if (firstAppointment && !this.prescriptionForm.value.patientId) {
       this.selectAppointment(firstAppointment);
     }
+  }
+
+  private isTodayAppointment(appointment: Appointment): boolean {
+    return this.dateOnly(appointment.appointmentDate) === this.todayValue();
+  }
+
+  private dateOnly(value: string | Date): string {
+    if (typeof value === 'string') {
+      return value.slice(0, 10);
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-');
+  }
+
+  private todayValue(): string {
+    const today = new Date();
+    return [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
   }
 
   private isDoctorUser(): boolean {

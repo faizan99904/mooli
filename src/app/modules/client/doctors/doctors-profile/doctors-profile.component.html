@@ -42,7 +42,7 @@
                             <div class="col-md-6 mb-3"><strong>Qualification:</strong> {{ doctor?.qualification || '-' }}</div>
                             <div class="col-md-6 mb-3"><strong>Experience:</strong> {{ doctor?.experienceYears || 0 }} years</div>
                             <div class="col-md-6 mb-3"><strong>Consultation Fee:</strong> {{ doctor?.consultationFee || 0 }}</div>
-                            <div class="col-md-12 mb-3"><strong>Available Days:</strong> {{ (doctor?.availableDays || []).join(', ') || '-' }}</div>
+                            <div class="col-md-12 mb-3"><strong>Available Days:</strong> {{ availableDaysLabel(doctor?.availableDays) }}</div>
                         </div>
                     </div>
                 </div>
