@@ -19,7 +19,14 @@ export class HeaderComponent implements OnInit {
   chatTab: boolean = true;
   noteText: string = '';
   notesList: any[] = [];
-  private readonly posPermission = 'sales.create';
+  private readonly posPermissions = [
+    'sales.create',
+    'sales.read',
+    'products.read',
+    'register_sessions.open',
+    'register_sessions.read',
+    'register_sessions.close',
+  ];
   constructor(
     private router: Router,
     private backend: BackendService,
@@ -134,7 +141,7 @@ export class HeaderComponent implements OnInit {
   }
 
   get canOpenPos(): boolean {
-    return this.backend.hasPermission('*') || this.backend.hasPermission(this.posPermission);
+    return this.posPermissions.every((permission) => this.backend.hasPermission(permission));
   }
 
   openPos(): void {

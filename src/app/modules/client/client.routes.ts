@@ -70,8 +70,13 @@ const PRESCRIPTION_ACCESS = ['owner', 'superAdmin', 'prescriptions.read', 'presc
 const PHARMACY_ACCESS = [
   'owner',
   'superAdmin',
+  'pharmacy',
   'prescriptions.read',
   'products.read',
+];
+const PHARMACY_POS_ACCESS = [
+  'owner',
+  'superAdmin',
   'sales.create',
   'sales.read',
   'register_sessions.open',
@@ -318,7 +323,7 @@ export const clientRoutes: Routes = [
         path: 'pharmacy/pos',
         component: PharmacyPosComponent,
         data: { title: 'Mooli | Pharmacy POS' },
-        canActivate: [roleGuard(PHARMACY_ACCESS)],
+        canActivate: [roleGuard(PHARMACY_POS_ACCESS)],
       },
       {
         path: 'pharmacy',

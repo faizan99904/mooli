@@ -1,9 +1,19 @@
-<div class="wrapper">
-    <div class="sidebar">
-        <app-leftmenu></app-leftmenu>
+<div class="wrapper" [class.pos-layout]="hideShell$ | async">
+    <ng-container *ngIf="!(hideShell$ | async); else posOnly">
+        <div class="sidebar">
+            <app-leftmenu></app-leftmenu>
+        </div>
+        <div class="layout-main">
+            <app-header></app-header>
+            <router-outlet></router-outlet>
+        </div>
+    </ng-container>
+
+    <ng-template #posOnly>
+        <div class="pos-content">
+            <router-outlet></router-outlet>
+        </div>
+    </ng-template>
+    
+    
     </div>
-    <div class="w-100">
-        <app-header></app-header>
-        <router-outlet></router-outlet>
-    </div>
-</div>

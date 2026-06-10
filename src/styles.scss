@@ -4,6 +4,38 @@ html,
 body {
   height: 100%;
 }
+
+html.pos-route-active,
+body.pos-route-active {
+  height: 100%;
+  overflow: hidden;
+}
+
+body.pos-route-active {
+  overscroll-behavior: none;
+}
+
+body.pos-route-active app-layout,
+body.pos-route-active .wrapper,
+body.pos-route-active .pos-content {
+  height: 100%;
+}
+
+body.pos-route-active #main-content {
+  width: 100% !important;
+  min-height: 100vh;
+  height: 100vh;
+  float: none;
+  margin-top: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body.pos-route-active.toggle_menu_active #main-content,
+body.pos-route-active .toggle_menu_active #main-content {
+  width: 100% !important;
+}
+
 body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
