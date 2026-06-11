@@ -55,21 +55,43 @@
           </div>
         </dl>
 
-        <div class="visit-type">
-          <label><input type="radio" checked /> OPD</label>
-          <label><input type="radio" /> Follow Up</label>
-        </div>
-
-        <div class="vitals-card" [formGroup]="vitalsGroup">
-          <div class="vitals-head">
-            <strong>Vitals</strong>
-            <span>{{ currentTime() }}</span>
+        <div [formGroup]="prescriptionForm">
+          <div class="visit-type">
+            <label><input type="radio" formControlName="visitType" [value]="'opd'" /> OPD</label>
+            <label><input type="radio" formControlName="visitType" [value]="'follow_up'" /> Follow Up</label>
           </div>
-          <label>BP <input formControlName="bp" placeholder="120/80 mmHg" /></label>
-          <label>Pulse <input formControlName="pulse" placeholder="78 /min" /></label>
-          <label>Weight <input formControlName="weight" placeholder="72 Kg" /></label>
-          <label>Temperature <input formControlName="temperature" placeholder="98.6 F" /></label>
-          <label>SpO2 <input formControlName="spo2" placeholder="98%" /></label>
+
+          <div class="vitals-card" [formGroup]="vitalsGroup">
+            <div class="vitals-head">
+              <strong>Vitals</strong>
+              <div class="vitals-head-actions">
+                <span>{{ currentTime() }}</span>
+                <button type="button" class="vital-add-btn" (click)="addCustomVital()" aria-label="Add custom vital">
+                  <i class="fa fa-plus-circle"></i>
+                </button>
+              </div>
+            </div>
+            <label>BP <input formControlName="bp" placeholder="120/80 mmHg" /></label>
+            <label>Pulse <input formControlName="pulse" placeholder="78 /min" /></label>
+            <label>Weight <input formControlName="weight" placeholder="72 Kg" /></label>
+            <label>Temperature <input formControlName="temperature" placeholder="98.6 F" /></label>
+            <label>SpO2 <input formControlName="spo2" placeholder="98%" /></label>
+          </div>
+
+          <div class="custom-vitals-card" formArrayName="customVitals" *ngIf="customVitals.length > 0">
+            <div class="custom-vital-row custom-vital-head">
+              <strong>Vital Name</strong>
+              <strong>Value</strong>
+              <span></span>
+            </div>
+            <div class="custom-vital-row" *ngFor="let vital of customVitals.controls; let i = index" [formGroupName]="i">
+              <input formControlName="key" placeholder="Respiratory Rate" />
+              <input formControlName="value" placeholder="18 /min" />
+              <button type="button" (click)="removeCustomVital(i)" aria-label="Remove custom vital">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
@@ -505,11 +527,14 @@
             <aside class="print-side-panel">
               <div class="print-mini-title">O/E</div>
               <table>
-                <tr><th>BP</th><td>{{ preview.vitals['bp'] || '-' }}</td></tr>
-                <tr><th>WT kg</th><td>{{ preview.vitals['weight'] || '-' }}</td></tr>
-                <tr><th>PR/min</th><td>{{ preview.vitals['pulse'] || '-' }}</td></tr>
-                <tr><th>TEMP</th><td>{{ preview.vitals['temperature'] || '-' }}</td></tr>
-                <tr><th>SPO2</th><td>{{ preview.vitals['spo2'] || '-' }}</td></tr>
+                <tr *ngFor="let vital of vitalEntries(preview.vitals)">
+                  <th>{{ vital.label }}</th>
+                  <td>{{ vital.value }}</td>
+                </tr>
+                <tr *ngIf="vitalEntries(preview.vitals).length === 0">
+                  <th>Vitals</th>
+                  <td>-</td>
+                </tr>
               </table>
 
               <div class="print-mini-title labs-title">LAB's</div>

@@ -11,8 +11,6 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { BackendService } from '../../../core/services/backend.service';
 import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/mooli-offline.service';
 import {
@@ -157,6 +155,14 @@ export class PrescriptionComponent implements OnInit {
     { name: 'Chest X-Ray', category: 'Radiology' },
     { name: 'Sputum Culture', category: 'Microbiology' },
   ];
+  readonly defaultVitalKeys = new Set(['bp', 'pulse', 'weight', 'temperature', 'spo2']);
+  readonly defaultVitalLabels: Record<string, string> = {
+    bp: 'BP',
+    pulse: 'Pulse',
+    weight: 'Weight',
+    temperature: 'Temperature',
+    spo2: 'SpO2',
+  };
 
   constructor(
     private fb: FormBuilder,
@@ -169,6 +175,7 @@ export class PrescriptionComponent implements OnInit {
       patientId: ['', Validators.required],
       doctorId: ['', Validators.required],
       appointmentId: [''],
+      visitType: ['opd'],
       chiefComplaint: [''],
       history: [''],
       examination: [''],
@@ -196,6 +203,7 @@ export class PrescriptionComponent implements OnInit {
         temperature: [''],
         spo2: [''],
       }),
+      customVitals: this.fb.array([]),
       advice: [''],
       followUpDate: [''],
     });
@@ -245,6 +253,10 @@ export class PrescriptionComponent implements OnInit {
 
   get vitalsGroup(): FormGroup {
     return this.prescriptionForm.get('vitals') as FormGroup;
+  }
+
+  get customVitals(): FormArray {
+    return this.prescriptionForm.get('customVitals') as FormArray;
   }
 
   get canCreatePrescriptions(): boolean {
@@ -300,8 +312,23 @@ export class PrescriptionComponent implements OnInit {
     });
   }
 
+  createCustomVitalGroup(key = '', value = ''): FormGroup {
+    return this.fb.group({
+      key: [key],
+      value: [value],
+    });
+  }
+
   addMedicine(): void {
     this.medicines.push(this.createMedicineGroup());
+  }
+
+  addCustomVital(key = '', value = ''): void {
+    this.customVitals.push(this.createCustomVitalGroup(key, value));
+  }
+
+  removeCustomVital(index: number): void {
+    this.customVitals.removeAt(index);
   }
 
   onSmartMedicineInputChange(): void {
@@ -1038,6 +1065,7 @@ export class PrescriptionComponent implements OnInit {
       patientId: value.patientId,
       doctorId: value.doctorId,
       appointmentId: value.appointmentId || undefined,
+      visitType: value.visitType || 'opd',
       chiefComplaint: value.chiefComplaint || undefined,
       history: value.history || undefined,
       examination: value.examination || undefined,
@@ -1046,7 +1074,10 @@ export class PrescriptionComponent implements OnInit {
       labTests: value.labTests.filter((test: Record<string, unknown>) => test['selected'] && test['name']),
       ivFluids: value.ivFluids.filter((fluid: Record<string, unknown>) => String(fluid['name'] || '').trim()),
       admissionOrders: value.admissionOrders,
-      vitals: value.vitals,
+      vitals: this.buildVitalsPayload(
+        value.vitals as Record<string, unknown>,
+        value.customVitals as Array<Record<string, unknown>>
+      ),
       advice: value.advice || undefined,
       followUpDate: value.followUpDate || undefined,
     };
@@ -1111,15 +1142,20 @@ export class PrescriptionComponent implements OnInit {
       patientId: prescription.patientId,
       doctorId: prescription.doctorId,
       appointmentId: prescription.appointmentId || '',
+      visitType: prescription.visitType || 'opd',
       chiefComplaint: prescription.chiefComplaint || '',
       history: prescription.history || '',
       examination: prescription.examination || '',
       diagnosis: prescription.diagnosis || '',
       advice: prescription.advice || '',
       followUpDate: prescription.followUpDate ? String(prescription.followUpDate).slice(0, 10) : '',
-      vitals: prescription.vitals || {},
+      vitals: this.extractDefaultVitals(prescription.vitals || {}),
       admissionOrders: prescription.admissionOrders || {},
     });
+    this.customVitals.clear();
+    this.extractCustomVitals(prescription.vitals || {}).forEach((entry) =>
+      this.customVitals.push(this.createCustomVitalGroup(entry.key, entry.value))
+    );
 
     this.medicines.clear();
     (prescription.medicines || []).forEach((medicine) => this.medicines.push(this.createMedicineGroup(medicine as any)));
@@ -1151,6 +1187,7 @@ export class PrescriptionComponent implements OnInit {
   resetForm(): void {
     this.editingId = null;
     this.prescriptionForm.reset({
+      visitType: 'opd',
       admissionOrders: {
         regularDiet: true,
         monitoring: {
@@ -1161,6 +1198,7 @@ export class PrescriptionComponent implements OnInit {
         },
       },
     });
+    this.customVitals.clear();
     this.medicines.clear();
     this.addMedicine();
     this.labTests.clear();
@@ -1295,27 +1333,17 @@ export class PrescriptionComponent implements OnInit {
 
   openPrintPreview(prescription: Prescription | null = null): void {
     this.previewPrescription = prescription;
-    this.printPreviewData = this.buildPrintPreviewData(prescription);
-    this.printPreviewOpen = true;
-
-    if (!prescription?._id || prescription._id.startsWith('local-')) {
+    this.printPreviewData =
+      this.buildPrintPreviewData(prescription) ||
+      this.buildPrintPreviewData();
+    this.printPreviewLoading = false;
+    if (!this.printPreviewData) {
+      this.printPreviewOpen = false;
+      this.toastr.error('Unable to build prescription preview.');
       return;
     }
 
-    this.printPreviewLoading = true;
-    this.backend
-      .getPrescription(prescription._id)
-      .pipe(finalize(() => (this.printPreviewLoading = false)))
-      .subscribe({
-        next: (result) => {
-          this.previewPrescription = result;
-          this.printPreviewData = this.buildPrintPreviewData(result);
-        },
-        error: (err) => {
-          this.printPreviewLoading = false;
-          this.toastr.error(err?.error?.message || 'Unable to load prescription preview');
-        },
-      });
+    this.printPreviewOpen = true;
   }
 
   closePrintPreview(): void {
@@ -1330,21 +1358,7 @@ export class PrescriptionComponent implements OnInit {
       return;
     }
 
-    html2canvas(this.printContent.nativeElement, {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      useCORS: true,
-    }).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
-      (pdf as any).autoPrint?.();
-      const printUrl = pdf.output('bloburl');
-      window.open(printUrl, '_blank');
-    });
+    this.openPrescriptionPrintWindow(this.printContent.nativeElement.innerHTML);
   }
 
   visibleAppointments(): Appointment[] {
@@ -1531,6 +1545,7 @@ export class PrescriptionComponent implements OnInit {
       admissionOrders: (payload['admissionOrders'] as Prescription['admissionOrders']) || null,
       vitals: (payload['vitals'] as Record<string, string> | undefined) || {},
       advice: (payload['advice'] as string | undefined) || null,
+      visitType: (payload['visitType'] as string | undefined) || 'opd',
       followUpDate: (payload['followUpDate'] as string | undefined) || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -2124,11 +2139,31 @@ export class PrescriptionComponent implements OnInit {
     };
   }
 
+  vitalEntries(vitals: Record<string, string> | null | undefined): Array<{ label: string; value: string }> {
+    const source = vitals || {};
+    const orderedDefaultEntries = ['bp', 'weight', 'pulse', 'temperature', 'spo2']
+      .filter((key) => Object.prototype.hasOwnProperty.call(source, key))
+      .map((key) => ({
+        label: this.defaultVitalLabels[key] || key,
+        value: String(source[key] || '').trim() || '-',
+      }));
+
+    const customEntries = Object.entries(source)
+      .filter(([key]) => !this.defaultVitalKeys.has(key))
+      .map(([key, value]) => ({
+        label: this.formatVitalLabel(key),
+        value: String(value || '').trim() || '-',
+      }));
+
+    return [...orderedDefaultEntries, ...customEntries];
+  }
+
   private resolvePrintPatient(source: Record<string, any>): Patient | null {
     const patientId = String(source['patientId'] || '');
     const patient =
       this.patients.find((item) => item._id === patientId) ||
       source['patient'] ||
+      this.selectedPatient() ||
       this.selectedAppointment()?.patient ||
       null;
 
@@ -2268,5 +2303,129 @@ export class PrescriptionComponent implements OnInit {
       })
       .replace(/ /g, '-')
       .toUpperCase();
+  }
+
+  private openPrescriptionPrintWindow(content: string): void {
+    const iframe = document.createElement('iframe');
+    const baseHref = document.baseURI || window.location.href;
+    const styles = this.collectDocumentStyles();
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const printDocument = iframe.contentWindow?.document;
+    const printWindow = iframe.contentWindow;
+
+    if (!printDocument || !printWindow) {
+      iframe.remove();
+      this.toastr.error('Unable to open prescription print view.');
+      return;
+    }
+
+    printDocument.open();
+    printDocument.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <base href="${baseHref}" />
+          <title>Prescription Print</title>
+          ${styles}
+          <style>
+            body {
+              background: #ffffff;
+              margin: 0;
+              padding: 0;
+            }
+
+            @page {
+              margin: 0;
+              size: A4;
+            }
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+    printDocument.close();
+    printWindow.onafterprint = () => iframe.remove();
+
+    window.setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      window.setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          iframe.remove();
+        }
+      }, 15000);
+    }, 300);
+  }
+
+  private collectDocumentStyles(): string {
+    const inlineStyles = Array.from(document.querySelectorAll('style'))
+      .map((style) => style.outerHTML)
+      .join('\n');
+    const linkedStyles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map((style) => style.outerHTML)
+      .join('\n');
+
+    return `${linkedStyles}\n${inlineStyles}`;
+  }
+
+  private buildVitalsPayload(
+    vitals: Record<string, unknown>,
+    customVitals: Array<Record<string, unknown>>
+  ): Record<string, string> {
+    const payload: Record<string, string> = {};
+
+    Object.entries(vitals || {}).forEach(([key, value]) => {
+      payload[key] = String(value || '').trim();
+    });
+
+    (customVitals || []).forEach((entry) => {
+      const key = String(entry['key'] || '').trim();
+      const value = String(entry['value'] || '').trim();
+      if (!key) {
+        return;
+      }
+      payload[key] = value;
+    });
+
+    return payload;
+  }
+
+  private extractDefaultVitals(vitals: Record<string, string>): Record<string, string> {
+    return {
+      bp: String(vitals['bp'] || ''),
+      pulse: String(vitals['pulse'] || ''),
+      weight: String(vitals['weight'] || ''),
+      temperature: String(vitals['temperature'] || ''),
+      spo2: String(vitals['spo2'] || ''),
+    };
+  }
+
+  private extractCustomVitals(vitals: Record<string, string>): Array<{ key: string; value: string }> {
+    return Object.entries(vitals || {})
+      .filter(([key]) => !this.defaultVitalKeys.has(key))
+      .map(([key, value]) => ({
+        key,
+        value: String(value || ''),
+      }));
+  }
+
+  private formatVitalLabel(key: string): string {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/_/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^./, (letter) => letter.toUpperCase());
   }
 }

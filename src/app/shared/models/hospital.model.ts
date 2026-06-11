@@ -211,6 +211,7 @@ export interface Prescription {
   history?: string | null;
   examination?: string | null;
   diagnosis?: string | null;
+  visitType?: 'opd' | 'follow_up' | string | null;
   labTests?: PrescriptionLabTest[];
   ivFluids?: PrescriptionIvFluid[];
   admissionOrders?: {
