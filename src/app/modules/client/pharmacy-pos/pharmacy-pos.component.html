@@ -434,7 +434,11 @@
         <div class="modern-register-body">
             <section class="receipt-preview-card">
                 <div class="receipt-preview-head">
-                    <h2>{{ receipt.storeName }}</h2>
+                    <img *ngIf="receiptLogoUrl(receipt)" class="receipt-preview-logo" [src]="receiptLogoUrl(receipt)" [alt]="receiptBrandTitle(receipt)" />
+                    <h2>{{ receiptBrandTitle(receipt) }}</h2>
+                    <p *ngIf="receiptBrandSubtitle(receipt)">{{ receiptBrandSubtitle(receipt) }}</p>
+                    <p *ngIf="receiptHeaderNote(receipt)">{{ receiptHeaderNote(receipt) }}</p>
+                    <p *ngFor="let line of receiptHeaderLines(receipt)">{{ line }}</p>
                     <p>{{ receipt.storeAddress || 'Mooli Pharmacy' }}</p>
                     <strong>Bill / Receipt</strong>
                 </div>
@@ -475,6 +479,10 @@
                     <div><span>Paid</span><strong>{{ formatCurrency(receipt.paidAmount) }}</strong></div>
                     <div><span>Change</span><strong>{{ formatCurrency(receipt.changeDueAmount) }}</strong></div>
                     <div><span>Status</span><strong>{{ receipt.paymentStatus }}</strong></div>
+                </div>
+                <div class="receipt-preview-foot">
+                    <strong>{{ receiptFooterTitle(receipt) }}</strong>
+                    <p *ngFor="let line of receiptFooterLines(receipt)">{{ line }}</p>
                 </div>
             </section>
 

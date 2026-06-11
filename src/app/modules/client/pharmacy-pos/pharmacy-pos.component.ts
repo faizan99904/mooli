@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
 import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/mooli-offline.service';
+import { CompanyProfile, ReceiptLetterheadSettings } from '../../../shared/models/company.model';
 import {
   CreateSalePayload,
   Prescription,
@@ -46,6 +47,7 @@ interface ReceiptPreviewLine {
 interface ReceiptPreviewData {
   reference: string;
   saleDate: string;
+  companyName: string;
   storeName: string;
   storeAddress: string;
   cashierName: string;
@@ -60,6 +62,7 @@ interface ReceiptPreviewData {
   cashReceivedAmount: number;
   changeDueAmount: number;
   note: string;
+  receiptLetterhead?: ReceiptLetterheadSettings;
 }
 
 interface PosShortcutDefinition {
@@ -86,6 +89,7 @@ interface PharmacyReportCard {
   styleUrl: './pharmacy-pos.component.scss',
 })
 export class PharmacyPosComponent implements OnInit {
+  companyProfile: CompanyProfile | null = null;
   stores: Store[] = [];
   products: ProductCatalogItem[] = [];
   billLines: PharmacyBillLine[] = [];
@@ -198,6 +202,7 @@ export class PharmacyPosComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadCompanyProfile();
     this.route.queryParamMap.subscribe((params) => {
       this.prescriptionId = params.get('prescriptionId') || '';
       this.selectedStoreId = params.get('storeId') || this.getStoredUser()?.storeId || '';
@@ -212,6 +217,17 @@ export class PharmacyPosComponent implements OnInit {
 
     this.refreshCurrentUser();
     void this.syncOfflineWork(false);
+  }
+
+  private loadCompanyProfile(): void {
+    this.backend.getMyCompany().subscribe({
+      next: (company) => {
+        this.companyProfile = company;
+      },
+      error: () => {
+        this.companyProfile = null;
+      },
+    });
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -416,6 +432,47 @@ export class PharmacyPosComponent implements OnInit {
         note: 'Estimated from sales lines and product cost price.',
       },
     ];
+  }
+
+  receiptBrandTitle(receipt: ReceiptPreviewData | null | undefined): string {
+    return receipt?.receiptLetterhead?.brandTitle?.trim() || receipt?.companyName || 'Mooli Pharmacy';
+  }
+
+  receiptBrandSubtitle(receipt: ReceiptPreviewData | null | undefined): string {
+    return receipt?.receiptLetterhead?.brandSubtitle?.trim() || receipt?.storeName || '';
+  }
+
+  receiptHeaderNote(receipt: ReceiptPreviewData | null | undefined): string {
+    return receipt?.receiptLetterhead?.headerNote?.trim() || '';
+  }
+
+  receiptHeaderLines(receipt: ReceiptPreviewData | null | undefined): string[] {
+    return (receipt?.receiptLetterhead?.extraHeaderLines || []).filter((line) => Boolean(line?.trim()));
+  }
+
+  receiptFooterTitle(receipt: ReceiptPreviewData | null | undefined): string {
+    return (
+      receipt?.receiptLetterhead?.footerTitle?.trim() ||
+      `Thank you for trusting ${receipt?.companyName || 'Mooli Pharmacy'}.`
+    );
+  }
+
+  receiptFooterLines(receipt: ReceiptPreviewData | null | undefined): string[] {
+    const configuredLines = (receipt?.receiptLetterhead?.footerLines || []).filter((line) =>
+      Boolean(line?.trim())
+    );
+
+    return configuredLines.length
+      ? configuredLines
+      : ['Please check your items before leaving the pharmacy counter.'];
+  }
+
+  receiptLogoUrl(receipt: ReceiptPreviewData | null | undefined): string {
+    if (!receipt?.receiptLetterhead?.showLogo) {
+      return '';
+    }
+
+    return receipt.receiptLetterhead.logoUrl?.trim() || this.companyProfile?.logoUrl || '';
   }
 
   loadStores(): void {
@@ -1028,6 +1085,7 @@ export class PharmacyPosComponent implements OnInit {
     return {
       reference: 'Preview',
       saleDate: new Date().toISOString(),
+      companyName: this.companyProfile?.name || 'Mooli Pharmacy',
       storeName: this.selectedStoreLabel,
       storeAddress: this.currentStoreAddress(),
       cashierName: this.cashierName,
@@ -1051,6 +1109,7 @@ export class PharmacyPosComponent implements OnInit {
       cashReceivedAmount: cashReceived,
       changeDueAmount: this.paymentMethod === 'cash' ? Math.max(cashReceived - this.subtotal, 0) : 0,
       note: this.prescription ? `Prescription ${this.prescription._id}` : 'POS sale preview',
+      receiptLetterhead: this.companyProfile?.receiptLetterhead,
     };
   }
 
@@ -1061,6 +1120,7 @@ export class PharmacyPosComponent implements OnInit {
     return {
       reference: sale.invoiceNo || sale._id,
       saleDate: sale.saleDate || sale.createdAt || new Date().toISOString(),
+      companyName: this.companyProfile?.name || 'Mooli Pharmacy',
       storeName: store?.name || this.selectedStoreLabel,
       storeAddress: [store?.address, store?.city].filter(Boolean).join(', '),
       cashierName: this.cashierName,
@@ -1082,6 +1142,7 @@ export class PharmacyPosComponent implements OnInit {
       cashReceivedAmount: paidAmount,
       changeDueAmount: 0,
       note: sale.note || '',
+      receiptLetterhead: this.companyProfile?.receiptLetterhead,
     };
   }
 
@@ -1099,6 +1160,13 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private receiptHtml(receipt: ReceiptPreviewData): string {
+    const brandTitle = this.receiptBrandTitle(receipt);
+    const brandSubtitle = this.receiptBrandSubtitle(receipt);
+    const headerNote = this.receiptHeaderNote(receipt);
+    const headerLines = this.receiptHeaderLines(receipt);
+    const footerTitle = this.receiptFooterTitle(receipt);
+    const footerLines = this.receiptFooterLines(receipt);
+    const logoUrl = this.receiptLogoUrl(receipt);
     const rows = receipt.items
       .map((item) => `
         <tr>
@@ -1124,6 +1192,7 @@ export class PharmacyPosComponent implements OnInit {
             body { color: #111827; font-family: Arial, sans-serif; font-size: 12px; margin: 0; }
             .receipt { margin: 0 auto; max-width: 320px; padding: 8px; }
             .center { text-align: center; }
+            .logo { display: block; height: 58px; margin: 0 auto 8px; max-width: 58px; object-fit: contain; }
             h1 { font-size: 18px; margin: 0 0 4px; }
             p { margin: 2px 0; }
             .meta { border-bottom: 1px dashed #9ca3af; border-top: 1px dashed #9ca3af; margin: 10px 0; padding: 8px 0; }
@@ -1141,7 +1210,11 @@ export class PharmacyPosComponent implements OnInit {
         <body>
           <section class="receipt">
             <div class="center">
-              <h1>${this.escapeHtml(receipt.storeName)}</h1>
+              ${logoUrl ? `<img class="logo" src="${this.escapeHtml(logoUrl)}" alt="${this.escapeHtml(brandTitle)}" />` : ''}
+              <h1>${this.escapeHtml(brandTitle)}</h1>
+              ${brandSubtitle ? `<p>${this.escapeHtml(brandSubtitle)}</p>` : ''}
+              ${headerNote ? `<p>${this.escapeHtml(headerNote)}</p>` : ''}
+              ${headerLines.map((line) => `<p>${this.escapeHtml(line)}</p>`).join('')}
               <p>${this.escapeHtml(receipt.storeAddress || 'Mooli Pharmacy')}</p>
               <p>Bill / Receipt</p>
             </div>
@@ -1166,6 +1239,8 @@ export class PharmacyPosComponent implements OnInit {
               <div><span>Status</span><strong>${this.escapeHtml(receipt.paymentStatus)}</strong></div>
             </div>
             <div class="foot">
+              <p><strong>${this.escapeHtml(footerTitle)}</strong></p>
+              ${footerLines.map((line) => `<p>${this.escapeHtml(line)}</p>`).join('')}
               <p>${this.escapeHtml(receipt.note || 'Thank you')}</p>
               <p>Powered by Mooli</p>
             </div>

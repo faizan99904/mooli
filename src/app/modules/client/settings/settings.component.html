@@ -802,22 +802,159 @@
                     <div class="tab-pane show active" *ngIf="Invoice">
                         <div class="card">
                             <div class="card-header">
-                                Invoice Settings
+                                Dynamic Receipt Letterhead
                             </div>
                             <div class="card-body">
-                                <form>
+                                <div *ngIf="!canManageReceiptLetterhead" class="alert alert-warning mb-0">
+                                    Only owner or super admin can manage the receipt letterhead.
+                                </div>
+
+                                <form *ngIf="canManageReceiptLetterhead">
                                     <div class="row">
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Company Name</label>
+                                                <input class="form-control" type="text" [(ngModel)]="companyName" name="companyName">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Company Phone</label>
+                                                <input class="form-control" type="text" [(ngModel)]="companyPhone" name="companyPhone">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Company Email</label>
+                                                <input class="form-control" type="email" [(ngModel)]="companyEmail" name="companyEmail">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Company Logo URL</label>
+                                                <input class="form-control" type="text" [(ngModel)]="companyLogoUrl" name="companyLogoUrl">
+                                            </div>
+                                        </div>
                                         <div class="col-sm-12">
                                             <div class="form-group c_form_group">
-                                                <label>Invoice prefix</label>
-                                                <input class="form-control" type="email">
+                                                <label>Company Address</label>
+                                                <textarea class="form-control" rows="3" [(ngModel)]="companyAddress" name="companyAddress"></textarea>
                                             </div>
-                                            <input type="file" class="dropify">
-                                            <small class="text-danger">Recommended image size is 200px x 40px</small>
                                         </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>City</label>
+                                                <input class="form-control" type="text" [(ngModel)]="companyCity" name="companyCity">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Country</label>
+                                                <input class="form-control" type="text" [(ngModel)]="companyCountry" name="companyCountry">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Tax Number</label>
+                                                <input class="form-control" type="text" [(ngModel)]="companyTaxNumber" name="companyTaxNumber">
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-12">
+                                            <hr>
+                                            <h6 class="mb-3">Letterhead Controls</h6>
+                                        </div>
+
+                                        <div class="col-lg-6 col-md-12">
+                                            <label class="d-flex align-items-center mb-3">
+                                                <input type="checkbox" [(ngModel)]="receiptLetterheadEnabled" name="receiptLetterheadEnabled">
+                                                <span class="ml-2">Enable dynamic letterhead</span>
+                                            </label>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <label class="d-flex align-items-center mb-3">
+                                                <input type="checkbox" [(ngModel)]="receiptLetterheadShowLogo" name="receiptLetterheadShowLogo">
+                                                <span class="ml-2">Show logo on receipt</span>
+                                            </label>
+                                        </div>
+
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Letterhead Logo URL</label>
+                                                <input class="form-control" type="text" [(ngModel)]="receiptLetterheadLogoUrl" name="receiptLetterheadLogoUrl">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Brand Title</label>
+                                                <input class="form-control" type="text" [(ngModel)]="receiptLetterheadBrandTitle" name="receiptLetterheadBrandTitle">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Brand Subtitle</label>
+                                                <input class="form-control" type="text" [(ngModel)]="receiptLetterheadBrandSubtitle" name="receiptLetterheadBrandSubtitle">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Contact Line</label>
+                                                <input class="form-control" type="text" [(ngModel)]="receiptLetterheadContactLine" name="receiptLetterheadContactLine">
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Header Note</label>
+                                                <input class="form-control" type="text" [(ngModel)]="receiptLetterheadHeaderNote" name="receiptLetterheadHeaderNote">
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Extra Header Lines</label>
+                                                <textarea class="form-control" rows="4" [(ngModel)]="receiptLetterheadExtraHeaderLines" name="receiptLetterheadExtraHeaderLines" placeholder="One line per row"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Footer Title</label>
+                                                <input class="form-control" type="text" [(ngModel)]="receiptLetterheadFooterTitle" name="receiptLetterheadFooterTitle">
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12">
+                                            <div class="form-group c_form_group">
+                                                <label>Footer Lines</label>
+                                                <textarea class="form-control" rows="4" [(ngModel)]="receiptLetterheadFooterLines" name="receiptLetterheadFooterLines" placeholder="One line per row"></textarea>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-12">
+                                            <div class="card bg-light border-0 shadow-none">
+                                                <div class="card-body">
+                                                    <small class="text-muted d-block mb-2">Receipt Preview</small>
+                                                    <div class="text-center">
+                                                        <img *ngIf="receiptPreview().showLogo && receiptPreview().logoUrl" [src]="receiptPreview().logoUrl || ''" alt="Letterhead logo" style="max-height: 64px; max-width: 64px; object-fit: contain;" class="mb-2">
+                                                        <h5 class="mb-1">{{ receiptPreview().brandTitle || 'Mooli Pharmacy' }}</h5>
+                                                        <p class="text-muted mb-1" *ngIf="receiptPreview().brandSubtitle">{{ receiptPreview().brandSubtitle }}</p>
+                                                        <p class="mb-1" *ngIf="receiptPreview().headerNote">{{ receiptPreview().headerNote }}</p>
+                                                        <p class="mb-1" *ngFor="let line of receiptPreview().extraHeaderLines">{{ line }}</p>
+                                                        <p class="mb-2" *ngIf="receiptPreview().contactLine">{{ receiptPreview().contactLine }}</p>
+                                                        <hr>
+                                                        <div class="d-flex justify-content-between"><span>Invoice</span><strong>INV-10021</strong></div>
+                                                        <div class="d-flex justify-content-between"><span>Total</span><strong>PKR 2,450</strong></div>
+                                                        <hr>
+                                                        <strong class="d-block mb-1">{{ receiptPreview().footerTitle }}</strong>
+                                                        <p class="mb-0" *ngFor="let line of receiptPreview().footerLines">{{ line }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div class="col-sm-12 m-t-20 text-right">
-                                            <button type="button"
-                                                class="btn btn-primary theme-bg gradient">SAVE</button>
+                                            <button type="button" class="btn btn-primary theme-bg gradient"
+                                                [disabled]="companyLoading || companySaving"
+                                                (click)="saveReceiptLetterhead()">
+                                                {{ companySaving ? 'Saving...' : 'Save Letterhead' }}
+                                            </button>
                                         </div>
                                     </div>
                                 </form>
