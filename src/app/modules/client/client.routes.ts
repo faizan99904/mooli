@@ -48,6 +48,7 @@ import { PrescriptionComponent } from './prescription/prescription.component';
 import { PharmacyComponent } from './pharmacy/pharmacy.component';
 import { PharmacyProductsComponent } from './pharmacy-products/pharmacy-products.component';
 import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
+import { PosReportsComponent } from './pos-reports/pos-reports.component';
 
 const WILDCARD_ACCESS = ['*'];
 const HOSPITAL_DASHBOARD_ACCESS = ['hospital_dashboard.read'];
@@ -72,6 +73,7 @@ const ROLE_READ_ACCESS = ['roles.read'];
 const HISTORY_ACCESS = ['patients_history.read', 'patients_history.create'];
 const PRESCRIPTION_ACCESS = ['prescriptions.read', 'prescriptions.create'];
 const PHARMACY_ACCESS = ['products.read'];
+const REPORT_ACCESS = ['reports.read'];
 const PHARMACY_POS_ACCESS = {
   all: [
     'sales.create',
@@ -336,6 +338,12 @@ export const clientRoutes: Routes = [
         component: PharmacyPosComponent,
         data: { title: 'Mooli | Pharmacy POS' },
         canActivate: [roleGuard(PHARMACY_POS_ACCESS)],
+      },
+      {
+        path: 'pos-reports',
+        component: PosReportsComponent,
+        data: { title: 'Mooli | POS Reports' },
+        canActivate: [roleGuard(REPORT_ACCESS)],
       },
       {
         path: 'pharmacy',

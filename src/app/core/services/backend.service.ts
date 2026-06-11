@@ -443,6 +443,48 @@ export class BackendService {
     );
   }
 
+  getDashboardReport(params?: Record<string, unknown>): Observable<Record<string, unknown>> {
+    return this.get<Record<string, unknown>>(CONFIG.reports.dashboard, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getSalesReport(params?: Record<string, unknown>): Observable<Record<string, unknown>> {
+    return this.get<Record<string, unknown>>(CONFIG.reports.sales, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getInventoryReport(params?: Record<string, unknown>): Observable<unknown[] | Record<string, unknown>> {
+    return this.get<unknown[] | Record<string, unknown>>(CONFIG.reports.inventory, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getProfitLossReport(params?: Record<string, unknown>): Observable<Record<string, unknown>> {
+    return this.get<Record<string, unknown>>(CONFIG.reports.profitLoss, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getStockMovementsReport(params?: Record<string, unknown>): Observable<Record<string, unknown>> {
+    return this.get<Record<string, unknown>>(CONFIG.reports.stockMovements, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getPaymentsReport(params?: Record<string, unknown>): Observable<Record<string, unknown>> {
+    return this.get<Record<string, unknown>>(CONFIG.reports.payments, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getExpensesReport(params?: Record<string, unknown>): Observable<Record<string, unknown>> {
+    return this.get<Record<string, unknown>>(CONFIG.reports.expenses, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
   getCurrentRegister(params?: Record<string, unknown>): Observable<RegisterSession | null> {
     return this.get<{ registerSession: RegisterSession | null }>(`${CONFIG.registerSessions}/current`, params).pipe(
       map((response) => response.data?.registerSession || null)

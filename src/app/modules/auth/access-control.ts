@@ -35,6 +35,10 @@ const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
     access: ['prescriptions.read', 'prescriptions.create'],
   },
   {
+    path: '/pos-reports',
+    access: ['reports.read'],
+  },
+  {
     path: '/room-allotment',
     access: ['rooms.read', 'rooms.create', 'rooms.update'],
   },

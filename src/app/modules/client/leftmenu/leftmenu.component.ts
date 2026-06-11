@@ -111,6 +111,10 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     );
   }
 
+  get canViewPosReports(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('reports.read');
+  }
+
   get canViewLaboratory(): boolean {
     return this.canViewAllRoutes || this.hasPermission('patients_history.read');
   }
@@ -193,7 +197,7 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     this.PaymentCollapsed = !url.includes('payments');
     this.RoomCollapsed = !url.includes('room-allotment');
     this.PatientCollapsed = !url.includes('patients');
-    this.PharmacyCollapsed = !url.includes('pharmacy');
+    this.PharmacyCollapsed = !(url.includes('pharmacy') || url.includes('pos-reports'));
   }
 
   private normalizeRole(role: string): string {

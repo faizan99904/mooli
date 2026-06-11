@@ -117,6 +117,12 @@ export class RolesComponent implements OnInit {
       ],
     },
     {
+      title: 'POS Reports',
+      permissions: [
+        { key: 'reports.read', label: 'View POS Reports' },
+      ],
+    },
+    {
       title: 'Rooms',
       permissions: [
         { key: 'rooms.create', label: 'Create Rooms' },

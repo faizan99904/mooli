@@ -1,0 +1,138 @@
+<div id="main-content">
+  <div class="container-fluid pos-reports-page">
+    <div class="block-header">
+      <div class="row clearfix align-items-center">
+        <div class="col-lg-6 col-md-12">
+          <h1>POS Reports</h1>
+          <span>Backend-calculated pharmacy POS sales, stock, payment, and profit reports</span>
+        </div>
+        <div class="col-lg-6 col-md-12 text-lg-right">
+          <button type="button" class="btn btn-primary" (click)="loadReport()" [disabled]="loading">
+            <i class="fa" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i>
+            Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-tabs" role="tablist">
+      <button
+        type="button"
+        *ngFor="let report of reports"
+        class="report-tab"
+        [class.active]="activeReport === report.key"
+        (click)="selectReport(report.key)"
+      >
+        <i class="fa" [ngClass]="report.icon"></i>
+        <span>{{ report.title }}</span>
+      </button>
+    </div>
+
+    <div class="report-filter-card">
+      <div class="report-filter-head">
+        <div>
+          <h2>{{ activeReportDefinition.title }} Report</h2>
+          <p>{{ activeReportDefinition.description }}</p>
+        </div>
+        <span class="permission-pill">reports.read</span>
+      </div>
+
+      <div class="report-filter-grid">
+        <label>
+          <span>From Date</span>
+          <input type="date" class="form-control" [(ngModel)]="fromDate" />
+        </label>
+
+        <label>
+          <span>To Date</span>
+          <input type="date" class="form-control" [(ngModel)]="toDate" />
+        </label>
+
+        <label>
+          <span>Store</span>
+          <select class="form-control" [(ngModel)]="storeId" [disabled]="!canChooseStore || storesLoading">
+            <option value="">{{ canChooseStore ? 'All stores' : 'Assigned store' }}</option>
+            <option *ngIf="storeId && !stores.length" [value]="storeId">Assigned store</option>
+            <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+          </select>
+        </label>
+
+        <label class="low-stock-filter" *ngIf="supportsLowStockFilter">
+          <input type="checkbox" [(ngModel)]="lowStockOnly" />
+          <span>Low Stock Only</span>
+        </label>
+
+        <div class="filter-actions">
+          <button type="button" class="btn btn-dark" (click)="applyFilters()" [disabled]="loading">
+            Apply
+          </button>
+          <button type="button" class="btn btn-default" (click)="resetFilters()" [disabled]="loading">
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-danger" *ngIf="errorMessage">
+      {{ errorMessage }}
+    </div>
+
+    <div class="report-loading" *ngIf="loading">
+      <i class="fa fa-spinner fa-spin"></i>
+      <span>Loading POS report...</span>
+    </div>
+
+    <ng-container *ngIf="!loading">
+      <div class="summary-grid" *ngIf="summaryEntries.length">
+        <div class="summary-card" *ngFor="let entry of summaryEntries; trackBy: trackByKey">
+          <span>{{ labelFor(entry.key) }}</span>
+
+          <ng-container *ngIf="!isPlainObject(entry.value); else nestedSummary">
+            <strong>{{ formatValue(entry.key, entry.value) }}</strong>
+          </ng-container>
+
+          <ng-template #nestedSummary>
+            <div class="nested-summary">
+              <div *ngFor="let pair of objectEntries(entry.value); trackBy: trackByKey">
+                <span>{{ labelFor(pair.key) }}</span>
+                <strong>{{ formatValue(pair.key, pair.value) }}</strong>
+              </div>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+      <div class="report-table-card">
+        <div class="report-table-head">
+          <div>
+            <h3>Report Rows</h3>
+            <span>{{ items.length }} row{{ items.length === 1 ? '' : 's' }}</span>
+          </div>
+        </div>
+
+        <div class="report-empty" *ngIf="!items.length">
+          No report rows found for the selected filters.
+        </div>
+
+        <div class="table-responsive" *ngIf="items.length">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th *ngFor="let column of tableColumns; trackBy: trackByColumn">
+                  {{ labelFor(column) }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of items; trackBy: trackByIndex">
+                <td *ngFor="let column of tableColumns; trackBy: trackByColumn">
+                  {{ formatValue(column, cellValue(row, column)) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>
