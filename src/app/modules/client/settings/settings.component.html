@@ -3,47 +3,21 @@
     <div class="container-fluid">
         <!-- Page header section  -->
         <div class="block-header">
-            <div class="row clearfix">
-                <div class="col-xl-6 col-md-5 col-sm-12">
-                    <h1>Hi, Welcomeback!</h1>
-                    <span>JustDo Settings,</span>
-                </div>
-                <div class="col-xl-6 col-md-7 col-sm-12 text-md-right">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap vivify pullUp delay-550">
-                        <div class="ml-auto mb-3 mb-xl-0">
-                            <p class="text-muted mb-1">Last Update</p>
-                            <h5 class="mb-0">18 Dec 2019</h5>
-                        </div>
-                    </div>
-                </div>
-            </div>
+	            <div class="row clearfix">
+	                <div class="col-xl-6 col-md-5 col-sm-12">
+	                    <h1>Hospital Settings</h1>
+	                    <span>Manage prescription header, footer, and logo details.</span>
+	                </div>
+	            </div>
         </div>
 
         <div class="row clearfix">
             <div class="col-12">
-                <div class="d-lg-flex justify-content-between">
-                    <ul class="nav nav-tabs3 page-header-tab">
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Company}"
-                                (click)="onTab('1')">Company</a></li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Localization}"
-                                (click)="onTab('2')">Localization</a>
-                        </li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Permissions}"
-                                (click)="onTab('3')">Roles &
-                                Permissions</a></li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Email}"
-                                (click)="onTab('4')">Email</a></li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Invoice}"
-                                (click)="onTab('5')">Invoice</a>
-                        </li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Notifications}"
-                                (click)="onTab('6')">Notifications
-                            </a></li>
-                        <li class="nav-item"><a class="nav-link" [ngClass]="{'active': Changepassword}"
-                                (click)="onTab('7')">Change
-                                Password </a></li>
-                    </ul>
-                </div>
+	                <div class="d-lg-flex justify-content-between">
+	                    <ul class="nav nav-tabs3 page-header-tab">
+	                        <li class="nav-item"><a class="nav-link active">Hospital Settings</a></li>
+	                    </ul>
+	                </div>
                 <div class="tab-content">
                     <div class="tab-pane active show" *ngIf="Company">
                         <div class="card">
@@ -409,11 +383,165 @@
                                         </div>
                                     </div>
                                 </form>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tab-pane show active" *ngIf="Localization">
-                        <div class="card">
+	                            </div>
+	                        </div>
+	                    </div>
+	                    <div class="tab-pane show active" *ngIf="HospitalSettings">
+	                        <div class="card">
+	                            <div class="card-header">
+	                                Hospital Prescription Settings
+	                            </div>
+	                            <div class="card-body">
+	                                <div *ngIf="!canReadHospitalSettings" class="alert alert-warning mb-0">
+	                                    You do not have permission to view hospital settings.
+	                                </div>
+	                                <div *ngIf="canReadHospitalSettings && !currentHospitalId" class="alert alert-warning mb-0">
+	                                    No hospital is assigned to this user.
+	                                </div>
+
+	                                <form *ngIf="canReadHospitalSettings && currentHospitalId">
+	                                    <div class="row">
+	                                        <div class="col-lg-6 col-md-12">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Hospital Name <span class="text-danger">*</span></label>
+	                                                <input class="form-control" type="text" [(ngModel)]="hospitalName" name="hospitalName"
+	                                                    [disabled]="!canManageHospitalSettings">
+	                                            </div>
+	                                        </div>
+	                                        <div class="col-lg-3 col-md-6">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Phone</label>
+	                                                <input class="form-control" type="text" [(ngModel)]="hospitalPhone" name="hospitalPhone"
+	                                                    [disabled]="!canManageHospitalSettings">
+	                                            </div>
+	                                        </div>
+	                                        <div class="col-lg-3 col-md-6">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Email</label>
+	                                                <input class="form-control" type="email" [(ngModel)]="hospitalEmail" name="hospitalEmail"
+	                                                    [disabled]="!canManageHospitalSettings">
+	                                            </div>
+	                                        </div>
+	                                        <div class="col-sm-12">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Address</label>
+	                                                <textarea class="form-control" rows="2" [(ngModel)]="hospitalAddress" name="hospitalAddress"
+	                                                    [disabled]="!canManageHospitalSettings"></textarea>
+	                                            </div>
+	                                        </div>
+	                                        <div class="col-lg-6 col-md-12">
+	                                            <div class="form-group c_form_group">
+	                                                <label>City</label>
+	                                                <input class="form-control" type="text" [(ngModel)]="hospitalCity" name="hospitalCity"
+	                                                    [disabled]="!canManageHospitalSettings">
+	                                            </div>
+	                                        </div>
+	                                        <div class="col-lg-6 col-md-12">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Country</label>
+	                                                <input class="form-control" type="text" [(ngModel)]="hospitalCountry" name="hospitalCountry"
+	                                                    [disabled]="!canManageHospitalSettings">
+	                                            </div>
+	                                        </div>
+
+	                                        <div class="col-sm-12">
+	                                            <hr>
+	                                            <h6 class="mb-3">Prescription Header & Footer</h6>
+	                                        </div>
+
+	                                        <div class="col-lg-4 col-md-12">
+	                                            <label class="d-flex align-items-center mb-3">
+	                                                <input type="checkbox" [(ngModel)]="prescriptionShowLogo" name="prescriptionShowLogo"
+	                                                    [disabled]="!canManageHospitalSettings">
+	                                                <span class="ml-2">Show logo on prescription</span>
+	                                            </label>
+	                                            <div class="hospital-logo-preview mb-3">
+	                                                <img *ngIf="hospitalLogoUrl" [src]="hospitalLogoUrl" alt="Hospital logo">
+	                                                <span *ngIf="!hospitalLogoUrl">Rx</span>
+	                                            </div>
+	                                        </div>
+	                                        <div class="col-lg-8 col-md-12">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Upload Logo</label>
+	                                                <input class="form-control" type="file" accept="image/*" (change)="onHospitalLogoSelected($event)"
+	                                                    [disabled]="!canManageHospitalSettings">
+	                                                <small class="text-muted">PNG, JPG, WEBP or GIF under 700 KB.</small>
+	                                            </div>
+	                                            <div class="form-group c_form_group">
+	                                                <label>Logo URL / Uploaded Image Data</label>
+	                                                <input class="form-control" type="text" [(ngModel)]="hospitalLogoUrl" name="hospitalLogoUrl"
+	                                                    [disabled]="!canManageHospitalSettings">
+	                                            </div>
+	                                            <button type="button" class="btn btn-outline-secondary btn-sm mb-3" (click)="clearHospitalLogo()"
+	                                                [disabled]="!canManageHospitalSettings || !hospitalLogoUrl">
+	                                                Remove Logo
+	                                            </button>
+	                                        </div>
+
+	                                        <div class="col-sm-12">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Revision Note</label>
+	                                                <input class="form-control" type="text" [(ngModel)]="prescriptionRevisionNote"
+	                                                    name="prescriptionRevisionNote" [disabled]="!canManageHospitalSettings">
+	                                            </div>
+	                                        </div>
+	                                        <div class="col-sm-12">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Follow-up Line</label>
+	                                                <input class="form-control" type="text" [(ngModel)]="prescriptionFollowUpLine"
+	                                                    name="prescriptionFollowUpLine" [disabled]="!canManageHospitalSettings">
+	                                            </div>
+	                                        </div>
+	                                        <div class="col-sm-12">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Contact Line</label>
+	                                                <input class="form-control" type="text" [(ngModel)]="prescriptionContactLine"
+	                                                    name="prescriptionContactLine" [disabled]="!canManageHospitalSettings">
+	                                            </div>
+	                                        </div>
+	                                        <div class="col-sm-12">
+	                                            <div class="form-group c_form_group">
+	                                                <label>Extra Footer Lines</label>
+	                                                <textarea class="form-control" rows="3" [(ngModel)]="prescriptionFooterLines"
+	                                                    name="prescriptionFooterLines" placeholder="One line per row"
+	                                                    [disabled]="!canManageHospitalSettings"></textarea>
+	                                            </div>
+	                                        </div>
+
+	                                        <div class="col-sm-12">
+	                                            <div class="card bg-light border-0 shadow-none">
+	                                                <div class="card-body">
+	                                                    <small class="text-muted d-block mb-2">Prescription Preview</small>
+	                                                    <div class="hospital-prescription-preview">
+	                                                        <div>
+	                                                            <img *ngIf="hospitalPrescriptionPreview().showLogo && hospitalPrescriptionPreview().logoUrl"
+	                                                                [src]="hospitalPrescriptionPreview().logoUrl" alt="Hospital logo">
+	                                                            <span *ngIf="!(hospitalPrescriptionPreview().showLogo && hospitalPrescriptionPreview().logoUrl)">Rx</span>
+	                                                        </div>
+	                                                        <h5>{{ hospitalPrescriptionPreview().hospitalName }}</h5>
+	                                                        <p *ngIf="hospitalPrescriptionPreview().hospitalAddress">{{ hospitalPrescriptionPreview().hospitalAddress }}</p>
+	                                                        <p>{{ hospitalPrescriptionPreview().followUpLine }}</p>
+	                                                        <p>{{ hospitalPrescriptionPreview().hospitalContactLine }}</p>
+	                                                        <strong>{{ hospitalPrescriptionPreview().revisionNote }}</strong>
+	                                                    </div>
+	                                                </div>
+	                                            </div>
+	                                        </div>
+
+	                                        <div class="col-sm-12 m-t-20 text-right" *ngIf="canManageHospitalSettings">
+	                                            <button type="button" class="btn btn-primary theme-bg gradient"
+	                                                [disabled]="hospitalLoading || hospitalSaving"
+	                                                (click)="saveHospitalSettings()">
+	                                                {{ hospitalSaving ? 'Saving...' : 'Save Hospital Settings' }}
+	                                            </button>
+	                                        </div>
+	                                    </div>
+	                                </form>
+	                            </div>
+	                        </div>
+	                    </div>
+	                    <div class="tab-pane show active" *ngIf="Localization">
+	                        <div class="card">
                             <div class="card-header">
                                 Basic Settings
                             </div>

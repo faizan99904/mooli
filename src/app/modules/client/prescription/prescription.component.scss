@@ -1299,6 +1299,12 @@ dd {
   gap: 2px;
 }
 
+.doctor-print-left small,
+.doctor-print-right small {
+  font-size: 10px;
+  line-height: 1.2;
+}
+
 .doctor-print-left strong,
 .doctor-print-right strong {
   font-size: 13px;
@@ -1326,6 +1332,16 @@ dd {
   justify-content: center;
   justify-self: center;
   width: 56px;
+}
+
+.print-logo-mark.has-logo {
+  border: 0;
+}
+
+.print-logo-mark img {
+  max-height: 62px;
+  max-width: 72px;
+  object-fit: contain;
 }
 
 .print-date-box {

@@ -211,6 +211,10 @@
   grid-template-columns: minmax(360px, 0.88fr) minmax(580px, 1.52fr);
 }
 
+.appointment-layout.list-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .panel {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -301,7 +305,8 @@
 }
 
 .phone-search button:disabled,
-.btn-confirm:disabled {
+.btn-confirm:disabled,
+.export-btn:disabled {
   cursor: not-allowed;
   opacity: 0.7;
 }
@@ -566,6 +571,17 @@
   display: flex;
   justify-content: space-between;
   padding: 0 12px;
+}
+
+.form-grid input[type='date'],
+.filters-row input[type='date'] {
+  padding-right: 10px;
+}
+
+.form-grid input[type='date']::-webkit-calendar-picker-indicator,
+.filters-row input[type='date']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  margin-left: auto;
 }
 
 .filters-row button {
@@ -834,4 +850,9 @@
   .patient-modal {
     padding: 14px;
   }
+}
+
+
+th, td{
+  text-align: center !important;
 }

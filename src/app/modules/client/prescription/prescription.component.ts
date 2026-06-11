@@ -19,7 +19,9 @@ import {
   Appointment,
   Doctor,
   DoctorMedicine,
+  Hospital,
   Patient,
+  PrescriptionPrintSettings,
   ProductCatalogItem,
   Prescription,
 } from '../../../shared/models/hospital.model';
@@ -34,6 +36,13 @@ interface PrintPreviewData {
   patientPhone: string;
   doctorName: string;
   doctorQualification: string;
+  hospitalName: string;
+  hospitalAddress: string;
+  hospitalLogoUrl: string;
+  showHospitalLogo: boolean;
+  prescriptionRevisionNote: string;
+  prescriptionFollowUpLine: string;
+  prescriptionFooterLines: string[];
   date: string;
   disease: string;
   vitals: Record<string, string>;
@@ -101,6 +110,7 @@ export class PrescriptionComponent implements OnInit {
   selectedAppointmentId = '';
   editingId: string | null = null;
   currentHospitalId: string | null = null;
+  currentHospital: Hospital | null = null;
   currentUserId: string | null = null;
   currentRole = '';
   routePatientId = '';
@@ -197,11 +207,13 @@ export class PrescriptionComponent implements OnInit {
 
   ngOnInit(): void {
     const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as
-      | { _id?: string; hospitalId?: string | null; role?: { name?: string | null } | null }
+      | { _id?: string; hospitalId?: string | null; hospital?: Hospital | null; role?: { name?: string | null } | null }
       | null;
     this.currentHospitalId = currentUser?.hospitalId || null;
+    this.currentHospital = currentUser?.hospital || null;
     this.currentUserId = currentUser?._id || null;
     this.currentRole = String(localStorage.getItem('role') || currentUser?.role?.name || '');
+    this.refreshCurrentHospital();
 
     this.route.queryParamMap.subscribe((params) => {
       this.routePatientId = params.get('patientId') || '';
@@ -2073,6 +2085,9 @@ export class PrescriptionComponent implements OnInit {
 
     const doctorId = String(source['doctorId'] || '');
     const doctor = this.doctors.find((item) => item.userId === doctorId);
+    const hospital = this.resolvePrintHospital(source);
+    const settings = this.resolvePrescriptionSettings(hospital);
+    const hospitalName = hospital?.name || 'MediLink City Care Hospital';
     const createdAt = source['createdAt'] || new Date();
     const followUpDate = source['followUpDate'];
     const labTests = (source['labTests'] || [])
@@ -2092,6 +2107,14 @@ export class PrescriptionComponent implements OnInit {
       patientPhone: patient.phone || '-',
       doctorName: source['doctor']?.name || (doctor ? this.doctorName(doctor) : this.selectedDoctorName()),
       doctorQualification: doctor?.qualification || doctor?.specialization || 'M.B.B.S., F.C.P.S.',
+      hospitalName,
+      hospitalAddress: this.hospitalAddressLine(hospital),
+      hospitalLogoUrl: hospital?.logoUrl || '',
+      showHospitalLogo: settings.showLogo !== false && Boolean(hospital?.logoUrl),
+      prescriptionRevisionNote: settings.revisionNote || '* Rx to be revised after Reports.',
+      prescriptionFollowUpLine:
+        settings.followUpLine || `For appointment and follow up, contact ${hospitalName}.`,
+      prescriptionFooterLines: this.prescriptionFooterLines(hospital, settings),
       date: this.formatPrintDate(createdAt),
       disease: source['diagnosis'] || source['chiefComplaint'] || source['history'] || '-',
       vitals: source['vitals'] || {},
@@ -2134,6 +2157,103 @@ export class PrescriptionComponent implements OnInit {
       currentMedications: [],
       status: 'active',
     } as Patient;
+  }
+
+  private refreshCurrentHospital(): void {
+    this.backend.getMe().subscribe({
+      next: (user) => {
+        const storedUser = JSON.parse(localStorage.getItem('user') || 'null') as Record<string, unknown> | null;
+        localStorage.setItem('user', JSON.stringify({ ...(storedUser || {}), ...user }));
+        this.currentHospitalId = user.hospitalId || this.currentHospitalId;
+        this.currentHospital = user.hospital || this.currentHospital;
+        this.refreshOpenPreviewData();
+
+        if (!this.currentHospital && this.currentHospitalId && this.backend.hasPermission('hospitals.read')) {
+          this.loadCurrentHospitalById();
+        }
+      },
+      error: () => {
+        if (this.currentHospitalId && this.backend.hasPermission('hospitals.read')) {
+          this.loadCurrentHospitalById();
+        }
+      },
+    });
+  }
+
+  private loadCurrentHospitalById(): void {
+    if (!this.currentHospitalId) {
+      return;
+    }
+
+    this.backend.getHospital(this.currentHospitalId).subscribe({
+      next: (hospital) => {
+        this.currentHospital = hospital;
+        this.updateStoredHospital(hospital);
+        this.refreshOpenPreviewData();
+      },
+      error: () => undefined,
+    });
+  }
+
+  private updateStoredHospital(hospital: Hospital): void {
+    const storedUser = JSON.parse(localStorage.getItem('user') || 'null') as Record<string, unknown> | null;
+
+    if (!storedUser) {
+      return;
+    }
+
+    localStorage.setItem(
+      'user',
+      JSON.stringify({
+        ...storedUser,
+        hospitalId: hospital._id,
+        hospital,
+      }),
+    );
+  }
+
+  private refreshOpenPreviewData(): void {
+    if (this.printPreviewOpen) {
+      this.printPreviewData = this.buildPrintPreviewData(this.previewPrescription);
+    }
+  }
+
+  private resolvePrintHospital(source: Record<string, any>): Hospital | null {
+    return (source['hospital'] as Hospital | null) || this.currentHospital || null;
+  }
+
+  private resolvePrescriptionSettings(hospital: Hospital | null): PrescriptionPrintSettings {
+    return {
+      showLogo: hospital?.prescriptionSettings?.showLogo !== false,
+      revisionNote: hospital?.prescriptionSettings?.revisionNote || '* Rx to be revised after Reports.',
+      followUpLine: hospital?.prescriptionSettings?.followUpLine || '',
+      contactLine: hospital?.prescriptionSettings?.contactLine || '',
+      footerLines: hospital?.prescriptionSettings?.footerLines || [],
+    };
+  }
+
+  private hospitalAddressLine(hospital: Hospital | null): string {
+    return [hospital?.address, hospital?.city, hospital?.country].filter(Boolean).join(', ');
+  }
+
+  private prescriptionFooterLines(hospital: Hospital | null, settings: PrescriptionPrintSettings): string[] {
+    const configuredLines = (settings.footerLines || []).filter((line) => Boolean(line?.trim()));
+
+    if (configuredLines.length > 0) {
+      return configuredLines;
+    }
+
+    const contactLine = settings.contactLine || this.defaultHospitalContactLine(hospital);
+    return contactLine ? [contactLine] : [];
+  }
+
+  private defaultHospitalContactLine(hospital: Hospital | null): string {
+    const parts = [
+      hospital?.email ? `Email: ${hospital.email}` : '',
+      hospital?.phone ? `Phone: ${hospital.phone}` : '',
+    ].filter(Boolean);
+
+    return parts.join(' | ') || 'Email: info@medilink.local | Phone: 0300-0000000';
   }
 
   private formatPrintDate(value: string | Date): string {

@@ -455,18 +455,22 @@
         <section class="prescription-print-sheet" #printContent *ngIf="!printPreviewLoading && printPreviewData as preview">
           <header class="print-header">
             <div class="doctor-print-left">
-              <h1>{{ preview.doctorName }}</h1>
-              <strong>{{ preview.doctorQualification }}</strong>
-              <span>Consultant Physician</span>
-              <span>MediLink City Care Hospital</span>
-            </div>
-            <div class="print-logo-mark">Rx</div>
-            <div class="doctor-print-right">
-              <h2>ڈاکٹر {{ preview.doctorName }}</h2>
-              <strong>{{ preview.doctorQualification }}</strong>
-              <span>کنسلٹنٹ فزیشن</span>
-              <span>میڈی لنک سٹی کیئر ہسپتال</span>
-            </div>
+	              <h1>{{ preview.doctorName }}</h1>
+	              <strong>{{ preview.doctorQualification }}</strong>
+	              <span>Consultant Physician</span>
+	              <span>{{ preview.hospitalName }}</span>
+	              <small *ngIf="preview.hospitalAddress">{{ preview.hospitalAddress }}</small>
+	            </div>
+	            <div class="print-logo-mark" [class.has-logo]="preview.showHospitalLogo">
+	              <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl" [alt]="preview.hospitalName">
+	              <span *ngIf="!preview.showHospitalLogo">Rx</span>
+	            </div>
+	            <div class="doctor-print-right">
+	              <h2>ڈاکٹر {{ preview.doctorName }}</h2>
+	              <strong>{{ preview.doctorQualification }}</strong>
+	              <span>کنسلٹنٹ فزیشن</span>
+	              <span>{{ preview.hospitalName }}</span>
+	            </div>
           </header>
 
           <div class="print-date-box">
@@ -583,11 +587,11 @@
             </aside>
           </div>
 
-          <footer class="print-footer">
-            <strong>* Rx to be revised after Reports.</strong>
-            <p>For appointment and follow up, contact MediLink City Care Hospital.</p>
-            <p>Email: info&#64;medilink.local | Phone: 0300-0000000</p>
-          </footer>
+	          <footer class="print-footer">
+	            <strong *ngIf="preview.prescriptionRevisionNote">{{ preview.prescriptionRevisionNote }}</strong>
+	            <p *ngIf="preview.prescriptionFollowUpLine">{{ preview.prescriptionFollowUpLine }}</p>
+	            <p *ngFor="let line of preview.prescriptionFooterLines">{{ line }}</p>
+	          </footer>
         </section>
       </div>
     </div>

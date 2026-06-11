@@ -175,7 +175,14 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewSettings(): boolean {
-    return this.isOwner || this.isSuperAdmin || this.hasWildcardPermission || this.hasPermission('company.manage');
+    return (
+      this.isOwner ||
+      this.isSuperAdmin ||
+      this.hasWildcardPermission ||
+      this.hasPermission('company.manage') ||
+      this.hasPermission('hospitals.read') ||
+      this.hasPermission('hospitals.update')
+    );
   }
 
   get canManageBilling(): boolean {
@@ -183,7 +190,7 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewHospitalAdministration(): boolean {
-    return this.canViewHospitals || this.canViewUsers || this.canViewRoles;
+    return this.canViewHospitals || this.canViewUsers || this.canViewRoles || this.canViewSettings;
   }
 
   get hasWildcardPermission(): boolean {

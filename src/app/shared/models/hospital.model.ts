@@ -28,6 +28,14 @@ export interface User {
   role?: Role | null;
 }
 
+export interface PrescriptionPrintSettings {
+  showLogo: boolean;
+  revisionNote?: string | null;
+  followUpLine?: string | null;
+  contactLine?: string | null;
+  footerLines: string[];
+}
+
 export interface Store {
   _id: string;
   companyId: string;
@@ -64,6 +72,7 @@ export interface Hospital {
   logoUrl?: string | null;
   status: Status;
   subscriptionPlan?: string | null;
+  prescriptionSettings?: PrescriptionPrintSettings | null;
 }
 
 export interface Department {

@@ -44,6 +44,7 @@ export class AppointmentComponent implements OnInit {
   loading = false;
   saving = false;
   patientSaving = false;
+  exportingAppointments = false;
   status = '';
   dateFrom = this.todayValue();
   dateTo = this.todayValue();
@@ -171,6 +172,26 @@ export class AppointmentComponent implements OnInit {
   applyAppointmentFilters(): void {
     this.page = 1;
     this.loadAppointments();
+  }
+
+  exportAppointments(): void {
+    if (this.exportingAppointments) {
+      return;
+    }
+
+    if (this.appointments.length === 0) {
+      this.toastr.info('No appointments available to export.');
+      return;
+    }
+
+    this.exportingAppointments = true;
+    try {
+      const csvContent = this.buildAppointmentsCsv(this.appointments);
+      this.downloadCsv(csvContent, this.appointmentsExportFileName());
+      this.toastr.success('Appointments exported successfully.');
+    } finally {
+      this.exportingAppointments = false;
+    }
   }
 
   submitAppointment(): void {
@@ -827,10 +848,71 @@ export class AppointmentComponent implements OnInit {
   private toArray(value: string): string[] {
     return value
       ? value
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean)
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
       : [];
+  }
+
+  private buildAppointmentsCsv(appointments: Appointment[]): string {
+    const headers = [
+      'Appointment ID',
+      'Patient',
+      'Patient No',
+      'Doctor',
+      'Department',
+      'Date',
+      'Time',
+      'Status',
+      'Reason',
+      'Notes',
+    ];
+
+    const rows = appointments.map((appointment) => [
+      appointment.appointmentNo,
+      this.patientName(appointment.patient),
+      appointment.patient?.patientNo || appointment.patientId,
+      appointment.doctor?.name || '-',
+      appointment.department?.name || '-',
+      this.shortDate(appointment.appointmentDate),
+      this.appointmentTimeRange(appointment),
+      this.appointmentStatusLabel(appointment.status),
+      appointment.reason || '',
+      appointment.notes || '',
+    ]);
+
+    return [headers, ...rows]
+      .map((row) => row.map((value) => this.csvCell(value)).join(','))
+      .join('\r\n');
+  }
+
+  private csvCell(value: string): string {
+    const normalizedValue = String(value || '').replace(/\r?\n|\r/g, ' ').trim();
+    const safeValue = /^[=+\-@]/.test(normalizedValue) ? `'${normalizedValue}` : normalizedValue;
+
+    return `"${safeValue.replace(/"/g, '""')}"`;
+  }
+
+  private downloadCsv(csvContent: string, fileName: string): void {
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  private appointmentsExportFileName(): string {
+    const statusPart = this.status || 'all';
+    const fromPart = this.dateFrom || 'from';
+    const toPart = this.dateTo || 'to';
+
+    return `appointments-${statusPart}-${fromPart}-${toPart}.csv`;
   }
 
   private async loadCachedDoctors(): Promise<void> {
@@ -1225,5 +1307,39 @@ export class AppointmentComponent implements OnInit {
 
     this.page = nextPage;
     this.loadAppointments();
+  }
+
+  sendAppointmentWhatsApp(appointment: any): void {
+    if (!appointment.patient?.phone) {
+      this.toastr.error('Patient does not have a phone number.');
+      return;
+    }
+
+    const token = this.buildAppointmentToken(appointment, appointment.patient, appointment.doctor);
+    const tokenHtml = `
+    <html>
+      <body>
+        <div>${this.printableTokenRow('Appointment', token.appointmentNo)}</div>
+        <div>${this.printableTokenRow('Patient', token.patientName)}</div>
+        <div>${this.printableTokenRow('Doctor', token.doctorName)}</div>
+        <div>${this.printableTokenRow('Department', token.departmentName)}</div>
+        <div>${this.printableTokenRow('Date', token.appointmentDate)}</div>
+        <div>${this.printableTokenRow('Time', token.timeRange)}</div>
+      </body>
+    </html>
+  `;
+
+    // Create a Blob URL
+    const blob = new Blob([tokenHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+
+    // WhatsApp API link
+    const phone = this.normalizePhone(appointment.patient.phone);
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(
+      `Your appointment details: ${url}`
+    )}`;
+
+    // Open WhatsApp
+    window.open(whatsappUrl, '_blank');
   }
 }

@@ -153,6 +153,10 @@
                     <a [routerLink]="['/roles']"><i class="fa fa-shield"></i><span>Roles</span></a>
                 </li>
 
+                <li *ngIf="canViewSettings" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                    <a [routerLink]="['/settings']"><i class="fa fa-gear"></i><span>Settings</span></a>
+                </li>
+
                 <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/contacts']"><i class="fa fa-address-book"></i><span>Contacts</span></a>
                 </li>

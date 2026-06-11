@@ -12,6 +12,7 @@ type RouteAccess = {
 
 const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
   { path: '/dashboard', access: ['hospital_dashboard.read'] },
+  { path: '/settings', access: ['company.manage', 'hospitals.read', 'hospitals.update'] },
   { path: '/appointments', access: ['appointments.read'] },
   { path: '/patients/all-patients', access: ['patients.read'] },
   {

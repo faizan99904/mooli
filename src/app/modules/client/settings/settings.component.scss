@@ -12,3 +12,42 @@
 .nav-item {
   cursor: pointer;
 }
+
+.hospital-logo-preview,
+.hospital-prescription-preview > div {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  display: inline-flex;
+  height: 86px;
+  justify-content: center;
+  width: 86px;
+}
+
+.hospital-logo-preview img,
+.hospital-prescription-preview img {
+  max-height: 72px;
+  max-width: 72px;
+  object-fit: contain;
+}
+
+.hospital-logo-preview span,
+.hospital-prescription-preview span {
+  color: #1f2937;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.hospital-prescription-preview {
+  text-align: center;
+}
+
+.hospital-prescription-preview h5 {
+  font-weight: 800;
+  margin: 10px 0 4px;
+}
+
+.hospital-prescription-preview p {
+  margin-bottom: 4px;
+}

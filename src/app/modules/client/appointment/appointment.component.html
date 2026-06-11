@@ -6,15 +6,19 @@
         <p>Create and manage patient appointments</p>
       </div>
       <div class="offline-actions">
-        <span class="offline-pill" [class.offline]="offline.statusTone() === 'offline'" [class.syncing]="offline.statusTone() === 'syncing'" [class.failed]="offline.statusTone() === 'failed'">
+        <span class="offline-pill" [class.offline]="offline.statusTone() === 'offline'"
+          [class.syncing]="offline.statusTone() === 'syncing'" [class.failed]="offline.statusTone() === 'failed'">
           <i class="fa fa-circle"></i>
           {{ offline.statusLabel() }}
         </span>
-        <button class="sync-action" type="button" [disabled]="!offline.online() || offline.syncing() || offline.pendingCount() === 0" (click)="syncOfflineWork()">
+        <button class="sync-action" type="button"
+          [disabled]="!offline.online() || offline.syncing() || offline.pendingCount() === 0"
+          (click)="syncOfflineWork()">
           <i class="fa fa-refresh"></i>
           Sync
         </button>
-        <button class="icon-action" type="button" *ngIf="canCreatePatients" (click)="openAddPatientModal()" title="Add patient">
+        <button class="icon-action" type="button" *ngIf="canCreatePatients" (click)="openAddPatientModal()"
+          title="Add patient">
           <i class="fa fa-plus"></i>
         </button>
       </div>
@@ -34,7 +38,8 @@
         <div>
           <p>Pending Check-ins</p>
           <strong>{{ pendingCheckIns }}</strong>
-          <small>{{ appointments.length ? ((pendingCheckIns / appointments.length) * 100 | number:'1.0-0') : 0 }}% of total</small>
+          <small>{{ appointments.length ? ((pendingCheckIns / appointments.length) * 100 | number:'1.0-0') : 0 }}% of
+            total</small>
         </div>
       </div>
       <div class="stat-card stat-blue">
@@ -55,7 +60,7 @@
       </div>
     </div>
 
-    <div class="appointment-layout">
+    <div class="appointment-layout" [class.list-only]="!(canCreateAppointment || editingId)">
       <section class="panel create-panel" *ngIf="canCreateAppointment || editingId">
         <div class="panel-title">
           <span class="panel-icon"><i class="fa fa-calendar-plus-o"></i></span>
@@ -69,14 +74,8 @@
 
           <label class="field-label">Mobile Number</label>
           <div class="phone-search">
-            <input
-              type="tel"
-              name="patientPhone"
-              [(ngModel)]="patientPhone"
-              [ngModelOptions]="{ standalone: true }"
-              placeholder="03004444444"
-              (keydown.enter)="$event.preventDefault(); lookupPatientsByPhone()"
-            />
+            <input type="tel" name="patientPhone" [(ngModel)]="patientPhone" [ngModelOptions]="{ standalone: true }"
+              placeholder="03004444444" (keydown.enter)="$event.preventDefault(); lookupPatientsByPhone()" />
             <button type="button" [disabled]="!canSearchPatientPhone()" (click)="lookupPatientsByPhone()">
               {{ phoneLookupLoading ? 'Finding...' : 'Find Patient' }}
             </button>
@@ -88,11 +87,8 @@
               {{ phoneMatchedTotal }} patient{{ phoneMatchedTotal === 1 ? '' : 's' }} found against this phone.
             </div>
 
-            <div
-              class="patient-card"
-              *ngFor="let patient of phoneMatchedPatients"
-              [class.selected]="selectedPatient?._id === patient._id"
-            >
+            <div class="patient-card" *ngFor="let patient of phoneMatchedPatients"
+              [class.selected]="selectedPatient?._id === patient._id">
               <div class="avatar avatar-green">{{ initials(patientName(patient)) }}</div>
               <div class="patient-card-main">
                 <strong>{{ patientName(patient) }}</strong>
@@ -125,10 +121,8 @@
             <button type="button" (click)="clearSelectedPatient()">Change</button>
           </div>
 
-          <div
-            class="field-error"
-            *ngIf="appointmentForm.get('patientId')?.touched && appointmentForm.get('patientId')?.invalid"
-          >
+          <div class="field-error"
+            *ngIf="appointmentForm.get('patientId')?.touched && appointmentForm.get('patientId')?.invalid">
             Select a patient from phone search results.
           </div>
 
@@ -182,12 +176,8 @@
           <div class="slot-row">
             <span>Available Time Slots</span>
             <div>
-              <button
-                type="button"
-                *ngFor="let slot of timeSlots"
-                [class.active]="isSelectedTimeSlot(slot)"
-                (click)="selectTimeSlot(slot)"
-              >
+              <button type="button" *ngFor="let slot of timeSlots" [class.active]="isSelectedTimeSlot(slot)"
+                (click)="selectTimeSlot(slot)">
                 {{ slot }}
               </button>
             </div>
@@ -195,11 +185,8 @@
 
           <label class="reason-field">
             <span>Reason for Visit (Optional)</span>
-            <textarea
-              formControlName="reason"
-              maxlength="250"
-              placeholder="Enter reason for visit, symptoms, or notes..."
-            ></textarea>
+            <textarea formControlName="reason" maxlength="250"
+              placeholder="Enter reason for visit, symptoms, or notes..."></textarea>
             <small>{{ appointmentForm.value.reason?.length || 0 }}/250</small>
           </label>
 
@@ -224,7 +211,10 @@
             <span class="panel-icon"><i class="fa fa-calendar"></i></span>
             <h2>Today's Appointments</h2>
           </div>
-          <button class="export-btn" type="button"><i class="fa fa-download"></i> Export</button>
+          <button class="export-btn" type="button" (click)="exportAppointments()" [disabled]="loading || exportingAppointments">
+            <i class="fa fa-download"></i>
+            {{ exportingAppointments ? 'Exporting...' : 'Export' }}
+          </button>
         </div>
 
         <div class="filters-row">
@@ -290,14 +280,21 @@
                     <a [routerLink]="['/patients/patient-profile', appointment.patientId]" title="Patient">
                       <i class="fa fa-eye"></i>
                     </a>
-                    <button type="button" *ngIf="canUpdateAppointment" (click)="editAppointment(appointment)" title="Edit">
+                    <button type="button" *ngIf="canUpdateAppointment" (click)="editAppointment(appointment)"
+                      title="Edit">
                       <i class="fa fa-pencil"></i>
                     </button>
-                    <button type="button" *ngIf="canUpdateAppointmentStatus" (click)="updateStatus(appointment, 'completed')" title="Complete">
+                    <button type="button" *ngIf="canUpdateAppointmentStatus"
+                      (click)="updateStatus(appointment, 'completed')" title="Complete">
                       <i class="fa fa-check"></i>
                     </button>
-                    <button type="button" *ngIf="canDeleteAppointment" (click)="deleteAppointment(appointment._id)" title="Delete">
+                    <button type="button" *ngIf="canDeleteAppointment" (click)="deleteAppointment(appointment._id)"
+                      title="Delete">
                       <i class="fa fa-trash"></i>
+                    </button>
+                    <button type="button" *ngIf="appointment.patient?.phone"
+                      (click)="sendAppointmentWhatsApp(appointment)" title="Send via WhatsApp">
+                      <i class="fa fa-whatsapp"></i>
                     </button>
                   </div>
                 </td>
