@@ -1,61 +1,64 @@
-const ELEVATED_ROLES = new Set(['owner', 'superadmin', 'admin']);
+export type AccessRequirement =
+  | string[]
+  | {
+      any?: string[];
+      all?: string[];
+    };
 
 type RouteAccess = {
   path: string;
-  access: string[];
-  deniedRoles?: string[];
+  access: AccessRequirement;
 };
 
 const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
-  { path: '/dashboard', access: ['owner', 'superAdmin', 'hospital_dashboard.read'] },
-  { path: '/appointments', access: ['owner', 'superAdmin', 'appointments.read'], deniedRoles: ['doctor'] },
-  { path: '/patients/all-patients', access: ['owner', 'superAdmin', 'patients.read'] },
+  { path: '/dashboard', access: ['hospital_dashboard.read'] },
+  { path: '/appointments', access: ['appointments.read'] },
+  { path: '/patients/all-patients', access: ['patients.read'] },
   {
     path: '/patients/add-patient',
-    access: ['owner', 'superAdmin', 'patients.create', 'patients.update'],
+    access: ['patients.create', 'patients.update'],
   },
-  { path: '/payments/invoices', access: ['owner', 'superAdmin', 'bills.read'] },
+  { path: '/payments/invoices', access: ['bills.read'] },
   {
     path: '/payments/addpayment',
-    access: ['owner', 'superAdmin', 'bills.create', 'bills.update_payment'],
+    access: ['bills.create', 'bills.update_payment'],
   },
-  { path: '/departments', access: ['owner', 'superAdmin', 'departments.read'] },
-  { path: '/all-doctors', access: ['owner', 'superAdmin', 'doctors.read'] },
+  { path: '/departments', access: ['departments.read'] },
+  { path: '/all-doctors', access: ['doctors.read'] },
   {
     path: '/clinical-records',
-    access: ['owner', 'superAdmin', 'patients_history.read', 'patients_history.create'],
+    access: ['patients_history.read', 'patients_history.create'],
   },
-  { path: '/pharmacy', access: ['owner', 'superAdmin', 'pharmacy', 'products.read'] },
+  { path: '/pharmacy', access: ['products.read'] },
   {
     path: '/prescriptions',
-    access: ['owner', 'superAdmin', 'prescriptions.read', 'prescriptions.create'],
+    access: ['prescriptions.read', 'prescriptions.create'],
+  },
+  {
+    path: '/room-allotment',
+    access: ['rooms.read', 'rooms.create', 'rooms.update'],
   },
   {
     path: '/room-allotment/alloted-rooms',
-    access: ['owner', 'superAdmin', 'room_allotments.read', 'rooms.read'],
+    access: ['room_allotments.read'],
   },
   {
     path: '/room-allotment/add-alloted-rooms',
-    access: [
-      'owner',
-      'superAdmin',
-      'room_allotments.create',
-      'room_allotments.update',
-      'rooms.create',
-      'rooms.update',
-    ],
+    access: {
+      all: ['room_allotments.create', 'rooms.read', 'patients.read'],
+    },
   },
   {
     path: '/laboratory',
-    access: ['owner', 'superAdmin', 'patients.read', 'patients_history.read'],
+    access: ['patients_history.read'],
   },
   {
     path: '/ward-admin',
-    access: ['owner', 'superAdmin', 'room_allotments.read', 'patients_history.read'],
+    access: ['patients_history.read'],
   },
-  { path: '/users', access: ['owner', 'superAdmin', 'users.read'] },
-  { path: '/hospitals', access: ['owner', 'superAdmin', 'hospitals.read'] },
-  { path: '/roles', access: ['owner', 'superAdmin', 'roles.read'] },
+  { path: '/users', access: ['users.read'] },
+  { path: '/hospitals', access: ['hospitals.read'] },
+  { path: '/roles', access: ['roles.read'] },
 ];
 
 export const normalizeAccessKey = (value: string) =>
@@ -82,45 +85,34 @@ export const readStoredPermissions = (): string[] => {
 };
 
 export const hasRouteAccess = (
-  allowedAccess: string[],
-  role: string | null,
-  permissions: string[],
-  deniedRoles: string[] = []
+  allowedAccess: AccessRequirement,
+  permissions: string[]
 ): boolean => {
-  const normalizedRole = role ? normalizeAccessKey(role) : '';
-  const normalizedDeniedRoles = new Set(deniedRoles.map((deniedRole) => normalizeAccessKey(deniedRole)));
   const normalizedPermissions = new Set(
     permissions.map((permission) => normalizeAccessKey(permission))
   );
 
-  if (normalizedDeniedRoles.has(normalizedRole)) {
-    return false;
-  }
-
-  if (
-    ELEVATED_ROLES.has(normalizedRole) ||
-    permissions.includes('*') ||
-    normalizedPermissions.has('*')
-  ) {
+  if (permissions.includes('*') || normalizedPermissions.has('*')) {
     return true;
   }
 
-  return allowedAccess.some((allowedItem) => {
+  const anyAccess = Array.isArray(allowedAccess) ? allowedAccess : allowedAccess.any || [];
+  const allAccess = Array.isArray(allowedAccess) ? [] : allowedAccess.all || [];
+  const hasAccessItem = (allowedItem: string) => {
     const normalizedAllowedItem = normalizeAccessKey(allowedItem);
-    return (
-      normalizedAllowedItem === normalizedRole ||
-      normalizedPermissions.has(normalizedAllowedItem)
-    );
-  });
+    return normalizedPermissions.has(normalizedAllowedItem);
+  };
+
+  const passesAny = anyAccess.length === 0 || anyAccess.some(hasAccessItem);
+  const passesAll = allAccess.every(hasAccessItem);
+
+  return passesAny && passesAll;
 };
 
-export const resolveDefaultRoute = (
-  role: string | null | undefined,
-  permissions: string[]
-): string => {
+export const resolveDefaultRoute = (permissions: string[]): string => {
   return (
     DEFAULT_ROUTE_ACCESS.find((routeAccess) =>
-      hasRouteAccess(routeAccess.access, role || null, permissions, routeAccess.deniedRoles)
+      hasRouteAccess(routeAccess.access, permissions)
     )?.path || '/login/access'
   );
 };

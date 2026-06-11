@@ -27,7 +27,7 @@ export class AddDoctorsComponent implements OnInit {
 
   currentUser: User | null = null;
   currentHospitalId: string | null = null;
-  isOwnerOrSuperAdmin = false;
+  canSelectHospital = false;
 
   saving = false;
 
@@ -68,14 +68,9 @@ export class AddDoctorsComponent implements OnInit {
   setLoggedInUser(): void {
     this.currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
 
-    const role = localStorage.getItem('role') || '';
-    const normalizedRole = role.trim().replace(/[\s_-]/g, '').toLowerCase();
     const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
 
-    this.isOwnerOrSuperAdmin =
-      normalizedRole === 'owner' ||
-      normalizedRole === 'superadmin' ||
-      permissions.includes('*');
+    this.canSelectHospital = permissions.includes('*');
 
     this.currentHospitalId = this.currentUser?.hospitalId || null;
 
@@ -87,7 +82,7 @@ export class AddDoctorsComponent implements OnInit {
   }
 
   loadInitialData(): void {
-    if (this.isOwnerOrSuperAdmin) {
+    if (this.canSelectHospital) {
       this.backend.getHospitals().subscribe({
         next: (result) => {
           this.hospitals = result.items || [];
@@ -153,7 +148,21 @@ export class AddDoctorsComponent implements OnInit {
     return this.selectedDays.includes(day);
   }
 
+  can(permission: string): boolean {
+    return this.backend.hasPermission(permission);
+  }
+
   submitDoctor(): void {
+    if (!this.editingDoctor && !this.can('doctors.create')) {
+      this.toastr.error('You do not have permission to create doctors.');
+      return;
+    }
+
+    if (this.editingDoctor && !this.can('doctors.update')) {
+      this.toastr.error('You do not have permission to update doctors.');
+      return;
+    }
+
     if (this.doctorForm.invalid) {
       this.doctorForm.markAllAsTouched();
       return;

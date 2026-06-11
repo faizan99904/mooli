@@ -68,13 +68,25 @@ export class HospitalsComponent implements OnInit {
     );
   }
 
+  can(permission: string): boolean {
+    return this.backend.hasPermission(permission);
+  }
+
   editHospital(hospital: Hospital): void {
+    if (!this.can('hospitals.update')) {
+      return;
+    }
+
     this.router.navigate(['/create-hospital'], {
       state: { hospital },
     });
   }
 
   deleteHospital(id: string): void {
+    if (!this.can('hospitals.delete')) {
+      return;
+    }
+
     if (!confirm('Delete this hospital?')) {
       return;
     }

@@ -59,7 +59,7 @@
                                         <td><span class="badge badge-info">{{ bill.paymentStatus }}</span></td>
                                         <td>
                                             <a class="btn btn-sm btn-default mr-1" [routerLink]="['/payments/invoices/invoice-detail', bill._id]">View</a>
-                                            <button type="button" class="btn btn-sm btn-primary" (click)="updatePayment(bill)">Payment</button>
+                                            <button type="button" class="btn btn-sm btn-primary" *ngIf="can('bills.update_payment')" (click)="updatePayment(bill)">Payment</button>
                                         </td>
                                     </tr>
                                     <tr *ngIf="!loading && bills.length === 0">

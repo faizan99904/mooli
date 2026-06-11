@@ -92,6 +92,16 @@ export class CreateUserComponent implements OnInit, OnDestroy {
   }
 
   submitForm() {
+    if (!this.editingUser && !this.backend.hasPermission('users.create')) {
+      this.toast.error('You do not have permission to create users.');
+      return;
+    }
+
+    if (this.editingUser && !this.backend.hasPermission('users.update')) {
+      this.toast.error('You do not have permission to update users.');
+      return;
+    }
+
     if (this.userForm.invalid) {
       this.userForm.markAllAsTouched();
       return;
@@ -159,14 +169,9 @@ export class CreateUserComponent implements OnInit, OnDestroy {
   private setLoggedInUser(): void {
     this.currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
 
-    const role = localStorage.getItem('role') || this.currentUser?.role?.name || '';
-    const normalizedRole = this.normalizeRole(role);
     const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
 
-    this.canSelectHospital =
-      normalizedRole === 'owner' ||
-      normalizedRole === 'superadmin' ||
-      permissions.includes('*');
+    this.canSelectHospital = permissions.includes('*');
     this.canAssignPosStore =
       this.canSelectHospital ||
       permissions.includes('stores.read') ||
@@ -303,21 +308,15 @@ export class CreateUserComponent implements OnInit, OnDestroy {
       return activeRoles;
     }
 
-    return activeRoles.filter((role) => !this.isElevatedRole(role));
+    return activeRoles.filter((role) => !this.isWildcardRole(role));
   }
 
   private canAssignSelectedRole(roleId: string): boolean {
     return this.roles.some((role) => role._id === roleId);
   }
 
-  private isElevatedRole(role: Role): boolean {
-    const roleName = this.normalizeRole(role.name);
-
-    return (
-      roleName === 'owner' ||
-      roleName === 'superadmin' ||
-      Boolean(role.permissions?.includes('*'))
-    );
+  private isWildcardRole(role: Role): boolean {
+    return Boolean(role.permissions?.includes('*'));
   }
 
   private getResolvedHospitalId(): string {
@@ -330,7 +329,4 @@ export class CreateUserComponent implements OnInit, OnDestroy {
     return this.currentHospitalId || formHospitalId;
   }
 
-  private normalizeRole(role: string): string {
-    return role.trim().replace(/[\s_-]/g, '').toLowerCase();
-  }
 }

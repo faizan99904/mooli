@@ -105,6 +105,30 @@ export class AppointmentComponent implements OnInit {
     void this.syncOfflineWork(false);
   }
 
+  get canCreateAppointment(): boolean {
+    return this.backend.hasPermission('appointments.create');
+  }
+
+  get canUpdateAppointment(): boolean {
+    return this.backend.hasPermission('appointments.update');
+  }
+
+  get canDeleteAppointment(): boolean {
+    return this.backend.hasPermission('appointments.delete');
+  }
+
+  get canUpdateAppointmentStatus(): boolean {
+    return this.backend.hasPermission('appointments.status_update');
+  }
+
+  get canReadPatients(): boolean {
+    return this.backend.hasPermission('patients.read');
+  }
+
+  get canCreatePatients(): boolean {
+    return this.backend.hasPermission('patients.create');
+  }
+
   loadLookups(): void {
     this.backend.getDoctors({ limit: 100, status: 'active' }).subscribe({
       next: (result) => {
@@ -150,6 +174,16 @@ export class AppointmentComponent implements OnInit {
   }
 
   submitAppointment(): void {
+    if (!this.editingId && !this.canCreateAppointment) {
+      this.toastr.error('You do not have permission to create appointments.');
+      return;
+    }
+
+    if (this.editingId && !this.canUpdateAppointment) {
+      this.toastr.error('You do not have permission to update appointments.');
+      return;
+    }
+
     if (!this.appointmentForm.value.patientId) {
       this.appointmentForm.get('patientId')?.markAsTouched();
       this.toastr.error('Search phone number and select a patient first');
@@ -221,6 +255,10 @@ export class AppointmentComponent implements OnInit {
   }
 
   editAppointment(appointment: Appointment): void {
+    if (!this.canUpdateAppointment) {
+      return;
+    }
+
     this.editingId = appointment._id;
     this.selectedPatient = appointment.patient || null;
     this.patientPhone = appointment.patient?.phone || '';
@@ -242,6 +280,10 @@ export class AppointmentComponent implements OnInit {
   }
 
   updateStatus(appointment: Appointment, status: string): void {
+    if (!this.canUpdateAppointmentStatus) {
+      return;
+    }
+
     this.backend
       .updateAppointmentStatus(appointment._id, { status, notes: appointment.notes || '' })
       .subscribe({
@@ -254,6 +296,10 @@ export class AppointmentComponent implements OnInit {
   }
 
   deleteAppointment(id: string): void {
+    if (!this.canDeleteAppointment) {
+      return;
+    }
+
     if (!confirm('Delete this appointment?')) {
       return;
     }
@@ -319,7 +365,7 @@ export class AppointmentComponent implements OnInit {
   }
 
   canSearchPatientPhone(): boolean {
-    return this.normalizePhone(this.patientPhone).length >= 4 && !this.phoneLookupLoading;
+    return this.canReadPatients && this.normalizePhone(this.patientPhone).length >= 4 && !this.phoneLookupLoading;
   }
 
   lookupPatientsByPhone(): void {
@@ -657,6 +703,11 @@ export class AppointmentComponent implements OnInit {
   }
 
   openAddPatientModal(): void {
+    if (!this.canCreatePatients) {
+      this.toastr.error('You do not have permission to create patients.');
+      return;
+    }
+
     this.patientForm.reset({
       firstName: '',
       lastName: '',
@@ -684,6 +735,11 @@ export class AppointmentComponent implements OnInit {
   }
 
   submitPatientFromModal(): void {
+    if (!this.canCreatePatients) {
+      this.toastr.error('You do not have permission to create patients.');
+      return;
+    }
+
     if (this.patientForm.invalid) {
       this.patientForm.markAllAsTouched();
       return;

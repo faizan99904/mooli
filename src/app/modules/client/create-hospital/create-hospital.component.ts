@@ -54,7 +54,21 @@ export class CreateHospitalComponent implements OnInit {
     });
   }
 
+  can(permission: string): boolean {
+    return this.backend.hasPermission(permission);
+  }
+
   submitForm(): void {
+    if (!this.editingHospital && !this.can('hospitals.create')) {
+      this.toast.error('You do not have permission to create hospitals.');
+      return;
+    }
+
+    if (this.editingHospital && !this.can('hospitals.update')) {
+      this.toast.error('You do not have permission to update hospitals.');
+      return;
+    }
+
     if (this.hospitalForm.invalid) {
       this.hospitalForm.markAllAsTouched();
       return;
@@ -98,4 +112,4 @@ export class CreateHospitalComponent implements OnInit {
       },
     });
   }
-} 
+}

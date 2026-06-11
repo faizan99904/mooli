@@ -62,8 +62,16 @@
                     <a [routerLink]="['/prescriptions']"><i class="fa fa-file-text-o"></i><span>Prescriptions</span></a>
                 </li>
 
-                <li *ngIf="canViewPharmacy" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
-                    <a [routerLink]="['/pharmacy']"><i class="fa fa-medkit"></i><span>Pharmacy</span></a>
+                <li *ngIf="canViewPharmacy || canOpenPharmacyPos">
+                    <a (click)="PharmacyCollapsed = !PharmacyCollapsed" [attr.aria-expanded]="!PharmacyCollapsed"
+                        class="has-arrow">
+                        <i class="fa fa-medkit"></i><span>Pharmacy</span>
+                    </a>
+                    <ul class="nav-dropdown" *ngIf="!PharmacyCollapsed" [@collapseExpand]>
+                        <li *ngIf="canViewPharmacy"><a [routerLink]="['/pharmacy']">Pharmacy Dashboard</a></li>
+                        <li *ngIf="canViewPharmacy"><a [routerLink]="['/pharmacy/products']">Medicine Catalog</a></li>
+                        <li *ngIf="canOpenPharmacyPos"><a [routerLink]="['/pharmacy/pos']">Pharmacy POS</a></li>
+                    </ul>
                 </li>
 
                 <li *ngIf="canViewLaboratory" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
@@ -91,13 +99,14 @@
                     </ul>
                 </li>
 
-                <li *ngIf="canViewRooms || canManageRooms">
+                <li *ngIf="canViewRooms || canManageRooms || canViewRoomAllotments || canManageRoomAllotments">
                     <a (click)="RoomCollapsed = !RoomCollapsed" [attr.aria-expanded]="!RoomCollapsed" class="has-arrow">
                         <i class="fa fa-thumbs-up"></i><span>Room Allotment</span>
                     </a>
                     <ul class="nav-dropdown" *ngIf="!RoomCollapsed" [@collapseExpand]>
-                        <li *ngIf="canViewRooms"><a [routerLink]="['/room-allotment/alloted-rooms']">Alloted Rooms</a></li>
-                        <li *ngIf="canManageRooms"><a [routerLink]="['/room-allotment/add-alloted-rooms']">Add Allotment</a></li>
+                        <li *ngIf="canViewRooms || canManageRooms"><a [routerLink]="['/room-allotment']">Rooms</a></li>
+                        <li *ngIf="canViewRoomAllotments"><a [routerLink]="['/room-allotment/alloted-rooms']">Alloted Rooms</a></li>
+                        <li *ngIf="canManageRoomAllotments"><a [routerLink]="['/room-allotment/add-alloted-rooms']">Add Allotment</a></li>
                     </ul>
                 </li>
 

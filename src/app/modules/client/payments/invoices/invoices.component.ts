@@ -32,6 +32,10 @@ export class InvoicesComponent implements OnInit {
     this.loadBills();
   }
 
+  can(permission: string): boolean {
+    return this.backend.hasPermission(permission);
+  }
+
   loadBills(): void {
     this.loading = true;
     this.backend
@@ -56,6 +60,11 @@ export class InvoicesComponent implements OnInit {
   }
 
   updatePayment(bill: Bill): void {
+    if (!this.can('bills.update_payment')) {
+      this.toastr.error('You do not have permission to update bill payments.');
+      return;
+    }
+
     const amount = prompt('Paid amount', String(bill.paidAmount || bill.grandTotal));
     if (amount === null) {
       return;

@@ -76,7 +76,21 @@ export class AddPatientComponent implements OnInit {
       : [];
   }
 
+  can(permission: string): boolean {
+    return this.backend.hasPermission(permission);
+  }
+
   submitPatient(): void {
+    if (!this.editingPatient && !this.can('patients.create')) {
+      this.toastr.error('You do not have permission to create patients.');
+      return;
+    }
+
+    if (this.editingPatient && !this.can('patients.update')) {
+      this.toastr.error('You do not have permission to update patients.');
+      return;
+    }
+
     if (this.patientForm.invalid) {
       this.patientForm.markAllAsTouched();
       return;

@@ -17,7 +17,6 @@ export class UsersComponent implements OnInit {
   users: User[] = [];
   search = '';
   loading = false;
-  role = localStorage.getItem('role') || '';
   permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
 
   constructor(
@@ -60,22 +59,27 @@ export class UsersComponent implements OnInit {
   }
 
   get canViewHospitalColumn(): boolean {
-    return this.isElevated();
+    return this.hasPermission('*');
   }
 
   canCreateUser(): boolean {
-    return this.isElevated() || this.isHospitalAdmin() || this.hasPermission('users.create');
+    return this.hasPermission('users.create');
   }
 
   canUpdateUser(): boolean {
-    return this.isElevated() || this.isHospitalAdmin() || this.hasPermission('users.update');
+    return this.hasPermission('users.update');
   }
 
   canDeleteUser(): boolean {
-    return this.isElevated() || this.hasPermission('users.delete');
+    return this.hasPermission('users.delete');
   }
 
   deleteUser(id: string) {
+    if (!this.canDeleteUser()) {
+      this.toast.error('You do not have permission to delete users.');
+      return;
+    }
+
     if (!confirm('Delete this user?')) {
       return;
     }
@@ -92,6 +96,10 @@ export class UsersComponent implements OnInit {
   }
 
   editUser(user: User) {
+    if (!this.canUpdateUser()) {
+      return;
+    }
+
     this.router.navigate(['/create-user'], { state: { user } });
   }
 
@@ -99,21 +107,4 @@ export class UsersComponent implements OnInit {
     return this.permissions.includes('*') || this.permissions.includes(permission);
   }
 
-  private isElevated(): boolean {
-    const normalizedRole = this.normalizeRole(this.role);
-
-    return (
-      normalizedRole === 'owner' ||
-      normalizedRole === 'superadmin' ||
-      this.permissions.includes('*')
-    );
-  }
-
-  private isHospitalAdmin(): boolean {
-    return this.normalizeRole(this.role) === 'admin';
-  }
-
-  private normalizeRole(role: string): string {
-    return role.trim().replace(/[\s_-]/g, '').toLowerCase();
-  }
 }

@@ -4,19 +4,23 @@ import {
 } from '@angular/router';
 import { inject } from '@angular/core';
 
-import { hasRouteAccess, readStoredPermissions, resolveDefaultRoute } from './access-control';
+import {
+  hasRouteAccess,
+  readStoredPermissions,
+  resolveDefaultRoute,
+} from './access-control';
+import type { AccessRequirement } from './access-control';
 
-export const roleGuard = (allowedRoles: string[], deniedRoles: string[] = []): CanActivateFn => {
+export const roleGuard = (accessRequirement: AccessRequirement): CanActivateFn => {
   return (_route, state) => {
-    const role = localStorage.getItem('role');
     const permissions = readStoredPermissions();
     const router = inject(Router);
 
-    if (hasRouteAccess(allowedRoles, role, permissions, deniedRoles)) {
+    if (hasRouteAccess(accessRequirement, permissions)) {
       return true;
     }
 
-    const fallbackRoute = resolveDefaultRoute(role, permissions);
+    const fallbackRoute = resolveDefaultRoute(permissions);
     const currentPath = state.url.split('?')[0];
 
     if (fallbackRoute !== currentPath) {

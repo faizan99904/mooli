@@ -10,7 +10,7 @@
         </div>
 
         <div class="row clearfix">
-            <div class="col-lg-4 col-md-12">
+            <div class="col-lg-4 col-md-12" *ngIf="canManageRooms || editingId">
                 <div class="card">
                     <div class="header"><h2>{{ editingId ? 'Edit Room' : 'Add Room' }}</h2></div>
                     <div class="body">
@@ -97,8 +97,8 @@
                                         <td>{{ room.chargesPerDay }}</td>
                                         <td><span class="badge badge-info">{{ room.status }}</span></td>
                                         <td class="text-right">
-                                            <button class="btn btn-sm btn-default mr-1" (click)="editRoom(room)">Edit</button>
-                                            <button class="btn btn-sm btn-danger" (click)="deleteRoom(room._id)">Delete</button>
+                                            <button class="btn btn-sm btn-default mr-1" *ngIf="can('rooms.update')" (click)="editRoom(room)">Edit</button>
+                                            <button class="btn btn-sm btn-danger" *ngIf="can('rooms.delete')" (click)="deleteRoom(room._id)">Delete</button>
                                         </td>
                                     </tr>
                                     <tr *ngIf="!loading && rooms.length === 0">

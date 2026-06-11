@@ -105,25 +105,19 @@ export class CareRecordsComponent implements OnInit {
   }
 
   get canCreate(): boolean {
-    return (
-      this.backend.hasPermission('patients_history.create') || this.isElevatedRole()
-    );
+    return this.backend.hasPermission('patients_history.create');
   }
 
   get canUpdate(): boolean {
-    return (
-      this.backend.hasPermission('patients_history.update') || this.isElevatedRole()
-    );
+    return this.backend.hasPermission('patients_history.update');
   }
 
   get canDelete(): boolean {
-    return (
-      this.backend.hasPermission('patients_history.delete') || this.isElevatedRole()
-    );
+    return this.backend.hasPermission('patients_history.delete');
   }
 
   get canChooseDoctor(): boolean {
-    return !this.isDoctorUser() || this.isElevatedRole();
+    return !this.isDoctorUser() || this.backend.hasPermission('*');
   }
 
   get titleLabel(): string {
@@ -368,7 +362,7 @@ export class CareRecordsComponent implements OnInit {
       this.recordForm.patchValue(nextValues, { emitEvent: false });
     }
 
-    if (this.isDoctorUser() && !this.isElevatedRole()) {
+    if (this.isDoctorUser() && !this.backend.hasPermission('*')) {
       this.recordForm.get('doctorId')?.disable({ emitEvent: false });
     } else {
       this.recordForm.get('doctorId')?.enable({ emitEvent: false });
@@ -405,15 +399,6 @@ export class CareRecordsComponent implements OnInit {
 
   private isDoctorUser(): boolean {
     return this.normalizeRole(this.currentRole) === 'doctor';
-  }
-
-  private isElevatedRole(): boolean {
-    const normalizedRole = this.normalizeRole(this.currentRole);
-    return (
-      normalizedRole === 'owner' ||
-      normalizedRole === 'superadmin' ||
-      this.backend.hasPermission('*')
-    );
   }
 
   private normalizeRole(role: string): string {

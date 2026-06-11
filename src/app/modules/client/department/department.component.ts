@@ -25,7 +25,7 @@ export class DepartmentComponent implements OnInit {
   hospitals: Hospital[] = [];
   currentUser: User | null = null;
   currentHospitalId: string | null = null;
-  isOwnerOrSuperAdmin = false;
+  canSelectHospital = false;
   loading = false;
   saving = false;
   search = '';
@@ -81,6 +81,16 @@ export class DepartmentComponent implements OnInit {
   }
 
   submitDepartment(): void {
+    if (!this.editingId && !this.can('departments.create')) {
+      this.toastr.error('You do not have permission to create departments.');
+      return;
+    }
+
+    if (this.editingId && !this.can('departments.update')) {
+      this.toastr.error('You do not have permission to update departments.');
+      return;
+    }
+
     if (this.departmentForm.invalid) {
       this.departmentForm.markAllAsTouched();
       return;
@@ -113,6 +123,10 @@ export class DepartmentComponent implements OnInit {
   }
 
   editDepartment(department: Department): void {
+    if (!this.can('departments.update')) {
+      return;
+    }
+
     this.editingId = department._id;
     this.departmentForm.patchValue({
       hospitalId: department.hospitalId || this.currentHospitalId || '',
@@ -123,6 +137,10 @@ export class DepartmentComponent implements OnInit {
   }
 
   deleteDepartment(id: string): void {
+    if (!this.can('departments.delete')) {
+      return;
+    }
+
     if (!confirm('Delete this department?')) {
       return;
     }
@@ -160,14 +178,9 @@ export class DepartmentComponent implements OnInit {
   setLoggedInUser(): void {
     this.currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
 
-    const role = localStorage.getItem('role') || '';
-    const normalizedRole = role.trim().replace(/[\s_-]/g, '').toLowerCase();
     const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
 
-    this.isOwnerOrSuperAdmin =
-      normalizedRole === 'owner' ||
-      normalizedRole === 'superadmin' ||
-      permissions.includes('*');
+    this.canSelectHospital = permissions.includes('*');
 
     this.currentHospitalId = this.currentUser?.hospitalId || null;
 
@@ -179,7 +192,7 @@ export class DepartmentComponent implements OnInit {
   }
 
   loadInitialData(): void {
-    if (this.isOwnerOrSuperAdmin) {
+    if (this.canSelectHospital) {
       this.backend.getHospitals().subscribe({
         next: (result) => {
           this.hospitals = result.items || [];

@@ -75,27 +75,27 @@ export class PharmacyProductsComponent implements OnInit {
   }
 
   get canViewProducts(): boolean {
-    return this.backend.hasPermission('products.read') || this.hasPharmacyAccess();
+    return this.backend.hasPermission('products.read');
   }
 
   get canCreateProducts(): boolean {
-    return this.backend.hasPermission('products.create') || this.hasPharmacyAccess();
+    return this.backend.hasPermission('products.create');
   }
 
   get canUpdateProducts(): boolean {
-    return this.backend.hasPermission('products.update') || this.hasPharmacyAccess();
+    return this.backend.hasPermission('products.update');
   }
 
   get canDeleteProducts(): boolean {
-    return this.backend.hasPermission('products.delete') || this.hasPharmacyAccess();
+    return this.backend.hasPermission('products.delete');
   }
 
   get canCreateCategories(): boolean {
-    return this.backend.hasPermission('categories.create') || this.hasPharmacyAccess();
+    return this.backend.hasPermission('categories.create');
   }
 
   get canAdjustInventory(): boolean {
-    return this.backend.hasPermission('inventory.adjust') || this.hasPharmacyAccess();
+    return this.backend.hasPermission('inventory.adjust');
   }
 
   get selectedStoreLabel(): string {
@@ -165,7 +165,7 @@ export class PharmacyProductsComponent implements OnInit {
   }
 
   loadCategories(): void {
-    if (!this.backend.hasPermission('categories.read') && !this.hasPharmacyAccess()) {
+    if (!this.backend.hasPermission('categories.read')) {
       this.categories = [];
       return;
     }
@@ -186,7 +186,7 @@ export class PharmacyProductsComponent implements OnInit {
 
   loadStores(): void {
     const user = this.getStoredUser();
-    if (!this.backend.hasPermission('stores.read') && !this.hasPharmacyAccess()) {
+    if (!this.backend.hasPermission('stores.read')) {
       this.stores = [];
       if (user?.storeId && !this.productForm.storeId) {
         this.productForm.storeId = user.storeId;
@@ -291,6 +291,16 @@ export class PharmacyProductsComponent implements OnInit {
     const openingStock = Number(this.productForm.openingStock || 0);
     const storeId = this.productForm.storeId || this.currentStoreId();
     const isEditing = Boolean(this.editingProductId);
+
+    if (!isEditing && !this.canCreateProducts) {
+      this.toastr.error('This role needs products.create to add pharmacy medicines.');
+      return;
+    }
+
+    if (isEditing && !this.canUpdateProducts) {
+      this.toastr.error('This role needs products.update to edit pharmacy medicines.');
+      return;
+    }
 
     if (!name) {
       this.toastr.error('Medicine/product name is required.');
@@ -538,16 +548,6 @@ export class PharmacyProductsComponent implements OnInit {
 
   private hasStockChanged(nextStock: number): boolean {
     return String(Math.floor(nextStock)) !== String(this.editingOriginalStock || '0');
-  }
-
-  private hasPharmacyAccess(): boolean {
-    const user = this.getStoredUser();
-    const roleName = String(localStorage.getItem('role') || user?.role?.name || '')
-      .trim()
-      .replace(/[\s_-]/g, '')
-      .toLowerCase();
-
-    return this.backend.hasPermission('products.read') || roleName.includes('pharmacy');
   }
 
   private getStoredUser(): User | null {
