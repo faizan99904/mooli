@@ -56,7 +56,16 @@ export class AddAllotmentComponent implements OnInit {
     return `${patient.firstName} ${patient.lastName}`.trim();
   }
 
+  can(permission: string): boolean {
+    return this.backend.hasPermission(permission);
+  }
+
   submitAllotment(): void {
+    if (!this.can('room_allotments.create')) {
+      this.toastr.error('You do not have permission to create room allotments.');
+      return;
+    }
+
     if (this.allotmentForm.invalid) {
       this.allotmentForm.markAllAsTouched();
       return;

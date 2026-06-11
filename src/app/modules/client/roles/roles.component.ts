@@ -239,6 +239,16 @@ export class RolesComponent implements OnInit {
   }
 
   submitRole(): void {
+    if (!this.editingRoleId && !this.can('roles.create')) {
+      this.toastr.error('You do not have permission to create roles.');
+      return;
+    }
+
+    if (this.editingRoleId && !this.can('roles.update')) {
+      this.toastr.error('You do not have permission to update roles.');
+      return;
+    }
+
     if (this.roleForm.invalid || this.permissionSelections.length === 0) {
       this.roleForm.markAllAsTouched();
       if (this.permissionSelections.length === 0) {
@@ -274,6 +284,10 @@ export class RolesComponent implements OnInit {
   }
 
   editRole(role: Role): void {
+    if (!this.can('roles.update')) {
+      return;
+    }
+
     this.editingRoleId = role._id;
     this.roleForm.patchValue({
       name: role.name,
@@ -287,6 +301,11 @@ export class RolesComponent implements OnInit {
   }
 
   deleteRole(role: Role): void {
+    if (!this.can('roles.delete')) {
+      this.toastr.error('You do not have permission to delete roles.');
+      return;
+    }
+
     if (!confirm(`Delete the "${role.name}" role?`)) {
       return;
     }

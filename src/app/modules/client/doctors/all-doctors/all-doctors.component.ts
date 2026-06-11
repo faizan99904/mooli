@@ -74,6 +74,11 @@ export class AllDoctorsComponent implements OnInit {
   }
 
   deleteDoctor(id: string): void {
+    if (!this.can('doctors.delete')) {
+      this.toastr.error('You do not have permission to delete doctors.');
+      return;
+    }
+
     if (!confirm('Delete this doctor?')) {
       return;
     }
@@ -90,6 +95,10 @@ export class AllDoctorsComponent implements OnInit {
   }
 
   editDoctor(doctor: Doctor): void {
+    if (!this.can('doctors.update')) {
+      return;
+    }
+
     this.router.navigate(['/add-doctors'], { state: { doctor } });
   }
 

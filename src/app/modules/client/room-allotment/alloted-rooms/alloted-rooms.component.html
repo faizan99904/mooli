@@ -7,7 +7,7 @@
                     <span>Admitted and discharged room allotments</span>
                 </div>
                 <div class="col-lg-8 col-md-12 col-sm-12 text-lg-right">
-                    <a class="btn btn-primary" [routerLink]="['/room-allotment/add-alloted-rooms']">Add Allotment</a>
+                    <a class="btn btn-primary" *ngIf="can('room_allotments.create')" [routerLink]="['/room-allotment/add-alloted-rooms']">Add Allotment</a>
                 </div>
             </div>
         </div>
@@ -46,7 +46,7 @@
                                         <td>{{ allotment.dischargedAt ? (allotment.dischargedAt | date:'short') : '-' }}</td>
                                         <td><span class="badge badge-info">{{ allotment.status }}</span></td>
                                         <td class="text-right">
-                                            <button class="btn btn-sm btn-success" *ngIf="allotment.status === 'admitted'"
+                                            <button class="btn btn-sm btn-success" *ngIf="allotment.status === 'admitted' && can('room_allotments.update')"
                                                 (click)="discharge(allotment)">Discharge</button>
                                         </td>
                                     </tr>

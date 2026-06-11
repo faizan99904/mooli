@@ -121,23 +121,23 @@ export class PharmacyComponent implements OnInit {
   }
 
   get canViewProducts(): boolean {
-    return this.backend.hasPermission('products.read') || this.hasPharmacyPosBaseAccess();
+    return this.backend.hasPermission('products.read');
   }
 
   get canCreateProducts(): boolean {
-    return this.backend.hasPermission('products.create') || this.hasPharmacyPosBaseAccess();
+    return this.backend.hasPermission('products.create');
   }
 
   get canDeleteProducts(): boolean {
-    return this.backend.hasPermission('products.delete') || this.hasPharmacyPosBaseAccess();
+    return this.backend.hasPermission('products.delete');
   }
 
   get canCreateCategories(): boolean {
-    return this.backend.hasPermission('categories.create') || this.hasPharmacyPosBaseAccess();
+    return this.backend.hasPermission('categories.create');
   }
 
   get canAdjustInventory(): boolean {
-    return this.backend.hasPermission('inventory.adjust') || this.hasPharmacyPosBaseAccess();
+    return this.backend.hasPermission('inventory.adjust');
   }
 
   get selectedStoreLabel(): string {
@@ -233,7 +233,7 @@ export class PharmacyComponent implements OnInit {
   }
 
   loadCategories(): void {
-    if (!this.backend.hasPermission('categories.read') && !this.hasPharmacyPosBaseAccess()) {
+    if (!this.backend.hasPermission('categories.read')) {
       this.categories = [];
       return;
     }
@@ -254,7 +254,7 @@ export class PharmacyComponent implements OnInit {
 
   loadStores(): void {
     const user = this.getStoredUser();
-    if (!this.backend.hasPermission('stores.read') && !this.hasPharmacyPosBaseAccess()) {
+    if (!this.backend.hasPermission('stores.read')) {
       this.stores = [];
       if (user?.storeId && !this.productForm.storeId) {
         this.productForm.storeId = user.storeId;
@@ -318,6 +318,11 @@ export class PharmacyComponent implements OnInit {
     const sellingPrice = Number(this.productForm.sellingPrice);
     const openingStock = Number(this.productForm.openingStock || 0);
     const storeId = this.productForm.storeId || this.currentStoreId();
+
+    if (!this.canCreateProducts) {
+      this.toastr.error('This role needs products.create to add pharmacy medicines.');
+      return;
+    }
 
     if (!name) {
       this.toastr.error('Medicine/product name is required.');
@@ -577,16 +582,6 @@ export class PharmacyComponent implements OnInit {
 
   private hasEffectivePosPermission(permission: string): boolean {
     return this.backend.hasPermission(permission);
-  }
-
-  private hasPharmacyPosBaseAccess(): boolean {
-    const user = this.getStoredUser();
-    const roleName = String(localStorage.getItem('role') || user?.role?.name || '')
-      .trim()
-      .replace(/[\s_-]/g, '')
-      .toLowerCase();
-
-    return this.backend.hasPermission('products.read') || roleName.includes('pharmacy');
   }
 
   private getStoredUser(): User | null {

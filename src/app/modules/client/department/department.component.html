@@ -17,7 +17,7 @@
                     </div>
                     <div class="body">
                         <form [formGroup]="departmentForm" (ngSubmit)="submitDepartment()">
-                            <div class="form-group" *ngIf="isOwnerOrSuperAdmin && !currentHospitalId">
+                            <div class="form-group" *ngIf="canSelectHospital && !currentHospitalId">
                                 <label>Hospital</label>
                                 <select class="form-control" formControlName="hospitalId" (change)="page = 1; loadDepartments()">
                                     <option value="">Select Hospital</option>

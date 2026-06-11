@@ -20,7 +20,7 @@
                         <form [formGroup]="doctorForm" (ngSubmit)="submitDoctor()">
                             <div class="row clearfix">
 
-                                <div class="col-md-4 form-group" *ngIf="isOwnerOrSuperAdmin && !currentHospitalId">
+                                <div class="col-md-4 form-group" *ngIf="canSelectHospital && !currentHospitalId">
                                     <label>Hospital</label>
                                     <select class="form-control" formControlName="hospitalId"
                                         (change)="onHospitalChange()">

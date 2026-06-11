@@ -49,43 +49,41 @@ import { PharmacyComponent } from './pharmacy/pharmacy.component';
 import { PharmacyProductsComponent } from './pharmacy-products/pharmacy-products.component';
 import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
 
-const HOSPITAL_DASHBOARD_ACCESS = ['owner', 'superAdmin', 'hospital_dashboard.read'];
-const DOCTOR_READ_ACCESS = ['owner', 'superAdmin', 'doctors.read'];
-const DOCTOR_MANAGE_ACCESS = ['owner', 'superAdmin', 'doctors.create', 'doctors.update'];
-const APPOINTMENT_ACCESS = ['owner', 'superAdmin', 'appointments.read'];
-const PATIENT_READ_ACCESS = ['owner', 'superAdmin', 'patients.read'];
-const PATIENT_MANAGE_ACCESS = ['owner', 'superAdmin', 'patients.create', 'patients.update'];
-const BILL_READ_ACCESS = ['owner', 'superAdmin', 'bills.read'];
-const BILL_MANAGE_ACCESS = ['owner', 'superAdmin', 'bills.create', 'bills.update_payment'];
-const DEPARTMENT_ACCESS = ['owner', 'superAdmin', 'departments.read'];
-const ROOM_READ_ACCESS = ['owner', 'superAdmin', 'room_allotments.read', 'rooms.read'];
-const ROOM_MANAGE_ACCESS = ['owner', 'superAdmin', 'room_allotments.create', 'room_allotments.update', 'rooms.create', 'rooms.update'];
-const USER_READ_ACCESS = ['owner', 'superAdmin', 'users.read'];
-const USER_MANAGE_ACCESS = ['owner', 'superAdmin', 'users.create', 'users.update'];
-const HOSPITAL_READ_ACCESS = ['owner', 'superAdmin', 'hospitals.read'];
-const HOSPITAL_MANAGE_ACCESS = ['owner', 'superAdmin', 'hospitals.create', 'hospitals.update'];
-const ROLE_READ_ACCESS = ['owner', 'superAdmin', 'roles.read'];
-const SETTINGS_ACCESS = ['owner', 'superAdmin', 'company.manage'];
-const HISTORY_ACCESS = ['owner', 'superAdmin', 'patients_history.read', 'patients_history.create'];
-const PRESCRIPTION_ACCESS = ['owner', 'superAdmin', 'prescriptions.read', 'prescriptions.create'];
-const PHARMACY_ACCESS = [
-  'owner',
-  'superAdmin',
-  'pharmacy',
-  'prescriptions.read',
-  'products.read',
-];
-const PHARMACY_POS_ACCESS = [
-  'owner',
-  'superAdmin',
-  'sales.create',
-  'sales.read',
-  'register_sessions.open',
-  'register_sessions.read',
-  'register_sessions.close',
-];
-const LABORATORY_ACCESS = ['owner', 'superAdmin', 'patients.read', 'patients_history.read'];
-const WARD_ADMIN_ACCESS = ['owner', 'superAdmin', 'room_allotments.read', 'patients_history.read'];
+const WILDCARD_ACCESS = ['*'];
+const HOSPITAL_DASHBOARD_ACCESS = ['hospital_dashboard.read'];
+const DOCTOR_READ_ACCESS = ['doctors.read'];
+const DOCTOR_MANAGE_ACCESS = ['doctors.create', 'doctors.update'];
+const APPOINTMENT_ACCESS = ['appointments.read'];
+const PATIENT_READ_ACCESS = ['patients.read'];
+const PATIENT_MANAGE_ACCESS = ['patients.create', 'patients.update'];
+const BILL_READ_ACCESS = ['bills.read'];
+const BILL_MANAGE_ACCESS = ['bills.create', 'bills.update_payment'];
+const DEPARTMENT_ACCESS = ['departments.read'];
+const ROOM_ACCESS = ['rooms.read', 'rooms.create', 'rooms.update'];
+const ROOM_ALLOTMENT_READ_ACCESS = ['room_allotments.read'];
+const ROOM_ALLOTMENT_MANAGE_ACCESS = {
+  all: ['room_allotments.create', 'rooms.read', 'patients.read'],
+};
+const USER_READ_ACCESS = ['users.read'];
+const USER_MANAGE_ACCESS = ['users.create', 'users.update'];
+const HOSPITAL_READ_ACCESS = ['hospitals.read'];
+const HOSPITAL_MANAGE_ACCESS = ['hospitals.create', 'hospitals.update'];
+const ROLE_READ_ACCESS = ['roles.read'];
+const HISTORY_ACCESS = ['patients_history.read', 'patients_history.create'];
+const PRESCRIPTION_ACCESS = ['prescriptions.read', 'prescriptions.create'];
+const PHARMACY_ACCESS = ['products.read'];
+const PHARMACY_POS_ACCESS = {
+  all: [
+    'sales.create',
+    'sales.read',
+    'products.read',
+    'register_sessions.open',
+    'register_sessions.read',
+    'register_sessions.close',
+  ],
+};
+const LABORATORY_ACCESS = ['patients_history.read'];
+const WARD_ADMIN_ACCESS = ['patients_history.read'];
 
 export const clientRoutes: Routes = [
   {
@@ -108,63 +106,73 @@ export const clientRoutes: Routes = [
         path: 'app-inbox',
         component: EmailComponent,
         data: { title: 'Mooli | Inbox' },
-        canActivate: [roleGuard(['ADMIN', 'superAdmin'])],
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'app-chat',
         component: ChatComponent,
         data: { title: 'Mooli | Chat' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'chartelement',
         component: ChartsComponent,
         data: { title: 'Mooli | Chart-element' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'todolist',
         component: TodoListComponent,
         data: { title: 'Mooli | TodoList' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'filemanager',
         component: FilemanagerComponent,
         data: { title: 'Mooli | Filemanager' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'contacts',
         component: ContactsComponent,
         data: { title: 'Mooli | Contacts' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'blog',
         component: BlogComponent,
         data: { title: 'Mooli | Blog' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'social',
         component: SocialComponent,
         data: { title: 'Mooli | Social' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'settings',
         component: SettingsComponent,
         data: { title: 'Mooli | Settings' },
-        canActivate: [roleGuard(SETTINGS_ACCESS)],
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'composeemail',
         component: ComposeEmailComponent,
         data: { title: 'Mooli | ComposeEmail' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'composeemail/composeemail-details',
         component: ComposeEmailDetailsComponent,
         data: { title: 'Mooli | ComposeEmailDetails' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'doctorschedule/events',
         component: EventsComponent,
         data: { title: 'Mooli | Events' },
+        canActivate: [roleGuard(DOCTOR_READ_ACCESS)],
       },
       {
         path: 'payments',
@@ -206,29 +214,31 @@ export const clientRoutes: Routes = [
         path: 'our-centers',
         component: OurCentersComponent,
         data: { title: 'Mooli | OurCenters' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'our-staff',
         component: OurStaffComponent,
         data: { title: 'Mooli | OurStaff' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
       {
         path: 'room-allotment',
         component: RoomAllotmentComponent,
         data: { title: 'Mooli | RoomAllotment' },
-        canActivate: [roleGuard(ROOM_READ_ACCESS)],
+        canActivate: [roleGuard(ROOM_ACCESS)],
       },
       {
         path: 'room-allotment/alloted-rooms',
         component: AllotedRoomsComponent,
         data: { title: 'Mooli | AllotedRooms' },
-        canActivate: [roleGuard(ROOM_READ_ACCESS)],
+        canActivate: [roleGuard(ROOM_ALLOTMENT_READ_ACCESS)],
       },
       {
         path: 'room-allotment/add-alloted-rooms',
         component: AddAllotmentComponent,
         data: { title: 'Mooli | Add-Allotment-Rooms' },
-        canActivate: [roleGuard(ROOM_MANAGE_ACCESS)],
+        canActivate: [roleGuard(ROOM_ALLOTMENT_MANAGE_ACCESS)],
       },
       {
         path: 'patients',
@@ -274,7 +284,7 @@ export const clientRoutes: Routes = [
         path: 'appointments',
         component: AppointmentComponent,
         data: { title: 'Mooli | Appointment' },
-        canActivate: [roleGuard(APPOINTMENT_ACCESS, ['doctor'])],
+        canActivate: [roleGuard(APPOINTMENT_ACCESS)],
       },
       {
         path: 'clinical-records',
@@ -372,6 +382,7 @@ export const clientRoutes: Routes = [
         path: 'covid-19',
         component: CovidComponent,
         data: { title: 'Mooli | Covid-19' },
+        canActivate: [roleGuard(WILDCARD_ACCESS)],
       },
 
       {

@@ -75,7 +75,7 @@
     </aside>
 
     <main class="consultation-panel">
-      <form [formGroup]="prescriptionForm" (ngSubmit)="submitPrescription()">
+      <form *ngIf="canCreatePrescriptions || editingId" [formGroup]="prescriptionForm" (ngSubmit)="submitPrescription()">
         <input type="hidden" formControlName="patientId" />
         <input type="hidden" formControlName="doctorId" />
         <input type="hidden" formControlName="appointmentId" />
@@ -387,7 +387,7 @@
               <small>{{ prescription.diagnosis || prescription.chiefComplaint || 'No diagnosis added' }}</small>
             </div>
             <div class="history-actions">
-              <button type="button" class="btn-light" (click)="editPrescription(prescription)">Edit</button>
+              <button type="button" class="btn-light" *ngIf="canUpdatePrescriptions" (click)="editPrescription(prescription)">Edit</button>
               <button type="button" class="btn-primary" (click)="openPrintPreview(prescription)">
                 <i class="fa fa-print"></i>
                 Print

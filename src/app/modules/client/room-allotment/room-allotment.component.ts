@@ -50,6 +50,14 @@ export class RoomAllotmentComponent implements OnInit {
     this.loadRooms();
   }
 
+  can(permission: string): boolean {
+    return this.backend.hasPermission(permission);
+  }
+
+  get canManageRooms(): boolean {
+    return this.can('rooms.create') || this.can('rooms.update');
+  }
+
   loadRooms(): void {
     this.loading = true;
     this.backend
@@ -74,6 +82,16 @@ export class RoomAllotmentComponent implements OnInit {
   }
 
   submitRoom(): void {
+    if (!this.editingId && !this.can('rooms.create')) {
+      this.toastr.error('You do not have permission to create rooms.');
+      return;
+    }
+
+    if (this.editingId && !this.can('rooms.update')) {
+      this.toastr.error('You do not have permission to update rooms.');
+      return;
+    }
+
     if (this.roomForm.invalid) {
       this.roomForm.markAllAsTouched();
       return;
@@ -101,11 +119,19 @@ export class RoomAllotmentComponent implements OnInit {
   }
 
   editRoom(room: Room): void {
+    if (!this.can('rooms.update')) {
+      return;
+    }
+
     this.editingId = room._id;
     this.roomForm.patchValue(room);
   }
 
   deleteRoom(id: string): void {
+    if (!this.can('rooms.delete')) {
+      return;
+    }
+
     if (!confirm('Delete this room?')) {
       return;
     }

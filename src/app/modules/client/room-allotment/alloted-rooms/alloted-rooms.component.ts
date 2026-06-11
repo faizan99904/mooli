@@ -30,6 +30,10 @@ export class AllotedRoomsComponent implements OnInit {
     this.loadAllotments();
   }
 
+  can(permission: string): boolean {
+    return this.backend.hasPermission(permission);
+  }
+
   loadAllotments(): void {
     this.loading = true;
     this.backend
@@ -52,6 +56,10 @@ export class AllotedRoomsComponent implements OnInit {
   }
 
   discharge(allotment: RoomAllotment): void {
+    if (!this.can('room_allotments.update')) {
+      return;
+    }
+
     if (!confirm('Discharge this patient from the room?')) {
       return;
     }

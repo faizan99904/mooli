@@ -235,6 +235,18 @@ export class PrescriptionComponent implements OnInit {
     return this.prescriptionForm.get('vitals') as FormGroup;
   }
 
+  get canCreatePrescriptions(): boolean {
+    return this.backend.hasPermission('prescriptions.create');
+  }
+
+  get canUpdatePrescriptions(): boolean {
+    return this.backend.hasPermission('prescriptions.update');
+  }
+
+  get canDeletePrescriptions(): boolean {
+    return this.backend.hasPermission('prescriptions.delete');
+  }
+
   createMedicineGroup(medicine?: Record<string, unknown>): FormGroup {
     const morningDose = String(medicine?.['morningDose'] || '').trim();
     const noonDose = String(medicine?.['noonDose'] || '').trim();
@@ -981,6 +993,16 @@ export class PrescriptionComponent implements OnInit {
   }
 
   submitPrescription(printAfterSave = false): void {
+    if (!this.editingId && !this.canCreatePrescriptions) {
+      this.toastr.error('You do not have permission to create prescriptions.');
+      return;
+    }
+
+    if (this.editingId && !this.canUpdatePrescriptions) {
+      this.toastr.error('You do not have permission to update prescriptions.');
+      return;
+    }
+
     if (this.prescriptionForm.invalid) {
       this.prescriptionForm.markAllAsTouched();
       return;
@@ -1066,6 +1088,10 @@ export class PrescriptionComponent implements OnInit {
   }
 
   editPrescription(prescription: Prescription): void {
+    if (!this.canUpdatePrescriptions) {
+      return;
+    }
+
     this.editingId = prescription._id;
     this.selectedPatientId = prescription.patientId;
     this.selectedAppointmentId = prescription.appointmentId || '';
@@ -1323,6 +1349,10 @@ export class PrescriptionComponent implements OnInit {
   }
 
   deletePrescription(id: string): void {
+    if (!this.canDeletePrescriptions) {
+      return;
+    }
+
     if (!confirm('Delete this prescription?')) {
       return;
     }

@@ -8,6 +8,7 @@ import {
 import { AppComponent } from '../../../app.component';
 import { trigger, style, animate, transition } from '@angular/animations';
 import { CommonModule } from '@angular/common';
+import { readStoredPermissions } from '../../auth/access-control';
 @Component({
   selector: 'app-leftmenu',
   animations: [
@@ -32,29 +33,18 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   PaymentCollapsed = true;
   RoomCollapsed = true;
   PatientCollapsed = true;
+  PharmacyCollapsed = true;
   private router = inject(Router);
   private app = inject(AppComponent);
-  role = localStorage.getItem('role') || 'ADMIN';
-  permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
-
-  get isAdmin(): boolean {
-    return this.normalizeRole(this.role) === 'admin';
-  }
-
-  get isSuperAdmin(): boolean {
-    return this.normalizeRole(this.role) === 'superadmin';
-  }
-
-  get isOwner(): boolean {
-    return this.normalizeRole(this.role) === 'owner';
-  }
+  role = localStorage.getItem('role') || '';
+  permissions = readStoredPermissions();
 
   get isDoctor(): boolean {
     return this.normalizeRole(this.role) === 'doctor';
   }
 
   get canViewAllRoutes(): boolean {
-    return this.isAdmin || this.isOwner || this.isSuperAdmin || this.hasWildcardPermission;
+    return this.hasWildcardPermission;
   }
 
   get canViewUsers(): boolean {
@@ -106,15 +96,27 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewPharmacy(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('products.read') || this.hasPermission('prescriptions.read');
+    return this.canViewAllRoutes || this.hasPermission('products.read');
+  }
+
+  get canOpenPharmacyPos(): boolean {
+    return (
+      this.canViewAllRoutes ||
+      (this.hasPermission('sales.create') &&
+        this.hasPermission('sales.read') &&
+        this.hasPermission('products.read') &&
+        this.hasPermission('register_sessions.open') &&
+        this.hasPermission('register_sessions.read') &&
+        this.hasPermission('register_sessions.close'))
+    );
   }
 
   get canViewLaboratory(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('patients_history.read') || this.hasPermission('patients.read');
+    return this.canViewAllRoutes || this.hasPermission('patients_history.read');
   }
 
   get canViewWardAdmin(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('room_allotments.read') || this.hasPermission('patients_history.read');
+    return this.canViewAllRoutes || this.hasPermission('patients_history.read');
   }
 
   get canViewPatients(): boolean {
@@ -126,11 +128,24 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewRooms(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('room_allotments.read') || this.hasPermission('rooms.read');
+    return this.canViewAllRoutes || this.hasPermission('rooms.read');
   }
 
   get canManageRooms(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('room_allotments.create') || this.hasPermission('room_allotments.update') || this.hasPermission('rooms.create') || this.hasPermission('rooms.update');
+    return this.canViewAllRoutes || this.hasPermission('rooms.create') || this.hasPermission('rooms.update');
+  }
+
+  get canViewRoomAllotments(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('room_allotments.read');
+  }
+
+  get canManageRoomAllotments(): boolean {
+    return (
+      this.canViewAllRoutes ||
+      (this.hasPermission('room_allotments.create') &&
+        this.hasPermission('rooms.read') &&
+        this.hasPermission('patients.read'))
+    );
   }
 
   get canViewDepartments(): boolean {
@@ -164,6 +179,8 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
+        this.role = localStorage.getItem('role') || '';
+        this.permissions = readStoredPermissions();
         this.closeSidebarOnMobile();
       }
     });
@@ -180,6 +197,7 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     this.PaymentCollapsed = !url.includes('payments');
     this.RoomCollapsed = !url.includes('room-allotment');
     this.PatientCollapsed = !url.includes('patients');
+    this.PharmacyCollapsed = !url.includes('pharmacy');
   }
 
   private normalizeRole(role: string): string {
