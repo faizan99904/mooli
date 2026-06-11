@@ -7,6 +7,10 @@ import {
   PaginatedResponse,
 } from '../../shared/models/api-response.model';
 import {
+  CompanyProfile,
+  UpdateCompanyProfilePayload,
+} from '../../shared/models/company.model';
+import {
   Appointment,
   Bill,
   Category,
@@ -133,6 +137,16 @@ export class BackendService {
 
   getMe(): Observable<User> {
     return this.get<User>(CONFIG.auth.me).pipe(map((response) => this.unwrapData(response)));
+  }
+
+  getMyCompany(): Observable<CompanyProfile> {
+    return this.get<CompanyProfile>(`${CONFIG.companies}/me`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  updateMyCompany(payload: UpdateCompanyProfilePayload): Observable<ApiResponse<CompanyProfile>> {
+    return this.patch<CompanyProfile>(`${CONFIG.companies}/me`, payload);
   }
 
   forgetPass(payload: { email: string }): Observable<any> {

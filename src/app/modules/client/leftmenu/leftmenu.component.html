@@ -24,7 +24,7 @@
                 <ul class="dropdown-menu dropdown-menu-right account vivify flipInY" id="drp">
                     <li><a [routerLink]="['/doctors-profile']"><i class="fa fa-user"></i>My Profile</a></li>
                     <li><a [routerLink]="['/app-inbox']"><i class="fa fa-envelope"></i>Messages</a></li>
-                    <li><a [routerLink]="['/settings']"><i class="fa fa-gear"></i>Settings</a></li>
+                    <li *ngIf="canViewSettings"><a [routerLink]="['/settings']"><i class="fa fa-gear"></i>Settings</a></li>
                     <li class="divider"></li>
                     <li><a [routerLink]="['/login/access']"><i class="fa fa-power-off"></i>Logout</a></li>
                 </ul>

@@ -65,6 +65,7 @@ const USER_MANAGE_ACCESS = ['owner', 'superAdmin', 'users.create', 'users.update
 const HOSPITAL_READ_ACCESS = ['owner', 'superAdmin', 'hospitals.read'];
 const HOSPITAL_MANAGE_ACCESS = ['owner', 'superAdmin', 'hospitals.create', 'hospitals.update'];
 const ROLE_READ_ACCESS = ['owner', 'superAdmin', 'roles.read'];
+const SETTINGS_ACCESS = ['owner', 'superAdmin', 'company.manage'];
 const HISTORY_ACCESS = ['owner', 'superAdmin', 'patients_history.read', 'patients_history.create'];
 const PRESCRIPTION_ACCESS = ['owner', 'superAdmin', 'prescriptions.read', 'prescriptions.create'];
 const PHARMACY_ACCESS = [
@@ -148,6 +149,7 @@ export const clientRoutes: Routes = [
         path: 'settings',
         component: SettingsComponent,
         data: { title: 'Mooli | Settings' },
+        canActivate: [roleGuard(SETTINGS_ACCESS)],
       },
       {
         path: 'composeemail',

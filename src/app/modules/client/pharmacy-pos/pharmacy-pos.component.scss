@@ -1050,6 +1050,14 @@
   text-align: center;
 }
 
+.receipt-preview-logo {
+  display: block;
+  height: 56px;
+  margin: 0 auto 8px;
+  max-width: 56px;
+  object-fit: contain;
+}
+
 .receipt-preview-head h2 {
   font-size: 20px;
   font-weight: 900;
@@ -1120,6 +1128,25 @@
 .receipt-preview-totals .grand {
   font-size: 16px;
   font-weight: 900;
+}
+
+.receipt-preview-foot {
+  border-top: 1px dashed #94a3b8;
+  margin-top: 8px;
+  padding-top: 10px;
+  text-align: center;
+}
+
+.receipt-preview-foot strong,
+.receipt-preview-foot p {
+  display: block;
+  margin: 0;
+}
+
+.receipt-preview-foot p {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .receipt-actions {

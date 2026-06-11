@@ -141,6 +141,10 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     return this.canViewAllRoutes || this.hasPermission('bills.read');
   }
 
+  get canViewSettings(): boolean {
+    return this.isOwner || this.isSuperAdmin || this.hasWildcardPermission || this.hasPermission('company.manage');
+  }
+
   get canManageBilling(): boolean {
     return this.canViewAllRoutes || this.hasPermission('bills.create') || this.hasPermission('bills.update_payment');
   }
