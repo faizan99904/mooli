@@ -73,7 +73,9 @@ const ROLE_READ_ACCESS = ['roles.read'];
 const HISTORY_ACCESS = ['patients_history.read', 'patients_history.create'];
 const PRESCRIPTION_ACCESS = ['prescriptions.read', 'prescriptions.create'];
 const PHARMACY_ACCESS = ['products.read'];
-const REPORT_ACCESS = ['reports.read'];
+const REPORT_ACCESS = {
+  any: ['reports.read', 'sales.read', 'products.read', 'register_sessions.read'],
+};
 const PHARMACY_POS_ACCESS = {
   all: [
     'sales.create',

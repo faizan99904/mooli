@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
@@ -196,6 +196,7 @@ export class PharmacyPosComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private backend: BackendService,
     readonly offline: MooliOfflineService,
     private toastr: ToastrService
@@ -644,6 +645,13 @@ export class PharmacyPosComponent implements OnInit {
         error: (err) => {
           this.registerOpened = false;
           this.registerClosed = false;
+          if (err?.status === 403) {
+            this.showPosMessage(
+              'This backend user is still blocked from opening the cash register. Please update the assigned role permissions.',
+              'danger'
+            );
+            return;
+          }
           this.toastr.error(err?.error?.message || 'Unable to open register.');
         },
       });
@@ -717,6 +725,13 @@ export class PharmacyPosComponent implements OnInit {
           this.toastr.success('Register closed successfully.');
         },
         error: (err) => {
+          if (err?.status === 403) {
+            this.showPosMessage(
+              'This backend user is still blocked from closing the cash register. Please update the assigned role permissions.',
+              'danger'
+            );
+            return;
+          }
           this.toastr.error(err?.error?.message || 'Unable to close register.');
         },
       });
@@ -766,10 +781,11 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   openReports(): void {
-    this.reportsOpen = true;
-    if (!this.recentSales.length && this.canReadSales) {
-      this.loadRecentSales();
-    }
+    void this.router.navigate(['/pos-reports'], {
+      queryParams: {
+        storeId: this.currentStoreId() || undefined,
+      },
+    });
   }
 
   closeReports(): void {
@@ -1001,6 +1017,14 @@ export class PharmacyPosComponent implements OnInit {
         error: (err) => {
           if (this.offline.shouldQueue(err)) {
             void this.queueOfflineSale(payload);
+            return;
+          }
+
+          if (err?.status === 403) {
+            this.showPosMessage(
+              'This backend user is still blocked from creating POS sales. Please update the assigned role permissions.',
+              'danger'
+            );
             return;
           }
 
