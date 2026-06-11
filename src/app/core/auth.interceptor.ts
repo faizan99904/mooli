@@ -28,7 +28,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (error.status === 403) {
-        toastr.error(error?.error?.message || 'You do not have permission for this action');
+        const currentUrl = router.url || '';
+        const suppressPosToast =
+          currentUrl.startsWith('/pos-reports') || currentUrl.startsWith('/pharmacy/pos');
+
+        if (!suppressPosToast) {
+          toastr.error(error?.error?.message || 'You do not have permission for this action');
+        }
       }
 
       return throwError(() => error);

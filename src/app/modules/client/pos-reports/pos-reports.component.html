@@ -34,7 +34,7 @@
           <h2>{{ activeReportDefinition.title }} Report</h2>
           <p>{{ activeReportDefinition.description }}</p>
         </div>
-        <span class="permission-pill">reports.read</span>
+        <span class="permission-pill">{{ localFallbackMode ? 'Local fallback' : 'reports.read' }}</span>
       </div>
 
       <div class="report-filter-grid">
@@ -75,6 +75,10 @@
 
     <div class="alert alert-danger" *ngIf="errorMessage">
       {{ errorMessage }}
+    </div>
+
+    <div class="alert alert-info" *ngIf="!errorMessage && localFallbackMode">
+      Showing pharmacy report data from accessible POS records because this user is blocked from the dedicated reports API.
     </div>
 
     <div class="report-loading" *ngIf="loading">

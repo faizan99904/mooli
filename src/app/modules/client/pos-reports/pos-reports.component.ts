@@ -1,11 +1,17 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { finalize, Observable } from 'rxjs';
-import { ToastrService } from 'ngx-toastr';
+import { ActivatedRoute } from '@angular/router';
+import { finalize, forkJoin, map, Observable, of } from 'rxjs';
 
 import { BackendService } from '../../../core/services/backend.service';
-import { Store, User } from '../../../shared/models/hospital.model';
+import {
+  ProductCatalogItem,
+  RegisterSession,
+  Sale,
+  Store,
+  User,
+} from '../../../shared/models/hospital.model';
 
 type ReportKey =
   | 'sales'
@@ -24,6 +30,7 @@ interface ReportDefinition {
 
 @Component({
   selector: 'app-pos-reports',
+  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './pos-reports.component.html',
   styleUrl: './pos-reports.component.scss',
@@ -78,15 +85,20 @@ export class PosReportsComponent implements OnInit {
   toDate = '';
   storeId = '';
   lowStockOnly = false;
+  localFallbackMode = false;
 
   constructor(
-    private backend: BackendService,
-    private toastr: ToastrService
+    private route: ActivatedRoute,
+    private backend: BackendService
   ) {}
 
   ngOnInit(): void {
     this.setDefaultDateRange();
     this.applyAssignedStore();
+    const requestedStoreId = this.route.snapshot.queryParamMap.get('storeId');
+    if (requestedStoreId) {
+      this.storeId = requestedStoreId;
+    }
     this.loadStores();
     this.loadReport();
   }
@@ -172,27 +184,12 @@ export class PosReportsComponent implements OnInit {
   }
 
   loadReport(): void {
-    if (!this.backend.hasPermission('reports.read')) {
-      this.errorMessage = 'This role needs reports.read to view POS reports.';
+    if (this.backend.hasPermission('reports.read')) {
+      this.loadBackendReport();
       return;
     }
 
-    this.loading = true;
-    this.errorMessage = '';
-    this.reportData = null;
-
-    const params = this.buildReportParams();
-    this.resolveReportRequest(params)
-      .pipe(finalize(() => (this.loading = false)))
-      .subscribe({
-        next: (data) => {
-          this.reportData = data;
-        },
-        error: (err) => {
-          this.errorMessage = err?.error?.message || 'Unable to load POS report.';
-          this.toastr.error(this.errorMessage);
-        },
-      });
+    this.loadFallbackReport();
   }
 
   objectEntries(value: unknown): Array<{ key: string; value: unknown }> {
@@ -222,6 +219,10 @@ export class PosReportsComponent implements OnInit {
   formatValue(key: string, value: unknown): string {
     if (value === null || value === undefined || value === '') {
       return '-';
+    }
+
+    if (this.isStoreKey(key)) {
+      return this.storeLabel(value);
     }
 
     if (this.isRecord(value)) {
@@ -351,7 +352,277 @@ export class PosReportsComponent implements OnInit {
     return /date|createdAt|updatedAt/i.test(key);
   }
 
+  private isStoreKey(key: string): boolean {
+    return key === 'storeId' || key === 'storeName';
+  }
+
+  private storeLabel(value: unknown): string {
+    const storeId = String(value || '').trim();
+    if (!storeId) {
+      return '-';
+    }
+
+    const matchedStore = this.stores.find((store) => store._id === storeId);
+    return matchedStore?.name || storeId;
+  }
+
   private isRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  private loadBackendReport(): void {
+    this.loading = true;
+    this.localFallbackMode = false;
+    this.errorMessage = '';
+    this.reportData = null;
+
+    const params = this.buildReportParams();
+    this.resolveReportRequest(params)
+      .subscribe({
+        next: (data) => {
+          this.loading = false;
+          this.reportData = data;
+        },
+        error: () => {
+          this.loading = false;
+          this.loadFallbackReport();
+        },
+      });
+  }
+
+  private loadFallbackReport(): void {
+    this.loading = true;
+    this.localFallbackMode = true;
+    this.errorMessage = '';
+    this.reportData = null;
+
+    const storeId = this.storeId || this.getStoredUser()?.storeId || undefined;
+    const salesParams = {
+      limit: 100,
+      storeId,
+      fromDate: this.fromDate ? new Date(`${this.fromDate}T00:00:00`).toISOString() : undefined,
+      toDate: this.toDate ? new Date(`${this.toDate}T23:59:59`).toISOString() : undefined,
+    };
+    const inventoryParams = {
+      limit: 200,
+      isActive: true,
+      storeId,
+    };
+
+    const sales$ = this.backend.hasPermission('sales.read')
+      ? this.backend.getSales(salesParams).pipe(map((result) => result.items || []))
+      : of([] as Sale[]);
+    const products$ = this.backend.hasPermission('products.read')
+      ? this.backend.getProducts(inventoryParams).pipe(map((result) => result.items || []))
+      : of([] as ProductCatalogItem[]);
+    const register$ = this.backend.hasPermission('register_sessions.read') && storeId
+      ? this.backend.getCurrentRegister({ storeId })
+      : of(null as RegisterSession | null);
+
+    forkJoin({
+      sales: sales$,
+      products: products$,
+      register: register$,
+    })
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: ({ sales, products, register }) => {
+          this.reportData = this.buildFallbackReportData(sales, products, register);
+
+          if (!this.reportData) {
+            this.errorMessage =
+              'No accessible POS data is available for this report. Give this user at least sales.read or products.read.';
+          }
+        },
+        error: () => {
+          this.errorMessage =
+            'Unable to load POS report data for this user. Please verify sales, products, and register permissions.';
+        },
+      });
+  }
+
+  private buildFallbackReportData(
+    sales: Sale[],
+    products: ProductCatalogItem[],
+    register: RegisterSession | null
+  ): unknown[] | Record<string, unknown> | null {
+    switch (this.activeReport) {
+      case 'sales':
+        return this.buildFallbackSalesReport(sales);
+      case 'inventory':
+        return this.buildFallbackInventoryReport(products);
+      case 'profit-loss':
+        return this.buildFallbackProfitLossReport(sales, products);
+      case 'stock-movements':
+        return this.buildFallbackStockMovementsReport(products);
+      case 'payments':
+        return this.buildFallbackPaymentsReport(sales, register);
+      case 'expenses':
+        return this.buildFallbackExpensesReport(register);
+      default:
+        return this.buildFallbackSalesReport(sales);
+    }
+  }
+
+  private buildFallbackSalesReport(sales: Sale[]): Record<string, unknown> {
+    const totalSales = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+    const totalPaid = sales.reduce((sum, sale) => sum + Number(sale.paidAmount || 0), 0);
+
+    return {
+      mode: 'Local POS fallback',
+      salesCount: sales.length,
+      totalSales,
+      totalPaid,
+      unpaidBalance: totalSales - totalPaid,
+      items: sales.map((sale) => ({
+        invoiceNo: sale.invoiceNo,
+        saleDate: sale.saleDate,
+        itemsCount: sale.items?.length || 0,
+        total: Number(sale.total || 0),
+        paidAmount: Number(sale.paidAmount || 0),
+        paymentStatus: sale.paymentStatus,
+      })),
+    };
+  }
+
+  private buildFallbackInventoryReport(products: ProductCatalogItem[]): Record<string, unknown> {
+    const filteredProducts = this.lowStockOnly
+      ? products.filter((product) => this.productQty(product) <= this.productReorderLevel(product))
+      : products;
+    const totalInventoryValue = filteredProducts.reduce(
+      (sum, product) => sum + this.productQty(product) * this.productPrice(product),
+      0
+    );
+
+    return {
+      mode: 'Local POS fallback',
+      itemsCount: filteredProducts.length,
+      totalInventoryValue,
+      totalUnits: filteredProducts.reduce((sum, product) => sum + this.productQty(product), 0),
+      items: filteredProducts.map((product) => ({
+        name: product.name,
+        sku: product.sku,
+        batchNumber: product.batchNumber || '-',
+        expiryDate: product.expiryDate || '-',
+        availableQuantity: this.productQty(product),
+        reorderLevel: this.productReorderLevel(product),
+        sellingPrice: this.productPrice(product),
+        costPrice: this.productCost(product),
+        valuation: this.productQty(product) * this.productPrice(product),
+      })),
+    };
+  }
+
+  private buildFallbackProfitLossReport(
+    sales: Sale[],
+    products: ProductCatalogItem[]
+  ): Record<string, unknown> {
+    const productCostMap = new Map(products.map((product) => [product._id, this.productCost(product)]));
+    const revenue = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+    const cogs = sales.reduce(
+      (sum, sale) =>
+        sum +
+        (sale.items || []).reduce((saleSum, item) => {
+          const cost = productCostMap.get(item.productId) || 0;
+          return saleSum + Number(item.qty || 0) * cost;
+        }, 0),
+      0
+    );
+    const grossProfit = revenue - cogs;
+
+    return {
+      mode: 'Local POS fallback',
+      revenue,
+      cogs,
+      grossProfit,
+      netProfit: grossProfit,
+      items: sales.map((sale) => {
+        const saleRevenue = Number(sale.total || 0);
+        const saleCogs = (sale.items || []).reduce((sum, item) => {
+          const cost = productCostMap.get(item.productId) || 0;
+          return sum + Number(item.qty || 0) * cost;
+        }, 0);
+
+        return {
+          invoiceNo: sale.invoiceNo,
+          saleDate: sale.saleDate,
+          revenue: saleRevenue,
+          cogs: saleCogs,
+          grossProfit: saleRevenue - saleCogs,
+        };
+      }),
+    };
+  }
+
+  private buildFallbackStockMovementsReport(products: ProductCatalogItem[]): Record<string, unknown> {
+    const lowStockItems = products.filter(
+      (product) => this.productQty(product) <= this.productReorderLevel(product)
+    ).length;
+
+    return {
+      mode: 'Local stock snapshot fallback',
+      productsTracked: products.length,
+      lowStockItems,
+      note: 'Current stock snapshot is shown because the dedicated stock movement report needs reports.read.',
+      items: products.map((product) => ({
+        name: product.name,
+        sku: product.sku,
+        batchNumber: product.batchNumber || '-',
+        expiryDate: product.expiryDate || '-',
+        availableQuantity: this.productQty(product),
+        reorderLevel: this.productReorderLevel(product),
+        stockValue: this.productQty(product) * this.productPrice(product),
+      })),
+    };
+  }
+
+  private buildFallbackPaymentsReport(
+    sales: Sale[],
+    register: RegisterSession | null
+  ): Record<string, unknown> {
+    const totalSales = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+    const totalPaid = sales.reduce((sum, sale) => sum + Number(sale.paidAmount || 0), 0);
+
+    return {
+      mode: 'Local POS fallback',
+      totalSales,
+      totalPaid,
+      totalOutstanding: totalSales - totalPaid,
+      registerCashSales: Number(register?.summary?.cashSales || 0),
+      items: sales.map((sale) => ({
+        invoiceNo: sale.invoiceNo,
+        saleDate: sale.saleDate,
+        total: Number(sale.total || 0),
+        paidAmount: Number(sale.paidAmount || 0),
+        dueAmount: Number(sale.total || 0) - Number(sale.paidAmount || 0),
+        paymentStatus: sale.paymentStatus,
+      })),
+    };
+  }
+
+  private buildFallbackExpensesReport(register: RegisterSession | null): Record<string, unknown> {
+    return {
+      mode: 'Register fallback',
+      totalExpenses: Number(register?.summary?.totalExpenses || 0),
+      cashExpenses: Number(register?.summary?.cashExpenses || 0),
+      note: 'Detailed expenses rows require the dedicated reports API permission.',
+      items: [],
+    };
+  }
+
+  private productQty(product: ProductCatalogItem): number {
+    return Number(product.availableQuantity ?? product.stockQuantity ?? 0) || 0;
+  }
+
+  private productPrice(product: ProductCatalogItem): number {
+    return Number(product.sellingPrice || 0) || 0;
+  }
+
+  private productCost(product: ProductCatalogItem): number {
+    return Number(product.costPrice || 0) || 0;
+  }
+
+  private productReorderLevel(product: ProductCatalogItem): number {
+    return Number(product.reorderLevel || 0) || 0;
   }
 }

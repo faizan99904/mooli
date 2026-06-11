@@ -120,7 +120,13 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewPosReports(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('reports.read');
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('reports.read') ||
+      this.hasPermission('sales.read') ||
+      this.hasPermission('products.read') ||
+      this.hasPermission('register_sessions.read')
+    );
   }
 
   get canViewLaboratory(): boolean {

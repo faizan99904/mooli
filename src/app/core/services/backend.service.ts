@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable, of } from 'rxjs';
 import { CONFIG } from '../../../../config';
+import { normalizeAccessKey, readStoredPermissions } from '../../modules/auth/access-control';
 import {
   ApiResponse,
   PaginatedResponse,
@@ -706,8 +707,13 @@ export class BackendService {
   }
 
   hasPermission(permission: string): boolean {
-    const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
-    return permissions.includes('*') || permissions.includes(permission);
+    const normalizedPermission = normalizeAccessKey(permission);
+    const permissions = readStoredPermissions();
+    const normalizedPermissions = new Set(
+      permissions.map((storedPermission) => normalizeAccessKey(storedPermission))
+    );
+
+    return normalizedPermissions.has('*') || normalizedPermissions.has(normalizedPermission);
   }
 
 
