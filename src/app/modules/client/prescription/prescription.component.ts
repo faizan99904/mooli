@@ -44,6 +44,7 @@ interface PrintPreviewData {
   date: string;
   disease: string;
   vitals: Record<string, string>;
+  vitalRows: Array<{ label: string; value: string }>;
   labTests: Array<{ name: string; category: string }>;
   medicines: Array<Record<string, unknown>>;
   followUpDate: string;
@@ -131,6 +132,7 @@ export class PrescriptionComponent implements OnInit {
   private medicineInputSearchTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private smartMedicineSearchTimer: ReturnType<typeof setTimeout> | null = null;
   private smartMedicineBlurTimer: ReturnType<typeof setTimeout> | null = null;
+  private printPreviewRequestId = 0;
   readonly durationOptions = [
     '1 Day',
     '3 Days',
@@ -1332,21 +1334,41 @@ export class PrescriptionComponent implements OnInit {
   }
 
   openPrintPreview(prescription: Prescription | null = null): void {
+    const requestId = ++this.printPreviewRequestId;
     this.previewPrescription = prescription;
-    this.printPreviewData =
-      this.buildPrintPreviewData(prescription) ||
-      this.buildPrintPreviewData();
-    this.printPreviewLoading = false;
-    if (!this.printPreviewData) {
-      this.printPreviewOpen = false;
-      this.toastr.error('Unable to build prescription preview.');
-      return;
-    }
-
+    this.printPreviewData = null;
+    this.printPreviewLoading = true;
     this.printPreviewOpen = true;
+
+    window.setTimeout(() => {
+      if (requestId !== this.printPreviewRequestId || !this.printPreviewOpen) {
+        return;
+      }
+
+      try {
+        const previewData =
+          this.buildPrintPreviewData(prescription) ||
+          this.buildPrintPreviewData();
+
+        if (!previewData) {
+          this.printPreviewOpen = false;
+          this.toastr.error('Unable to build prescription preview.');
+          return;
+        }
+
+        this.printPreviewData = previewData;
+      } catch (error) {
+        console.error('Unable to build prescription preview', error);
+        this.printPreviewOpen = false;
+        this.toastr.error('Unable to build prescription preview.');
+      } finally {
+        this.printPreviewLoading = false;
+      }
+    }, 0);
   }
 
   closePrintPreview(): void {
+    this.printPreviewRequestId += 1;
     this.printPreviewOpen = false;
     this.printPreviewLoading = false;
     this.previewPrescription = null;
@@ -2103,14 +2125,24 @@ export class PrescriptionComponent implements OnInit {
     const hospital = this.resolvePrintHospital(source);
     const settings = this.resolvePrescriptionSettings(hospital);
     const hospitalName = hospital?.name || 'MediLink City Care Hospital';
+    const hospitalLogoUrl = this.safeHospitalLogoUrl(hospital?.logoUrl);
     const createdAt = source['createdAt'] || new Date();
     const followUpDate = source['followUpDate'];
-    const labTests = (source['labTests'] || [])
-      .filter((test: { selected?: boolean; name?: string }) => Boolean(test.name) && (prescription || test.selected))
-      .map((test: { name: string; category?: string }) => ({
+    const vitals = this.safeStringRecord(source['vitals']);
+    const labTests = this.safeArray(source['labTests'])
+      .map((test) => this.normalizePrintLabTest(test))
+      .filter((test): test is { name: string; category: string; selected?: boolean } =>
+        Boolean(test?.name) && Boolean(prescription || test?.selected)
+      )
+      .slice(0, 80)
+      .map((test) => ({
         name: test.name,
-        category: test.category || '',
+        category: test.category,
       }));
+    const medicines = this.safeArray(source['medicines'])
+      .map((medicine) => this.normalizePrintMedicine(medicine))
+      .filter((medicine): medicine is Record<string, unknown> => Boolean(medicine))
+      .slice(0, 80);
 
     return {
       patient,
@@ -2124,19 +2156,105 @@ export class PrescriptionComponent implements OnInit {
       doctorQualification: doctor?.qualification || doctor?.specialization || 'M.B.B.S., F.C.P.S.',
       hospitalName,
       hospitalAddress: this.hospitalAddressLine(hospital),
-      hospitalLogoUrl: hospital?.logoUrl || '',
-      showHospitalLogo: settings.showLogo !== false && Boolean(hospital?.logoUrl),
+      hospitalLogoUrl,
+      showHospitalLogo: settings.showLogo !== false && Boolean(hospitalLogoUrl),
       prescriptionRevisionNote: settings.revisionNote || '* Rx to be revised after Reports.',
       prescriptionFollowUpLine:
         settings.followUpLine || `For appointment and follow up, contact ${hospitalName}.`,
       prescriptionFooterLines: this.prescriptionFooterLines(hospital, settings),
       date: this.formatPrintDate(createdAt),
       disease: source['diagnosis'] || source['chiefComplaint'] || source['history'] || '-',
-      vitals: source['vitals'] || {},
+      vitals,
+      vitalRows: this.vitalEntries(vitals),
       labTests,
-      medicines: source['medicines'] || [],
+      medicines,
       followUpDate: followUpDate ? this.shortDate(followUpDate) : '-',
     };
+  }
+
+  private safeArray(value: unknown): unknown[] {
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      return value.trim() ? [value] : [];
+    }
+
+    if (!value || typeof value !== 'object') {
+      return [];
+    }
+
+    const record = value as Record<string, unknown>;
+    return Object.prototype.hasOwnProperty.call(record, 'name')
+      ? [record]
+      : Object.values(record).filter((entry) => entry !== null && entry !== undefined);
+  }
+
+  private safeStringRecord(value: unknown): Record<string, string> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {};
+    }
+
+    return Object.entries(value as Record<string, unknown>).reduce((record, [key, entryValue]) => {
+      const safeKey = String(key || '').trim();
+      if (!safeKey) {
+        return record;
+      }
+
+      record[safeKey] = String(entryValue ?? '').trim();
+      return record;
+    }, {} as Record<string, string>);
+  }
+
+  private normalizePrintLabTest(test: unknown): { name: string; category: string; selected?: boolean } | null {
+    if (typeof test === 'string') {
+      const name = test.trim();
+      return name ? { name, category: '', selected: true } : null;
+    }
+
+    if (!test || typeof test !== 'object' || Array.isArray(test)) {
+      return null;
+    }
+
+    const record = test as Record<string, unknown>;
+    const name = String(record['name'] ?? '').trim();
+
+    if (!name) {
+      return null;
+    }
+
+    return {
+      name,
+      category: String(record['category'] ?? '').trim(),
+      selected: record['selected'] === undefined ? true : this.toBoolean(record['selected']),
+    };
+  }
+
+  private normalizePrintMedicine(medicine: unknown): Record<string, unknown> | null {
+    if (typeof medicine === 'string') {
+      const name = medicine.trim();
+      return name ? { name } : null;
+    }
+
+    if (!medicine || typeof medicine !== 'object' || Array.isArray(medicine)) {
+      return null;
+    }
+
+    return medicine as Record<string, unknown>;
+  }
+
+  private toBoolean(value: unknown): boolean {
+    return value === true || value === 'true' || value === 1 || value === '1';
+  }
+
+  private safeHospitalLogoUrl(value: unknown): string {
+    const logoUrl = String(value || '').trim();
+    if (!logoUrl) {
+      return '';
+    }
+
+    return logoUrl.startsWith('data:image/') && logoUrl.length > 1000000 ? '' : logoUrl;
   }
 
   vitalEntries(vitals: Record<string, string> | null | undefined): Array<{ label: string; value: string }> {
@@ -2248,8 +2366,16 @@ export class PrescriptionComponent implements OnInit {
   }
 
   private refreshOpenPreviewData(): void {
-    if (this.printPreviewOpen) {
-      this.printPreviewData = this.buildPrintPreviewData(this.previewPrescription);
+    if (!this.printPreviewOpen || !this.printPreviewData) {
+      return;
+    }
+
+    try {
+      this.printPreviewData =
+        this.buildPrintPreviewData(this.previewPrescription) ||
+        this.printPreviewData;
+    } catch (error) {
+      console.error('Unable to refresh prescription preview', error);
     }
   }
 

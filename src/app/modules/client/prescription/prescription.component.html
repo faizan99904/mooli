@@ -465,7 +465,7 @@
         </div>
         <div>
           <button type="button" class="btn-light" (click)="closePrintPreview()">Close</button>
-          <button type="button" class="btn-primary" [disabled]="printPreviewLoading" (click)="printPrescription()">
+          <button type="button" class="btn-primary" [disabled]="printPreviewLoading || !printPreviewData" (click)="printPrescription()">
             <i class="fa fa-print"></i>
             Print
           </button>
@@ -527,11 +527,11 @@
             <aside class="print-side-panel">
               <div class="print-mini-title">O/E</div>
               <table>
-                <tr *ngFor="let vital of vitalEntries(preview.vitals)">
+                <tr *ngFor="let vital of preview.vitalRows">
                   <th>{{ vital.label }}</th>
                   <td>{{ vital.value }}</td>
                 </tr>
-                <tr *ngIf="vitalEntries(preview.vitals).length === 0">
+                <tr *ngIf="preview.vitalRows.length === 0">
                   <th>Vitals</th>
                   <td>-</td>
                 </tr>
