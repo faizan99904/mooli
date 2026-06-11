@@ -43,6 +43,14 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     return this.normalizeRole(this.role) === 'doctor';
   }
 
+  get isOwner(): boolean {
+    return this.normalizeRole(this.role) === 'owner';
+  }
+
+  get isSuperAdmin(): boolean {
+    return this.normalizeRole(this.role) === 'superadmin';
+  }
+
   get canViewAllRoutes(): boolean {
     return this.hasWildcardPermission;
   }
