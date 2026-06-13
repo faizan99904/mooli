@@ -78,7 +78,7 @@
 }
 
 .storepos-search-box input.keyboard-active,
-.catalog-card.keyboard-active,
+.storepos-product-card.keyboard-active,
 .storepos-table-row.keyboard-active,
 .dock-actions button.keyboard-active {
   box-shadow: 0 0 0 3px rgba(1, 156, 157, 0.22);
@@ -234,6 +234,66 @@
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.storepos-quick-discount {
+  align-content: start;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.storepos-quick-discount > span {
+  color: #526273;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.quick-discount-control {
+  align-items: center;
+  background: #fff8ec;
+  border: 1px solid #aebdca;
+  border-radius: 5px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-height: 32px;
+  overflow: hidden;
+}
+
+.quick-discount-control input {
+  background: transparent;
+  border: 0;
+  color: #172033;
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 30px;
+  min-width: 0;
+  outline: 0;
+  padding: 5px 8px;
+  width: 100%;
+}
+
+.quick-discount-control b {
+  color: #64748b;
+  font-size: 11px;
+  padding: 0 7px;
+}
+
+.quick-discount-control button {
+  align-self: stretch;
+  background: #019c9d;
+  border: 0;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 0 10px;
+}
+
+.quick-discount-control input:disabled,
+.quick-discount-control button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .storepos-field input,
@@ -437,6 +497,46 @@
   width: 100%;
 }
 
+.storepos-discount-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.storepos-discount-entry {
+  align-items: center;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.storepos-discount-label,
+.storepos-discount-cell small {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.storepos-discount-label {
+  white-space: nowrap;
+}
+
+.storepos-discount-na {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  min-height: 28px;
+}
+
+.storepos-discount-na span {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
 .qty-stepper {
   align-items: center;
   display: grid;
@@ -523,73 +623,96 @@
   font-weight: 800;
 }
 
-.catalog-grid {
+.storepos-product-list {
+  align-content: start;
   display: grid;
   flex: 1;
-  gap: 6px;
+  gap: 7px;
   min-height: 0;
-  align-content: start;
   overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
 }
 
-.catalog-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 7px;
+.storepos-product-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #d4e0ec;
+  border-radius: 8px;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
   color: #172033;
   display: grid;
-  gap: 2px;
-  padding: 7px 8px;
+  gap: 8px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  padding: 7px;
   text-align: left;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
 
-.catalog-card:hover {
-  background: #ecfeff;
-  border-color: #67e8f9;
+.storepos-product-card:hover,
+.storepos-product-card.keyboard-active {
+  border-color: #93c5fd;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
 }
 
-.catalog-card.keyboard-active {
-  background: #ecfeff;
-  border-color: #019c9d;
+.storepos-product-card > span {
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid #dbe5f1;
+  border-radius: 8px;
+  color: #64748b;
+  display: grid;
+  height: 38px;
+  justify-content: center;
+  overflow: hidden;
+  width: 38px;
 }
 
-.catalog-card strong,
-.catalog-card span {
+.storepos-product-card strong,
+.storepos-product-card small,
+.storepos-product-card div > span,
+.storepos-product-card b {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.catalog-card strong {
+.storepos-product-card strong {
+  color: #0f172a;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 950;
 }
 
-.catalog-card span {
+.storepos-product-card small {
   color: #64748b;
-  font-size: 11px;
-}
-
-.catalog-card .catalog-meta {
-  color: #003e86;
+  font-size: 10px;
   font-weight: 800;
+  margin-top: 2px;
 }
 
-.catalog-card em {
-  color: #019c9d;
-  font-size: 11px;
-  font-style: normal;
+.storepos-product-card div > span {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.storepos-product-card b {
+  background: #e8f7f7;
+  border-radius: 999px;
+  color: #00696a;
+  font-size: 10px;
+  font-weight: 950;
+  padding: 5px 8px;
+}
+
+.storepos-product-discount {
+  color: #0f766e;
+  display: inline;
   font-weight: 900;
-  white-space: nowrap;
-}
-
-.catalog-card em.out {
-  color: #dc2626;
-}
-
-.catalog-card b {
-  color: #1d4ed8;
-  font-size: 12px;
 }
 
 .shortcut-modal {
@@ -1092,31 +1215,60 @@
 
 .receipt-preview-table {
   border-collapse: collapse;
+  table-layout: fixed;
   width: 100%;
 }
 
 .receipt-preview-table th,
 .receipt-preview-table td {
   border-bottom: 1px solid #e2e8f0;
-  padding: 7px 3px;
+  font-size: 10px;
+  line-height: 1.2;
+  padding: 5px 2px;
   vertical-align: top;
+  word-break: break-word;
+}
+
+.receipt-preview-table th:first-child,
+.receipt-preview-table td:first-child {
+  width: 38%;
 }
 
 .receipt-preview-table th:nth-child(2),
 .receipt-preview-table td:nth-child(2) {
-  text-align: center;
+  width: 10%;
 }
 
 .receipt-preview-table th:nth-child(3),
+.receipt-preview-table td:nth-child(3) {
+  width: 15%;
+}
+
 .receipt-preview-table th:nth-child(4),
-.receipt-preview-table td:nth-child(3),
-.receipt-preview-table td:nth-child(4) {
+.receipt-preview-table td:nth-child(4),
+.receipt-preview-table th:nth-child(5),
+.receipt-preview-table td:nth-child(5) {
+  width: 18.5%;
+}
+
+.receipt-preview-table th:nth-child(2),
+.receipt-preview-table td:nth-child(2),
+.receipt-preview-table th:nth-child(3),
+.receipt-preview-table td:nth-child(3) {
+  text-align: center;
+}
+
+.receipt-preview-table th:nth-child(4),
+.receipt-preview-table th:nth-child(5),
+.receipt-preview-table td:nth-child(4),
+.receipt-preview-table td:nth-child(5) {
   text-align: right;
 }
 
 .receipt-preview-table small {
   color: #64748b;
   display: block;
+  font-size: 9px;
 }
 
 .receipt-preview-totals {
@@ -1160,8 +1312,7 @@
     grid-template-columns: 1fr;
   }
 
-  .catalog-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .storepos-product-list {
     max-height: 320px;
   }
 }
@@ -1202,8 +1353,8 @@
     padding: 8px;
   }
 
-  .catalog-grid {
-    grid-template-columns: 1fr;
+  .storepos-product-list {
+    max-height: 320px;
   }
 
   .storepos-toolbar-icons {

@@ -294,6 +294,8 @@ export interface Payment {
   referenceNo: string;
 }
 
+export type ProductDiscountType = 'amount' | 'percentage';
+
 export interface ProductCatalogItem {
   _id: string;
   companyId?: string;
@@ -316,6 +318,9 @@ export interface ProductCatalogItem {
   stockQuantity?: string | null;
   reservedQuantity?: string | null;
   availableQuantity?: string | null;
+  discountEligible?: boolean;
+  maxDiscountType?: ProductDiscountType | null;
+  maxDiscountValue?: number | string | null;
   stockScopeCity?: string | null;
   stockLocationCount?: number;
   isActive?: boolean;

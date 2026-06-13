@@ -5,24 +5,23 @@
                 <span>Search:</span>
                 <label>
                     <i class="fa fa-search"></i>
-                    <input
-                        type="search"
-                        [(ngModel)]="productSearch"
-                        placeholder="Product name / SKU / scan barcode"
-                        [class.keyboard-active]="keyboardZone === 'search'"
-                        (focus)="setKeyboardZone('search')"
-                        (keydown.enter)="handleProductSearchEnter($event)"
-                    />
+                    <input type="search" [(ngModel)]="productSearch" placeholder="Product name / SKU / scan barcode"
+                        [class.keyboard-active]="keyboardZone === 'search'" (focus)="setKeyboardZone('search')"
+                        (keydown.enter)="handleProductSearchEnter($event)" />
                     <i class="fa fa-barcode"></i>
                 </label>
             </div>
 
             <div class="storepos-toolbar-icons">
-                <span class="storepos-connection-pill" [class.offline]="offline.statusTone() === 'offline'" [class.syncing]="offline.statusTone() === 'syncing'" [class.failed]="offline.statusTone() === 'failed'">
+                <span class="storepos-connection-pill" [class.offline]="offline.statusTone() === 'offline'"
+                    [class.syncing]="offline.statusTone() === 'syncing'"
+                    [class.failed]="offline.statusTone() === 'failed'">
                     <i class="fa fa-circle"></i>
                     {{ offline.statusLabel() }}
                 </span>
-                <button type="button" class="storepos-icon-btn" title="Sync offline work" [disabled]="!offline.online() || offline.syncing() || offline.pendingCount() === 0" (click)="syncOfflineWork()">
+                <button type="button" class="storepos-icon-btn" title="Sync offline work"
+                    [disabled]="!offline.online() || offline.syncing() || offline.pendingCount() === 0"
+                    (click)="syncOfflineWork()">
                     <i class="fa fa-refresh"></i>
                 </button>
                 <a [routerLink]="['/pharmacy']" class="storepos-icon-btn" title="Back to pharmacy">
@@ -34,7 +33,8 @@
                 <button type="button" class="storepos-icon-btn" title="New sale" (click)="clearSale()">
                     <i class="fa fa-refresh"></i>
                 </button>
-                <button type="button" class="storepos-icon-btn" title="Invoice preview" [disabled]="billLines.length === 0" (click)="openCurrentBillPreview()">
+                <button type="button" class="storepos-icon-btn" title="Invoice preview"
+                    [disabled]="billLines.length === 0" (click)="openCurrentBillPreview()">
                     <i class="fa fa-file-text-o"></i>
                 </button>
                 <button type="button" class="storepos-icon-btn" title="Sale history" (click)="openSaleHistory()">
@@ -43,13 +43,8 @@
                 <button type="button" class="storepos-icon-btn" title="Pharmacy reports" (click)="openReports()">
                     <i class="fa fa-bar-chart"></i>
                 </button>
-                <button
-                    type="button"
-                    class="storepos-icon-btn storepos-warn"
-                    title="Close register"
-                    [disabled]="!registerOpened || !canCloseRegister"
-                    (click)="openCloseRegister()"
-                >
+                <button type="button" class="storepos-icon-btn storepos-warn" title="Close register"
+                    [disabled]="!registerOpened || !canCloseRegister" (click)="openCloseRegister()">
                     <i class="fa fa-lock"></i>
                 </button>
             </div>
@@ -87,23 +82,23 @@
         <div class="storepos-invoice-panel">
             <div class="storepos-invoice-grid">
                 <label class="storepos-field">
-                    <span>Store</span>
-                    <select [(ngModel)]="selectedStoreId" (change)="onStoreChange()" [disabled]="registerOpened">
-                        <option value="" disabled>Select store</option>
-                        <option *ngFor="let store of stores" [value]="store._id">{{ store.name }} · {{ store.code }}</option>
-                        <option [value]="selectedStoreId" *ngIf="stores.length === 0 && selectedStoreId">{{ selectedStoreLabel }}</option>
-                    </select>
-                </label>
-
-                <label class="storepos-field">
-                    <span>Date</span>
-                    <input type="text" [value]="prescription?.createdAt ? (prescription?.createdAt | date:'yyyy-MM-dd') : ''" readonly />
-                </label>
-
-                <label class="storepos-field">
                     <span>Customer / Patient</span>
                     <input type="text" [value]="patientName() === '-' ? 'Walk-in Customer' : patientName()" readonly />
                 </label>
+                <div class="storepos-quick-discount">
+                    <span>Bill Discount %</span>
+                    <div class="quick-discount-control">
+                        <input type="number" min="0" step="0.5" [(ngModel)]="customDiscountPercent"
+                            [disabled]="!hasDiscountEligibleBillLines" placeholder="10"
+                            (keydown.enter)="applyCustomPercentDiscount()" />
+                        <b>%</b>
+                        <button type="button" [disabled]="!hasDiscountEligibleBillLines"
+                            title="Apply custom percent discount to eligible medicines"
+                            (click)="applyCustomPercentDiscount()">
+                            Apply
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="storepos-total-display">
@@ -112,10 +107,6 @@
             </div>
         </div>
 
-        <div class="storepos-message" [class]="posMessageType" *ngIf="posMessage">{{ posMessage }}</div>
-        <div class="storepos-message success" *ngIf="saleInvoiceNo">
-            Sale completed. Invoice No: <strong>{{ saleInvoiceNo }}</strong>
-        </div>
         <div class="storepos-message warning" *ngIf="!canReadProducts">
             Missing POS permission: <strong>products.read</strong>
         </div>
@@ -169,14 +160,10 @@
                 </div>
 
                 <div class="storepos-table-body" *ngIf="billLines.length">
-                    <div
-                        class="storepos-table-row"
-                        *ngFor="let line of billLines; let i = index"
-                        tabindex="0"
+                    <div class="storepos-table-row" *ngFor="let line of billLines; let i = index" tabindex="0"
                         [attr.data-kb-cart-index]="i"
                         [class.keyboard-active]="keyboardZone === 'cart' && selectedCartIndex === i"
-                        (focus)="setKeyboardZone('cart', i)"
-                    >
+                        (focus)="setKeyboardZone('cart', i)">
                         <div class="storepos-product-cell">
                             <p>{{ productDisplay(line.product) }}</p>
                             <small>{{ line.product.sku || 'No SKU' }} · {{ line.sourceMedicineName }}</small>
@@ -185,14 +172,36 @@
                         <span>{{ line.requestedQty }}</span>
                         <span class="storepos-stock-cell">{{ formatCompactNumber(line.availableQty) }}</span>
                         <div class="qty-stepper">
-                            <button type="button" data-kb-cart-cell (focus)="setCartCellFocus(i, 0)" (click)="decrementLineQty(i)">-</button>
-                            <input type="number" min="0" step="0.1" data-kb-cart-cell (focus)="setCartCellFocus(i, 1)" [(ngModel)]="line.billQty" (ngModelChange)="onQtyChange(line)" />
-                            <button type="button" data-kb-cart-cell (focus)="setCartCellFocus(i, 2)" (click)="incrementLineQty(i)">+</button>
+                            <button type="button" data-kb-cart-cell (focus)="setCartCellFocus(i, 0)"
+                                (click)="decrementLineQty(i)">-</button>
+                            <input type="number" min="0" step="1" data-kb-cart-cell (focus)="setCartCellFocus(i, 1)"
+                                [(ngModel)]="line.billQty" (ngModelChange)="onQtyChange(line)" />
+                            <button type="button" data-kb-cart-cell (focus)="setCartCellFocus(i, 2)"
+                                (click)="incrementLineQty(i)">+</button>
                         </div>
-                        <input type="number" min="0" data-kb-cart-cell (focus)="setCartCellFocus(i, 3)" [(ngModel)]="line.unitPrice" (ngModelChange)="refreshPaidAmount()" />
-                        <input type="number" min="0" data-kb-cart-cell (focus)="setCartCellFocus(i, 4)" [(ngModel)]="line.discount" (ngModelChange)="refreshPaidAmount()" />
+                        <input type="number" min="0" data-kb-cart-cell (focus)="setCartCellFocus(i, 3)"
+                            [(ngModel)]="line.unitPrice" (ngModelChange)="onUnitPriceChange(line)" />
+                        <div class="storepos-discount-cell">
+                            <ng-container *ngIf="itemDiscountEligible(i); else discountLocked">
+                                <div class="storepos-discount-entry">
+                                    <input type="number" min="0" step="0.5" data-kb-cart-cell
+                                        [value]="lineDiscountDisplayValue(i)" (focus)="setCartCellFocus(i, 4)"
+                                        [max]="lineDiscountMaxValue(i)" title="Line discount"
+                                        aria-label="Line discount value" (paste)="$event.preventDefault()"
+                                        (keydown)="handleLineDiscountKeydown(i, $event)"
+                                        (input)="updateLineDiscountInput(i, $any($event.target).value)" />
+                                </div>
+                            </ng-container>
+                            <ng-template #discountLocked>
+                                <div class="storepos-discount-na">
+                                    <span>N/A</span>
+                                </div>
+                            </ng-template>
+                            <!-- <small>{{ lineDiscountHint(i) }}</small> -->
+                        </div>
                         <strong>{{ formatCurrency(lineTotal(line)) }}</strong>
-                        <button type="button" class="storepos-line-remove" data-kb-cart-cell (focus)="setCartCellFocus(i, 5)" (click)="removeLine(i)">
+                        <button type="button" class="storepos-line-remove" data-kb-cart-cell
+                            (focus)="setCartCellFocus(i, itemDiscountEligible(i) ? 5 : 4)" (click)="removeLine(i)">
                             <i class="fa fa-trash"></i>
                         </button>
                     </div>
@@ -216,22 +225,24 @@
                     <small *ngIf="productsLoading">Loading...</small>
                 </div>
 
-                <div class="catalog-grid">
-                    <button
-                        type="button"
-                        class="catalog-card"
-                        *ngFor="let product of filteredProducts(); let i = index"
+                <div class="storepos-product-list">
+                    <button type="button" class="storepos-product-card" *ngFor="let product of filteredProducts(); let i = index"
                         [attr.data-kb-product-index]="i"
                         [class.keyboard-active]="keyboardZone === 'products' && selectedProductIndex === i"
-                        (focus)="setKeyboardZone('products', i)"
-                        (click)="addProduct(product)"
-                    >
-                        <strong>{{ productDisplay(product) }}</strong>
+                        (focus)="setKeyboardZone('products', i)" (click)="addProduct(product)">
+                        <span><i class="fa fa-medkit"></i></span>
+                        <div>
+                            <strong>{{ productDisplay(product) }}</strong>
                         <span>{{ product.sku }} · {{ product.unit || 'unit' }}</span>
-                        <span *ngIf="productBatchExpiryLabel(product)" class="catalog-meta">
+                            <small *ngIf="productBatchExpiryLabel(product)">
                             {{ productBatchExpiryLabel(product) }}
-                        </span>
-                        <em [class.out]="productAvailableQty(product) <= 0">Stock {{ stockLabel(product) }}</em>
+                            </small>
+                            <small>Stock {{ stockLabel(product) }}</small>
+                            <small>
+                                {{ product.sku || 'No SKU' }} · {{ product.brand || product.unit || 'General' }} ·
+                                <small class="storepos-product-discount">{{ productDiscountSummary(product) }}</small>
+                            </small>
+                        </div>
                         <b>{{ formatCurrency(product.sellingPrice || 0) }}</b>
                     </button>
                 </div>
@@ -275,8 +286,13 @@
             </div>
 
             <div class="dock-actions">
-                <button type="button" class="cash-btn" data-kb-dock-index="0" [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 0" (focus)="setKeyboardZone('actions', 0)" [disabled]="!canCheckout" (click)="checkoutWith('cash')">Cash</button>
-                <button type="button" class="pay-btn" data-kb-dock-index="1" [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 1" (focus)="setKeyboardZone('actions', 1)" [disabled]="!canCheckout" (click)="confirmBilling()">
+                <button type="button" class="cash-btn" data-kb-dock-index="0"
+                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 0"
+                    (focus)="setKeyboardZone('actions', 0)" [disabled]="!canCheckout"
+                    (click)="checkoutWith('cash')">Cash</button>
+                <button type="button" class="pay-btn" data-kb-dock-index="1"
+                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 1"
+                    (focus)="setKeyboardZone('actions', 1)" [disabled]="!canCheckout" (click)="confirmBilling()">
                     <i class="fa fa-spinner fa-spin" *ngIf="saleSaving"></i>
                     Confirm Sale
                 </button>
@@ -300,7 +316,8 @@
 
         <div class="modern-register-body">
             <div class="reports-card-grid">
-                <div class="report-card" *ngFor="let card of pharmacyReportCards" [class.good]="card.tone === 'good'" [class.warn]="card.tone === 'warn'">
+                <div class="report-card" *ngFor="let card of pharmacyReportCards" [class.good]="card.tone === 'good'"
+                    [class.warn]="card.tone === 'warn'">
                     <span>{{ card.label }}</span>
                     <strong>{{ card.value }}</strong>
                     <small>{{ card.note }}</small>
@@ -386,8 +403,10 @@
 
         <div class="modern-register-body">
             <div class="history-loading" *ngIf="saleHistoryLoading">Loading sale history...</div>
-            <div class="history-loading" *ngIf="!saleHistoryLoading && !canReadSales">Missing permission: sales.read</div>
-            <div class="history-loading" *ngIf="!saleHistoryLoading && canReadSales && recentSales.length === 0">No sales found.</div>
+            <div class="history-loading" *ngIf="!saleHistoryLoading && !canReadSales">Missing permission: sales.read
+            </div>
+            <div class="history-loading" *ngIf="!saleHistoryLoading && canReadSales && recentSales.length === 0">No
+                sales found.</div>
 
             <div class="history-table" *ngIf="!saleHistoryLoading && recentSales.length">
                 <div class="history-head">
@@ -434,7 +453,8 @@
         <div class="modern-register-body">
             <section class="receipt-preview-card">
                 <div class="receipt-preview-head">
-                    <img *ngIf="receiptLogoUrl(receipt)" class="receipt-preview-logo" [src]="receiptLogoUrl(receipt)" [alt]="receiptBrandTitle(receipt)" />
+                    <img *ngIf="receiptLogoUrl(receipt)" class="receipt-preview-logo" [src]="receiptLogoUrl(receipt)"
+                        [alt]="receiptBrandTitle(receipt)" />
                     <h2>{{ receiptBrandTitle(receipt) }}</h2>
                     <p *ngIf="receiptBrandSubtitle(receipt)">{{ receiptBrandSubtitle(receipt) }}</p>
                     <p *ngIf="receiptHeaderNote(receipt)">{{ receiptHeaderNote(receipt) }}</p>
@@ -455,6 +475,7 @@
                         <tr>
                             <th>Item</th>
                             <th>Qty</th>
+                            <th>Discount</th>
                             <th>Rate</th>
                             <th>Total</th>
                         </tr>
@@ -466,6 +487,7 @@
                                 <small>{{ item.sku }}</small>
                             </td>
                             <td>{{ item.qty }}</td>
+                            <td>{{ item.discountLabel }}</td>
                             <td>{{ formatCurrency(item.unitPrice) }}</td>
                             <td>{{ formatCurrency(item.total) }}</td>
                         </tr>
@@ -474,7 +496,7 @@
 
                 <div class="receipt-preview-totals">
                     <div><span>Subtotal</span><strong>{{ formatCurrency(receipt.subtotal) }}</strong></div>
-                    <div><span>Discount</span><strong>{{ formatCurrency(receipt.discount) }}</strong></div>
+                    <div><span>Total Discount</span><strong>{{ formatCurrency(receipt.discount) }}</strong></div>
                     <div class="grand"><span>Total</span><strong>{{ formatCurrency(receipt.total) }}</strong></div>
                     <div><span>Paid</span><strong>{{ formatCurrency(receipt.paidAmount) }}</strong></div>
                     <div><span>Change</span><strong>{{ formatCurrency(receipt.changeDueAmount) }}</strong></div>
@@ -525,7 +547,8 @@
                 <span>Store</span>
                 <select [(ngModel)]="selectedStoreId" [disabled]="stores.length === 0 || registerOpening">
                     <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
-                    <option [value]="selectedStoreId" *ngIf="stores.length === 0 && selectedStoreId">{{ selectedStoreLabel }}</option>
+                    <option [value]="selectedStoreId" *ngIf="stores.length === 0 && selectedStoreId">{{
+                        selectedStoreLabel }}</option>
                 </select>
             </label>
 
@@ -542,7 +565,8 @@
                 <input type="text" [(ngModel)]="openingNote" placeholder="Optional opening note" />
             </label>
 
-            <button type="button" class="modern-register-submit" [disabled]="registerOpening || !canOpenRegister" (click)="openRegister()">
+            <button type="button" class="modern-register-submit" [disabled]="registerOpening || !canOpenRegister"
+                (click)="openRegister()">
                 {{ registerOpening ? 'Opening register...' : 'Open Register' }}
             </button>
 
@@ -593,7 +617,8 @@
                 <input type="text" [(ngModel)]="closeNote" placeholder="Optional close note" />
             </label>
 
-            <button type="button" class="modern-register-submit danger" [disabled]="closeRegisterSaving" (click)="confirmCloseRegister()">
+            <button type="button" class="modern-register-submit danger" [disabled]="closeRegisterSaving"
+                (click)="confirmCloseRegister()">
                 {{ closeRegisterSaving ? 'Closing register...' : 'Close Register' }}
             </button>
         </div>

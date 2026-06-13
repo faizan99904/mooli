@@ -125,8 +125,8 @@
   background: #fff;
   border-bottom: 1px solid #e2e8f0;
   display: grid;
-  grid-template-columns: minmax(210px, 1.4fr) 140px 90px 120px 120px 115px 165px 90px 90px 95px 178px;
-  min-width: 1430px;
+  grid-template-columns: minmax(210px, 1.4fr) 140px 90px 120px 120px 115px 165px 90px 90px 95px 130px 178px;
+  min-width: 1560px;
 }
 
 .product-row > * {
@@ -158,6 +158,15 @@
   display: inline-flex;
   gap: 5px;
   justify-content: center;
+}
+
+.product-discount {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.product-discount.not-eligible {
+  color: #94a3b8;
 }
 
 .product-modal-backdrop {

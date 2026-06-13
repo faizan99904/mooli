@@ -11,6 +11,7 @@ import {
   Category,
   Patient,
   Prescription,
+  ProductDiscountType,
   ProductCatalogItem,
   Store,
   User,
@@ -51,6 +52,9 @@ interface PharmacyProductForm {
   sellingPrice: string;
   openingStock: string;
   storeId: string;
+  discountEligible: boolean;
+  maxDiscountType: ProductDiscountType;
+  maxDiscountValue: string;
 }
 
 @Component({
@@ -334,6 +338,16 @@ export class PharmacyComponent implements OnInit {
       return;
     }
 
+    if (this.productForm.discountEligible && !this.isValidDiscountSetup()) {
+      this.toastr.error('Enable discount only after setting a valid maximum amount or percentage.');
+      return;
+    }
+
+    if (this.productForm.discountEligible && !this.isHalfStepValue(this.productForm.maxDiscountValue)) {
+      this.toastr.error('Discount must be in 0.5 steps like 1.5 or 5.0.');
+      return;
+    }
+
     if (!storeId) {
       this.toastr.error('No pharmacy store is assigned. Login again or assign a store to this pharmacy user.');
       return;
@@ -368,6 +382,12 @@ export class PharmacyComponent implements OnInit {
             description: strengthDescription || undefined,
             costPrice: this.productForm.costPrice || '0',
             sellingPrice: this.productForm.sellingPrice || '0',
+            discountEligible: this.productForm.discountEligible,
+            maxDiscountType: this.productForm.discountEligible ? this.productForm.maxDiscountType : undefined,
+            maxDiscountValue:
+              this.productForm.discountEligible && this.productForm.maxDiscountValue !== ''
+                ? this.productForm.maxDiscountValue
+                : undefined,
             taxRate: '0',
             isActive: true,
           })
@@ -615,7 +635,14 @@ export class PharmacyComponent implements OnInit {
       sellingPrice: '0',
       openingStock: '1',
       storeId: this.getStoredUser()?.storeId || '',
+      discountEligible: false,
+      maxDiscountType: 'amount',
+      maxDiscountValue: '',
     };
+  }
+
+  get discountEnabled(): boolean {
+    return Boolean(this.productForm.discountEligible);
   }
 
   private resolveProductCategoryId(): Observable<string> {
@@ -676,6 +703,33 @@ export class PharmacyComponent implements OnInit {
     const prefix = this.generateCode(name).slice(0, 18) || 'MED';
     const suffix = Date.now().toString(36).slice(-6).toUpperCase();
     return `${prefix}-${suffix}`;
+  }
+
+  private isValidDiscountSetup(): boolean {
+    const value = Number(this.productForm.maxDiscountValue);
+    if (
+      (this.productForm.maxDiscountType !== 'amount' && this.productForm.maxDiscountType !== 'percentage') ||
+      !Number.isFinite(value) ||
+      value <= 0
+    ) {
+      return false;
+    }
+
+    if (this.productForm.maxDiscountType === 'percentage' && value > 100) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private isHalfStepValue(value: number | string | null | undefined): boolean {
+    const normalized = String(value ?? '').trim();
+    if (!normalized.length) {
+      return false;
+    }
+
+    const numeric = Number(normalized);
+    return Number.isFinite(numeric) && numeric > 0 && Math.abs(numeric * 2 - Math.round(numeric * 2)) < 0.000001;
   }
 
   private toDateInputValue(value?: string | null): string {

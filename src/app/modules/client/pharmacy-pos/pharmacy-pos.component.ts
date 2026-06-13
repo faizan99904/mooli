@@ -5,12 +5,19 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
-import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/mooli-offline.service';
-import { CompanyProfile, ReceiptLetterheadSettings } from '../../../shared/models/company.model';
+import {
+  MooliOfflineService,
+  MooliQueuedWork,
+} from '../../../core/services/mooli-offline.service';
+import {
+  CompanyProfile,
+  ReceiptLetterheadSettings,
+} from '../../../shared/models/company.model';
 import {
   CreateSalePayload,
   Prescription,
   PrescriptionMedicine,
+  ProductDiscountType,
   ProductCatalogItem,
   RegisterSession,
   Sale,
@@ -27,6 +34,8 @@ interface PharmacyBillLine {
   availableQty: number;
   unitPrice: number;
   discount: number;
+  discountInput: number;
+  discountType: ProductDiscountType;
 }
 
 interface UnavailableMedicine {
@@ -39,6 +48,7 @@ interface ReceiptPreviewLine {
   name: string;
   sku: string;
   qty: number;
+  discountLabel: string;
   unitPrice: number;
   discount: number;
   total: number;
@@ -101,6 +111,7 @@ export class PharmacyPosComponent implements OnInit {
   paymentMethod: SalePaymentMethod = 'cash';
   paidAmount = '0';
   cashReceivedAmount = '0';
+  customDiscountPercent = '10';
   storesLoading = false;
   productsLoading = false;
   prescriptionLoading = false;
@@ -125,12 +136,11 @@ export class PharmacyPosComponent implements OnInit {
   selectedCartIndex = 0;
   selectedCartCellIndex = 0;
   selectedDockIndex = 0;
+  shortcutBindings: Record<string, string> = {};
   openingAmount: number | null = null;
   openingNote = '';
   closingAmount: number | null = null;
   closeNote = '';
-  posMessage = '';
-  posMessageType: 'success' | 'warning' | 'danger' | 'info' = 'info';
   readonly shortcutDefinitions: PosShortcutDefinition[] = [
     {
       id: 'focusSearch',
@@ -188,8 +198,8 @@ export class PharmacyPosComponent implements OnInit {
     },
     {
       id: 'shortcutInfo',
-      label: 'Shortcut Help',
-      description: 'Show keyboard controls.',
+      label: 'Shortcut Controls',
+      description: 'Open the shortcuts info and editor.',
       defaultCombo: 'Ctrl+/',
     },
   ];
@@ -199,14 +209,16 @@ export class PharmacyPosComponent implements OnInit {
     private router: Router,
     private backend: BackendService,
     readonly offline: MooliOfflineService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
   ) {}
 
   ngOnInit(): void {
     this.loadCompanyProfile();
+    this.loadShortcutBindings();
     this.route.queryParamMap.subscribe((params) => {
       this.prescriptionId = params.get('prescriptionId') || '';
-      this.selectedStoreId = params.get('storeId') || this.getStoredUser()?.storeId || '';
+      this.selectedStoreId =
+        params.get('storeId') || this.getStoredUser()?.storeId || '';
       this.loadStores();
       this.loadProducts();
       this.refreshRegisterState();
@@ -284,7 +296,9 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   get selectedStoreLabel(): string {
-    const store = this.stores.find((item) => item._id === this.currentStoreId());
+    const store = this.stores.find(
+      (item) => item._id === this.currentStoreId(),
+    );
     return store?.name || 'Assigned pharmacy store';
   }
 
@@ -293,11 +307,17 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   get totalDiscount(): number {
-    return this.billLines.reduce((sum, line) => sum + Number(line.discount || 0), 0);
+    return this.billLines.reduce(
+      (sum, line) => sum + Number(line.discount || 0),
+      0,
+    );
   }
 
   get totalQuantity(): number {
-    return this.billLines.reduce((sum, line) => sum + Number(line.billQty || 0), 0);
+    return this.billLines.reduce(
+      (sum, line) => sum + Number(line.billQty || 0),
+      0,
+    );
   }
 
   get payableAmount(): string {
@@ -319,6 +339,12 @@ export class PharmacyPosComponent implements OnInit {
     );
   }
 
+  get hasDiscountEligibleBillLines(): boolean {
+    return this.billLines.some(
+      (line) => line.billQty > 0 && line.product.discountEligible,
+    );
+  }
+
   get cashierName(): string {
     return this.getStoredUser()?.name || 'Cashier';
   }
@@ -328,7 +354,7 @@ export class PharmacyPosComponent implements OnInit {
       this.registerSession?.expectedCashAmount ||
         this.registerSession?.summary?.expectedCashInDrawer ||
         this.registerSession?.openingAmount ||
-        0
+        0,
     );
   }
 
@@ -337,23 +363,31 @@ export class PharmacyPosComponent implements OnInit {
       return 0;
     }
 
-    return Math.max(Number(this.cashReceivedAmount || this.paidAmount || 0) - this.subtotal, 0);
+    return Math.max(
+      Number(this.cashReceivedAmount || this.paidAmount || 0) - this.subtotal,
+      0,
+    );
   }
 
   get totalStockUnits(): number {
-    return this.products.reduce((sum, product) => sum + this.productAvailableQty(product), 0);
+    return this.products.reduce(
+      (sum, product) => sum + this.productAvailableQty(product),
+      0,
+    );
   }
 
   get totalStockCostValue(): number {
     return this.products.reduce(
-      (sum, product) => sum + this.productAvailableQty(product) * this.productCost(product),
+      (sum, product) =>
+        sum + this.productAvailableQty(product) * this.productCost(product),
       0,
     );
   }
 
   get totalStockRetailValue(): number {
     return this.products.reduce(
-      (sum, product) => sum + this.productAvailableQty(product) * this.productPrice(product),
+      (sum, product) =>
+        sum + this.productAvailableQty(product) * this.productPrice(product),
       0,
     );
   }
@@ -387,10 +421,14 @@ export class PharmacyPosComponent implements OnInit {
       return (
         sum +
         (sale.items || []).reduce((saleSum, item) => {
-          const matchedProduct = this.products.find((product) => product._id === item.productId);
+          const matchedProduct = this.products.find(
+            (product) => product._id === item.productId,
+          );
           const qty = Number(item.qty || 0) || 0;
           const unitPrice = Number(item.unitPrice || 0) || 0;
-          const costPrice = matchedProduct ? this.productCost(matchedProduct) : 0;
+          const costPrice = matchedProduct
+            ? this.productCost(matchedProduct)
+            : 0;
           return saleSum + qty * Math.max(unitPrice - costPrice, 0);
         }, 0)
       );
@@ -436,11 +474,19 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   receiptBrandTitle(receipt: ReceiptPreviewData | null | undefined): string {
-    return receipt?.receiptLetterhead?.brandTitle?.trim() || receipt?.companyName || 'Mooli Pharmacy';
+    return (
+      receipt?.receiptLetterhead?.brandTitle?.trim() ||
+      receipt?.companyName ||
+      'Mooli Pharmacy'
+    );
   }
 
   receiptBrandSubtitle(receipt: ReceiptPreviewData | null | undefined): string {
-    return receipt?.receiptLetterhead?.brandSubtitle?.trim() || receipt?.storeName || '';
+    return (
+      receipt?.receiptLetterhead?.brandSubtitle?.trim() ||
+      receipt?.storeName ||
+      ''
+    );
   }
 
   receiptHeaderNote(receipt: ReceiptPreviewData | null | undefined): string {
@@ -448,7 +494,9 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   receiptHeaderLines(receipt: ReceiptPreviewData | null | undefined): string[] {
-    return (receipt?.receiptLetterhead?.extraHeaderLines || []).filter((line) => Boolean(line?.trim()));
+    return (receipt?.receiptLetterhead?.extraHeaderLines || []).filter((line) =>
+      Boolean(line?.trim()),
+    );
   }
 
   receiptFooterTitle(receipt: ReceiptPreviewData | null | undefined): string {
@@ -459,9 +507,9 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   receiptFooterLines(receipt: ReceiptPreviewData | null | undefined): string[] {
-    const configuredLines = (receipt?.receiptLetterhead?.footerLines || []).filter((line) =>
-      Boolean(line?.trim())
-    );
+    const configuredLines = (
+      receipt?.receiptLetterhead?.footerLines || []
+    ).filter((line) => Boolean(line?.trim()));
 
     return configuredLines.length
       ? configuredLines
@@ -473,7 +521,11 @@ export class PharmacyPosComponent implements OnInit {
       return '';
     }
 
-    return receipt.receiptLetterhead.logoUrl?.trim() || this.companyProfile?.logoUrl || '';
+    return (
+      receipt.receiptLetterhead.logoUrl?.trim() ||
+      this.companyProfile?.logoUrl ||
+      ''
+    );
   }
 
   loadStores(): void {
@@ -488,7 +540,11 @@ export class PharmacyPosComponent implements OnInit {
 
     this.storesLoading = true;
     this.backend
-      .getStores({ limit: 100, isActive: true, hospitalId: user?.hospitalId || undefined })
+      .getStores({
+        limit: 100,
+        isActive: true,
+        hospitalId: user?.hospitalId || undefined,
+      })
       .pipe(finalize(() => (this.storesLoading = false)))
       .subscribe({
         next: (result) => {
@@ -527,7 +583,10 @@ export class PharmacyPosComponent implements OnInit {
       .subscribe({
         next: (result) => {
           this.products = result.items || [];
-          void this.offline.cacheValue(this.productsCacheKey(storeId), this.products);
+          void this.offline.cacheValue(
+            this.productsCacheKey(storeId),
+            this.products,
+          );
           if (!this.saleInvoiceNo) {
             this.rebuildPrescriptionBill();
           }
@@ -546,7 +605,10 @@ export class PharmacyPosComponent implements OnInit {
       .subscribe({
         next: (prescription) => {
           this.prescription = prescription;
-          void this.offline.cacheValue(this.prescriptionCacheKey(id), prescription);
+          void this.offline.cacheValue(
+            this.prescriptionCacheKey(id),
+            prescription,
+          );
           this.rebuildPrescriptionBill();
         },
         error: (err) => {
@@ -557,21 +619,24 @@ export class PharmacyPosComponent implements OnInit {
 
   refreshCurrentUser(): void {
     this.backend.getMe().subscribe({
-        next: (user) => {
-          localStorage.setItem('user', JSON.stringify(user));
+      next: (user) => {
+        localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('role', user.role?.name || '');
-        localStorage.setItem('permissions', JSON.stringify(user.role?.permissions || []));
+        localStorage.setItem(
+          'permissions',
+          JSON.stringify(user.role?.permissions || []),
+        );
 
         if (!this.selectedStoreId && user.storeId) {
           this.selectedStoreId = user.storeId;
           this.loadProducts();
           this.refreshRegisterState();
         }
-        },
-        error: () => {
-          // Cached session data is enough to keep the POS page usable.
-        },
-      });
+      },
+      error: () => {
+        // Cached session data is enough to keep the POS page usable.
+      },
+    });
   }
 
   refreshRegisterState(): void {
@@ -592,7 +657,10 @@ export class PharmacyPosComponent implements OnInit {
           this.registerSession = registerSession;
           this.registerOpened = registerSession?.status === 'open';
           this.registerClosed = registerSession?.status === 'closed';
-          void this.offline.cacheValue(this.registerCacheKey(storeId), registerSession);
+          void this.offline.cacheValue(
+            this.registerCacheKey(storeId),
+            registerSession,
+          );
           if (registerSession?.status === 'open') {
             this.openingAmount = Number(registerSession.openingAmount || 0);
           }
@@ -638,9 +706,8 @@ export class PharmacyPosComponent implements OnInit {
           this.loadRecentSales();
           this.showPosMessage(
             `Register opened with ${this.formatCurrency(this.registerSession?.openingAmount || this.openingAmount || 0)}.`,
-            'success'
+            'success',
           );
-          this.toastr.success('Register opened successfully.');
         },
         error: (err) => {
           this.registerOpened = false;
@@ -648,7 +715,7 @@ export class PharmacyPosComponent implements OnInit {
           if (err?.status === 403) {
             this.showPosMessage(
               'This backend user is still blocked from opening the cash register. Please update the assigned role permissions.',
-              'danger'
+              'danger',
             );
             return;
           }
@@ -692,10 +759,14 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     const queuedSales = (await this.offline.getQueuedWork('sale')).filter(
-      (entry) => (entry.payload as unknown as CreateSalePayload).storeId === this.currentStoreId(),
+      (entry) =>
+        (entry.payload as unknown as CreateSalePayload).storeId ===
+        this.currentStoreId(),
     );
     if (queuedSales.length > 0) {
-      this.toastr.error('Sync queued offline POS sales before closing register.');
+      this.toastr.error(
+        'Sync queued offline POS sales before closing register.',
+      );
       void this.syncOfflineWork(false);
       return;
     }
@@ -714,21 +785,24 @@ export class PharmacyPosComponent implements OnInit {
       .pipe(finalize(() => (this.closeRegisterSaving = false)))
       .subscribe({
         next: (response) => {
-          this.registerSession = response.data?.registerSession || this.registerSession;
-          void this.offline.cacheValue(this.registerCacheKey(this.currentStoreId()), this.registerSession);
+          this.registerSession =
+            response.data?.registerSession || this.registerSession;
+          void this.offline.cacheValue(
+            this.registerCacheKey(this.currentStoreId()),
+            this.registerSession,
+          );
           this.registerOpened = false;
           this.registerClosed = true;
           this.closeRegisterOpen = false;
           this.clearSale();
           this.loadRecentSales();
           this.showPosMessage('Register closed successfully.', 'success');
-          this.toastr.success('Register closed successfully.');
         },
         error: (err) => {
           if (err?.status === 403) {
             this.showPosMessage(
               'This backend user is still blocked from closing the cash register. Please update the assigned role permissions.',
-              'danger'
+              'danger',
             );
             return;
           }
@@ -768,7 +842,6 @@ export class PharmacyPosComponent implements OnInit {
     this.productSearch = '';
     this.paidAmount = '0';
     this.cashReceivedAmount = '0';
-    this.posMessage = '';
   }
 
   openSaleHistory(): void {
@@ -820,6 +893,50 @@ export class PharmacyPosComponent implements OnInit {
     this.shortcutInfoOpen = false;
   }
 
+  shortcutBinding(id: string): string {
+    return this.shortcutBindings[id] || '';
+  }
+
+  updateShortcutBinding(id: string, value: string): void {
+    this.shortcutBindings = {
+      ...this.shortcutBindings,
+      [id]: this.normalizeShortcutCombo(value),
+    };
+  }
+
+  saveShortcutBindings(): void {
+    const normalizedEntries = this.shortcutDefinitions.map(
+      (definition) =>
+        [
+          definition.id,
+          this.normalizeShortcutCombo(
+            this.shortcutBindings[definition.id] || definition.defaultCombo,
+          ),
+        ] as const,
+    );
+    const normalizedBindings = Object.fromEntries(normalizedEntries);
+    const collisions = this.findShortcutConflicts(normalizedBindings);
+
+    if (collisions.length) {
+      this.showPosMessage(
+        `Shortcut conflict detected for ${collisions.join(', ')}. Give each action a unique key combo.`,
+        'danger',
+      );
+      return;
+    }
+
+    this.shortcutBindings = normalizedBindings;
+    localStorage.setItem(this.shortcutBindingsStorageKey(), JSON.stringify(this.shortcutBindings));
+    this.showPosMessage('POS keyboard shortcuts updated.', 'success');
+    this.closeShortcutInfo();
+  }
+
+  resetShortcutBindings(): void {
+    this.shortcutBindings = this.defaultShortcutBindings();
+    localStorage.removeItem(this.shortcutBindingsStorageKey());
+    this.showPosMessage('POS keyboard shortcuts reset to defaults.', 'success');
+  }
+
   printReceipt(): void {
     if (!this.receiptPreview) {
       return;
@@ -845,12 +962,18 @@ export class PharmacyPosComponent implements OnInit {
       .getSales({
         limit: 20,
         storeId,
-        registerSessionId: this.registerSession?.status === 'open' ? this.registerSession._id : undefined,
+        registerSessionId:
+          this.registerSession?.status === 'open'
+            ? this.registerSession._id
+            : undefined,
       })
       .pipe(finalize(() => (this.saleHistoryLoading = false)))
       .subscribe({
         next: (result) => {
-          void this.offline.cacheValue(this.recentSalesCacheKey(storeId), result.items || []);
+          void this.offline.cacheValue(
+            this.recentSalesCacheKey(storeId),
+            result.items || [],
+          );
           void this.applyRecentSales(result.items || []);
         },
         error: () => {
@@ -881,11 +1004,17 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   addProduct(product: ProductCatalogItem): void {
-    const existing = this.billLines.find((line) => line.product._id === product._id);
+    const existing = this.billLines.find(
+      (line) => line.product._id === product._id,
+    );
     const availableQty = this.productAvailableQty(product);
 
     if (existing) {
-      existing.billQty = Math.min(existing.billQty + 1, Math.max(availableQty, 0));
+      existing.billQty = Math.min(
+        existing.billQty + 1,
+        Math.max(availableQty, 0),
+      );
+      this.syncLineDiscount(existing);
       this.refreshPaidAmount();
       return;
     }
@@ -898,6 +1027,9 @@ export class PharmacyPosComponent implements OnInit {
       availableQty,
       unitPrice: this.productPrice(product),
       discount: 0,
+      discountInput: 0,
+      discountType:
+        product.maxDiscountType === 'percentage' ? 'percentage' : 'amount',
     });
     this.refreshPaidAmount();
   }
@@ -930,14 +1062,160 @@ export class PharmacyPosComponent implements OnInit {
   onQtyChange(line: PharmacyBillLine): void {
     const qty = Number(line.billQty || 0);
     line.billQty = Math.max(0, Math.min(qty, Math.max(line.availableQty, 0)));
+    this.syncLineDiscount(line);
+    this.refreshPaidAmount();
+  }
+
+  onUnitPriceChange(line: PharmacyBillLine): void {
+    line.unitPrice = Math.max(Number(line.unitPrice || 0), 0);
+    this.syncLineDiscount(line);
     this.refreshPaidAmount();
   }
 
   lineTotal(line: PharmacyBillLine): number {
     return Math.max(
-      Number(line.billQty || 0) * Number(line.unitPrice || 0) - Number(line.discount || 0),
-      0
+      Number(line.billQty || 0) * Number(line.unitPrice || 0) -
+        Number(line.discount || 0),
+      0,
     );
+  }
+
+  itemDiscountEligible(index: number): boolean {
+    return Boolean(this.billLines[index]?.product.discountEligible);
+  }
+
+  lineDiscountDisplayValue(index: number): number {
+    return Number(this.billLines[index]?.discountInput || 0);
+  }
+
+  lineDiscountAmount(index: number): number {
+    return Number(this.billLines[index]?.discount || 0);
+  }
+
+  lineDiscountLabel(index: number): string {
+    return this.lineDiscountType(index) === 'percentage' ? '%' : 'Rs';
+  }
+
+  lineDiscountMaxValue(index: number): number {
+    return this.lineDiscountType(index) === 'percentage'
+      ? this.lineMaxDiscountPercent(index)
+      : this.lineMaxDiscountAmount(index);
+  }
+
+  lineDiscountHint(index: number): string {
+    const line = this.billLines[index];
+    const product = line?.product;
+    if (!product) {
+      return '';
+    }
+
+    if (!product.discountEligible) {
+      return 'Discount locked for this product';
+    }
+
+    const maxAmount = this.lineMaxDiscountAmount(index);
+    const maxPercent = this.lineMaxDiscountPercent(index);
+
+    if (product.maxDiscountType === 'percentage') {
+      return `Max ${this.formatNumber(maxPercent)}% (${this.formatCurrency(maxAmount)})`;
+    }
+
+    return `Max ${this.formatCurrency(maxAmount)} (${this.formatNumber(maxPercent)}%)`;
+  }
+
+  productDiscountSummary(product: ProductCatalogItem): string {
+    if (!product.discountEligible) {
+      return 'No discount';
+    }
+
+    const value = Number(product.maxDiscountValue || 0) || 0;
+    return product.maxDiscountType === 'percentage'
+      ? `Discount up to ${this.formatNumber(value)}%`
+      : `Discount up to ${this.formatCurrency(value)}`;
+  }
+
+  updateLineDiscountInput(
+    index: number,
+    value: number | string | null | undefined,
+  ): void {
+    const line = this.billLines[index];
+    if (!line) {
+      return;
+    }
+
+    const requestedValue = this.normalizeHalfStepValue(value);
+    const maxAllowedValue = this.lineDiscountMaxValue(index);
+    line.discountInput = this.normalizeHalfStepValue(
+      Math.min(requestedValue, maxAllowedValue),
+    );
+    this.syncLineDiscount(line);
+    this.refreshPaidAmount();
+  }
+
+  handleLineDiscountKeydown(index: number, event: KeyboardEvent): void {
+    if (!this.itemDiscountEligible(index)) {
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.stepLineDiscount(index, 0.5);
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.stepLineDiscount(index, -0.5);
+    }
+  }
+
+  applyCustomPercentDiscount(): void {
+    const percent = Number(this.customDiscountPercent || 0);
+    if (!Number.isFinite(percent) || percent <= 0) {
+      this.toastr.info('Enter a discount percentage greater than zero.');
+      return;
+    }
+
+    this.applyPercentDiscount(percent);
+  }
+
+  private applyPercentDiscount(percent: number): void {
+    const requestedPercent = this.normalizeHalfStepValue(percent);
+    let appliedCount = 0;
+
+    this.billLines.forEach((line, index) => {
+      if (!line.product.discountEligible || Number(line.billQty || 0) <= 0) {
+        return;
+      }
+
+      if (line.discountType === 'percentage') {
+        line.discountInput = this.normalizeHalfStepValue(
+          Math.min(requestedPercent, this.lineMaxDiscountPercent(index)),
+        );
+      } else {
+        const lineSubtotal =
+          Number(line.billQty || 0) * Number(line.unitPrice || 0);
+        const requestedAmount = Number(
+          ((lineSubtotal * requestedPercent) / 100).toFixed(2),
+        );
+        line.discountInput = this.normalizeHalfStepValue(
+          Math.min(requestedAmount, this.lineMaxDiscountAmount(index)),
+        );
+      }
+
+      this.syncLineDiscount(line);
+      appliedCount += 1;
+    });
+
+    if (!appliedCount) {
+      this.toastr.info(
+        'No discount eligible medicine is currently in the bill.',
+      );
+      return;
+    }
+
+    this.refreshPaidAmount();
   }
 
   confirmBilling(): void {
@@ -947,7 +1225,10 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     if (!this.registerSession || this.registerSession.status !== 'open') {
-      this.showPosMessage('Open the register with opening balance before checkout.', 'warning');
+      this.showPosMessage(
+        'Open the register with opening balance before checkout.',
+        'warning',
+      );
       return;
     }
 
@@ -1003,10 +1284,11 @@ export class PharmacyPosComponent implements OnInit {
             this.receiptPreviewOpen = true;
           }
           this.showPosMessage(
-            this.saleInvoiceNo ? `Sale completed: ${this.saleInvoiceNo}` : 'Sale completed successfully.',
-            'success'
+            this.saleInvoiceNo
+              ? `Sale completed: ${this.saleInvoiceNo}`
+              : 'Sale completed successfully.',
+            'success',
           );
-          this.toastr.success(this.saleInvoiceNo ? `Bill created: ${this.saleInvoiceNo}` : 'Bill created successfully.');
           this.billLines = [];
           this.unavailableMedicines = [];
           this.paidAmount = '0';
@@ -1023,14 +1305,17 @@ export class PharmacyPosComponent implements OnInit {
           if (err?.status === 403) {
             this.showPosMessage(
               'This backend user is still blocked from creating POS sales. Please update the assigned role permissions.',
-              'danger'
+              'danger',
             );
             return;
           }
 
-          const message = err?.error?.message || 'Unable to confirm pharmacy bill.';
+          const message =
+            err?.error?.message || 'Unable to confirm pharmacy bill.';
           if (String(message).toLowerCase().includes('register')) {
-            this.toastr.error('Open an active cash register for this store before confirming the bill.');
+            this.toastr.error(
+              'Open an active cash register for this store before confirming the bill.',
+            );
             return;
           }
 
@@ -1041,7 +1326,9 @@ export class PharmacyPosComponent implements OnInit {
 
   patientName(): string {
     const patient = this.prescription?.patient;
-    return [patient?.firstName, patient?.lastName].filter(Boolean).join(' ') || '-';
+    return (
+      [patient?.firstName, patient?.lastName].filter(Boolean).join(' ') || '-'
+    );
   }
 
   doctorName(): string {
@@ -1053,7 +1340,7 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   formatCurrency(value: unknown): string {
-    return `Rs ${Number(value || 0).toLocaleString('en-PK', {
+    return `${Number(value || 0).toLocaleString('en-PK', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
@@ -1068,7 +1355,8 @@ export class PharmacyPosComponent implements OnInit {
     const absolute = Math.abs(amount);
     if (absolute >= 100000) {
       const lacValue = absolute / 100000;
-      const formatted = lacValue >= 10 ? lacValue.toFixed(1) : lacValue.toFixed(2);
+      const formatted =
+        lacValue >= 10 ? lacValue.toFixed(1) : lacValue.toFixed(2);
       const cleaned = formatted
         .replace(/\.0+$/, '')
         .replace(/(\.\d*[1-9])0+$/, '$1');
@@ -1082,15 +1370,21 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   productDisplay(product: ProductCatalogItem): string {
-    const strength = [product.strengthValue, product.strengthUnit].filter(Boolean).join(' ');
-    return [product.name, strength ? `(${strength})` : ''].filter(Boolean).join(' ');
+    const strength = [product.strengthValue, product.strengthUnit]
+      .filter(Boolean)
+      .join(' ');
+    return [product.name, strength ? `(${strength})` : '']
+      .filter(Boolean)
+      .join(' ');
   }
 
   productBatchExpiryLabel(product: ProductCatalogItem): string {
     const parts = [
       product.batchNumber ? `Batch ${product.batchNumber}` : '',
       product.mfdDate ? `MFD ${this.formatProductDate(product.mfdDate)}` : '',
-      product.expiryDate ? `Exp ${this.formatProductDate(product.expiryDate)}` : '',
+      product.expiryDate
+        ? `Exp ${this.formatProductDate(product.expiryDate)}`
+        : '',
     ];
 
     return parts.filter(Boolean).join(' · ');
@@ -1098,13 +1392,15 @@ export class PharmacyPosComponent implements OnInit {
 
   private buildReceiptFromCurrentCart(): ReceiptPreviewData {
     const rawSubtotal = this.billLines.reduce(
-      (sum, line) => sum + Number(line.billQty || 0) * Number(line.unitPrice || 0),
-      0
+      (sum, line) =>
+        sum + Number(line.billQty || 0) * Number(line.unitPrice || 0),
+      0,
     );
     const paidAmount = Number(this.paidAmount || this.subtotal || 0);
-    const cashReceived = this.paymentMethod === 'cash'
-      ? Math.max(Number(this.cashReceivedAmount || paidAmount), paidAmount)
-      : paidAmount;
+    const cashReceived =
+      this.paymentMethod === 'cash'
+        ? Math.max(Number(this.cashReceivedAmount || paidAmount), paidAmount)
+        : paidAmount;
 
     return {
       reference: 'Preview',
@@ -1113,15 +1409,22 @@ export class PharmacyPosComponent implements OnInit {
       storeName: this.selectedStoreLabel,
       storeAddress: this.currentStoreAddress(),
       cashierName: this.cashierName,
-      customerName: this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
+      customerName:
+        this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
       paymentMethod: this.paymentMethod,
-      paymentStatus: paidAmount >= this.subtotal ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid',
+      paymentStatus:
+        paidAmount >= this.subtotal
+          ? 'paid'
+          : paidAmount > 0
+            ? 'partial'
+            : 'unpaid',
       items: this.billLines
         .filter((line) => line.billQty > 0)
         .map((line) => ({
           name: this.productDisplay(line.product),
           sku: line.product.sku || '',
           qty: Number(line.billQty || 0),
+          discountLabel: this.receiptLineDiscountLabel(line),
           unitPrice: Number(line.unitPrice || 0),
           discount: Number(line.discount || 0),
           total: this.lineTotal(line),
@@ -1131,8 +1434,13 @@ export class PharmacyPosComponent implements OnInit {
       total: this.subtotal,
       paidAmount,
       cashReceivedAmount: cashReceived,
-      changeDueAmount: this.paymentMethod === 'cash' ? Math.max(cashReceived - this.subtotal, 0) : 0,
-      note: this.prescription ? `Prescription ${this.prescription._id}` : 'POS sale preview',
+      changeDueAmount:
+        this.paymentMethod === 'cash'
+          ? Math.max(cashReceived - this.subtotal, 0)
+          : 0,
+      note: this.prescription
+        ? `Prescription ${this.prescription._id}`
+        : 'POS sale preview',
       receiptLetterhead: this.companyProfile?.receiptLetterhead,
     };
   }
@@ -1148,13 +1456,18 @@ export class PharmacyPosComponent implements OnInit {
       storeName: store?.name || this.selectedStoreLabel,
       storeAddress: [store?.address, store?.city].filter(Boolean).join(', '),
       cashierName: this.cashierName,
-      customerName: this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
+      customerName:
+        this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
       paymentMethod: sale.paymentStatus,
       paymentStatus: sale.paymentStatus,
       items: (sale.items || []).map((item) => ({
         name: item.name || 'Product',
         sku: item.sku || '',
         qty: Number(item.qty || 0),
+        discountLabel: this.saleItemDiscountLabel(
+          item,
+          sale.items.indexOf(item),
+        ),
         unitPrice: Number(item.unitPrice || 0),
         discount: Number(item.discount || 0),
         total: Number(item.total || 0),
@@ -1192,17 +1505,20 @@ export class PharmacyPosComponent implements OnInit {
     const footerLines = this.receiptFooterLines(receipt);
     const logoUrl = this.receiptLogoUrl(receipt);
     const rows = receipt.items
-      .map((item) => `
+      .map(
+        (item) => `
         <tr>
           <td>
             <strong>${this.escapeHtml(item.name)}</strong>
             <small>${this.escapeHtml(item.sku)}</small>
           </td>
           <td>${item.qty}</td>
+          <td>${this.escapeHtml(item.discountLabel)}</td>
           <td>${this.formatCurrency(item.unitPrice)}</td>
           <td>${this.formatCurrency(item.total)}</td>
         </tr>
-      `)
+      `,
+      )
       .join('');
 
     return `
@@ -1213,7 +1529,7 @@ export class PharmacyPosComponent implements OnInit {
           <style>
             @page { margin: 8mm; size: 80mm auto; }
             * { box-sizing: border-box; }
-            body { color: #111827; font-family: Arial, sans-serif; font-size: 12px; margin: 0; }
+            body { color: #111827; font-family: Arial, sans-serif; font-size: 11px; margin: 0; }
             .receipt { margin: 0 auto; max-width: 320px; padding: 8px; }
             .center { text-align: center; }
             .logo { display: block; height: 58px; margin: 0 auto 8px; max-width: 58px; object-fit: contain; }
@@ -1221,11 +1537,15 @@ export class PharmacyPosComponent implements OnInit {
             p { margin: 2px 0; }
             .meta { border-bottom: 1px dashed #9ca3af; border-top: 1px dashed #9ca3af; margin: 10px 0; padding: 8px 0; }
             .meta div, .totals div { display: flex; justify-content: space-between; gap: 10px; }
-            table { border-collapse: collapse; width: 100%; }
-            th, td { border-bottom: 1px solid #e5e7eb; padding: 6px 2px; text-align: left; vertical-align: top; }
-            th:nth-child(2), td:nth-child(2) { text-align: center; }
-            th:nth-child(3), th:nth-child(4), td:nth-child(3), td:nth-child(4) { text-align: right; }
-            small { color: #6b7280; display: block; margin-top: 2px; }
+            table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+            th, td { border-bottom: 1px solid #e5e7eb; font-size: 9px; line-height: 1.2; padding: 4px 1px; text-align: left; vertical-align: top; word-break: break-word; }
+            th:first-child, td:first-child { width: 38%; }
+            th:nth-child(2), td:nth-child(2) { width: 10%; }
+            th:nth-child(3), td:nth-child(3) { width: 15%; }
+            th:nth-child(4), td:nth-child(4), th:nth-child(5), td:nth-child(5) { width: 18.5%; }
+            th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) { text-align: center; }
+            th:nth-child(4), th:nth-child(5), td:nth-child(4), td:nth-child(5) { text-align: right; }
+            small { color: #6b7280; display: block; font-size: 8px; margin-top: 2px; }
             .totals { border-top: 1px dashed #9ca3af; margin-top: 8px; padding-top: 8px; }
             .grand { font-size: 15px; font-weight: 800; }
             .foot { border-top: 1px dashed #9ca3af; margin-top: 12px; padding-top: 8px; text-align: center; }
@@ -1250,13 +1570,13 @@ export class PharmacyPosComponent implements OnInit {
             </div>
             <table>
               <thead>
-                <tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr>
+                <tr><th>Item</th><th>Qty</th><th>Discount</th><th>Rate</th><th>Total</th></tr>
               </thead>
               <tbody>${rows}</tbody>
             </table>
             <div class="totals">
               <div><span>Subtotal</span><strong>${this.formatCurrency(receipt.subtotal)}</strong></div>
-              <div><span>Discount</span><strong>${this.formatCurrency(receipt.discount)}</strong></div>
+              <div><span>Total Discount</span><strong>${this.formatCurrency(receipt.discount)}</strong></div>
               <div class="grand"><span>Total</span><strong>${this.formatCurrency(receipt.total)}</strong></div>
               <div><span>Paid</span><strong>${this.formatCurrency(receipt.paidAmount)}</strong></div>
               <div><span>Change</span><strong>${this.formatCurrency(receipt.changeDueAmount)}</strong></div>
@@ -1296,13 +1616,19 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private async loadCachedStores(userStoreId = ''): Promise<void> {
-    this.stores = await this.offline.readCachedValue<Store[]>(this.storesCacheKey(), []);
+    this.stores = await this.offline.readCachedValue<Store[]>(
+      this.storesCacheKey(),
+      [],
+    );
     if (!this.selectedStoreId) {
       this.selectedStoreId = userStoreId || this.stores[0]?._id || '';
     }
   }
 
-  private async loadCachedProducts(storeId: string, error: unknown): Promise<void> {
+  private async loadCachedProducts(
+    storeId: string,
+    error: unknown,
+  ): Promise<void> {
     this.products = await this.offline.readCachedValue<ProductCatalogItem[]>(
       this.productsCacheKey(storeId),
       [],
@@ -1317,7 +1643,10 @@ export class PharmacyPosComponent implements OnInit {
     }
   }
 
-  private async loadCachedPrescription(id: string, error: unknown): Promise<void> {
+  private async loadCachedPrescription(
+    id: string,
+    error: unknown,
+  ): Promise<void> {
     this.prescription = await this.offline.readCachedValue<Prescription | null>(
       this.prescriptionCacheKey(id),
       null,
@@ -1333,10 +1662,11 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private async loadCachedRegisterState(storeId: string): Promise<void> {
-    this.registerSession = await this.offline.readCachedValue<RegisterSession | null>(
-      this.registerCacheKey(storeId),
-      null,
-    );
+    this.registerSession =
+      await this.offline.readCachedValue<RegisterSession | null>(
+        this.registerCacheKey(storeId),
+        null,
+      );
     this.registerOpened = this.registerSession?.status === 'open';
     this.registerClosed = this.registerSession?.status === 'closed';
     if (this.registerSession?.status === 'open') {
@@ -1346,12 +1676,18 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private async loadCachedRecentSales(storeId: string): Promise<void> {
-    const cached = await this.offline.readCachedValue<Sale[]>(this.recentSalesCacheKey(storeId), []);
+    const cached = await this.offline.readCachedValue<Sale[]>(
+      this.recentSalesCacheKey(storeId),
+      [],
+    );
     await this.applyRecentSales(cached);
   }
 
   private async applyRecentSales(items: Sale[]): Promise<void> {
-    this.recentSales = this.mergeSales([...(await this.localQueuedSales()), ...items]);
+    this.recentSales = this.mergeSales([
+      ...(await this.localQueuedSales()),
+      ...items,
+    ]);
   }
 
   private async queueOfflineSale(payload: CreateSalePayload): Promise<void> {
@@ -1384,7 +1720,6 @@ export class PharmacyPosComponent implements OnInit {
     this.cashReceivedAmount = '0';
     this.saleSaving = false;
     this.showPosMessage(`Sale saved offline: ${invoiceNo}`, 'success');
-    this.toastr.success('POS sale saved offline and queued for sync.');
   }
 
   private buildLocalSale(
@@ -1422,7 +1757,10 @@ export class PharmacyPosComponent implements OnInit {
     const storeId = this.currentStoreId();
     const entries = await this.offline.getQueuedWork('sale');
     return entries
-      .filter((entry) => (entry.payload as unknown as CreateSalePayload).storeId === storeId)
+      .filter(
+        (entry) =>
+          (entry.payload as unknown as CreateSalePayload).storeId === storeId,
+      )
       .map((entry) => this.saleFromQueuedWork(entry));
   }
 
@@ -1464,7 +1802,9 @@ export class PharmacyPosComponent implements OnInit {
       }
     });
     return Array.from(map.values()).sort((first, second) =>
-      String(second.createdAt || second.saleDate || '').localeCompare(String(first.createdAt || first.saleDate || '')),
+      String(second.createdAt || second.saleDate || '').localeCompare(
+        String(first.createdAt || first.saleDate || ''),
+      ),
     );
   }
 
@@ -1485,7 +1825,11 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private recentSalesCacheKey(storeId: string): string {
-    return this.offline.cacheKey('pos-recent-sales', storeId || 'store', this.registerSession?._id || 'register');
+    return this.offline.cacheKey(
+      'pos-recent-sales',
+      storeId || 'store',
+      this.registerSession?._id || 'register',
+    );
   }
 
   private rebuildPrescriptionBill(): void {
@@ -1529,6 +1873,9 @@ export class PharmacyPosComponent implements OnInit {
         availableQty,
         unitPrice: this.productPrice(product),
         discount: 0,
+        discountInput: 0,
+        discountType:
+          product.maxDiscountType === 'percentage' ? 'percentage' : 'amount',
       });
     }
 
@@ -1537,7 +1884,9 @@ export class PharmacyPosComponent implements OnInit {
     this.refreshPaidAmount();
   }
 
-  private findProductForMedicine(medicineName: string): ProductCatalogItem | null {
+  private findProductForMedicine(
+    medicineName: string,
+  ): ProductCatalogItem | null {
     const normalizedMedicine = this.normalizeText(medicineName);
     if (!normalizedMedicine) {
       return null;
@@ -1553,13 +1902,26 @@ export class PharmacyPosComponent implements OnInit {
       );
     });
 
-    return matches.sort((a, b) => this.productAvailableQty(b) - this.productAvailableQty(a))[0] || null;
+    return (
+      matches.sort(
+        (a, b) => this.productAvailableQty(b) - this.productAvailableQty(a),
+      )[0] || null
+    );
   }
 
   private requestedMedicineQty(medicine: PrescriptionMedicine): number {
-    const slots: Array<'morning' | 'noon' | 'evening' | 'night'> = ['morning', 'noon', 'evening', 'night'];
+    const slots: Array<'morning' | 'noon' | 'evening' | 'night'> = [
+      'morning',
+      'noon',
+      'evening',
+      'night',
+    ];
     const total = slots.reduce((sum, slot) => {
-      const doseKey = `${slot}Dose` as 'morningDose' | 'noonDose' | 'eveningDose' | 'nightDose';
+      const doseKey = `${slot}Dose` as
+        | 'morningDose'
+        | 'noonDose'
+        | 'eveningDose'
+        | 'nightDose';
       const doseValue = this.parseDoseAmount(medicine[doseKey]);
 
       if (doseValue > 0) {
@@ -1597,7 +1959,159 @@ export class PharmacyPosComponent implements OnInit {
     return Number(product.sellingPrice || 0) || 0;
   }
 
+  private lineDiscountType(index: number): ProductDiscountType {
+    return this.billLines[index]?.product.maxDiscountType === 'percentage'
+      ? 'percentage'
+      : 'amount';
+  }
+
+  private lineMaxDiscountAmount(index: number): number {
+    const line = this.billLines[index];
+    const product = line?.product;
+    if (!line || !product?.discountEligible) {
+      return 0;
+    }
+
+    const lineSubtotal =
+      Number(line.billQty || 0) * Number(line.unitPrice || 0);
+    const configuredValue = Number(product.maxDiscountValue || 0) || 0;
+    if (lineSubtotal <= 0 || configuredValue <= 0) {
+      return 0;
+    }
+
+    if (product.maxDiscountType === 'percentage') {
+      return Number(((lineSubtotal * configuredValue) / 100).toFixed(2));
+    }
+
+    return Math.min(configuredValue, lineSubtotal);
+  }
+
+  private lineMaxDiscountPercent(index: number): number {
+    const line = this.billLines[index];
+    const lineSubtotal =
+      Number(line?.billQty || 0) * Number(line?.unitPrice || 0);
+    if (lineSubtotal <= 0) {
+      return 0;
+    }
+
+    return Number(
+      ((this.lineMaxDiscountAmount(index) / lineSubtotal) * 100).toFixed(2),
+    );
+  }
+
+  private syncLineDiscount(line: PharmacyBillLine): void {
+    const product = line.product;
+    line.discountType =
+      product.maxDiscountType === 'percentage' ? 'percentage' : 'amount';
+
+    if (!product.discountEligible) {
+      line.discount = 0;
+      line.discountInput = 0;
+      return;
+    }
+
+    const lineSubtotal =
+      Number(line.billQty || 0) * Number(line.unitPrice || 0);
+    const requestedInput = this.normalizeHalfStepValue(line.discountInput);
+    const lineIndex = this.billLines.indexOf(line);
+    const maxAmount =
+      lineIndex >= 0 ? this.lineMaxDiscountAmount(lineIndex) : 0;
+    const maxPercent =
+      lineIndex >= 0 ? this.lineMaxDiscountPercent(lineIndex) : 0;
+
+    let nextInputValue = requestedInput;
+    let nextDiscountAmount = 0;
+
+    if (line.discountType === 'percentage') {
+      nextInputValue = this.normalizeHalfStepValue(
+        Math.min(requestedInput, maxPercent),
+      );
+      nextDiscountAmount = Number(
+        ((lineSubtotal * nextInputValue) / 100).toFixed(2),
+      );
+    } else {
+      nextInputValue = this.normalizeHalfStepValue(
+        Math.min(requestedInput, maxAmount),
+      );
+      nextDiscountAmount = nextInputValue;
+    }
+
+    line.discountInput = nextInputValue;
+    line.discount = Math.max(Math.min(nextDiscountAmount, lineSubtotal), 0);
+  }
+
+  private stepLineDiscount(index: number, step: number): void {
+    const line = this.billLines[index];
+    if (!line) {
+      return;
+    }
+
+    const nextValue = this.normalizeHalfStepValue(
+      Math.max(
+        0,
+        Math.min(
+          Number(line.discountInput || 0) + step,
+          this.lineDiscountMaxValue(index),
+        ),
+      ),
+    );
+
+    line.discountInput = nextValue;
+    this.syncLineDiscount(line);
+    this.refreshPaidAmount();
+  }
+
+  private normalizeHalfStepValue(
+    value: number | string | null | undefined,
+  ): number {
+    const numeric = Number(value || 0);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return 0;
+    }
+
+    return Math.round(numeric * 2) / 2;
+  }
+
+  private formatNumber(value: unknown): string {
+    const amount = Number(value || 0);
+    if (!Number.isFinite(amount)) {
+      return '0';
+    }
+
+    return amount.toLocaleString('en-PK', {
+      minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  private receiptLineDiscountLabel(line: PharmacyBillLine): string {
+    if (Number(line.discount || 0) <= 0) {
+      return '-';
+    }
+
+    return line.discountType === 'percentage'
+      ? `${this.formatNumber(line.discountInput)}%`
+      : this.formatCurrency(line.discount);
+  }
+
+  private saleItemDiscountLabel(
+    item: Sale['items'][number],
+    index: number,
+  ): string {
+    const currentLine = this.billLines[index];
+    if (
+      currentLine?.product._id === item.productId &&
+      Number(currentLine.discount || 0) > 0
+    ) {
+      return this.receiptLineDiscountLabel(currentLine);
+    }
+
+    const discount = Number(item.discount || 0);
+    return discount > 0 ? this.formatCurrency(discount) : '-';
+  }
+
   refreshPaidAmount(): void {
+    this.billLines.forEach((line) => this.syncLineDiscount(line));
     this.paidAmount = this.payableAmount;
     if (this.paymentMethod === 'cash') {
       this.cashReceivedAmount = this.payableAmount;
@@ -1608,13 +2122,32 @@ export class PharmacyPosComponent implements OnInit {
     return new Date().toISOString().slice(0, 10);
   }
 
-  private showPosMessage(message: string, type: 'success' | 'warning' | 'danger' | 'info'): void {
-    this.posMessage = message;
-    this.posMessageType = type;
+  private showPosMessage(
+    message: string,
+    type: 'success' | 'warning' | 'danger' | 'info',
+  ): void {
+    if (type === 'success') {
+      this.toastr.success(message);
+      return;
+    }
+
+    if (type === 'danger') {
+      this.toastr.error(message);
+      return;
+    }
+
+    if (type === 'warning') {
+      this.toastr.warning(message);
+      return;
+    }
+
+    this.toastr.info(message);
   }
 
   private currentStoreAddress(): string {
-    const store = this.stores.find((item) => item._id === this.currentStoreId());
+    const store = this.stores.find(
+      (item) => item._id === this.currentStoreId(),
+    );
     return [store?.address, store?.city].filter(Boolean).join(', ');
   }
 
@@ -1640,7 +2173,9 @@ export class PharmacyPosComponent implements OnInit {
         if (this.canCheckout) {
           this.checkoutWith('cash');
         } else {
-          this.toastr.info('Add bill items and open register before cash checkout.');
+          this.toastr.info(
+            'Add bill items and open register before cash checkout.',
+          );
         }
         return;
       case 'print':
@@ -1700,7 +2235,10 @@ export class PharmacyPosComponent implements OnInit {
       return false;
     }
 
-    if (this.isEditableTarget(event.target) && !this.isCartKeyboardTarget(event.target)) {
+    if (
+      this.isEditableTarget(event.target) &&
+      !this.isCartKeyboardTarget(event.target)
+    ) {
       return false;
     }
 
@@ -1766,15 +2304,24 @@ export class PharmacyPosComponent implements OnInit {
       return false;
     }
 
-    const currentPosition = Math.max(cartIndexes.indexOf(this.selectedCartIndex), 0);
+    const currentPosition = Math.max(
+      cartIndexes.indexOf(this.selectedCartIndex),
+      0,
+    );
     switch (event.key) {
       case 'ArrowRight':
         event.preventDefault();
-        this.focusCartCell(this.selectedCartIndex, this.selectedCartCellIndex + 1);
+        this.focusCartCell(
+          this.selectedCartIndex,
+          this.selectedCartCellIndex + 1,
+        );
         return true;
       case 'ArrowLeft':
         event.preventDefault();
-        this.focusCartCell(this.selectedCartIndex, this.selectedCartCellIndex - 1);
+        this.focusCartCell(
+          this.selectedCartIndex,
+          this.selectedCartCellIndex - 1,
+        );
         return true;
       case 'ArrowDown':
         event.preventDefault();
@@ -1796,19 +2343,28 @@ export class PharmacyPosComponent implements OnInit {
       case '=':
         event.preventDefault();
         this.incrementLineQty(this.selectedCartIndex);
-        this.focusCartRow(this.selectedCartIndex, false, this.selectedCartCellIndex);
+        this.focusCartRow(
+          this.selectedCartIndex,
+          false,
+          this.selectedCartCellIndex,
+        );
         return true;
       case '-':
         event.preventDefault();
         this.decrementLineQty(this.selectedCartIndex);
-        this.focusCartRow(this.selectedCartIndex, false, this.selectedCartCellIndex);
+        this.focusCartRow(
+          this.selectedCartIndex,
+          false,
+          this.selectedCartCellIndex,
+        );
         return true;
       case 'Delete':
         event.preventDefault();
         {
           const nextIndex =
-            cartIndexes[Math.min(currentPosition + 1, cartIndexes.length - 1)] ??
-            cartIndexes[currentPosition - 1];
+            cartIndexes[
+              Math.min(currentPosition + 1, cartIndexes.length - 1)
+            ] ?? cartIndexes[currentPosition - 1];
           this.removeLine(this.selectedCartIndex);
           window.setTimeout(() => {
             const available = this.availableCartIndexes();
@@ -1831,9 +2387,17 @@ export class PharmacyPosComponent implements OnInit {
       case 'Tab':
         event.preventDefault();
         if (event.shiftKey) {
-          this.focusCartRow(cartIndexes[Math.max(currentPosition - 1, 0)], true, this.selectedCartCellIndex);
+          this.focusCartRow(
+            cartIndexes[Math.max(currentPosition - 1, 0)],
+            true,
+            this.selectedCartCellIndex,
+          );
         } else if (currentPosition < cartIndexes.length - 1) {
-          this.focusCartRow(cartIndexes[currentPosition + 1], true, this.selectedCartCellIndex);
+          this.focusCartRow(
+            cartIndexes[currentPosition + 1],
+            true,
+            this.selectedCartCellIndex,
+          );
         } else {
           this.focusActionDockButton(this.selectedDockIndex);
         }
@@ -1849,12 +2413,17 @@ export class PharmacyPosComponent implements OnInit {
       return false;
     }
 
-    const currentPosition = Math.max(dockIndexes.indexOf(this.selectedDockIndex), 0);
+    const currentPosition = Math.max(
+      dockIndexes.indexOf(this.selectedDockIndex),
+      0,
+    );
     switch (event.key) {
       case 'ArrowRight':
       case 'ArrowDown':
         event.preventDefault();
-        this.focusActionDockButton(dockIndexes[Math.min(currentPosition + 1, dockIndexes.length - 1)]);
+        this.focusActionDockButton(
+          dockIndexes[Math.min(currentPosition + 1, dockIndexes.length - 1)],
+        );
         return true;
       case 'ArrowLeft':
       case 'ArrowUp':
@@ -1891,7 +2460,9 @@ export class PharmacyPosComponent implements OnInit {
     this.keyboardZone = 'search';
     this.clampKeyboardNavigationState();
     window.setTimeout(() => {
-      const input = document.querySelector('.storepos-search-box input[type="search"]') as HTMLInputElement | null;
+      const input = document.querySelector(
+        '.storepos-search-box input[type="search"]',
+      ) as HTMLInputElement | null;
       input?.focus();
       if (selectText) {
         input?.select();
@@ -1907,7 +2478,10 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     this.keyboardZone = 'products';
-    this.selectedProductIndex = Math.min(Math.max(index, 0), products.length - 1);
+    this.selectedProductIndex = Math.min(
+      Math.max(index, 0),
+      products.length - 1,
+    );
     const targetIndex = this.selectedProductIndex;
     this.clampKeyboardNavigationState();
 
@@ -1916,13 +2490,19 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     window.setTimeout(() => {
-      const element = document.querySelector(`[data-kb-product-index="${targetIndex}"]`) as HTMLElement | null;
+      const element = document.querySelector(
+        `[data-kb-product-index="${targetIndex}"]`,
+      ) as HTMLElement | null;
       element?.focus();
       element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     });
   }
 
-  private focusCartRow(index: number, focus = true, preferredCellIndex = 0): void {
+  private focusCartRow(
+    index: number,
+    focus = true,
+    preferredCellIndex = 0,
+  ): void {
     const cartIndexes = this.availableCartIndexes();
     if (!cartIndexes.length) {
       this.focusProductCard(this.selectedProductIndex || 0);
@@ -1944,7 +2524,9 @@ export class PharmacyPosComponent implements OnInit {
     window.setTimeout(() => {
       const element =
         this.cartCellElements(resolvedIndex)[this.selectedCartCellIndex] ||
-        (document.querySelector(`[data-kb-cart-index="${resolvedIndex}"]`) as HTMLElement | null);
+        (document.querySelector(
+          `[data-kb-cart-index="${resolvedIndex}"]`,
+        ) as HTMLElement | null);
       element?.focus();
       element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     });
@@ -1959,7 +2541,10 @@ export class PharmacyPosComponent implements OnInit {
 
     this.keyboardZone = 'cart';
     this.selectedCartIndex = index;
-    this.selectedCartCellIndex = Math.min(Math.max(cellIndex, 0), cells.length - 1);
+    this.selectedCartCellIndex = Math.min(
+      Math.max(cellIndex, 0),
+      cells.length - 1,
+    );
 
     window.setTimeout(() => {
       const element = this.cartCellElements(index)[this.selectedCartCellIndex];
@@ -1986,7 +2571,9 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     window.setTimeout(() => {
-      const element = document.querySelector(`[data-kb-dock-index="${resolvedIndex}"]`) as HTMLElement | null;
+      const element = document.querySelector(
+        `[data-kb-dock-index="${resolvedIndex}"]`,
+      ) as HTMLElement | null;
       element?.focus();
       element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     });
@@ -2018,7 +2605,9 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private availableActionDockIndexes(): number[] {
-    return Array.from(document.querySelectorAll<HTMLElement>('[data-kb-dock-index]'))
+    return Array.from(
+      document.querySelectorAll<HTMLElement>('[data-kb-dock-index]'),
+    )
       .map((element) => Number(element.dataset['kbDockIndex']))
       .filter((index) => Number.isFinite(index))
       .sort((first, second) => first - second);
@@ -2026,7 +2615,9 @@ export class PharmacyPosComponent implements OnInit {
 
   private cartCellElements(index: number): HTMLElement[] {
     return Array.from(
-      document.querySelectorAll<HTMLElement>(`[data-kb-cart-index="${index}"] [data-kb-cart-cell]`),
+      document.querySelectorAll<HTMLElement>(
+        `[data-kb-cart-index="${index}"] [data-kb-cart-cell]`,
+      ),
     );
   }
 
@@ -2068,7 +2659,13 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private handleOverlayEnter(event: KeyboardEvent): boolean {
-    if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
+    if (
+      event.key !== 'Enter' ||
+      event.shiftKey ||
+      event.ctrlKey ||
+      event.altKey ||
+      event.metaKey
+    ) {
       return false;
     }
 
@@ -2078,7 +2675,12 @@ export class PharmacyPosComponent implements OnInit {
 
     const target = event.target as HTMLElement | null;
     const tagName = target?.tagName.toLowerCase();
-    if (target?.isContentEditable || tagName === 'textarea' || tagName === 'button' || tagName === 'a') {
+    if (
+      target?.isContentEditable ||
+      tagName === 'textarea' ||
+      tagName === 'button' ||
+      tagName === 'a'
+    ) {
       return false;
     }
 
@@ -2127,13 +2729,17 @@ export class PharmacyPosComponent implements OnInit {
       tagName === 'textarea' ||
       tagName === 'select' ||
       (tagName === 'input' &&
-        !['button', 'checkbox', 'radio', 'range', 'file', 'color'].includes((element as HTMLInputElement).type))
+        !['button', 'checkbox', 'radio', 'range', 'file', 'color'].includes(
+          (element as HTMLInputElement).type,
+        ))
     );
   }
 
   private isSearchInputTarget(target: EventTarget | null): boolean {
     const element = target as HTMLElement | null;
-    return Boolean(element?.matches?.('.storepos-search-box input[type="search"]'));
+    return Boolean(
+      element?.matches?.('.storepos-search-box input[type="search"]'),
+    );
   }
 
   private isCartKeyboardTarget(target: EventTarget | null): boolean {
@@ -2154,32 +2760,44 @@ export class PharmacyPosComponent implements OnInit {
   private findShortcutAction(event: KeyboardEvent): string | undefined {
     const combo = this.eventShortcutCombo(event);
     return this.shortcutDefinitions.find(
-      (definition) => this.normalizeShortcutCombo(definition.defaultCombo) === combo,
+      (definition) =>
+        this.normalizeShortcutCombo(definition.defaultCombo) === combo,
     )?.id;
   }
 
   private normalizeShortcutCombo(value: string): string {
-    const raw = String(value || '').trim().replace(/\s+/g, '');
+    const raw = String(value || '')
+      .trim()
+      .replace(/\s+/g, '');
     if (!raw) {
       return '';
     }
 
     const segments = raw.split('+').filter(Boolean);
-    const modifiers = new Set(segments.slice(0, -1).map((segment) => segment.toLowerCase()));
+    const modifiers = new Set(
+      segments.slice(0, -1).map((segment) => segment.toLowerCase()),
+    );
     const key = (segments.at(-1) || '').toLowerCase();
     const ordered: string[] = [];
 
     if (modifiers.has('ctrl') || modifiers.has('control')) ordered.push('Ctrl');
     if (modifiers.has('shift')) ordered.push('Shift');
     if (modifiers.has('alt')) ordered.push('Alt');
-    if (modifiers.has('meta') || modifiers.has('cmd') || modifiers.has('command')) ordered.push('Meta');
+    if (
+      modifiers.has('meta') ||
+      modifiers.has('cmd') ||
+      modifiers.has('command')
+    )
+      ordered.push('Meta');
 
     ordered.push(this.normalizeShortcutKey(key));
     return ordered.filter(Boolean).join('+');
   }
 
   private normalizeShortcutKey(key: string): string {
-    const normalized = String(key || '').trim().toLowerCase();
+    const normalized = String(key || '')
+      .trim()
+      .toLowerCase();
     if (!normalized) {
       return '';
     }
@@ -2228,7 +2846,7 @@ export class PharmacyPosComponent implements OnInit {
         product.unit,
         product.strengthValue,
         product.strengthUnit,
-      ].join(' ')
+      ].join(' '),
     );
   }
 
@@ -2256,7 +2874,12 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private currentStoreId(): string {
-    return this.selectedStoreId || this.getStoredUser()?.storeId || this.stores[0]?._id || '';
+    return (
+      this.selectedStoreId ||
+      this.getStoredUser()?.storeId ||
+      this.stores[0]?._id ||
+      ''
+    );
   }
 
   private getStoredUser(): User | null {

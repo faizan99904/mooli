@@ -7,6 +7,7 @@ import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
 import {
   Category,
+  ProductDiscountType,
   ProductCatalogItem,
   Store,
   User,
@@ -29,6 +30,9 @@ interface ProductForm {
   sellingPrice: string;
   openingStock: string;
   storeId: string;
+  discountEligible: boolean;
+  maxDiscountType: ProductDiscountType;
+  maxDiscountValue: string;
 }
 
 @Component({
@@ -51,14 +55,34 @@ export class PharmacyProductsComponent implements OnInit {
   editingProductId = '';
   editingOriginalStock = '';
   deletingProductId = '';
-  productUnits = ['tablet', 'capsule', 'syrup', 'injection', 'drops', 'cream', 'ointment', 'inhaler', 'pcs'];
-  strengthUnits = ['mg', 'ml', 'g', 'mcg', 'IU', '%', 'mg/ml', 'mg/5ml', 'mcg/ml'];
+  productUnits = [
+    'tablet',
+    'capsule',
+    'syrup',
+    'injection',
+    'drops',
+    'cream',
+    'ointment',
+    'inhaler',
+    'pcs',
+  ];
+  strengthUnits = [
+    'mg',
+    'ml',
+    'g',
+    'mcg',
+    'IU',
+    '%',
+    'mg/ml',
+    'mg/5ml',
+    'mcg/ml',
+  ];
   productForm: ProductForm = this.getEmptyProductForm();
 
   constructor(
     private route: ActivatedRoute,
     private backend: BackendService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
   ) {}
 
   ngOnInit(): void {
@@ -101,7 +125,9 @@ export class PharmacyProductsComponent implements OnInit {
   get selectedStoreLabel(): string {
     const storeId = this.currentStoreId();
     const store = this.stores.find((item) => item._id === storeId);
-    return store?.name || (storeId ? 'Assigned pharmacy store' : 'No store assigned');
+    return (
+      store?.name || (storeId ? 'Assigned pharmacy store' : 'No store assigned')
+    );
   }
 
   get filteredProducts(): ProductCatalogItem[] {
@@ -111,14 +137,16 @@ export class PharmacyProductsComponent implements OnInit {
     }
 
     return this.products.filter((product) =>
-      this.normalizeText([
-        product.name,
-        product.sku,
-        product.barcode,
-        product.batchNumber,
-        product.brand,
-        product.unit,
-      ].join(' ')).includes(query)
+      this.normalizeText(
+        [
+          product.name,
+          product.sku,
+          product.barcode,
+          product.batchNumber,
+          product.brand,
+          product.unit,
+        ].join(' '),
+      ).includes(query),
     );
   }
 
@@ -127,7 +155,10 @@ export class PharmacyProductsComponent implements OnInit {
       next: (user) => {
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('role', user.role?.name || '');
-        localStorage.setItem('permissions', JSON.stringify(user.role?.permissions || []));
+        localStorage.setItem(
+          'permissions',
+          JSON.stringify(user.role?.permissions || []),
+        );
 
         if (user.storeId && !this.productForm.storeId) {
           this.productForm.storeId = user.storeId;
@@ -151,7 +182,11 @@ export class PharmacyProductsComponent implements OnInit {
 
     this.productsLoading = true;
     this.backend
-      .getProducts({ limit: 100, isActive: true, storeId: this.currentStoreId() || undefined })
+      .getProducts({
+        limit: 100,
+        isActive: true,
+        storeId: this.currentStoreId() || undefined,
+      })
       .pipe(finalize(() => (this.productsLoading = false)))
       .subscribe({
         next: (result) => {
@@ -224,7 +259,9 @@ export class PharmacyProductsComponent implements OnInit {
 
   openProductModal(): void {
     if (!this.canCreateProducts) {
-      this.toastr.error('This role needs products.create to add pharmacy medicines.');
+      this.toastr.error(
+        'This role needs products.create to add pharmacy medicines.',
+      );
       return;
     }
 
@@ -239,7 +276,9 @@ export class PharmacyProductsComponent implements OnInit {
 
   openEditProduct(product: ProductCatalogItem): void {
     if (!this.canUpdateProducts) {
-      this.toastr.error('This role needs products.update to edit pharmacy medicines.');
+      this.toastr.error(
+        'This role needs products.update to edit pharmacy medicines.',
+      );
       return;
     }
 
@@ -263,6 +302,14 @@ export class PharmacyProductsComponent implements OnInit {
       sellingPrice: product.sellingPrice || '0',
       openingStock: stock,
       storeId: product.storeId || this.currentStoreId(),
+      discountEligible: Boolean(product.discountEligible),
+      maxDiscountType:
+        product.maxDiscountType === 'percentage' ? 'percentage' : 'amount',
+      maxDiscountValue:
+        product.maxDiscountValue === null ||
+        product.maxDiscountValue === undefined
+          ? ''
+          : String(product.maxDiscountValue),
     };
     this.productModalOpen = true;
   }
@@ -293,12 +340,16 @@ export class PharmacyProductsComponent implements OnInit {
     const isEditing = Boolean(this.editingProductId);
 
     if (!isEditing && !this.canCreateProducts) {
-      this.toastr.error('This role needs products.create to add pharmacy medicines.');
+      this.toastr.error(
+        'This role needs products.create to add pharmacy medicines.',
+      );
       return;
     }
 
     if (isEditing && !this.canUpdateProducts) {
-      this.toastr.error('This role needs products.update to edit pharmacy medicines.');
+      this.toastr.error(
+        'This role needs products.update to edit pharmacy medicines.',
+      );
       return;
     }
 
@@ -317,13 +368,32 @@ export class PharmacyProductsComponent implements OnInit {
       return;
     }
 
+    if (this.productForm.discountEligible && !this.isValidDiscountSetup()) {
+      this.toastr.error(
+        'Enable discount only after setting a valid maximum amount or percentage.',
+      );
+      return;
+    }
+
+    if (
+      this.productForm.discountEligible &&
+      !this.isHalfStepValue(this.productForm.maxDiscountValue)
+    ) {
+      this.toastr.error('Discount must be in 0.5 steps like 1.5 or 5.0.');
+      return;
+    }
+
     if (!isEditing && !storeId) {
-      this.toastr.error('No pharmacy store is assigned. Login again or assign a store to this pharmacy user.');
+      this.toastr.error(
+        'No pharmacy store is assigned. Login again or assign a store to this pharmacy user.',
+      );
       return;
     }
 
     if (!isEditing && (!Number.isInteger(openingStock) || openingStock < 1)) {
-      this.toastr.error('Opening stock must be at least 1 to add this product to the store.');
+      this.toastr.error(
+        'Opening stock must be at least 1 to add this product to the store.',
+      );
       return;
     }
 
@@ -337,8 +407,14 @@ export class PharmacyProductsComponent implements OnInit {
       return;
     }
 
-    if (isEditing && this.hasStockChanged(openingStock) && !this.canAdjustInventory) {
-      this.toastr.error('This role needs inventory.adjust to update stock quantity.');
+    if (
+      isEditing &&
+      this.hasStockChanged(openingStock) &&
+      !this.canAdjustInventory
+    ) {
+      this.toastr.error(
+        'This role needs inventory.adjust to update stock quantity.',
+      );
       return;
     }
 
@@ -359,8 +435,12 @@ export class PharmacyProductsComponent implements OnInit {
             sku: sku || this.generateSku(name),
             barcode: this.productForm.barcode.trim() || undefined,
             batchNumber: this.productForm.batchNumber.trim() || undefined,
-            expiryDate: this.normalizeDateForPayload(this.productForm.expiryDate) || undefined,
-            mfdDate: this.normalizeDateForPayload(this.productForm.mfdDate) || undefined,
+            expiryDate:
+              this.normalizeDateForPayload(this.productForm.expiryDate) ||
+              undefined,
+            mfdDate:
+              this.normalizeDateForPayload(this.productForm.mfdDate) ||
+              undefined,
             brand: this.productForm.brand.trim() || undefined,
             unit: this.productForm.unit || 'pcs',
             strengthValue: this.productForm.strengthValue.trim() || undefined,
@@ -368,6 +448,15 @@ export class PharmacyProductsComponent implements OnInit {
             description: strengthDescription || undefined,
             costPrice: this.productForm.costPrice || '0',
             sellingPrice: this.productForm.sellingPrice || '0',
+            discountEligible: this.productForm.discountEligible,
+            maxDiscountType: this.productForm.discountEligible
+              ? this.productForm.maxDiscountType
+              : undefined,
+            maxDiscountValue:
+              this.productForm.discountEligible &&
+              this.productForm.maxDiscountValue !== ''
+                ? this.productForm.maxDiscountValue
+                : undefined,
             taxRate: '0',
             isActive: true,
           };
@@ -383,7 +472,7 @@ export class PharmacyProductsComponent implements OnInit {
               storeId,
               openingStock,
               'OPENING_STOCK',
-              'Opening stock from Mooli product management'
+              'Opening stock from Mooli product management',
             );
           }
 
@@ -393,15 +482,19 @@ export class PharmacyProductsComponent implements OnInit {
                 storeId,
                 openingStock,
                 'MANUAL_ADJUSTMENT',
-                'Stock update from Mooli product management'
+                'Stock update from Mooli product management',
               )
             : of(response.data);
         }),
-        finalize(() => (this.savingProduct = false))
+        finalize(() => (this.savingProduct = false)),
       )
       .subscribe({
         next: () => {
-          this.toastr.success(isEditing ? 'Medicine/product and stock updated.' : 'Medicine/product added to pharmacy store.');
+          this.toastr.success(
+            isEditing
+              ? 'Medicine/product and stock updated.'
+              : 'Medicine/product added to pharmacy store.',
+          );
           this.productModalOpen = false;
           this.editingProductId = '';
           this.editingOriginalStock = '';
@@ -410,18 +503,26 @@ export class PharmacyProductsComponent implements OnInit {
           this.loadProducts();
         },
         error: (err) => {
-          this.toastr.error(err?.error?.message || err?.message || 'Unable to add medicine/product.');
+          this.toastr.error(
+            err?.error?.message ||
+              err?.message ||
+              'Unable to add medicine/product.',
+          );
         },
       });
   }
 
   deleteProduct(product: ProductCatalogItem): void {
     if (!this.canDeleteProducts) {
-      this.toastr.error('This role needs products.delete to remove pharmacy medicines.');
+      this.toastr.error(
+        'This role needs products.delete to remove pharmacy medicines.',
+      );
       return;
     }
 
-    const confirmed = window.confirm(`Delete ${product.name} from product management?`);
+    const confirmed = window.confirm(
+      `Delete ${product.name} from product management?`,
+    );
     if (!confirmed) {
       return;
     }
@@ -432,21 +533,43 @@ export class PharmacyProductsComponent implements OnInit {
       .pipe(finalize(() => (this.deletingProductId = '')))
       .subscribe({
         next: () => {
-          this.products = this.products.filter((item) => item._id !== product._id);
+          this.products = this.products.filter(
+            (item) => item._id !== product._id,
+          );
           this.toastr.success('Medicine/product deleted.');
         },
         error: (err) => {
-          this.toastr.error(err?.error?.message || 'Unable to delete medicine/product.');
+          this.toastr.error(
+            err?.error?.message || 'Unable to delete medicine/product.',
+          );
         },
       });
   }
 
   productStrength(product: ProductCatalogItem): string {
-    return [product.strengthValue, product.strengthUnit].filter(Boolean).join(' ') || '-';
+    return (
+      [product.strengthValue, product.strengthUnit].filter(Boolean).join(' ') ||
+      '-'
+    );
   }
 
   productStock(product: ProductCatalogItem): string {
     return String(product.availableQuantity ?? product.stockQuantity ?? '0');
+  }
+
+  productDiscountSummary(product: ProductCatalogItem): string {
+    if (!product.discountEligible) {
+      return 'N/A';
+    }
+
+    const value = Number(product.maxDiscountValue || 0);
+    if (!Number.isFinite(value) || value <= 0) {
+      return 'N/A';
+    }
+
+    return product.maxDiscountType === 'percentage'
+      ? `${this.formatNumber(value)}%`
+      : this.formatCurrency(value);
   }
 
   formatProductDate(value?: string | null): string {
@@ -475,12 +598,16 @@ export class PharmacyProductsComponent implements OnInit {
       return 'badge-secondary';
     }
 
-    return this.isExpired(product.expiryDate) ? 'badge-danger' : 'badge-success';
+    return this.isExpired(product.expiryDate)
+      ? 'badge-danger'
+      : 'badge-success';
   }
 
   currentStoreId(): string {
     const user = this.getStoredUser();
-    return user?.storeId || this.productForm.storeId || this.stores[0]?._id || '';
+    return (
+      user?.storeId || this.productForm.storeId || this.stores[0]?._id || ''
+    );
   }
 
   private resolveProductCategoryId(required: boolean): Observable<string> {
@@ -494,11 +621,18 @@ export class PharmacyProductsComponent implements OnInit {
     }
 
     if (!categoryName) {
-      return throwError(() => new Error('Select category or enter a new category name.'));
+      return throwError(
+        () => new Error('Select category or enter a new category name.'),
+      );
     }
 
     if (!this.canCreateCategories) {
-      return throwError(() => new Error('This role needs categories.create to add a new medicine category.'));
+      return throwError(
+        () =>
+          new Error(
+            'This role needs categories.create to add a new medicine category.',
+          ),
+      );
     }
 
     return this.backend
@@ -513,7 +647,7 @@ export class PharmacyProductsComponent implements OnInit {
           this.categories = [category, ...this.categories];
           this.productForm.categoryId = category._id;
           return category._id;
-        })
+        }),
       );
   }
 
@@ -522,14 +656,16 @@ export class PharmacyProductsComponent implements OnInit {
     storeId: string,
     quantity: number,
     reason: 'OPENING_STOCK' | 'MANUAL_ADJUSTMENT',
-    note: string
+    note: string,
   ): Observable<ProductCatalogItem> {
     if (!Number.isFinite(quantity) || quantity < 0) {
       return of(product);
     }
 
     if (!this.canAdjustInventory) {
-      this.toastr.warning('Product saved, but this role needs inventory.adjust to set stock.');
+      this.toastr.warning(
+        'Product saved, but this role needs inventory.adjust to set stock.',
+      );
       return of(product);
     }
 
@@ -547,7 +683,9 @@ export class PharmacyProductsComponent implements OnInit {
   }
 
   private hasStockChanged(nextStock: number): boolean {
-    return String(Math.floor(nextStock)) !== String(this.editingOriginalStock || '0');
+    return (
+      String(Math.floor(nextStock)) !== String(this.editingOriginalStock || '0')
+    );
   }
 
   private getStoredUser(): User | null {
@@ -576,7 +714,33 @@ export class PharmacyProductsComponent implements OnInit {
       sellingPrice: '0',
       openingStock: '1',
       storeId: this.getStoredUser()?.storeId || '',
+      discountEligible: false,
+      maxDiscountType: 'amount',
+      maxDiscountValue: '',
     };
+  }
+
+  get discountEnabled(): boolean {
+    return Boolean(this.productForm.discountEligible);
+  }
+
+  private formatCurrency(value: unknown): string {
+    return `Rs ${Number(value || 0).toLocaleString('en-PK', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+
+  private formatNumber(value: unknown): string {
+    const amount = Number(value || 0);
+    if (!Number.isFinite(amount)) {
+      return '0';
+    }
+
+    return amount.toLocaleString('en-PK', {
+      minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
   }
 
   private normalizeText(value: string): string {
@@ -610,6 +774,38 @@ export class PharmacyProductsComponent implements OnInit {
     return this.toDateInputValue(value);
   }
 
+  private isValidDiscountSetup(): boolean {
+    const value = Number(this.productForm.maxDiscountValue);
+    if (
+      (this.productForm.maxDiscountType !== 'amount' &&
+        this.productForm.maxDiscountType !== 'percentage') ||
+      !Number.isFinite(value) ||
+      value <= 0
+    ) {
+      return false;
+    }
+
+    if (this.productForm.maxDiscountType === 'percentage' && value > 100) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private isHalfStepValue(value: number | string | null | undefined): boolean {
+    const normalized = String(value ?? '').trim();
+    if (!normalized.length) {
+      return false;
+    }
+
+    const numeric = Number(normalized);
+    return (
+      Number.isFinite(numeric) &&
+      numeric > 0 &&
+      Math.abs(numeric * 2 - Math.round(numeric * 2)) < 0.000001
+    );
+  }
+
   private isExpired(value?: string | null): boolean {
     const normalized = this.toDateInputValue(value);
     if (!normalized) {
@@ -629,11 +825,13 @@ export class PharmacyProductsComponent implements OnInit {
   }
 
   private generateCode(value: string): string {
-    return String(value || 'MED')
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 30) || 'MED';
+    return (
+      String(value || 'MED')
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 30) || 'MED'
+    );
   }
 }
