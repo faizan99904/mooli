@@ -6,7 +6,12 @@
           <h2>Today's Appointments</h2>
           <span>{{ visibleAppointments().length }}</span>
         </div>
-        <button type="button">View All</button>
+        <div class="panel-heading-actions">
+          <button type="button" class="appointments-refresh-btn" title="Refresh appointments"
+            [disabled]="appointmentsLoading" (click)="refreshAppointments()">
+            <i class="fa" [ngClass]="appointmentsLoading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i>
+          </button>
+        </div>
       </div>
 
       <button class="appointment-row" type="button" *ngFor="let appointment of visibleAppointments()"
