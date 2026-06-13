@@ -157,7 +157,9 @@ export interface Appointment {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   consultationFee?: number;
   paymentStatus?: 'unpaid' | 'paid';
+  vitals?: Record<string, string>;
   notes?: string | null;
+  createdAt?: string;
 }
 
 export interface PrescriptionMedicine {

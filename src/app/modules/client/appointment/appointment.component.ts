@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import {
+  FormArray,
   FormBuilder,
   FormGroup,
   FormsModule,
@@ -18,6 +19,15 @@ import {
   Hospital,
   Patient,
 } from '../../../shared/models/hospital.model';
+import {
+  buildVitalDisplayItems,
+  buildVitalTrendVisits,
+  getPatientAgeYears,
+  isArbitraryCustomVitalKey,
+  VitalDisplayItem,
+  VitalStatus,
+  VitalTrendVisit,
+} from '../prescription/vitals-analytics';
 
 interface AppointmentToken {
   appointmentNo: string;
@@ -47,6 +57,7 @@ export class AppointmentComponent implements OnInit {
   doctors: Doctor[] = [];
   appointmentForm: FormGroup;
   patientForm: FormGroup;
+  vitalsModalForm: FormGroup;
   loading = false;
   saving = false;
   patientSaving = false;
@@ -69,6 +80,19 @@ export class AppointmentComponent implements OnInit {
   addPatientModalOpen = false;
   bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
   visitType = 'Consultation';
+  vitalsModalOpen = false;
+  vitalsTrendModalOpen = false;
+  vitalDisplayItems: VitalDisplayItem[] = [];
+  vitalTrendVisits: VitalTrendVisit[] = [];
+  readonly defaultVitalKeys = new Set(['bp', 'pulse', 'weight', 'temperature', 'spo2']);
+  readonly defaultVitalLabels: Record<string, string> = {
+    bp: 'BP',
+    pulse: 'Pulse',
+    weight: 'Weight',
+    temperature: 'Temperature',
+    spo2: 'SpO2',
+  };
+  readonly vitalTrendKeys = ['weight', 'bp', 'temperature', 'pulse', 'spo2'];
 
   constructor(
     private fb: FormBuilder,
@@ -88,6 +112,27 @@ export class AppointmentComponent implements OnInit {
       paymentStatus: ['unpaid', Validators.required],
       status: ['pending', Validators.required],
       notes: [''],
+      vitals: this.fb.group({
+        bp: [''],
+        pulse: [''],
+        weight: [''],
+        temperature: [''],
+        spo2: [''],
+      }),
+      customVitals: this.fb.array([]),
+    });
+
+    this.vitalsModalForm = this.fb.group({
+      bp: [''],
+      pulse: [''],
+      weight: [''],
+      height: [''],
+      temperature: [''],
+      spo2: [''],
+      respiratoryRate: [''],
+      bloodSugar: [''],
+      notes: [''],
+      customRows: this.fb.array([]),
     });
 
     this.patientForm = this.fb.group({
@@ -114,6 +159,175 @@ export class AppointmentComponent implements OnInit {
     this.loadLookups();
     this.loadAppointments();
     void this.syncOfflineWork(false);
+
+    this.vitalsGroup.valueChanges.subscribe(() => this.refreshVitalAnalytics());
+    this.customVitals.valueChanges.subscribe(() => this.refreshVitalAnalytics());
+  }
+
+  get vitalsGroup(): FormGroup {
+    return this.appointmentForm.get('vitals') as FormGroup;
+  }
+
+  get customVitals(): FormArray {
+    return this.appointmentForm.get('customVitals') as FormArray;
+  }
+
+  get vitalsModalCustomVitals(): FormArray {
+    return this.vitalsModalForm.get('customRows') as FormArray;
+  }
+
+  createCustomVitalGroup(key = '', value = ''): FormGroup {
+    return this.fb.group({
+      key: [key],
+      value: [value],
+    });
+  }
+
+  openVitalsModal(): void {
+    const vitals = this.vitalsGroup.getRawValue() as Record<string, string>;
+    const customMap = this.customVitalsToMap();
+
+    this.vitalsModalForm.reset({
+      bp: vitals['bp'] || '',
+      pulse: vitals['pulse'] || '',
+      weight: vitals['weight'] || '',
+      height: customMap['height'] || '',
+      temperature: vitals['temperature'] || '',
+      spo2: vitals['spo2'] || '',
+      respiratoryRate: customMap['respiratoryRate'] || customMap['respiratory_rate'] || '',
+      bloodSugar: customMap['bloodSugar'] || customMap['blood_sugar'] || '',
+      notes: customMap['notes'] || '',
+    });
+    this.loadVitalsModalCustomRows();
+    this.vitalsModalOpen = true;
+  }
+
+  openVitalsModalWithCustomRow(): void {
+    this.openVitalsModal();
+    this.addVitalsModalCustomRow();
+  }
+
+  addVitalsModalCustomRow(): void {
+    this.vitalsModalCustomVitals.push(this.createCustomVitalGroup());
+  }
+
+  removeVitalsModalCustomRow(index: number): void {
+    this.vitalsModalCustomVitals.removeAt(index);
+  }
+
+  arbitraryCustomVitals(): Array<{ key: string; value: string; index: number }> {
+    return this.customVitals.controls
+      .map((control, index) => ({
+        key: String(control.get('key')?.value || '').trim(),
+        value: String(control.get('value')?.value || '').trim(),
+        index,
+      }))
+      .filter((item) => isArbitraryCustomVitalKey(item.key));
+  }
+
+  formatCustomVitalLabel(key: string): string {
+    return key
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  closeVitalsModal(): void {
+    this.vitalsModalOpen = false;
+  }
+
+  saveVitalsModal(): void {
+    const value = this.vitalsModalForm.getRawValue() as Record<string, string>;
+
+    this.vitalsGroup.patchValue({
+      bp: value['bp'] || '',
+      pulse: value['pulse'] || '',
+      weight: value['weight'] || '',
+      temperature: value['temperature'] || '',
+      spo2: value['spo2'] || '',
+    });
+
+    this.rebuildCustomVitalsFromModal(value);
+
+    this.vitalsModalOpen = false;
+    this.refreshVitalAnalytics();
+  }
+
+  openVitalsTrendsModal(): void {
+    this.vitalTrendVisits = buildVitalTrendVisits(this.patientVitalHistory());
+    this.vitalsTrendModalOpen = true;
+  }
+
+  closeVitalsTrendsModal(): void {
+    this.vitalsTrendModalOpen = false;
+  }
+
+  vitalStatusClass(status: VitalStatus): string {
+    return `vital-status-${status}`;
+  }
+
+  trendClass(item: VitalDisplayItem): string {
+    if (!item.trendText) {
+      return 'unknown';
+    }
+
+    if (item.status === 'critical') {
+      return 'critical';
+    }
+
+    if (item.status === 'warning') {
+      return 'warning';
+    }
+
+    if (item.status === 'watch') {
+      return 'watch';
+    }
+
+    if (item.trendDirection === 'up') {
+      return 'normal';
+    }
+
+    if (item.trendDirection === 'down') {
+      return item.key === 'weight' ? 'warning' : 'watch';
+    }
+
+    return 'normal';
+  }
+
+  hasRecordedVitals(): boolean {
+    return this.vitalDisplayItems.some((item) => Boolean(item.value));
+  }
+
+  hasVitalTrendData(): boolean {
+    return this.vitalTrendVisits.length > 0;
+  }
+
+  trendVitalValue(visit: VitalTrendVisit, key: string): string {
+    const value = String(visit.vitals[key] || '').trim();
+    return value || '—';
+  }
+
+  trendSectionHasData(key: string): boolean {
+    return this.vitalTrendVisits.some((visit) => Boolean(String(visit.vitals[key] || '').trim()));
+  }
+
+  vitalTrendSectionLabel(key: string): string {
+    return this.defaultVitalLabels[key] || key;
+  }
+
+  refreshVitalAnalytics(): void {
+    const current = this.buildVitalsPayload(
+      this.vitalsGroup.getRawValue() as Record<string, unknown>,
+      this.customVitals.getRawValue() as Array<Record<string, unknown>>
+    );
+    const previous = this.getPreviousVisitVitals();
+
+    this.vitalDisplayItems = buildVitalDisplayItems(
+      current,
+      previous,
+      getPatientAgeYears(this.selectedPatient?.dateOfBirth || null)
+    );
+    this.vitalTrendVisits = buildVitalTrendVisits(this.patientVitalHistory());
   }
 
   loadHospitalProfile(): void {
@@ -255,14 +469,28 @@ export class AppointmentComponent implements OnInit {
 
     const selectedDoctor = this.findDoctorByUserId(value.doctorId);
     const paymentStatus = value.paymentStatus || 'unpaid';
+    const vitals = this.buildVitalsPayload(
+      value.vitals as Record<string, unknown>,
+      value.customVitals as Array<Record<string, unknown>>
+    );
     const payload: Record<string, unknown> = {
-      ...value,
+      patientId: value.patientId,
+      doctorId: value.doctorId,
       departmentId: selectedDoctor?.departmentId || value.departmentId || undefined,
+      appointmentDate: value.appointmentDate,
+      startTime: value.startTime,
+      endTime: value.endTime,
+      reason: value.reason,
       consultationFee: Number(value.consultationFee || selectedDoctor?.consultationFee || 0),
       paymentStatus,
       status: paymentStatus === 'paid' ? 'confirmed' : value.status || 'pending',
+      notes: value.notes,
     };
     const isEditing = Boolean(this.editingId);
+    if (isEditing || Object.keys(vitals).length > 0) {
+      payload['vitals'] = vitals;
+    }
+
     this.removeEmptyTimeFields(payload);
     if (!isEditing) {
       this.removeEmptyOptionalTextFields(payload, ['reason', 'notes']);
@@ -334,7 +562,13 @@ export class AppointmentComponent implements OnInit {
       paymentStatus: appointment.paymentStatus || 'unpaid',
       status: appointment.status,
       notes: appointment.notes || '',
+      vitals: this.extractDefaultVitals(appointment.vitals || {}),
     });
+    this.customVitals.clear();
+    this.extractCustomVitals(appointment.vitals || {}).forEach((entry) =>
+      this.customVitals.push(this.createCustomVitalGroup(entry.key, entry.value))
+    );
+    this.refreshVitalAnalytics();
   }
 
   updateStatus(appointment: Appointment, status: string): void {
@@ -386,6 +620,16 @@ export class AppointmentComponent implements OnInit {
     this.phoneMatchedTotal = 0;
     this.selectedPatient = null;
     this.patients = [];
+    this.customVitals.clear();
+    this.vitalsGroup.reset({
+      bp: '',
+      pulse: '',
+      weight: '',
+      temperature: '',
+      spo2: '',
+    });
+    this.vitalDisplayItems = [];
+    this.vitalTrendVisits = [];
   }
 
   patientName(patient?: Patient | null): string {
@@ -482,6 +726,8 @@ export class AppointmentComponent implements OnInit {
       this.appointmentForm.patchValue({ doctorId: patient.assignedDoctorId });
       this.onDoctorChange();
     }
+
+    this.refreshVitalAnalytics();
   }
 
   onDoctorChange(): void {
@@ -883,6 +1129,153 @@ export class AppointmentComponent implements OnInit {
     this.appointments = this.mergeAppointments([...(await this.localQueuedAppointments()), ...items])
       .filter((appointment) => this.appointmentMatchesFilters(appointment));
     this.totalPages = totalPages;
+    this.refreshVitalAnalytics();
+  }
+
+  private patientVitalHistory(): Array<{ createdAt?: string; vitals?: Record<string, string> | null }> {
+    const patientId = this.appointmentForm.value.patientId || this.selectedPatient?._id;
+    if (!patientId) {
+      return [];
+    }
+
+    return [...this.appointments]
+      .filter(
+        (appointment) =>
+          appointment.patientId === patientId &&
+          appointment._id !== this.editingId &&
+          appointment.vitals &&
+          Object.values(appointment.vitals).some((value) => String(value || '').trim())
+      )
+      .sort(
+        (first, second) =>
+          new Date(second.appointmentDate || second.createdAt || 0).getTime() -
+          new Date(first.appointmentDate || first.createdAt || 0).getTime()
+      )
+      .map((appointment) => ({
+        createdAt: appointment.appointmentDate || appointment.createdAt,
+        vitals: appointment.vitals || {},
+      }));
+  }
+
+  private getPreviousVisitVitals(): Record<string, string> {
+    return this.patientVitalHistory()[0]?.vitals || {};
+  }
+
+  private buildVitalsPayload(
+    vitals: Record<string, unknown>,
+    customVitals: Array<Record<string, unknown>>
+  ): Record<string, string> {
+    const payload: Record<string, string> = {};
+
+    Object.entries(vitals || {}).forEach(([key, value]) => {
+      const normalized = String(value || '').trim();
+      if (normalized) {
+        payload[key] = normalized;
+      }
+    });
+
+    (customVitals || []).forEach((entry) => {
+      const key = String(entry['key'] || '').trim();
+      const value = String(entry['value'] || '').trim();
+      if (key && value) {
+        payload[key] = value;
+      }
+    });
+
+    return payload;
+  }
+
+  private extractDefaultVitals(vitals: Record<string, string>): Record<string, string> {
+    return {
+      bp: String(vitals['bp'] || ''),
+      pulse: String(vitals['pulse'] || ''),
+      weight: String(vitals['weight'] || ''),
+      temperature: String(vitals['temperature'] || ''),
+      spo2: String(vitals['spo2'] || ''),
+    };
+  }
+
+  private extractCustomVitals(vitals: Record<string, string>): Array<{ key: string; value: string }> {
+    return Object.entries(vitals || {})
+      .filter(([key]) => !this.defaultVitalKeys.has(key))
+      .map(([key, value]) => ({
+        key,
+        value: String(value || ''),
+      }));
+  }
+
+  private customVitalsToMap(): Record<string, string> {
+    return (this.customVitals.getRawValue() as Array<Record<string, string>>).reduce(
+      (map, entry) => {
+        const key = String(entry['key'] || '').trim();
+        if (key) {
+          map[key] = String(entry['value'] || '').trim();
+        }
+        return map;
+      },
+      {} as Record<string, string>
+    );
+  }
+
+  private loadVitalsModalCustomRows(): void {
+    this.vitalsModalCustomVitals.clear();
+
+    (this.customVitals.getRawValue() as Array<Record<string, string>>).forEach((entry) => {
+      const key = String(entry['key'] || '').trim();
+      const value = String(entry['value'] || '').trim();
+      if (isArbitraryCustomVitalKey(key)) {
+        this.vitalsModalCustomVitals.push(this.createCustomVitalGroup(key, value));
+      }
+    });
+  }
+
+  private rebuildCustomVitalsFromModal(modalValue: Record<string, string>): void {
+    this.customVitals.clear();
+
+    const entries: Array<{ key: string; value: string }> = [];
+    const addEntry = (key: string, value: string): void => {
+      const normalizedKey = key.trim();
+      const normalizedValue = String(value || '').trim();
+      if (normalizedKey && normalizedValue) {
+        entries.push({ key: normalizedKey, value: normalizedValue });
+      }
+    };
+
+    addEntry('height', modalValue['height'] || '');
+    addEntry('respiratoryRate', modalValue['respiratoryRate'] || '');
+    addEntry('bloodSugar', modalValue['bloodSugar'] || '');
+    addEntry('notes', modalValue['notes'] || '');
+
+    (this.vitalsModalCustomVitals.getRawValue() as Array<Record<string, string>>).forEach((entry) => {
+      addEntry(String(entry['key'] || ''), String(entry['value'] || ''));
+    });
+
+    entries.forEach((entry) => this.customVitals.push(this.createCustomVitalGroup(entry.key, entry.value)));
+  }
+
+  private syncCustomVitalValue(key: string, value: string): void {
+    const normalizedKey = key.trim();
+    if (!normalizedKey) {
+      return;
+    }
+
+    const index = (this.customVitals.getRawValue() as Array<Record<string, string>>).findIndex(
+      (entry) => String(entry['key'] || '').trim() === normalizedKey
+    );
+
+    if (!String(value || '').trim()) {
+      if (index >= 0) {
+        this.customVitals.removeAt(index);
+      }
+      return;
+    }
+
+    if (index >= 0) {
+      this.customVitals.at(index).patchValue({ key: normalizedKey, value });
+      return;
+    }
+
+    this.customVitals.push(this.createCustomVitalGroup(normalizedKey, value));
   }
 
   private async loadCachedPatientsByPhone(normalizedPhone: string, error: unknown): Promise<void> {
@@ -1010,6 +1403,7 @@ export class AppointmentComponent implements OnInit {
       status: (payload['status'] as Appointment['status']) || 'pending',
       consultationFee: Number(payload['consultationFee'] || doctor?.consultationFee || 0),
       paymentStatus: (payload['paymentStatus'] as Appointment['paymentStatus']) || 'unpaid',
+      vitals: (payload['vitals'] as Record<string, string> | undefined) || {},
       notes: (payload['notes'] as string | undefined) || 'Saved offline',
     };
   }
