@@ -169,6 +169,7 @@ export class PrescriptionComponent implements OnInit {
   doctorMedicineForm: FormGroup;
   vitalsModalForm: FormGroup;
   loading = false;
+  appointmentsLoading = false;
   saving = false;
   page = 1;
   limit = 100;
@@ -1975,6 +1976,15 @@ export class PrescriptionComponent implements OnInit {
       },
     });
 
+    this.loadAppointments();
+  }
+
+  refreshAppointments(): void {
+    this.loadAppointments(true);
+  }
+
+  private loadAppointments(showToast = false): void {
+    this.appointmentsLoading = true;
     const appointmentDate = this.todayValue();
 
     this.backend
@@ -1984,14 +1994,21 @@ export class PrescriptionComponent implements OnInit {
         dateFrom: appointmentDate,
         dateTo: appointmentDate,
       })
+      .pipe(finalize(() => (this.appointmentsLoading = false)))
       .subscribe({
         next: (result) => {
           void this.offline.cacheValue(this.appointmentsCacheKey(), result.items);
           void this.applyAppointmentList(result.items);
           this.selectInitialAppointment();
+          if (showToast) {
+            this.toastr.success('Appointments refreshed.');
+          }
         },
         error: () => {
           void this.loadCachedAppointments();
+          if (showToast) {
+            this.toastr.error('Unable to refresh appointments.');
+          }
         },
       });
   }

@@ -114,6 +114,27 @@
   white-space: nowrap;
 }
 
+.panel-heading-actions {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.appointments-refresh-btn {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 34px;
+  padding: 0;
+  width: 34px;
+}
+
+.appointments-refresh-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .offline-pill {
   align-items: center;
   background: #e8f7f7;
