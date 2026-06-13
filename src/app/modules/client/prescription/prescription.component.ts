@@ -1416,6 +1416,70 @@ export class PrescriptionComponent implements OnInit {
     }
   }
 
+  handleSlotDoseKeydown(event: KeyboardEvent, rowIndex: number, slot: DoseSlot): void {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) {
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const target = event.shiftKey
+        ? this.previousSlotDoseTarget(rowIndex, slot)
+        : this.nextSlotDoseTarget(rowIndex, slot);
+
+      if (target) {
+        this.focusSlotDoseInput(target.rowIndex, target.slot);
+      }
+      return;
+    }
+
+    if (event.key === 'Backspace' && !input.value) {
+      event.preventDefault();
+      const previous = this.previousSlotDoseTarget(rowIndex, slot);
+      if (previous) {
+        this.focusSlotDoseInput(previous.rowIndex, previous.slot);
+      }
+    }
+  }
+
+  private nextSlotDoseTarget(rowIndex: number, slot: DoseSlot): { rowIndex: number; slot: DoseSlot } | null {
+    const slots: DoseSlot[] = ['morning', 'noon', 'evening', 'night'];
+    const slotIndex = slots.indexOf(slot);
+
+    if (slotIndex < slots.length - 1) {
+      return { rowIndex, slot: slots[slotIndex + 1] };
+    }
+
+    if (rowIndex < this.medicines.length - 1) {
+      return { rowIndex: rowIndex + 1, slot: 'morning' };
+    }
+
+    return null;
+  }
+
+  private previousSlotDoseTarget(rowIndex: number, slot: DoseSlot): { rowIndex: number; slot: DoseSlot } | null {
+    const slots: DoseSlot[] = ['morning', 'noon', 'evening', 'night'];
+    const slotIndex = slots.indexOf(slot);
+
+    if (slotIndex > 0) {
+      return { rowIndex, slot: slots[slotIndex - 1] };
+    }
+
+    if (rowIndex > 0) {
+      return { rowIndex: rowIndex - 1, slot: 'night' };
+    }
+
+    return null;
+  }
+
+  private focusSlotDoseInput(rowIndex: number, slot: DoseSlot): void {
+    const selector = `input.slot-dose-input[data-slot-dose="${rowIndex}-${slot}"]`;
+    const element = document.querySelector(selector) as HTMLInputElement | null;
+    element?.focus();
+    element?.select();
+  }
+
   onSlotToggle(index: number, slot: DoseSlot): void {
     const group = this.medicines.at(index);
 
