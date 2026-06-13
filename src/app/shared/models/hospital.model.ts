@@ -199,6 +199,25 @@ export interface PrescriptionIvFluid {
   name: string;
   rate?: string;
   duration?: string;
+  route?: string;
+  status?: 'running' | 'completed' | 'planned';
+  startDateTime?: string;
+}
+
+export interface AdmissionOrderItem {
+  order: string;
+  category?: string;
+  orderedOn?: string;
+  priority?: 'normal' | 'high';
+  status?: 'active' | 'planned' | 'completed';
+}
+
+export interface PatientDocumentItem {
+  name: string;
+  type?: string;
+  uploadedOn?: string;
+  uploadedBy?: string;
+  url?: string;
 }
 
 export interface Prescription {
@@ -232,6 +251,8 @@ export interface Prescription {
     };
     notes?: string;
   } | null;
+  admissionOrderItems?: AdmissionOrderItem[];
+  patientDocuments?: PatientDocumentItem[];
   vitals?: Record<string, string> | null;
   advice?: string | null;
   followUpDate?: string | null;

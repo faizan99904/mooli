@@ -17,6 +17,13 @@ export interface LabTestCatalogItem {
   parameters?: LabTestParameter[];
 }
 
+export interface PatientLabTestRecord {
+  prescriptionId: string;
+  orderedAt?: string;
+  name: string;
+  category?: string;
+}
+
 export interface LabTestDisplayRow {
   id: string;
   name: string;
@@ -30,47 +37,10 @@ export interface LabTestDisplayRow {
   resultClass: string;
   hasReport: boolean;
   parameters: LabTestParameter[];
-  source: 'catalog' | 'custom';
+  source: 'catalog' | 'custom' | 'saved';
+  formIndex?: number;
+  prescriptionId?: string;
 }
-
-const DEMO_COMPLETED_TESTS: Array<{
-  name: string;
-  orderedOn: string;
-  completedOn: string;
-  resultSummary: string;
-  resultTrend?: string;
-  resultClass: string;
-}> = [
-  {
-    name: 'CBC',
-    orderedOn: 'Jun 12, 2026 10:45 PM',
-    completedOn: 'Jun 12, 2026 11:30 PM',
-    resultSummary: 'Normal',
-    resultClass: 'normal',
-  },
-  {
-    name: 'ESR',
-    orderedOn: 'Jun 12, 2026 10:45 PM',
-    completedOn: 'Jun 12, 2026 11:15 PM',
-    resultSummary: 'Normal',
-    resultClass: 'normal',
-  },
-  {
-    name: 'CRP',
-    orderedOn: 'Jun 12, 2026 10:45 PM',
-    completedOn: 'Jun 12, 2026 11:20 PM',
-    resultSummary: '12.5 mg/L',
-    resultTrend: '↑',
-    resultClass: 'abnormal',
-  },
-  {
-    name: 'Blood Sugar Fasting',
-    orderedOn: 'Jun 12, 2026 10:45 PM',
-    completedOn: 'Jun 12, 2026 11:10 PM',
-    resultSummary: 'Normal',
-    resultClass: 'normal',
-  },
-];
 
 export const LAB_TEST_CATALOG: LabTestCatalogItem[] = [
   {
@@ -146,51 +116,66 @@ const formatOrderedOn = (value?: string | Date): string => {
   });
 };
 
+const buildPendingLabRow = (
+  name: string,
+  category: string,
+  orderedOn: string,
+  id: string,
+  source: 'catalog' | 'custom' | 'saved',
+  extras?: { formIndex?: number; prescriptionId?: string }
+): LabTestDisplayRow => {
+  const catalog = findCatalogItem(name);
+
+  return {
+    id,
+    name,
+    fullName: catalog?.fullName || name,
+    category: category.trim() || catalog?.category || 'Other',
+    orderedOn,
+    status: 'pending',
+    resultSummary: '—',
+    resultClass: 'pending',
+    hasReport: false,
+    parameters: [],
+    source,
+    formIndex: extras?.formIndex,
+    prescriptionId: extras?.prescriptionId,
+  };
+};
+
 export const buildLabTestDisplayRows = (
+  savedTests: PatientLabTestRecord[],
   orderedTests: Array<{ name?: string; category?: string; selected?: boolean }>
 ): LabTestDisplayRow[] => {
-  const rows: LabTestDisplayRow[] = DEMO_COMPLETED_TESTS.map((demo) => {
-    const catalog = findCatalogItem(demo.name);
-    return {
-      id: `demo-${demo.name}`,
-      name: demo.name,
-      fullName: catalog?.fullName || demo.name,
-      category: catalog?.category || 'General',
-      orderedOn: demo.orderedOn,
-      completedOn: demo.completedOn,
-      status: 'completed',
-      resultSummary: demo.resultSummary,
-      resultTrend: demo.resultTrend,
-      resultClass: demo.resultClass,
-      hasReport: true,
-      parameters: catalog?.parameters || [],
-      source: 'catalog',
-    };
-  });
+  const savedRows = savedTests.map((record, index) =>
+    buildPendingLabRow(
+      record.name,
+      String(record.category || ''),
+      formatOrderedOn(record.orderedAt),
+      `saved-${record.prescriptionId}-${record.name}-${index}`,
+      'saved',
+      { prescriptionId: record.prescriptionId }
+    )
+  );
 
   const pendingTests = orderedTests
-    .filter((test) => Boolean(test.selected) && String(test.name || '').trim())
-    .filter((test) => !DEMO_COMPLETED_TESTS.some((demo) => demo.name.toLowerCase() === String(test.name).toLowerCase()))
-    .map((test, index) => {
+    .map((test, index) => ({ test, index }))
+    .filter(({ test }) => Boolean(test.selected) && String(test.name || '').trim())
+    .map(({ test, index }) => {
       const name = String(test.name || '').trim();
       const catalog = findCatalogItem(name);
 
-      return {
-        id: `pending-${name}-${index}`,
+      return buildPendingLabRow(
         name,
-        fullName: catalog?.fullName || name,
-        category: String(test.category || catalog?.category || 'Other').trim(),
-        orderedOn: formatOrderedOn(),
-        status: 'pending' as LabTestStatus,
-        resultSummary: '—',
-        resultClass: 'pending',
-        hasReport: false,
-        parameters: [],
-        source: (catalog ? 'catalog' : 'custom') as 'catalog' | 'custom',
-      };
+        String(test.category || catalog?.category || 'Other'),
+        formatOrderedOn(),
+        `form-${index}-${name}`,
+        catalog ? 'catalog' : 'custom',
+        { formIndex: index }
+      );
     });
 
-  return [...rows, ...pendingTests];
+  return [...savedRows, ...pendingTests];
 };
 
 export const filterLabTestRows = (rows: LabTestDisplayRow[], filter: LabTestFilter): LabTestDisplayRow[] => {

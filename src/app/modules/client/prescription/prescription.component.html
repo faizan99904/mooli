@@ -193,8 +193,8 @@
             Fluids</button>
           <button type="button" [class.active]="activeTab === 'admission'" (click)="activeTab = 'admission'">Admission
             Orders</button>
-          <button type="button" [class.active]="activeTab === 'history'"
-            (click)="activeTab = 'history'">Documents</button>
+          <button type="button" [class.active]="activeTab === 'documents'"
+            (click)="activeTab = 'documents'">Documents</button>
         </div>
 
         <section class="vitals-dashboard-panel" *ngIf="activeTab === 'vitals'">
@@ -322,8 +322,16 @@
 
         <section class="lab-tests-dashboard-panel" *ngIf="activeTab === 'lab'">
           <div class="lab-tests-dashboard-head">
-            <h3>Lab Tests</h3>
-            <button type="button" class="btn-light lab-add-btn" (click)="openLabTestModal()">+ Add Test</button>
+            <div>
+              <h3>Lab Tests</h3>
+              <p class="tab-patient-note" *ngIf="selectedPatient() as patient">
+                Tests for {{ patientName(patient) }}
+              </p>
+              <p class="tab-patient-note muted" *ngIf="!hasAssignedPatient()">
+                Assign a patient appointment to view lab test history.
+              </p>
+            </div>
+            <button type="button" class="btn-light lab-add-btn" [disabled]="!hasAssignedPatient()" (click)="openLabTestModal()">+ Add Test</button>
           </div>
 
           <div class="lab-filter-tabs">
@@ -376,14 +384,17 @@
                       <button type="button" class="lab-action-btn" (click)="selectLabTestRow(row); $event.stopPropagation()">
                         <i class="fa fa-eye"></i>
                       </button>
-                      <button type="button" class="lab-action-btn" (click)="$event.stopPropagation()">
-                        <i class="fa fa-ellipsis-v"></i>
+                      <button type="button" class="lab-action-btn delete" *ngIf="row.source !== 'saved'"
+                        (click)="removeLabTestRow(row); $event.stopPropagation()">
+                        <i class="fa fa-trash"></i>
                       </button>
                     </div>
                   </td>
                 </tr>
                 <tr *ngIf="filteredLabTestRows().length === 0">
-                  <td colspan="7" class="lab-empty-row">No lab tests found for this filter.</td>
+                  <td colspan="7" class="lab-empty-row">
+                    {{ hasAssignedPatient() ? 'No lab tests found for this filter.' : 'Select an assigned patient to view lab tests.' }}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -434,8 +445,16 @@
 
         <section class="iv-fluids-dashboard-panel" *ngIf="activeTab === 'iv'">
           <div class="iv-fluids-dashboard-head">
-            <h3>Drips / IV Fluids</h3>
-            <button type="button" class="btn-light iv-add-btn" (click)="openIvFluidModal()">+ Add Drip</button>
+            <div>
+              <h3>Drips / IV Fluids</h3>
+              <p class="tab-patient-note" *ngIf="selectedPatient() as patient">
+                Drip history for {{ patientName(patient) }}
+              </p>
+              <p class="tab-patient-note muted" *ngIf="!hasAssignedPatient()">
+                Assign a patient appointment to view drip history.
+              </p>
+            </div>
+            <button type="button" class="btn-light iv-add-btn" [disabled]="!hasAssignedPatient()" (click)="openIvFluidModal()">+ Add Drip</button>
           </div>
 
           <div class="iv-fluids-table-wrap">
@@ -452,6 +471,11 @@
                 </tr>
               </thead>
               <tbody>
+                <tr *ngIf="ivFluidRows.length === 0">
+                  <td colspan="7" class="lab-empty-row">
+                    {{ hasAssignedPatient() ? 'No drips recorded for this patient yet.' : 'Select an assigned patient to view drip history.' }}
+                  </td>
+                </tr>
                 <tr *ngFor="let row of ivFluidRows; trackBy: trackIvFluidRow">
                   <td><strong>{{ row.name }}</strong></td>
                   <td>{{ row.rate }}</td>
@@ -481,6 +505,137 @@
 
           <div class="iv-fluids-summary">
             <strong>Total Active Drips: {{ totalActiveIvFluids() }}</strong>
+          </div>
+        </section>
+
+        <section class="admission-orders-dashboard-panel" *ngIf="activeTab === 'admission'">
+          <div class="admission-orders-dashboard-head">
+            <div>
+              <h3>Admission Orders</h3>
+              <p class="tab-patient-note" *ngIf="selectedPatient() as patient">
+                Orders for {{ patientName(patient) }}
+              </p>
+              <p class="tab-patient-note muted" *ngIf="!hasAssignedPatient()">
+                Assign a patient appointment to view admission orders.
+              </p>
+            </div>
+            <button type="button" class="btn-light admission-add-btn" [disabled]="!hasAssignedPatient()"
+              (click)="openAdmissionOrderModal()">+ Add Order</button>
+          </div>
+
+          <div class="admission-orders-table-wrap">
+            <table class="admission-orders-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Category</th>
+                  <th>Ordered On</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="admissionOrderRows.length === 0">
+                  <td colspan="6" class="lab-empty-row">
+                    {{ hasAssignedPatient() ? 'No admission orders recorded for this patient yet.' : 'Select an assigned patient to view admission orders.' }}
+                  </td>
+                </tr>
+                <tr *ngFor="let row of admissionOrderRows; trackBy: trackAdmissionOrderRow">
+                  <td><strong>{{ row.order }}</strong></td>
+                  <td>{{ row.category }}</td>
+                  <td>{{ row.orderedOn }}</td>
+                  <td>
+                    <span class="admission-priority-badge" [ngClass]="admissionOrderPriorityClass(row.priority)">
+                      {{ admissionOrderPriorityLabel(row.priority) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="admission-status-badge" [ngClass]="admissionOrderStatusClass(row.status)">
+                      {{ admissionOrderStatusLabel(row.status) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="admission-order-actions">
+                      <button type="button" class="admission-action-btn" *ngIf="row.source === 'form'"
+                        (click)="editAdmissionOrderRow(row)">
+                        <i class="fa fa-pencil"></i>
+                      </button>
+                      <button type="button" class="admission-action-btn delete" *ngIf="row.source === 'form'"
+                        (click)="deleteAdmissionOrderRow(row)">
+                        <i class="fa fa-trash"></i>
+                      </button>
+                      <span *ngIf="row.source !== 'form'">—</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="admission-orders-summary">
+            <strong>Total Active Orders: {{ totalActiveAdmissionOrders() }}</strong>
+          </div>
+        </section>
+
+        <section class="documents-dashboard-panel" *ngIf="activeTab === 'documents'">
+          <div class="documents-dashboard-head">
+            <div>
+              <h3>Documents</h3>
+              <p class="tab-patient-note" *ngIf="selectedPatient() as patient">
+                Documents for {{ patientName(patient) }}
+              </p>
+              <p class="tab-patient-note muted" *ngIf="!hasAssignedPatient()">
+                Assign a patient appointment to view documents.
+              </p>
+            </div>
+            <button type="button" class="btn-light documents-upload-btn" [disabled]="!hasAssignedPatient()"
+              (click)="openDocumentModal()">
+              <i class="fa fa-upload"></i>
+              Upload Document
+            </button>
+          </div>
+
+          <div class="documents-table-wrap">
+            <table class="documents-table">
+              <thead>
+                <tr>
+                  <th>Document Name</th>
+                  <th>Type</th>
+                  <th>Uploaded On</th>
+                  <th>Uploaded By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="patientDocumentRows.length === 0">
+                  <td colspan="5" class="lab-empty-row">
+                    {{ hasAssignedPatient() ? 'No documents uploaded for this patient yet.' : 'Select an assigned patient to view documents.' }}
+                  </td>
+                </tr>
+                <tr *ngFor="let row of patientDocumentRows; trackBy: trackPatientDocumentRow">
+                  <td><strong>{{ row.name }}</strong></td>
+                  <td>{{ row.type }}</td>
+                  <td>{{ row.uploadedOn }}</td>
+                  <td>{{ row.uploadedBy }}</td>
+                  <td>
+                    <div class="document-actions">
+                      <button type="button" class="document-action-btn" (click)="downloadDocument(row)">
+                        <i class="fa fa-download"></i>
+                      </button>
+                      <button type="button" class="document-action-btn delete" *ngIf="row.source === 'form'"
+                        (click)="deleteDocumentRow(row)">
+                        <i class="fa fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="documents-summary">
+            <strong>Total Documents: {{ totalPatientDocuments() }}</strong>
           </div>
         </section>
 
@@ -642,27 +797,6 @@
               <textarea formControlName="advice"></textarea>
             </label>
           </section>
-
-          <aside class="orders-section">
-            <section class="order-card admission-card" formGroupName="admissionOrders">
-              <div class="section-heading">
-                <h3>Admission Orders</h3>
-                <button type="button">+ Add Order</button>
-              </div>
-              <div class="check-row">
-                <label><input type="checkbox" formControlName="regularDiet" /> Regular Diet</label>
-                <label><input type="checkbox" formControlName="npo" /> NPO</label>
-              </div>
-              <label>Consultation <input formControlName="consultation" placeholder="Physiotherapy" /></label>
-              <div class="check-row" formGroupName="monitoring">
-                <label><input type="checkbox" formControlName="bp" /> BP</label>
-                <label><input type="checkbox" formControlName="pulse" /> Pulse</label>
-                <label><input type="checkbox" formControlName="spo2" /> SpO2</label>
-                <label><input type="checkbox" formControlName="rbs" /> RBS</label>
-              </div>
-              <textarea formControlName="notes" placeholder="Enter notes if any..."></textarea>
-            </section>
-          </aside>
         </div>
       </form>
 
@@ -1035,6 +1169,109 @@
         <div class="iv-fluid-modal-actions">
           <button type="button" class="btn-light" (click)="closeIvFluidModal()">Cancel</button>
           <button type="submit" class="btn-primary">{{ editingIvFluidIndex !== null ? 'Save Changes' : 'Add Drip' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="admissionOrderModalOpen">
+    <div class="admission-order-modal-dialog">
+      <div class="medicine-library-header">
+        <div>
+          <h3>{{ editingAdmissionOrderIndex !== null ? 'Edit Order' : 'Add Order' }}</h3>
+          <p>Add admission order for this patient.</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeAdmissionOrderModal()">&times;</button>
+      </div>
+
+      <div class="admission-order-presets">
+        <button type="button" class="admission-preset-btn" *ngFor="let preset of admissionOrderPresets"
+          (click)="applyAdmissionOrderPreset(preset)">
+          {{ preset.order }}
+        </button>
+      </div>
+
+      <form class="admission-order-modal-form" [formGroup]="admissionOrderModalForm" (ngSubmit)="saveAdmissionOrderModal()">
+        <label>
+          <span>Order</span>
+          <input formControlName="order" placeholder="Monitor Vitals (4 hourly)" />
+        </label>
+
+        <div class="admission-order-modal-grid">
+          <label>
+            <span>Category</span>
+            <select formControlName="category">
+              <option *ngFor="let category of admissionOrderCategories" [value]="category">{{ category }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Priority</span>
+            <select formControlName="priority">
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="admission-order-modal-grid">
+          <label>
+            <span>Status</span>
+            <select formControlName="status">
+              <option value="active">Active</option>
+              <option value="planned">Planned</option>
+              <option value="completed">Completed</option>
+            </select>
+          </label>
+          <label>
+            <span>Ordered On</span>
+            <input type="datetime-local" formControlName="orderedOn" />
+          </label>
+        </div>
+
+        <div class="admission-order-modal-actions">
+          <button type="button" class="btn-light" (click)="closeAdmissionOrderModal()">Cancel</button>
+          <button type="submit" class="btn-primary">{{ editingAdmissionOrderIndex !== null ? 'Save Changes' : 'Add Order' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="documentModalOpen">
+    <div class="document-modal-dialog">
+      <div class="medicine-library-header">
+        <div>
+          <h3>{{ editingDocumentIndex !== null ? 'Edit Document' : 'Upload Document' }}</h3>
+          <p>Attach a document for this patient.</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeDocumentModal()">&times;</button>
+      </div>
+
+      <form class="document-modal-form" [formGroup]="documentModalForm" (ngSubmit)="saveDocumentModal()">
+        <label class="document-file-picker">
+          <span>Select File</span>
+          <input type="file" (change)="onDocumentFileSelected($event)" />
+        </label>
+
+        <label>
+          <span>Document Name</span>
+          <input formControlName="name" placeholder="Previous Prescription.pdf" />
+        </label>
+
+        <label>
+          <span>Type</span>
+          <select formControlName="type">
+            <option *ngFor="let type of documentTypes" [value]="type">{{ type }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>File URL (optional)</span>
+          <input formControlName="url" placeholder="https://..." />
+        </label>
+
+        <div class="document-modal-actions">
+          <button type="button" class="btn-light" (click)="closeDocumentModal()">Cancel</button>
+          <button type="submit" class="btn-primary">{{ editingDocumentIndex !== null ? 'Save Changes' : 'Upload Document' }}</button>
         </div>
       </form>
     </div>

@@ -22,10 +22,13 @@ import { BackendService } from '../../../core/services/backend.service';
 import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/mooli-offline.service';
 import {
   Appointment,
+  AdmissionOrderItem,
   Doctor,
   DoctorMedicine,
   Hospital,
   Patient,
+  PatientDocumentItem,
+  PatientHistory,
   PrescriptionPrintSettings,
   ProductCatalogItem,
   Prescription,
@@ -57,6 +60,7 @@ import {
   LabTestFilter,
   labParameterStatusLabel,
   labStatusLabel,
+  PatientLabTestRecord,
 } from './lab-test-data';
 import {
   buildIvFluidDisplayRows,
@@ -65,7 +69,27 @@ import {
   IvFluidDisplayRow,
   IvFluidStatus,
   ivFluidStatusLabel as formatIvFluidStatusLabel,
+  PatientIvFluidRecord,
 } from './iv-fluid-data';
+import {
+  ADMISSION_ORDER_CATEGORIES,
+  ADMISSION_ORDER_PRESETS,
+  AdmissionOrderDisplayRow,
+  AdmissionOrderPriority,
+  AdmissionOrderStatus,
+  admissionOrderPriorityLabel as formatAdmissionOrderPriorityLabel,
+  admissionOrderStatusLabel as formatAdmissionOrderStatusLabel,
+  buildAdmissionOrderDisplayRows,
+  countActiveAdmissionOrders,
+  PatientAdmissionOrderRecord,
+} from './admission-order-data';
+import {
+  buildPatientDocumentDisplayRows,
+  countPatientDocuments,
+  DOCUMENT_TYPES,
+  PatientDocumentDisplayRow,
+  PatientDocumentRecord,
+} from './patient-document-data';
 
 interface PrintPreviewData {
   patient: Patient;
@@ -251,6 +275,19 @@ export class PrescriptionComponent implements OnInit {
   editingIvFluidIndex: number | null = null;
   ivFluidModalForm: FormGroup;
   readonly ivFluidOptions = IV_FLUID_OPTIONS;
+  admissionOrderRows: AdmissionOrderDisplayRow[] = [];
+  admissionOrderModalOpen = false;
+  editingAdmissionOrderIndex: number | null = null;
+  admissionOrderModalForm: FormGroup;
+  readonly admissionOrderCategories = ADMISSION_ORDER_CATEGORIES;
+  readonly admissionOrderPresets = ADMISSION_ORDER_PRESETS;
+  patientDocumentRows: PatientDocumentDisplayRow[] = [];
+  patientHistoryRecords: PatientHistory[] = [];
+  documentModalOpen = false;
+  editingDocumentIndex: number | null = null;
+  documentModalForm: FormGroup;
+  readonly documentTypes = DOCUMENT_TYPES;
+  currentUserName = '';
   readonly defaultVitalKeys = new Set(['bp', 'pulse', 'weight', 'temperature', 'spo2']);
   readonly defaultVitalLabels: Record<string, string> = {
     bp: 'BP',
@@ -281,18 +318,8 @@ export class PrescriptionComponent implements OnInit {
       labTests: this.fb.array(this.labTestCatalog.map((test) => this.createLabTestGroup(test))),
       customLabTest: [''],
       ivFluids: this.fb.array([this.createIvFluidGroup()]),
-      admissionOrders: this.fb.group({
-        regularDiet: [true],
-        npo: [false],
-        consultation: [''],
-        monitoring: this.fb.group({
-          bp: [true],
-          pulse: [true],
-          spo2: [true],
-          rbs: [true],
-        }),
-        notes: [''],
-      }),
+      admissionOrderItems: this.fb.array([]),
+      patientDocuments: this.fb.array([]),
       vitals: this.fb.group({
         bp: [''],
         pulse: [''],
@@ -328,6 +355,18 @@ export class PrescriptionComponent implements OnInit {
       startDateTime: [this.currentDateTimeLocalValue()],
       status: ['planned' as IvFluidStatus],
     });
+    this.admissionOrderModalForm = this.fb.group({
+      order: ['', Validators.required],
+      category: ['Nursing'],
+      priority: ['normal' as AdmissionOrderPriority],
+      status: ['active' as AdmissionOrderStatus],
+      orderedOn: [this.currentDateTimeLocalValue()],
+    });
+    this.documentModalForm = this.fb.group({
+      name: ['', Validators.required],
+      type: ['Other'],
+      url: [''],
+    });
   }
 
   ngOnInit(): void {
@@ -338,6 +377,7 @@ export class PrescriptionComponent implements OnInit {
     this.currentHospital = currentUser?.hospital || null;
     this.currentUserId = currentUser?._id || null;
     this.currentRole = String(localStorage.getItem('role') || currentUser?.role?.name || '');
+    this.currentUserName = String((currentUser as { name?: string } | null)?.name || localStorage.getItem('userName') || 'Staff');
     this.refreshCurrentHospital();
 
     this.route.queryParamMap.subscribe((params) => {
@@ -359,8 +399,12 @@ export class PrescriptionComponent implements OnInit {
     this.customVitals.valueChanges.subscribe(() => this.refreshVitalAnalytics());
     this.labTests.valueChanges.subscribe(() => this.refreshLabTestRows());
     this.ivFluids.valueChanges.subscribe(() => this.refreshIvFluidRows());
+    this.admissionOrderItems.valueChanges.subscribe(() => this.refreshAdmissionOrderRows());
+    this.patientDocuments.valueChanges.subscribe(() => this.refreshPatientDocumentRows());
     this.refreshLabTestRows();
     this.refreshIvFluidRows();
+    this.refreshAdmissionOrderRows();
+    this.refreshPatientDocumentRows();
   }
 
   get medicines(): FormArray {
@@ -373,6 +417,14 @@ export class PrescriptionComponent implements OnInit {
 
   get ivFluids(): FormArray {
     return this.prescriptionForm.get('ivFluids') as FormArray;
+  }
+
+  get admissionOrderItems(): FormArray {
+    return this.prescriptionForm.get('admissionOrderItems') as FormArray;
+  }
+
+  get patientDocuments(): FormArray {
+    return this.prescriptionForm.get('patientDocuments') as FormArray;
   }
 
   get vitalsGroup(): FormGroup {
@@ -450,6 +502,30 @@ export class PrescriptionComponent implements OnInit {
       status: [(fluid?.status || 'planned') as IvFluidStatus],
       startDateTime: [fluid?.startDateTime || this.currentDateTimeLocalValue()],
     });
+  }
+
+  createAdmissionOrderGroup(item?: AdmissionOrderItem): FormGroup {
+    return this.fb.group({
+      order: [item?.order || ''],
+      category: [item?.category || 'General'],
+      orderedOn: [item?.orderedOn || this.currentDateTimeLocalValue()],
+      priority: [(item?.priority || 'normal') as AdmissionOrderPriority],
+      status: [(item?.status || 'active') as AdmissionOrderStatus],
+    });
+  }
+
+  createPatientDocumentGroup(item?: PatientDocumentItem): FormGroup {
+    return this.fb.group({
+      name: [item?.name || ''],
+      type: [item?.type || 'Other'],
+      uploadedOn: [item?.uploadedOn || this.currentDateTimeLocalValue()],
+      uploadedBy: [item?.uploadedBy || this.currentUploaderName()],
+      url: [item?.url || ''],
+    });
+  }
+
+  private currentUploaderName(): string {
+    return this.selectedDoctorName() || this.currentUserName || 'Staff';
   }
 
   createCustomVitalGroup(key = '', value = ''): FormGroup {
@@ -650,6 +726,150 @@ export class PrescriptionComponent implements OnInit {
         (first, second) =>
           new Date(second.createdAt || 0).getTime() - new Date(first.createdAt || 0).getTime()
       );
+  }
+
+  hasAssignedPatient(): boolean {
+    return Boolean(this.prescriptionForm.getRawValue().patientId || this.selectedPatientId);
+  }
+
+  private patientSavedLabTests(): PatientLabTestRecord[] {
+    return this.patientPrescriptionHistory()
+      .filter((prescription) => prescription._id !== this.editingId)
+      .flatMap((prescription) =>
+        (prescription.labTests || [])
+          .filter((test) => Boolean(test.selected) && String(test.name || '').trim())
+          .map((test) => ({
+            prescriptionId: prescription._id,
+            orderedAt: prescription.createdAt,
+            name: String(test.name || '').trim(),
+            category: test.category,
+          }))
+      );
+  }
+
+  private patientSavedIvFluids(): PatientIvFluidRecord[] {
+    return this.patientPrescriptionHistory()
+      .filter((prescription) => prescription._id !== this.editingId)
+      .flatMap((prescription) =>
+        (prescription.ivFluids || [])
+          .filter((fluid) => String(fluid.name || '').trim())
+          .map((fluid) => ({
+            prescriptionId: prescription._id,
+            orderedAt: prescription.createdAt,
+            name: String(fluid.name || '').trim(),
+            rate: fluid.rate,
+            duration: fluid.duration,
+            route: fluid.route,
+            status: fluid.status,
+            startDateTime: fluid.startDateTime,
+          }))
+      );
+  }
+
+  private patientSavedAdmissionOrders(): PatientAdmissionOrderRecord[] {
+    return this.patientPrescriptionHistory()
+      .filter((prescription) => prescription._id !== this.editingId)
+      .flatMap((prescription) =>
+        (prescription.admissionOrderItems || [])
+          .filter((item) => String(item.order || '').trim())
+          .map((item) => ({
+            prescriptionId: prescription._id,
+            order: String(item.order || '').trim(),
+            category: item.category,
+            orderedOn: item.orderedOn || prescription.createdAt,
+            priority: item.priority,
+            status: item.status,
+          }))
+      );
+  }
+
+  private patientLegacyAdmissionOrders(): Array<{
+    prescriptionId: string;
+    orderedAt?: string;
+    legacy: Prescription['admissionOrders'];
+  }> {
+    return this.patientPrescriptionHistory()
+      .filter((prescription) => prescription._id !== this.editingId)
+      .filter(
+        (prescription) =>
+          (prescription.admissionOrderItems || []).length === 0 && Boolean(prescription.admissionOrders)
+      )
+      .map((prescription) => ({
+        prescriptionId: prescription._id,
+        orderedAt: prescription.createdAt,
+        legacy: prescription.admissionOrders,
+      }));
+  }
+
+  private patientSavedDocuments(): PatientDocumentRecord[] {
+    const fromPrescriptions = this.patientPrescriptionHistory()
+      .filter((prescription) => prescription._id !== this.editingId)
+      .flatMap((prescription) =>
+        (prescription.patientDocuments || [])
+          .filter((document) => String(document.name || '').trim())
+          .map((document) => ({
+            prescriptionId: prescription._id,
+            sourceType: 'prescription' as const,
+            name: String(document.name || '').trim(),
+            type: document.type,
+            uploadedOn: document.uploadedOn || prescription.createdAt,
+            uploadedBy: document.uploadedBy,
+            url: document.url,
+          }))
+      );
+
+    const fromHistory = this.patientHistoryRecords.flatMap((record) =>
+      (record.attachments || [])
+        .filter((attachment) => String(attachment.url || '').trim())
+        .map((attachment) => ({
+          historyId: record._id,
+          sourceType: 'history' as const,
+          name: String(attachment.name || record.title || 'Document').trim(),
+          type: this.historyDocumentType(record),
+          uploadedOn: record.createdAt,
+          uploadedBy: record.doctor?.name || 'Staff',
+          url: String(attachment.url || '').trim(),
+        }))
+    );
+
+    return [...fromPrescriptions, ...fromHistory];
+  }
+
+  private historyDocumentType(record: PatientHistory): string {
+    if (record.recordType === 'laboratory') {
+      return 'Lab Report';
+    }
+
+    const title = String(record.title || '').toLowerCase();
+    if (title.includes('x-ray') || title.includes('radiology')) {
+      return 'Radiology';
+    }
+
+    if (title.includes('prescription')) {
+      return 'Prescription';
+    }
+
+    return 'Other';
+  }
+
+  loadPatientHistoryRecords(): void {
+    const patientId = this.prescriptionForm.getRawValue().patientId || this.selectedPatientId;
+    if (!patientId) {
+      this.patientHistoryRecords = [];
+      this.refreshPatientDocumentRows();
+      return;
+    }
+
+    this.backend.getPatientHistoryRecords({ patientId, limit: 100 }).subscribe({
+      next: (result) => {
+        this.patientHistoryRecords = result.items;
+        this.refreshPatientDocumentRows();
+      },
+      error: () => {
+        this.patientHistoryRecords = [];
+        this.refreshPatientDocumentRows();
+      },
+    });
   }
 
   private patientVitalHistory(): Array<{
@@ -1281,12 +1501,36 @@ export class PrescriptionComponent implements OnInit {
 
   refreshLabTestRows(): void {
     const orderedTests = this.labTests.getRawValue() as Array<{ name?: string; category?: string; selected?: boolean }>;
-    this.labTestRows = buildLabTestDisplayRows(orderedTests);
+    this.labTestRows = this.hasAssignedPatient()
+      ? buildLabTestDisplayRows(this.patientSavedLabTests(), orderedTests)
+      : [];
 
     if (!this.selectedLabTestId || !this.labTestRows.some((row) => row.id === this.selectedLabTestId)) {
-      const firstCompleted = this.labTestRows.find((row) => row.status === 'completed' && row.parameters.length > 0);
-      this.selectedLabTestId = firstCompleted?.id || this.labTestRows[0]?.id || null;
+      this.selectedLabTestId = this.labTestRows[0]?.id || null;
     }
+  }
+
+  removeLabTestRow(row: LabTestDisplayRow): void {
+    if (row.source === 'saved' || row.formIndex === undefined) {
+      return;
+    }
+
+    const control = this.labTests.at(row.formIndex);
+    if (!control) {
+      return;
+    }
+
+    const isCatalogItem = this.labTestCatalog.some(
+      (item) => item.name.toLowerCase() === String(control.get('name')?.value || '').trim().toLowerCase()
+    );
+
+    if (isCatalogItem) {
+      control.patchValue({ selected: false });
+    } else {
+      this.labTests.removeAt(row.formIndex);
+    }
+
+    this.refreshLabTestRows();
   }
 
   isLabTestAlreadyOrdered(name: string): boolean {
@@ -1390,9 +1634,12 @@ export class PrescriptionComponent implements OnInit {
   }
 
   refreshIvFluidRows(): void {
-    this.ivFluidRows = buildIvFluidDisplayRows(
-      this.ivFluids.getRawValue() as Array<Record<string, string>>
-    );
+    this.ivFluidRows = this.hasAssignedPatient()
+      ? buildIvFluidDisplayRows(
+          this.patientSavedIvFluids(),
+          this.ivFluids.getRawValue() as Array<Record<string, string>>
+        )
+      : [];
   }
 
   totalActiveIvFluids(): number {
@@ -1408,6 +1655,226 @@ export class PrescriptionComponent implements OnInit {
   }
 
   trackIvFluidRow(_index: number, row: IvFluidDisplayRow): string {
+    return row.id;
+  }
+
+  openAdmissionOrderModal(formIndex: number | null = null): void {
+    this.editingAdmissionOrderIndex = formIndex;
+
+    if (formIndex !== null && this.admissionOrderItems.at(formIndex)) {
+      const item = this.admissionOrderItems.at(formIndex).getRawValue() as AdmissionOrderItem;
+      this.admissionOrderModalForm.reset({
+        order: item.order || '',
+        category: item.category || 'General',
+        priority: item.priority || 'normal',
+        status: item.status || 'active',
+        orderedOn: item.orderedOn || this.currentDateTimeLocalValue(),
+      });
+    } else {
+      this.admissionOrderModalForm.reset({
+        order: '',
+        category: 'Nursing',
+        priority: 'normal',
+        status: 'active',
+        orderedOn: this.currentDateTimeLocalValue(),
+      });
+    }
+
+    this.admissionOrderModalOpen = true;
+  }
+
+  closeAdmissionOrderModal(): void {
+    this.admissionOrderModalOpen = false;
+    this.editingAdmissionOrderIndex = null;
+  }
+
+  applyAdmissionOrderPreset(preset: (typeof ADMISSION_ORDER_PRESETS)[number]): void {
+    this.admissionOrderModalForm.patchValue({
+      order: preset.order,
+      category: preset.category,
+      priority: preset.priority,
+      status: preset.status,
+    });
+  }
+
+  saveAdmissionOrderModal(): void {
+    if (this.admissionOrderModalForm.invalid) {
+      this.admissionOrderModalForm.markAllAsTouched();
+      return;
+    }
+
+    const value = this.admissionOrderModalForm.getRawValue() as AdmissionOrderItem;
+    const payload = {
+      order: String(value.order || '').trim(),
+      category: String(value.category || 'General').trim(),
+      orderedOn: String(value.orderedOn || '').trim(),
+      priority: (value.priority || 'normal') as AdmissionOrderPriority,
+      status: (value.status || 'active') as AdmissionOrderStatus,
+    };
+
+    if (!payload.order) {
+      return;
+    }
+
+    if (this.editingAdmissionOrderIndex !== null) {
+      this.admissionOrderItems.at(this.editingAdmissionOrderIndex).patchValue(payload);
+    } else {
+      this.admissionOrderItems.push(this.createAdmissionOrderGroup(payload));
+    }
+
+    this.closeAdmissionOrderModal();
+    this.refreshAdmissionOrderRows();
+  }
+
+  editAdmissionOrderRow(row: AdmissionOrderDisplayRow): void {
+    if (row.source === 'form' && row.formIndex !== undefined) {
+      this.openAdmissionOrderModal(row.formIndex);
+    }
+  }
+
+  deleteAdmissionOrderRow(row: AdmissionOrderDisplayRow): void {
+    if (row.source !== 'form' || row.formIndex === undefined) {
+      return;
+    }
+
+    this.admissionOrderItems.removeAt(row.formIndex);
+    this.refreshAdmissionOrderRows();
+  }
+
+  refreshAdmissionOrderRows(): void {
+    this.admissionOrderRows = this.hasAssignedPatient()
+      ? buildAdmissionOrderDisplayRows(
+          this.patientSavedAdmissionOrders(),
+          this.admissionOrderItems.getRawValue() as AdmissionOrderItem[],
+          this.patientLegacyAdmissionOrders()
+        )
+      : [];
+  }
+
+  totalActiveAdmissionOrders(): number {
+    return countActiveAdmissionOrders(this.admissionOrderRows);
+  }
+
+  admissionOrderPriorityClass(priority: AdmissionOrderPriority): string {
+    return `admission-priority-${priority}`;
+  }
+
+  admissionOrderStatusClass(status: AdmissionOrderStatus): string {
+    return `admission-status-${status}`;
+  }
+
+  admissionOrderPriorityLabel(priority: AdmissionOrderPriority): string {
+    return formatAdmissionOrderPriorityLabel(priority);
+  }
+
+  admissionOrderStatusLabel(status: AdmissionOrderStatus): string {
+    return formatAdmissionOrderStatusLabel(status);
+  }
+
+  trackAdmissionOrderRow(_index: number, row: AdmissionOrderDisplayRow): string {
+    return row.id;
+  }
+
+  openDocumentModal(formIndex: number | null = null): void {
+    this.editingDocumentIndex = formIndex;
+
+    if (formIndex !== null && this.patientDocuments.at(formIndex)) {
+      const document = this.patientDocuments.at(formIndex).getRawValue() as PatientDocumentItem;
+      this.documentModalForm.reset({
+        name: document.name || '',
+        type: document.type || 'Other',
+        url: document.url || '',
+      });
+    } else {
+      this.documentModalForm.reset({
+        name: '',
+        type: 'Other',
+        url: '',
+      });
+    }
+
+    this.documentModalOpen = true;
+  }
+
+  closeDocumentModal(): void {
+    this.documentModalOpen = false;
+    this.editingDocumentIndex = null;
+  }
+
+  onDocumentFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    this.documentModalForm.patchValue({
+      name: file.name,
+      url: URL.createObjectURL(file),
+    });
+  }
+
+  saveDocumentModal(): void {
+    if (this.documentModalForm.invalid) {
+      this.documentModalForm.markAllAsTouched();
+      return;
+    }
+
+    const value = this.documentModalForm.getRawValue() as PatientDocumentItem;
+    const payload = {
+      name: String(value.name || '').trim(),
+      type: String(value.type || 'Other').trim(),
+      uploadedOn: this.currentDateTimeLocalValue(),
+      uploadedBy: this.currentUploaderName(),
+      url: String(value.url || '').trim(),
+    };
+
+    if (!payload.name) {
+      return;
+    }
+
+    if (this.editingDocumentIndex !== null) {
+      this.patientDocuments.at(this.editingDocumentIndex).patchValue(payload);
+    } else {
+      this.patientDocuments.push(this.createPatientDocumentGroup(payload));
+    }
+
+    this.closeDocumentModal();
+    this.refreshPatientDocumentRows();
+  }
+
+  deleteDocumentRow(row: PatientDocumentDisplayRow): void {
+    if (row.source !== 'form' || row.formIndex === undefined) {
+      return;
+    }
+
+    this.patientDocuments.removeAt(row.formIndex);
+    this.refreshPatientDocumentRows();
+  }
+
+  downloadDocument(row: PatientDocumentDisplayRow): void {
+    if (!row.url) {
+      this.toastr.info('No file link available for this document.');
+      return;
+    }
+
+    window.open(row.url, '_blank');
+  }
+
+  refreshPatientDocumentRows(): void {
+    this.patientDocumentRows = this.hasAssignedPatient()
+      ? buildPatientDocumentDisplayRows(
+          this.patientSavedDocuments(),
+          this.patientDocuments.getRawValue() as PatientDocumentItem[]
+        )
+      : [];
+  }
+
+  totalPatientDocuments(): number {
+    return countPatientDocuments(this.patientDocumentRows);
+  }
+
+  trackPatientDocumentRow(_index: number, row: PatientDocumentDisplayRow): string {
     return row.id;
   }
 
@@ -1756,8 +2223,28 @@ export class PrescriptionComponent implements OnInit {
           name: String(fluid['name'] || '').trim(),
           rate: String(fluid['rate'] || '').trim(),
           duration: String(fluid['duration'] || '').trim(),
+          route: String(fluid['route'] || 'IV').trim(),
+          status: (String(fluid['status'] || 'planned') as IvFluidStatus),
+          startDateTime: String(fluid['startDateTime'] || '').trim(),
         })),
-      admissionOrders: value.admissionOrders,
+      admissionOrderItems: value.admissionOrderItems
+        .filter((item: Record<string, unknown>) => String(item['order'] || '').trim())
+        .map((item: Record<string, unknown>) => ({
+          order: String(item['order'] || '').trim(),
+          category: String(item['category'] || 'General').trim(),
+          orderedOn: String(item['orderedOn'] || '').trim(),
+          priority: String(item['priority'] || 'normal'),
+          status: String(item['status'] || 'active'),
+        })),
+      patientDocuments: value.patientDocuments
+        .filter((document: Record<string, unknown>) => String(document['name'] || '').trim())
+        .map((document: Record<string, unknown>) => ({
+          name: String(document['name'] || '').trim(),
+          type: String(document['type'] || 'Other').trim(),
+          uploadedOn: String(document['uploadedOn'] || '').trim(),
+          uploadedBy: String(document['uploadedBy'] || '').trim(),
+          url: String(document['url'] || '').trim(),
+        })),
       vitals: this.buildVitalsPayload(
         value.vitals as Record<string, unknown>,
         value.customVitals as Array<Record<string, unknown>>
@@ -1817,7 +2304,12 @@ export class PrescriptionComponent implements OnInit {
 
     this.loadDoctorMedicines();
     this.loadPrescriptions();
+    this.loadPatientHistoryRecords();
     this.refreshVitalAnalytics();
+    this.refreshLabTestRows();
+    this.refreshIvFluidRows();
+    this.refreshAdmissionOrderRows();
+    this.refreshPatientDocumentRows();
     this.refreshSelectedAppointment(appointment._id);
   }
 
@@ -1873,7 +2365,6 @@ export class PrescriptionComponent implements OnInit {
       advice: prescription.advice || '',
       followUpDate: prescription.followUpDate ? String(prescription.followUpDate).slice(0, 10) : '',
       vitals: this.extractDefaultVitals(prescription.vitals || {}),
-      admissionOrders: prescription.admissionOrders || {},
     });
     this.customVitals.clear();
     this.extractCustomVitals(prescription.vitals || {}).forEach((entry) =>
@@ -1904,32 +2395,39 @@ export class PrescriptionComponent implements OnInit {
           name: fluid.name,
           rate: fluid.rate || '',
           duration: fluid.duration || '',
-          status: 'planned',
+          route: fluid.route || 'IV',
+          status: fluid.status || 'planned',
+          startDateTime: fluid.startDateTime || prescription.createdAt || this.currentDateTimeLocalValue(),
         })
       )
     );
     if (this.ivFluids.length === 0) {
       this.addIvFluid();
     }
+
+    this.admissionOrderItems.clear();
+    (prescription.admissionOrderItems || []).forEach((item) =>
+      this.admissionOrderItems.push(this.createAdmissionOrderGroup(item))
+    );
+
+    this.patientDocuments.clear();
+    (prescription.patientDocuments || []).forEach((document) =>
+      this.patientDocuments.push(this.createPatientDocumentGroup(document))
+    );
+
     this.loadDoctorMedicines();
+    this.loadPatientHistoryRecords();
     this.refreshVitalAnalytics();
     this.refreshLabTestRows();
     this.refreshIvFluidRows();
+    this.refreshAdmissionOrderRows();
+    this.refreshPatientDocumentRows();
   }
 
   resetForm(): void {
     this.editingId = null;
     this.prescriptionForm.reset({
       visitType: 'opd',
-      admissionOrders: {
-        regularDiet: true,
-        monitoring: {
-          bp: true,
-          pulse: true,
-          spo2: true,
-          rbs: true,
-        },
-      },
     });
     this.customVitals.clear();
     this.medicines.clear();
@@ -1938,12 +2436,17 @@ export class PrescriptionComponent implements OnInit {
     this.labTestCatalog.forEach((test) => this.labTests.push(this.createLabTestGroup(test)));
     this.ivFluids.clear();
     this.ivFluids.push(this.createIvFluidGroup());
+    this.admissionOrderItems.clear();
+    this.patientDocuments.clear();
     this.applyRouteDefaults();
     this.selectInitialAppointment();
     this.loadDoctorMedicines();
+    this.loadPatientHistoryRecords();
     this.refreshVitalAnalytics();
     this.refreshLabTestRows();
     this.refreshIvFluidRows();
+    this.refreshAdmissionOrderRows();
+    this.refreshPatientDocumentRows();
   }
 
   patientName(patient?: Patient | null): string {
@@ -2252,7 +2755,12 @@ export class PrescriptionComponent implements OnInit {
     const localPrescriptions = await this.localQueuedPrescriptions();
     this.prescriptions = this.mergePrescriptions([...localPrescriptions, ...items]);
     this.totalPages = totalPages;
+    this.loadPatientHistoryRecords();
     this.refreshVitalAnalytics();
+    this.refreshLabTestRows();
+    this.refreshIvFluidRows();
+    this.refreshAdmissionOrderRows();
+    this.refreshPatientDocumentRows();
   }
 
   private async queuePrescription(payload: Record<string, unknown>, printAfterSave: boolean): Promise<void> {
@@ -2272,6 +2780,10 @@ export class PrescriptionComponent implements OnInit {
     this.prescriptions = this.mergePrescriptions([prescription, ...this.prescriptions]);
     this.editingId = localId;
     this.markAppointmentCompleted(prescription.appointmentId);
+    this.refreshLabTestRows();
+    this.refreshIvFluidRows();
+    this.refreshAdmissionOrderRows();
+    this.refreshPatientDocumentRows();
     this.saving = false;
     this.toastr.success('Prescription saved offline and queued for sync.');
     if (printAfterSave) {
@@ -2299,7 +2811,8 @@ export class PrescriptionComponent implements OnInit {
       diagnosis: (payload['diagnosis'] as string | undefined) || null,
       labTests: (payload['labTests'] as Prescription['labTests']) || [],
       ivFluids: (payload['ivFluids'] as Prescription['ivFluids']) || [],
-      admissionOrders: (payload['admissionOrders'] as Prescription['admissionOrders']) || null,
+      admissionOrderItems: (payload['admissionOrderItems'] as Prescription['admissionOrderItems']) || [],
+      patientDocuments: (payload['patientDocuments'] as Prescription['patientDocuments']) || [],
       vitals: (payload['vitals'] as Record<string, string> | undefined) || {},
       advice: (payload['advice'] as string | undefined) || null,
       visitType: (payload['visitType'] as string | undefined) || 'opd',

@@ -8,44 +8,21 @@ export interface IvFluidDisplayRow {
   route: string;
   startDateTime: string;
   status: IvFluidStatus;
-  source: 'demo' | 'form';
+  source: 'saved' | 'form';
   formIndex?: number;
+  prescriptionId?: string;
 }
 
-const DEMO_IV_FLUIDS: Array<Omit<IvFluidDisplayRow, 'id' | 'source'>> = [
-  {
-    name: 'DNS',
-    rate: '80 ml/hr',
-    quantity: '500 ml',
-    route: 'IV',
-    startDateTime: 'Jun 12, 2026 11:00 PM',
-    status: 'running',
-  },
-  {
-    name: 'RL',
-    rate: '100 ml/hr',
-    quantity: '500 ml',
-    route: 'IV',
-    startDateTime: 'Jun 13, 2026 09:00 AM',
-    status: 'running',
-  },
-  {
-    name: 'NS',
-    rate: '60 ml/hr',
-    quantity: '500 ml',
-    route: 'IV',
-    startDateTime: 'Jun 14, 2026 08:00 AM',
-    status: 'completed',
-  },
-  {
-    name: 'D5-NS',
-    rate: '75 ml/hr',
-    quantity: '500 ml',
-    route: 'IV',
-    startDateTime: 'Jun 15, 2026 08:00 AM',
-    status: 'planned',
-  },
-];
+export interface PatientIvFluidRecord {
+  prescriptionId: string;
+  orderedAt?: string;
+  name: string;
+  rate?: string;
+  duration?: string;
+  route?: string;
+  status?: IvFluidStatus;
+  startDateTime?: string;
+}
 
 export const IV_FLUID_OPTIONS = ['DNS', 'RL', 'NS', 'D5-NS', 'D5W', 'DNS + KCl'];
 
@@ -92,7 +69,33 @@ const normalizeRate = (value?: string): string => {
   return /ml\/hr|ml\/h/i.test(raw) ? raw : `${raw} ml/hr`;
 };
 
+const buildIvFluidRow = (
+  id: string,
+  fluid: {
+    name: string;
+    rate?: string;
+    duration?: string;
+    route?: string;
+    status?: IvFluidStatus;
+    startDateTime?: string;
+  },
+  source: 'saved' | 'form',
+  extras?: { formIndex?: number; prescriptionId?: string; fallbackStart?: string }
+): IvFluidDisplayRow => ({
+  id,
+  name: fluid.name,
+  rate: normalizeRate(fluid.rate),
+  quantity: normalizeQuantity(fluid.duration),
+  route: String(fluid.route || 'IV').trim() || 'IV',
+  startDateTime: formatStartDateTime(fluid.startDateTime || extras?.fallbackStart),
+  status: (fluid.status || 'planned') as IvFluidStatus,
+  source,
+  formIndex: extras?.formIndex,
+  prescriptionId: extras?.prescriptionId,
+});
+
 export const buildIvFluidDisplayRows = (
+  savedFluids: PatientIvFluidRecord[],
   formFluids: Array<{
     name?: string;
     rate?: string;
@@ -102,36 +105,46 @@ export const buildIvFluidDisplayRows = (
     startDateTime?: string;
   }>
 ): IvFluidDisplayRow[] => {
-  const demoRows: IvFluidDisplayRow[] = DEMO_IV_FLUIDS.map((row) => ({
-    ...row,
-    id: `demo-${row.name}`,
-    source: 'demo',
-  }));
-
-  const demoNames = new Set(demoRows.map((row) => row.name.toLowerCase()));
+  const savedRows = savedFluids.map((record, index) =>
+    buildIvFluidRow(
+      `saved-${record.prescriptionId}-${record.name}-${index}`,
+      {
+        name: record.name,
+        rate: record.rate,
+        duration: record.duration,
+        route: record.route,
+        status: record.status,
+        startDateTime: record.startDateTime,
+      },
+      'saved',
+      { prescriptionId: record.prescriptionId, fallbackStart: record.orderedAt }
+    )
+  );
 
   const formRows: IvFluidDisplayRow[] = formFluids
     .map((fluid, index) => {
       const name = String(fluid.name || '').trim();
-      if (!name || demoNames.has(name.toLowerCase())) {
+      if (!name) {
         return null;
       }
 
-      return {
-        id: `form-${index}-${name}`,
-        name,
-        rate: normalizeRate(fluid.rate),
-        quantity: normalizeQuantity(fluid.duration),
-        route: String(fluid.route || 'IV').trim() || 'IV',
-        startDateTime: formatStartDateTime(fluid.startDateTime),
-        status: (fluid.status || 'planned') as IvFluidStatus,
-        source: 'form' as const,
-        formIndex: index,
-      };
+      return buildIvFluidRow(
+        `form-${index}-${name}`,
+        {
+          name,
+          rate: fluid.rate,
+          duration: fluid.duration,
+          route: fluid.route,
+          status: fluid.status,
+          startDateTime: fluid.startDateTime,
+        },
+        'form',
+        { formIndex: index }
+      );
     })
-    .filter((row): row is NonNullable<typeof row> => row !== null);
+    .filter((row): row is IvFluidDisplayRow => row !== null);
 
-  return [...demoRows, ...formRows];
+  return [...savedRows, ...formRows];
 };
 
 export const countActiveIvFluids = (rows: IvFluidDisplayRow[]): number =>

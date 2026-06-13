@@ -654,6 +654,16 @@ dd {
   margin: 0;
 }
 
+.tab-patient-note {
+  color: var(--rx-muted);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.tab-patient-note.muted {
+  color: #94a3b8;
+}
+
 .lab-add-btn {
   min-height: 34px;
 }
@@ -794,6 +804,10 @@ dd {
   height: 28px;
   justify-content: center;
   width: 28px;
+}
+
+.lab-action-btn.delete {
+  color: #dc2626;
 }
 
 .lab-actions {
@@ -1061,6 +1075,214 @@ dd {
   padding-top: 14px;
 }
 
+.admission-orders-dashboard-panel,
+.documents-dashboard-panel {
+  background: var(--rx-panel);
+  border: 1px solid var(--rx-line);
+  border-top: 0;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.admission-orders-dashboard-head,
+.documents-dashboard-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.admission-orders-dashboard-head h3,
+.documents-dashboard-head h3 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.admission-add-btn,
+.documents-upload-btn {
+  min-height: 34px;
+}
+
+.documents-upload-btn i {
+  margin-right: 6px;
+}
+
+.admission-orders-table-wrap,
+.documents-table-wrap {
+  border: 1px solid var(--rx-line);
+  border-radius: 10px;
+  overflow: auto;
+}
+
+.admission-orders-table,
+.documents-table {
+  border-collapse: collapse;
+  min-width: 920px;
+  width: 100%;
+}
+
+.admission-orders-table th,
+.admission-orders-table td,
+.documents-table th,
+.documents-table td {
+  border-bottom: 1px solid var(--rx-soft-line);
+  font-size: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admission-orders-table th,
+.documents-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.admission-priority-badge,
+.admission-status-badge {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+}
+
+.admission-priority-normal {
+  background: #fff;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+}
+
+.admission-priority-high {
+  background: #fff;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+}
+
+.admission-status-active {
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.admission-status-planned {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.admission-status-completed {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+}
+
+.admission-order-actions,
+.document-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.admission-action-btn,
+.document-action-btn {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--rx-blue);
+  display: inline-flex;
+  font-size: 14px;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.admission-action-btn.delete,
+.document-action-btn.delete {
+  color: #dc2626;
+}
+
+.admission-orders-summary,
+.documents-summary {
+  font-size: 13px;
+}
+
+.admission-order-modal-dialog,
+.document-modal-dialog {
+  background: #fff;
+  border: 1px solid var(--rx-line);
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 0.22);
+  max-height: 90vh;
+  max-width: 560px;
+  overflow: auto;
+  padding: 16px;
+  width: 100%;
+}
+
+.admission-order-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.admission-preset-btn {
+  background: #f8fafc;
+  border: 1px solid var(--rx-line);
+  border-radius: 999px;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  min-height: 30px;
+  padding: 0 12px;
+}
+
+.admission-order-modal-form,
+.document-modal-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.admission-order-modal-form label,
+.document-modal-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.admission-order-modal-form label span,
+.document-modal-form label span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admission-order-modal-form input,
+.admission-order-modal-form select,
+.document-modal-form input,
+.document-modal-form select {
+  border: 1px solid var(--rx-line);
+  border-radius: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.admission-order-modal-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admission-order-modal-actions,
+.document-modal-actions {
+  border-top: 1px solid var(--rx-soft-line);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+  padding-top: 14px;
+}
+
 @media (max-width: 768px) {
   .lab-test-picker-grid,
   .lab-test-custom-add {
@@ -1069,12 +1291,15 @@ dd {
 
   .lab-tests-dashboard-head,
   .lab-test-detail-head,
-  .iv-fluids-dashboard-head {
+  .iv-fluids-dashboard-head,
+  .admission-orders-dashboard-head,
+  .documents-dashboard-head {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .iv-fluid-modal-grid {
+  .iv-fluid-modal-grid,
+  .admission-order-modal-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1531,7 +1756,7 @@ dd {
   border-top: 0;
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(0, 1fr) clamp(286px, 25vw, 360px);
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   padding: 9px;
 }
