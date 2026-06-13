@@ -140,6 +140,10 @@
                 </option>
               </select>
             </label>
+            <div class="consultation-fee-card" *ngIf="appointmentForm.value.doctorId">
+              <span>Consultation Fee</span>
+              <strong>{{ formatConsultationFee(selectedDoctorConsultationFee) }}</strong>
+            </div>
             <label>
               <span>Date *</span>
               <input type="date" formControlName="appointmentDate" />
@@ -151,6 +155,13 @@
                 <option value="Follow-up">Follow-up</option>
                 <option value="Walk-in">Walk-in</option>
                 <option value="Emergency">Emergency</option>
+              </select>
+            </label>
+            <label>
+              <span>Payment Status *</span>
+              <select formControlName="paymentStatus" (change)="onPaymentStatusChange()">
+                <option value="unpaid">Unpaid</option>
+                <option value="paid">Paid</option>
               </select>
             </label>
             <label>
@@ -170,6 +181,9 @@
                 <option value="cancelled">Cancelled</option>
                 <option value="no_show">No show</option>
               </select>
+              <small class="status-hint" *ngIf="appointmentForm.value.paymentStatus === 'paid'">
+                Payment paid — appointment will be confirmed automatically.
+              </small>
             </label>
           </div>
 
@@ -243,6 +257,8 @@
                 <th>Doctor</th>
                 <th>Department</th>
                 <th>Date & Time</th>
+                <th>Fee</th>
+                <th>Payment</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -270,6 +286,12 @@
                 </td>
                 <td>{{ appointment.department?.name || '-' }}</td>
                 <td>{{ shortDate(appointment.appointmentDate) }}<br />{{ appointmentTimeRange(appointment) }}</td>
+                <td>{{ formatConsultationFee(appointment.consultationFee) }}</td>
+                <td>
+                  <span class="payment-pill" [class.paid]="appointment.paymentStatus === 'paid'">
+                    {{ paymentStatusLabel(appointment.paymentStatus) }}
+                  </span>
+                </td>
                 <td>
                   <span class="status-pill" [ngClass]="appointmentStatusClass(appointment.status)">
                     {{ appointment.status.replace('_', ' ') }}
@@ -292,6 +314,9 @@
                       title="Delete">
                       <i class="fa fa-trash"></i>
                     </button>
+                    <button type="button" (click)="reprintAppointmentToken(appointment)" title="Print Token">
+                      <i class="fa fa-print"></i>
+                    </button>
                     <button type="button" *ngIf="appointment.patient?.phone"
                       (click)="sendAppointmentWhatsApp(appointment)" title="Send via WhatsApp">
                       <i class="fa fa-whatsapp"></i>
@@ -300,10 +325,10 @@
                 </td>
               </tr>
               <tr *ngIf="!loading && appointments.length === 0">
-                <td colspan="7" class="empty-row">No appointments found</td>
+                <td colspan="9" class="empty-row">No appointments found</td>
               </tr>
               <tr *ngIf="loading">
-                <td colspan="7" class="empty-row">Loading...</td>
+                <td colspan="9" class="empty-row">Loading...</td>
               </tr>
             </tbody>
           </table>

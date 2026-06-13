@@ -15,16 +15,22 @@ import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/moo
 import {
   Appointment,
   Doctor,
+  Hospital,
   Patient,
 } from '../../../shared/models/hospital.model';
 
 interface AppointmentToken {
   appointmentNo: string;
+  clinicName: string;
+  clinicSubtitle: string;
+  logoUrl: string;
   patientName: string;
   doctorName: string;
   departmentName: string;
   appointmentDate: string;
   timeRange: string;
+  consultationFee: string;
+  paymentStatus: string;
   status: string;
   printedAt: string;
 }
@@ -53,6 +59,7 @@ export class AppointmentComponent implements OnInit {
   totalPages = 0;
   editingId: string | null = null;
   currentHospitalId: string | null = null;
+  hospitalProfile: Hospital | null = null;
   patientPhone = '';
   phoneLookupLoading = false;
   phoneLookupPerformed = false;
@@ -77,7 +84,9 @@ export class AppointmentComponent implements OnInit {
       startTime: [''],
       endTime: [''],
       reason: [''],
-      status: ['confirmed', Validators.required],
+      consultationFee: [0],
+      paymentStatus: ['unpaid', Validators.required],
+      status: ['pending', Validators.required],
       notes: [''],
     });
 
@@ -101,9 +110,31 @@ export class AppointmentComponent implements OnInit {
   ngOnInit(): void {
     const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as { hospitalId?: string | null } | null;
     this.currentHospitalId = currentUser?.hospitalId || null;
+    this.loadHospitalProfile();
     this.loadLookups();
     this.loadAppointments();
     void this.syncOfflineWork(false);
+  }
+
+  loadHospitalProfile(): void {
+    if (!this.currentHospitalId) {
+      return;
+    }
+
+    this.backend.getHospital(this.currentHospitalId).subscribe({
+      next: (hospital) => {
+        this.hospitalProfile = hospital;
+      },
+      error: () => {},
+    });
+  }
+
+  get selectedDoctor(): Doctor | undefined {
+    return this.findDoctorByUserId(this.appointmentForm.value.doctorId);
+  }
+
+  get selectedDoctorConsultationFee(): number {
+    return Number(this.selectedDoctor?.consultationFee || 0);
   }
 
   get canCreateAppointment(): boolean {
@@ -135,7 +166,7 @@ export class AppointmentComponent implements OnInit {
       next: (result) => {
         this.doctors = result.items;
         void this.offline.cacheValue(this.doctorsCacheKey(), this.doctors);
-        this.patchDepartmentFromDoctor(this.appointmentForm.value.doctorId);
+        this.onDoctorChange();
       },
       error: () => {
         void this.loadCachedDoctors();
@@ -223,9 +254,13 @@ export class AppointmentComponent implements OnInit {
     }
 
     const selectedDoctor = this.findDoctorByUserId(value.doctorId);
+    const paymentStatus = value.paymentStatus || 'unpaid';
     const payload: Record<string, unknown> = {
       ...value,
       departmentId: selectedDoctor?.departmentId || value.departmentId || undefined,
+      consultationFee: Number(value.consultationFee || selectedDoctor?.consultationFee || 0),
+      paymentStatus,
+      status: paymentStatus === 'paid' ? 'confirmed' : value.status || 'pending',
     };
     const isEditing = Boolean(this.editingId);
     this.removeEmptyTimeFields(payload);
@@ -295,6 +330,8 @@ export class AppointmentComponent implements OnInit {
       startTime: appointment.startTime,
       endTime: appointment.endTime,
       reason: appointment.reason || '',
+      consultationFee: appointment.consultationFee ?? this.selectedDoctorConsultationFee,
+      paymentStatus: appointment.paymentStatus || 'unpaid',
       status: appointment.status,
       notes: appointment.notes || '',
     });
@@ -338,7 +375,9 @@ export class AppointmentComponent implements OnInit {
     this.editingId = null;
     this.appointmentForm.reset({
       appointmentDate: this.todayValue(),
-      status: 'confirmed',
+      consultationFee: 0,
+      paymentStatus: 'unpaid',
+      status: 'pending',
     });
     this.patientPhone = '';
     this.phoneLookupLoading = false;
@@ -441,12 +480,37 @@ export class AppointmentComponent implements OnInit {
 
     if (patient.assignedDoctorId) {
       this.appointmentForm.patchValue({ doctorId: patient.assignedDoctorId });
-      this.patchDepartmentFromDoctor(patient.assignedDoctorId);
+      this.onDoctorChange();
     }
   }
 
   onDoctorChange(): void {
     this.patchDepartmentFromDoctor(this.appointmentForm.value.doctorId);
+    const doctor = this.selectedDoctor;
+    const consultationFee = Number(doctor?.consultationFee || 0);
+    this.appointmentForm.patchValue({ consultationFee });
+  }
+
+  onPaymentStatusChange(): void {
+    const paymentStatus = this.appointmentForm.value.paymentStatus;
+
+    if (paymentStatus === 'paid') {
+      this.appointmentForm.patchValue({ status: 'confirmed' });
+      return;
+    }
+
+    if (!this.editingId) {
+      this.appointmentForm.patchValue({ status: 'pending' });
+    }
+  }
+
+  formatConsultationFee(value?: number | null): string {
+    const amount = Number(value || 0);
+    return amount > 0 ? `PKR ${amount.toLocaleString('en-PK')}` : 'Not set';
+  }
+
+  paymentStatusLabel(value?: string | null): string {
+    return value === 'paid' ? 'Paid' : 'Unpaid';
   }
 
   doctorOptionLabel(doctor: Doctor): string {
@@ -561,6 +625,13 @@ export class AppointmentComponent implements OnInit {
     return `${normalizedHour}:${String(minute).padStart(2, '0')} ${meridiem}`;
   }
 
+  reprintAppointmentToken(appointment: Appointment): void {
+    const doctor = this.findDoctorByUserId(appointment.doctorId);
+    this.printAppointmentToken(
+      this.buildAppointmentToken(appointment, appointment.patient, doctor)
+    );
+  }
+
   printAppointmentToken(token: AppointmentToken): void {
     const printFrame = document.createElement('iframe');
     printFrame.style.position = 'fixed';
@@ -581,146 +652,23 @@ export class AppointmentComponent implements OnInit {
       return;
     }
 
-    const tokenHtml = `
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Appointment Token ${token.appointmentNo}</title>
-          <style>
-            @page { margin: 0; size: 80mm auto; }
-            * { box-sizing: border-box; }
-            html, body { height: auto; width: 100%; }
-            body {
-              align-items: center;
-              background: #fff;
-              color: #111827;
-              display: flex;
-              font-family: Arial, sans-serif;
-              justify-content: center;
-              margin: 0;
-              min-height: auto;
-              padding: 0;
-            }
-            .token {
-              background: #fff;
-              border: 0;
-              border-radius: 0;
-              box-shadow: none;
-              max-width: 78mm;
-              padding: 20px 14px;
-              text-align: center;
-              width: 100%;
-            }
-            .eyebrow {
-              color: #019C9D;
-              font-size: 11px;
-              font-weight: 800;
-              letter-spacing: 0.14em;
-              text-transform: uppercase;
-            }
-            h1 { font-size: 28px; line-height: 1; margin: 10px 0 8px; }
-            p { margin: 0; }
-            .sub {
-              color: #6b7280;
-              font-size: 11px;
-              margin-bottom: 16px;
-            }
-            .status-badge {
-              background: #e8f7f7;
-              border: 1px solid #b9e8e8;
-              border-radius: 999px;
-              color: #003E86;
-              display: inline-block;
-              font-size: 11px;
-              font-weight: 800;
-              margin-bottom: 18px;
-              padding: 6px 10px;
-            }
-            .row {
-              align-items: flex-start;
-              display: flex;
-              gap: 10px;
-              justify-content: space-between;
-              padding: 10px 0;
-              border-top: 1px dashed #d1d5db;
-              font-size: 12px;
-              text-align: left;
-            }
-            .row:first-of-type { border-top: 0; }
-            .label {
-              color: #6b7280;
-              font-weight: 700;
-            }
-            .value {
-              font-weight: 800;
-              max-width: 54%;
-              text-align: right;
-            }
-            .footer {
-              border-top: 1px solid #e5e7eb;
-              color: #6b7280;
-              font-size: 11px;
-              margin-top: 14px;
-              padding-top: 10px;
-            }
-            @media print {
-              @page { margin: 0; size: 80mm auto; }
-              html, body {
-                height: auto;
-                width: 100%;
-              }
-              body {
-                background: #fff;
-                min-height: auto;
-                padding: 0;
-              }
-              .token {
-                max-width: none;
-                padding: 14px 12px;
-              }
-              h1 { font-size: 26px; }
-              .sub { font-size: 10px; margin-bottom: 14px; }
-              .status-badge { font-size: 10px; margin-bottom: 16px; padding: 5px 9px; }
-              .row { font-size: 11px; padding: 9px 0; }
-              .footer { font-size: 10px; margin-top: 14px; padding-top: 10px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="token">
-            <div class="eyebrow">Appointment Token</div>
-            <h1>${this.escapeHtml(token.appointmentNo)}</h1>
-            <p class="sub">Keep this token for your visit</p>
-            <div class="status-badge">${this.escapeHtml(token.status)}</div>
-            ${this.printableTokenRow('Patient', token.patientName)}
-            ${this.printableTokenRow('Doctor', token.doctorName)}
-            ${this.printableTokenRow('Department', token.departmentName)}
-            ${this.printableTokenRow('Date', token.appointmentDate)}
-            ${this.printableTokenRow('Time', token.timeRange)}
-            ${this.printableTokenRow('Printed At', token.printedAt)}
-            <div class="footer">Please wait for your turn.</div>
-          </div>
-          <script>
-            window.onload = function () {
-              setTimeout(function () {
-                window.focus();
-                window.print();
-              }, 150);
-            };
-            window.onafterprint = function () {
-              setTimeout(function () {
-                window.frameElement && window.frameElement.remove();
-              }, 0);
-            };
-          </script>
-        </body>
-      </html>
-    `;
+    const tokenHtml = this.buildAppointmentTokenPrintHtml(token);
 
     printDocument.open();
     printDocument.write(tokenHtml);
     printDocument.close();
+
+    printWindow.onafterprint = () => printFrame.remove();
+
+    window.setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      window.setTimeout(() => {
+        if (document.body.contains(printFrame)) {
+          printFrame.remove();
+        }
+      }, 15000);
+    }, 200);
   }
 
   openAddPatientModal(): void {
@@ -917,7 +865,7 @@ export class AppointmentComponent implements OnInit {
 
   private async loadCachedDoctors(): Promise<void> {
     this.doctors = await this.offline.readCachedValue<Doctor[]>(this.doctorsCacheKey(), []);
-    this.patchDepartmentFromDoctor(this.appointmentForm.value.doctorId);
+    this.onDoctorChange();
   }
 
   private async loadCachedAppointments(error: unknown): Promise<void> {
@@ -1059,7 +1007,9 @@ export class AppointmentComponent implements OnInit {
       startTime: String(payload['startTime'] || ''),
       endTime: String(payload['endTime'] || ''),
       reason: (payload['reason'] as string | undefined) || null,
-      status: (payload['status'] as Appointment['status']) || 'confirmed',
+      status: (payload['status'] as Appointment['status']) || 'pending',
+      consultationFee: Number(payload['consultationFee'] || doctor?.consultationFee || 0),
+      paymentStatus: (payload['paymentStatus'] as Appointment['paymentStatus']) || 'unpaid',
       notes: (payload['notes'] as string | undefined) || 'Saved offline',
     };
   }
@@ -1258,29 +1208,427 @@ export class AppointmentComponent implements OnInit {
     doctorRecord?: Doctor
   ): AppointmentToken {
     const resolvedPatient = appointment.patient || patient || null;
-    const resolvedDoctorName = appointment.doctor?.name || doctorRecord?.user?.name || doctorRecord?.specialization || '-';
+    const resolvedDoctorName = this.formatDoctorName(
+      appointment.doctor?.name || doctorRecord?.user?.name || doctorRecord?.specialization || '-'
+    );
     const resolvedDepartment =
       appointment.department?.name || doctorRecord?.department?.name || 'General';
+    const branding = this.resolveClinicBranding();
 
     return {
       appointmentNo: appointment.appointmentNo,
+      clinicName: branding.clinicName,
+      clinicSubtitle: branding.clinicSubtitle,
+      logoUrl: branding.logoUrl,
       patientName: this.patientName(resolvedPatient),
       doctorName: resolvedDoctorName,
       departmentName: resolvedDepartment,
       appointmentDate: this.shortDate(appointment.appointmentDate),
       timeRange: this.appointmentTimeRange(appointment),
+      consultationFee: this.formatConsultationFee(
+        appointment.consultationFee ?? doctorRecord?.consultationFee
+      ),
+      paymentStatus: this.paymentStatusLabel(appointment.paymentStatus),
       status: this.appointmentStatusLabel(appointment.status),
       printedAt: `${this.shortDate(new Date())} ${this.formatClockTime(this.formatTime(new Date()))}`,
     };
   }
 
-  private printableTokenRow(label: string, value: string): string {
+  private resolveClinicBranding(): { clinicName: string; clinicSubtitle: string; logoUrl: string } {
+    const storedUser = JSON.parse(localStorage.getItem('user') || 'null') as {
+      hospital?: Hospital | null;
+    } | null;
+    const hospital = this.hospitalProfile || storedUser?.hospital || null;
+    const hospitalName = hospital?.name?.trim() || 'Health Clinic';
+    const nameParts = hospitalName.split(/\s+/).filter(Boolean);
+
+    if (nameParts.length >= 3) {
+      const splitIndex = Math.ceil(nameParts.length / 2);
+      return {
+        clinicName: nameParts.slice(0, splitIndex).join(' ').toUpperCase(),
+        clinicSubtitle: nameParts.slice(splitIndex).join(' ').toUpperCase(),
+        logoUrl: this.safeHospitalLogoUrl(hospital?.logoUrl),
+      };
+    }
+
+    return {
+      clinicName: hospitalName.toUpperCase(),
+      clinicSubtitle: (hospital?.city || 'HEALTH CLINIC').toUpperCase(),
+      logoUrl: this.safeHospitalLogoUrl(hospital?.logoUrl),
+    };
+  }
+
+  private safeHospitalLogoUrl(value?: string | null): string {
+    const logoUrl = String(value || '').trim();
+    if (!logoUrl) {
+      return '';
+    }
+
+    return logoUrl.startsWith('data:image/') && logoUrl.length > 1000000 ? '' : logoUrl;
+  }
+
+  private formatDoctorName(name: string): string {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === '-') {
+      return '-';
+    }
+
+    return /^dr\.?\s/i.test(trimmed) ? trimmed : `Dr ${trimmed}`;
+  }
+
+  private buildAppointmentTokenPrintHtml(token: AppointmentToken): string {
+    const logoMarkup = token.logoUrl
+      ? `<img class="clinic-logo" src="${this.escapeHtml(token.logoUrl)}" alt="${this.escapeHtml(token.clinicName)}" />`
+      : this.defaultClinicLogoSvg();
+
     return `
-      <div class="row">
-        <span class="label">${this.escapeHtml(label)}</span>
-        <span class="value">${this.escapeHtml(value || '-')}</span>
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title></title>
+          <style>
+            @page { margin: 0; size: auto; }
+            * { box-sizing: border-box; }
+            html, body { margin: 0; padding: 0; width: 100%; }
+            body {
+              align-items: flex-start;
+              background: #fff;
+              color: #003E86;
+              display: flex;
+              font-family: "Segoe UI", Arial, sans-serif;
+              justify-content: center;
+              min-height: auto;
+              padding: 16px 12px;
+            }
+            .token {
+              max-width: 420px;
+              overflow: hidden;
+              position: relative;
+              width: 100%;
+            }
+            .header {
+              align-items: center;
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 10px;
+            }
+            .brand {
+              align-items: center;
+              display: flex;
+              gap: 12px;
+            }
+            .clinic-logo,
+            .logo-fallback {
+              flex: 0 0 auto;
+              height: 52px;
+              object-fit: contain;
+              width: 52px;
+            }
+            .logo-fallback {
+              display: block;
+            }
+            .brand-text strong {
+              color: #003E86;
+              display: block;
+              font-size: 18px;
+              font-weight: 800;
+              letter-spacing: 0.02em;
+              line-height: 1.1;
+            }
+            .brand-text span {
+              color: #019C9D;
+              display: block;
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.08em;
+              margin-top: 2px;
+            }
+            .header-art {
+              height: 56px;
+              opacity: 0.9;
+              width: 88px;
+            }
+            .divider {
+              background: linear-gradient(90deg, #003E86 0 28%, #019C9D 28% 100%);
+              height: 3px;
+              margin: 10px 0 18px;
+              width: 100%;
+            }
+            .eyebrow {
+              color: #019C9D;
+              font-size: 12px;
+              font-weight: 800;
+              letter-spacing: 0.16em;
+              margin-bottom: 8px;
+              text-align: center;
+              text-transform: uppercase;
+            }
+            h1 {
+              color: #003E86;
+              font-size: 30px;
+              font-weight: 800;
+              letter-spacing: 0.01em;
+              line-height: 1.05;
+              margin: 0 0 8px;
+              text-align: center;
+            }
+            .sub {
+              color: #6b7280;
+              font-size: 12px;
+              margin: 0 0 14px;
+              text-align: center;
+            }
+            .status-badge {
+              align-items: center;
+              border: 1.5px solid #019C9D;
+              border-radius: 999px;
+              color: #019C9D;
+              display: inline-flex;
+              font-size: 12px;
+              font-weight: 800;
+              gap: 8px;
+              margin: 0 auto 18px;
+              padding: 7px 14px;
+            }
+            .status-wrap {
+              text-align: center;
+            }
+            .status-icon {
+              align-items: center;
+              background: #019C9D;
+              border-radius: 50%;
+              color: #fff;
+              display: inline-flex;
+              font-size: 10px;
+              height: 18px;
+              justify-content: center;
+              width: 18px;
+            }
+            .details-card {
+              background: #f4f7fb;
+              border: 1px solid #e3eaf3;
+              border-radius: 14px;
+              margin-bottom: 18px;
+              padding: 6px 14px;
+            }
+            .detail-row {
+              align-items: center;
+              border-top: 1px dashed #d5dde8;
+              display: grid;
+              gap: 10px;
+              grid-template-columns: 34px 1fr auto;
+              min-height: 48px;
+              padding: 10px 0;
+            }
+            .detail-row:first-child { border-top: 0; }
+            .detail-icon {
+              align-items: center;
+              background: #e8f7f7;
+              border-radius: 50%;
+              display: inline-flex;
+              height: 34px;
+              justify-content: center;
+              width: 34px;
+            }
+            .detail-icon svg {
+              display: block;
+              height: 16px;
+              width: 16px;
+            }
+            .detail-label {
+              color: #6b7280;
+              font-size: 12px;
+              font-weight: 700;
+            }
+            .detail-value {
+              color: #003E86;
+              font-size: 12px;
+              font-weight: 800;
+              text-align: right;
+            }
+            .footer-divider {
+              align-items: center;
+              display: flex;
+              gap: 10px;
+              margin-bottom: 10px;
+            }
+            .footer-line {
+              background: #019C9D;
+              flex: 1;
+              height: 2px;
+            }
+            .footer-heart {
+              align-items: center;
+              background: #019C9D;
+              border-radius: 50%;
+              color: #fff;
+              display: inline-flex;
+              height: 24px;
+              justify-content: center;
+              width: 24px;
+            }
+            .footer-text {
+              color: #6b7280;
+              font-size: 12px;
+              margin: 0;
+              text-align: center;
+            }
+            .corner-art {
+              bottom: -8px;
+              height: 72px;
+              position: absolute;
+              right: -8px;
+              width: 110px;
+            }
+            @media print {
+              @page { margin: 0; size: auto; }
+              html, body {
+                height: auto;
+                min-height: auto;
+              }
+              body { padding: 10px 8px; }
+              .token {
+                max-width: none;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="token">
+            <div class="header">
+              <div class="brand">
+                ${logoMarkup}
+                <div class="brand-text">
+                  <strong>${this.escapeHtml(token.clinicName)}</strong>
+                  <span>${this.escapeHtml(token.clinicSubtitle)}</span>
+                </div>
+              </div>
+              ${this.headerDecorationSvg()}
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="eyebrow">Appointment Token</div>
+            <h1>${this.escapeHtml(token.appointmentNo)}</h1>
+            <p class="sub">Keep this token for your visit</p>
+            <div class="status-wrap">
+              <div class="status-badge">
+                <span class="status-icon">&#10003;</span>
+                <span>${this.escapeHtml(token.status)}</span>
+              </div>
+            </div>
+
+            <div class="details-card">
+              ${this.printableTokenDetailRow('Patient', token.patientName, 'patient')}
+              ${this.printableTokenDetailRow('Doctor', token.doctorName, 'doctor')}
+              ${this.printableTokenDetailRow('Department', token.departmentName, 'department')}
+              ${this.printableTokenDetailRow('Consultation Fee', token.consultationFee, 'fee')}
+              ${this.printableTokenDetailRow('Payment', token.paymentStatus, 'payment')}
+              ${this.printableTokenDetailRow('Date', token.appointmentDate, 'date')}
+              ${this.printableTokenDetailRow('Time', token.timeRange, 'time')}
+              ${this.printableTokenDetailRow('Printed At', token.printedAt, 'printed')}
+            </div>
+
+            <div class="footer-divider">
+              <span class="footer-line"></span>
+              <span class="footer-heart">${this.footerHeartSvg()}</span>
+              <span class="footer-line"></span>
+            </div>
+            <p class="footer-text">Please wait for your turn.</p>
+            ${this.cornerDecorationSvg()}
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  private printableTokenDetailRow(label: string, value: string, icon: string): string {
+    return `
+      <div class="detail-row">
+        <span class="detail-icon">${this.tokenRowIconSvg(icon)}</span>
+        <span class="detail-label">${this.escapeHtml(label)}</span>
+        <span class="detail-value">${this.escapeHtml(value || '-')}</span>
       </div>
     `;
+  }
+
+  private defaultClinicLogoSvg(): string {
+    return `
+      <svg class="logo-fallback" viewBox="0 0 52 52" aria-hidden="true">
+        <rect x="2" y="2" width="48" height="48" rx="10" fill="#019C9D"/>
+        <rect x="23" y="12" width="6" height="28" rx="2" fill="#fff"/>
+        <rect x="12" y="23" width="28" height="6" rx="2" fill="#fff"/>
+        <path d="M14 34 C18 30, 22 28, 26 30 C30 32, 34 30, 38 26" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      </svg>
+    `;
+  }
+
+  private headerDecorationSvg(): string {
+    return `
+      <svg class="header-art" viewBox="0 0 88 56" aria-hidden="true">
+        <path d="M58 8 C72 6, 82 14, 84 28" stroke="#b9e8e8" stroke-width="2" fill="none"/>
+        <path d="M52 16 C66 14, 76 22, 78 36" stroke="#d8f2f2" stroke-width="2" fill="none"/>
+        <path d="M68 18 C70 14, 76 12, 80 16 C84 20, 80 26, 76 26 C74 26, 72 24, 72 22 C72 20, 70 18, 68 18 Z" fill="#019C9D"/>
+        <path d="M72 22 L74 28 L80 28 L75 32 L77 38 L72 34 L67 38 L69 32 L64 28 L70 28 Z" fill="#019C9D" opacity="0.25"/>
+      </svg>
+    `;
+  }
+
+  private footerHeartSvg(): string {
+    return `
+      <svg viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">
+        <path d="M7 12 C4 9, 1.5 7, 1.5 4.5 C1.5 3, 2.7 2, 4 2 C5 2, 6 2.6, 7 3.6 C8 2.6, 9 2, 10 2 C11.3 2, 12.5 3, 12.5 4.5 C12.5 7, 10 9, 7 12 Z" fill="#fff"/>
+      </svg>
+    `;
+  }
+
+  private cornerDecorationSvg(): string {
+    return `
+      <svg class="corner-art" viewBox="0 0 110 72" aria-hidden="true">
+        <path d="M30 72 C55 58, 78 42, 110 18 L110 72 Z" fill="#019C9D" opacity="0.9"/>
+        <path d="M52 72 C72 60, 90 46, 110 30 L110 72 Z" fill="#003E86" opacity="0.95"/>
+      </svg>
+    `;
+  }
+
+  private tokenRowIconSvg(type: string): string {
+    const stroke = '#003E86';
+    const icons: Record<string, string> = {
+      patient: `<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="2.5" stroke="${stroke}" stroke-width="1.4"/><path d="M3.5 14c0-2.8 2-4.5 4.5-4.5S12.5 11.2 12.5 14" stroke="${stroke}" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+      doctor: `<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="4.8" r="2.2" stroke="${stroke}" stroke-width="1.3"/><path d="M3.8 13.5c0-2.4 1.8-3.8 4.2-3.8s4.2 1.4 4.2 3.8" stroke="${stroke}" stroke-width="1.3" stroke-linecap="round"/><path d="M11.2 7.2h1.6v1.6M12 6.4v3.2" stroke="${stroke}" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+      department: `<svg viewBox="0 0 16 16" fill="none"><path d="M2.5 14V5.5L8 2.5l5.5 3V14" stroke="${stroke}" stroke-width="1.3" stroke-linejoin="round"/><path d="M6 14v-4h4v4" stroke="${stroke}" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 7h3M6.5 9.5h3" stroke="${stroke}" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+      date: `<svg viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3.5" width="11" height="10" rx="1.5" stroke="${stroke}" stroke-width="1.3"/><path d="M2.5 6.5h11M5.5 2.5v2M10.5 2.5v2" stroke="${stroke}" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+      time: `<svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="${stroke}" stroke-width="1.3"/><path d="M8 5v3.2l2.2 1.3" stroke="${stroke}" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+      printed: `<svg viewBox="0 0 16 16" fill="none"><rect x="3" y="2.5" width="10" height="4" rx="1" stroke="${stroke}" stroke-width="1.2"/><path d="M3 8.5h10v4.5H3z" stroke="${stroke}" stroke-width="1.2"/><path d="M5.5 11.5h5" stroke="${stroke}" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+      fee: `<svg viewBox="0 0 16 16" fill="none"><rect x="2.5" y="4" width="11" height="8" rx="1.5" stroke="${stroke}" stroke-width="1.3"/><path d="M5 8h6M8 6v4" stroke="${stroke}" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+      payment: `<svg viewBox="0 0 16 16" fill="none"><rect x="2" y="4.5" width="12" height="7.5" rx="1.5" stroke="${stroke}" stroke-width="1.3"/><path d="M2 7h12" stroke="${stroke}" stroke-width="1.2"/><path d="M5 10.5h3.5" stroke="${stroke}" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    };
+
+    return icons[type] || icons['patient'];
+  }
+
+  private buildAppointmentWhatsAppMessage(token: AppointmentToken): string {
+    return [
+      `*${token.clinicName}*`,
+      token.clinicSubtitle,
+      '',
+      '*Appointment Token*',
+      token.appointmentNo,
+      '',
+      `Patient: ${token.patientName}`,
+      `Doctor: ${token.doctorName}`,
+      `Department: ${token.departmentName}`,
+      `Consultation Fee: ${token.consultationFee}`,
+      `Payment: ${token.paymentStatus}`,
+      `Date: ${token.appointmentDate}`,
+      `Time: ${token.timeRange}`,
+      `Status: ${token.status}`,
+      '',
+      'Please keep this token for your visit.',
+    ].join('\n');
   }
 
   private escapeHtml(value: string): string {
@@ -1316,30 +1664,11 @@ export class AppointmentComponent implements OnInit {
     }
 
     const token = this.buildAppointmentToken(appointment, appointment.patient, appointment.doctor);
-    const tokenHtml = `
-    <html>
-      <body>
-        <div>${this.printableTokenRow('Appointment', token.appointmentNo)}</div>
-        <div>${this.printableTokenRow('Patient', token.patientName)}</div>
-        <div>${this.printableTokenRow('Doctor', token.doctorName)}</div>
-        <div>${this.printableTokenRow('Department', token.departmentName)}</div>
-        <div>${this.printableTokenRow('Date', token.appointmentDate)}</div>
-        <div>${this.printableTokenRow('Time', token.timeRange)}</div>
-      </body>
-    </html>
-  `;
-
-    // Create a Blob URL
-    const blob = new Blob([tokenHtml], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-
-    // WhatsApp API link
     const phone = this.normalizePhone(appointment.patient.phone);
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(
-      `Your appointment details: ${url}`
+      this.buildAppointmentWhatsAppMessage(token)
     )}`;
 
-    // Open WhatsApp
     window.open(whatsappUrl, '_blank');
   }
 }
