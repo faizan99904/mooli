@@ -23,6 +23,14 @@ import {
   ProductCatalogItem,
   Prescription,
 } from '../../../shared/models/hospital.model';
+import {
+  buildVitalDisplayItems,
+  buildVitalTrendVisits,
+  getPatientAgeYears,
+  VitalDisplayItem,
+  VitalStatus,
+  VitalTrendVisit,
+} from './vitals-analytics';
 
 interface PrintPreviewData {
   patient: Patient;
@@ -100,6 +108,7 @@ export class PrescriptionComponent implements OnInit {
   medicineRowSuggestions: Record<number, MedicineSuggestionOption[]> = {};
   prescriptionForm: FormGroup;
   doctorMedicineForm: FormGroup;
+  vitalsModalForm: FormGroup;
   loading = false;
   saving = false;
   page = 1;
@@ -128,6 +137,10 @@ export class PrescriptionComponent implements OnInit {
   medicineLibraryLoading = false;
   savingDoctorMedicine = false;
   selectedMedicineRowIndex: number | null = null;
+  vitalsModalOpen = false;
+  vitalsTrendModalOpen = false;
+  vitalDisplayItems: VitalDisplayItem[] = [];
+  vitalTrendVisits: VitalTrendVisit[] = [];
   today = new Date();
   private medicineInputSearchTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private smartMedicineSearchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -165,6 +178,7 @@ export class PrescriptionComponent implements OnInit {
     temperature: 'Temperature',
     spo2: 'SpO2',
   };
+  readonly vitalTrendKeys = ['weight', 'bp', 'temperature', 'pulse', 'spo2'];
 
   constructor(
     private fb: FormBuilder,
@@ -213,6 +227,17 @@ export class PrescriptionComponent implements OnInit {
       name: ['', Validators.required],
       type: ['', Validators.required],
     });
+    this.vitalsModalForm = this.fb.group({
+      bp: [''],
+      pulse: [''],
+      weight: [''],
+      height: [''],
+      temperature: [''],
+      spo2: [''],
+      respiratoryRate: [''],
+      bloodSugar: [''],
+      notes: [''],
+    });
   }
 
   ngOnInit(): void {
@@ -239,6 +264,9 @@ export class PrescriptionComponent implements OnInit {
     this.loadLookups();
     this.loadPrescriptions();
     void this.syncOfflineWork(false);
+
+    this.vitalsGroup.valueChanges.subscribe(() => this.refreshVitalAnalytics());
+    this.customVitals.valueChanges.subscribe(() => this.refreshVitalAnalytics());
   }
 
   get medicines(): FormArray {
@@ -326,7 +354,185 @@ export class PrescriptionComponent implements OnInit {
   }
 
   addCustomVital(key = '', value = ''): void {
-    this.customVitals.push(this.createCustomVitalGroup(key, value));
+    this.openVitalsModal();
+  }
+
+  openVitalsModal(): void {
+    const vitals = this.vitalsGroup.getRawValue() as Record<string, string>;
+    const customMap = this.customVitalsToMap();
+
+    this.vitalsModalForm.reset({
+      bp: vitals['bp'] || '',
+      pulse: vitals['pulse'] || '',
+      weight: vitals['weight'] || '',
+      height: customMap['height'] || '',
+      temperature: vitals['temperature'] || '',
+      spo2: vitals['spo2'] || '',
+      respiratoryRate: customMap['respiratoryRate'] || customMap['respiratory_rate'] || '',
+      bloodSugar: customMap['bloodSugar'] || customMap['blood_sugar'] || '',
+      notes: customMap['notes'] || '',
+    });
+    this.vitalsModalOpen = true;
+  }
+
+  closeVitalsModal(): void {
+    this.vitalsModalOpen = false;
+  }
+
+  saveVitalsModal(): void {
+    const value = this.vitalsModalForm.getRawValue() as Record<string, string>;
+
+    this.vitalsGroup.patchValue({
+      bp: value['bp'] || '',
+      pulse: value['pulse'] || '',
+      weight: value['weight'] || '',
+      temperature: value['temperature'] || '',
+      spo2: value['spo2'] || '',
+    });
+
+    this.syncCustomVitalValue('height', value['height'] || '');
+    this.syncCustomVitalValue('respiratoryRate', value['respiratoryRate'] || '');
+    this.syncCustomVitalValue('bloodSugar', value['bloodSugar'] || '');
+    this.syncCustomVitalValue('notes', value['notes'] || '');
+
+    this.vitalsModalOpen = false;
+    this.refreshVitalAnalytics();
+  }
+
+  openVitalsTrendsModal(): void {
+    this.vitalTrendVisits = buildVitalTrendVisits(this.patientPrescriptionHistory());
+    this.vitalsTrendModalOpen = true;
+  }
+
+  closeVitalsTrendsModal(): void {
+    this.vitalsTrendModalOpen = false;
+  }
+
+  vitalStatusClass(status: VitalStatus): string {
+    return `vital-status-${status}`;
+  }
+
+  trendClass(item: VitalDisplayItem): string {
+    if (!item.trendText) {
+      return 'unknown';
+    }
+
+    if (item.status === 'critical') {
+      return 'critical';
+    }
+
+    if (item.status === 'warning') {
+      return 'warning';
+    }
+
+    if (item.status === 'watch') {
+      return 'watch';
+    }
+
+    if (item.trendDirection === 'up') {
+      return 'normal';
+    }
+
+    if (item.trendDirection === 'down') {
+      return item.key === 'weight' ? 'warning' : 'watch';
+    }
+
+    return 'normal';
+  }
+
+  trendVitalValue(visit: VitalTrendVisit, key: string): string {
+    const value = String(visit.vitals[key] || '').trim();
+    return value || '—';
+  }
+
+  trendSectionHasData(key: string): boolean {
+    return this.vitalTrendVisits.some((visit) => Boolean(String(visit.vitals[key] || '').trim()));
+  }
+
+  vitalTrendSectionLabel(key: string): string {
+    return this.defaultVitalLabels[key] || key;
+  }
+
+  hasVitalTrendData(): boolean {
+    return this.vitalTrendVisits.length > 0;
+  }
+
+  hasRecordedVitals(): boolean {
+    return this.vitalDisplayItems.some((item) => Boolean(item.value));
+  }
+
+  patientPrescriptionHistory(): Prescription[] {
+    const patientId = this.prescriptionForm.getRawValue().patientId || this.selectedPatientId;
+    if (!patientId) {
+      return [];
+    }
+
+    return [...this.prescriptions]
+      .filter((prescription) => prescription.patientId === patientId)
+      .sort(
+        (first, second) =>
+          new Date(second.createdAt || 0).getTime() - new Date(first.createdAt || 0).getTime()
+      );
+  }
+
+  refreshVitalAnalytics(): void {
+    const current = this.buildVitalsPayload(
+      this.vitalsGroup.getRawValue() as Record<string, unknown>,
+      this.customVitals.getRawValue() as Array<Record<string, unknown>>
+    );
+    const previous = this.getPreviousVisitVitals();
+    const patient = this.selectedPatient();
+
+    this.vitalDisplayItems = buildVitalDisplayItems(
+      current,
+      previous,
+      getPatientAgeYears(patient?.dateOfBirth || null)
+    );
+    this.vitalTrendVisits = buildVitalTrendVisits(this.patientPrescriptionHistory());
+  }
+
+  private getPreviousVisitVitals(): Record<string, string> {
+    const history = this.patientPrescriptionHistory();
+    const previousPrescription = history.find((prescription) => prescription._id !== this.editingId);
+    return (previousPrescription?.vitals as Record<string, string> | undefined) || {};
+  }
+
+  private customVitalsToMap(): Record<string, string> {
+    return (this.customVitals.getRawValue() as Array<Record<string, string>>).reduce(
+      (map, entry) => {
+        const key = String(entry['key'] || '').trim();
+        if (key) {
+          map[key] = String(entry['value'] || '').trim();
+        }
+        return map;
+      },
+      {} as Record<string, string>
+    );
+  }
+
+  private syncCustomVitalValue(key: string, value: string): void {
+    const normalizedKey = key.trim();
+    if (!normalizedKey) {
+      return;
+    }
+
+    const index = (this.customVitals.getRawValue() as Array<Record<string, string>>).findIndex(
+      (entry) => String(entry['key'] || '').trim() === normalizedKey
+    );
+
+    if (!String(value || '').trim()) {
+      if (index >= 0) {
+        this.customVitals.removeAt(index);
+      }
+      return;
+    }
+
+    if (index >= 0) {
+      this.customVitals.at(index).patchValue({ key: normalizedKey, value });
+      return;
+    }
+
+    this.customVitals.push(this.createCustomVitalGroup(normalizedKey, value));
   }
 
   removeCustomVital(index: number): void {
@@ -1130,6 +1336,7 @@ export class PrescriptionComponent implements OnInit {
     });
     this.loadDoctorMedicines();
     this.loadPrescriptions();
+    this.refreshVitalAnalytics();
   }
 
   editPrescription(prescription: Prescription): void {
@@ -1184,6 +1391,7 @@ export class PrescriptionComponent implements OnInit {
       this.addIvFluid();
     }
     this.loadDoctorMedicines();
+    this.refreshVitalAnalytics();
   }
 
   resetForm(): void {
@@ -1210,6 +1418,7 @@ export class PrescriptionComponent implements OnInit {
     this.applyRouteDefaults();
     this.selectInitialAppointment();
     this.loadDoctorMedicines();
+    this.refreshVitalAnalytics();
   }
 
   patientName(patient?: Patient | null): string {
@@ -1518,6 +1727,7 @@ export class PrescriptionComponent implements OnInit {
     const localPrescriptions = await this.localQueuedPrescriptions();
     this.prescriptions = this.mergePrescriptions([...localPrescriptions, ...items]);
     this.totalPages = totalPages;
+    this.refreshVitalAnalytics();
   }
 
   private async queuePrescription(payload: Record<string, unknown>, printAfterSave: boolean): Promise<void> {

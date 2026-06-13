@@ -61,21 +61,36 @@
             <label><input type="radio" formControlName="visitType" [value]="'follow_up'" /> Follow Up</label>
           </div>
 
-          <div class="vitals-card" [formGroup]="vitalsGroup">
+          <div class="vitals-card">
             <div class="vitals-head">
               <strong>Vitals</strong>
               <div class="vitals-head-actions">
                 <span>{{ currentTime() }}</span>
-                <button type="button" class="vital-add-btn" (click)="addCustomVital()" aria-label="Add custom vital">
+                <button type="button" class="vital-add-btn" (click)="openVitalsModal()" aria-label="Add vitals">
                   <i class="fa fa-plus-circle"></i>
                 </button>
               </div>
             </div>
-            <label>BP <input formControlName="bp" placeholder="120/80 mmHg" /></label>
-            <label>Pulse <input formControlName="pulse" placeholder="78 /min" /></label>
-            <label>Weight <input formControlName="weight" placeholder="72 Kg" /></label>
-            <label>Temperature <input formControlName="temperature" placeholder="98.6 F" /></label>
-            <label>SpO2 <input formControlName="spo2" placeholder="98%" /></label>
+
+            <button type="button" class="vital-display-row" *ngFor="let vital of vitalDisplayItems" (click)="openVitalsModal()">
+              <div class="vital-display-main">
+                <span class="vital-label">{{ vital.label }}</span>
+                <span class="vital-trend" [ngClass]="trendClass(vital)" *ngIf="vital.trendText">{{ vital.trendText }}</span>
+                <span class="vital-trend unknown" *ngIf="!vital.trendText && vital.value">No previous record</span>
+              </div>
+              <div class="vital-display-side">
+                <strong class="vital-value">{{ vital.displayValue }}</strong>
+                <span class="vital-status" [ngClass]="vitalStatusClass(vital.status)">{{ vital.statusLabel }}</span>
+              </div>
+            </button>
+
+            <div class="vitals-empty" *ngIf="!hasRecordedVitals()">
+              No vitals recorded yet. Tap + to add today's vitals.
+            </div>
+
+            <button type="button" class="vitals-trends-btn" (click)="openVitalsTrendsModal()" [disabled]="!hasVitalTrendData()">
+              View Trends
+            </button>
           </div>
 
           <div class="custom-vitals-card" formArrayName="customVitals" *ngIf="customVitals.length > 0">
@@ -618,6 +633,61 @@
 	            <p *ngFor="let line of preview.prescriptionFooterLines">{{ line }}</p>
 	          </footer>
         </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="vitalsModalOpen">
+    <form class="vitals-modal-dialog" [formGroup]="vitalsModalForm" (ngSubmit)="saveVitalsModal()">
+      <div class="medicine-library-header">
+        <div>
+          <h3>Add Vitals</h3>
+          <p>Record today's vitals and compare with the previous visit.</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeVitalsModal()">&times;</button>
+      </div>
+
+      <div class="vitals-modal-grid">
+        <label><span>Weight</span><input formControlName="weight" placeholder="12 Kg" /></label>
+        <label><span>Height</span><input formControlName="height" placeholder="95 cm" /></label>
+        <label><span>BP</span><input formControlName="bp" placeholder="120/80 mmHg" /></label>
+        <label><span>Pulse</span><input formControlName="pulse" placeholder="78 /min" /></label>
+        <label><span>Temperature</span><input formControlName="temperature" placeholder="98.6 F" /></label>
+        <label><span>SpO2</span><input formControlName="spo2" placeholder="98%" /></label>
+        <label><span>Respiratory Rate</span><input formControlName="respiratoryRate" placeholder="18 /min" /></label>
+        <label><span>Blood Sugar</span><input formControlName="bloodSugar" placeholder="90 mg/dL" /></label>
+        <label class="wide"><span>Notes</span><textarea formControlName="notes" placeholder="Vitals notes"></textarea></label>
+      </div>
+
+      <div class="medicine-library-footer">
+        <div>
+          <button type="button" class="btn-light" (click)="closeVitalsModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Vitals</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="vitalsTrendModalOpen">
+    <div class="vitals-trend-dialog">
+      <div class="medicine-library-header">
+        <div>
+          <h3>Vitals Trends</h3>
+          <p>Visit-wise vitals history for {{ patientName(selectedPatient()) }}</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeVitalsTrendsModal()">&times;</button>
+      </div>
+
+      <div class="vitals-trend-empty" *ngIf="!hasVitalTrendData()">
+        No previous vitals history found for this patient.
+      </div>
+
+      <div class="vitals-trend-section" *ngFor="let key of vitalTrendKeys" [hidden]="!trendSectionHasData(key)">
+        <h4>{{ vitalTrendSectionLabel(key) }}</h4>
+        <div class="vitals-trend-row" *ngFor="let visit of vitalTrendVisits">
+          <span>{{ visit.label }}</span>
+          <strong>{{ trendVitalValue(visit, key) }}</strong>
+        </div>
       </div>
     </div>
   </div>
