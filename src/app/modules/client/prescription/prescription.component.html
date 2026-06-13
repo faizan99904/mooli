@@ -61,36 +61,65 @@
             <label><input type="radio" formControlName="visitType" [value]="'follow_up'" /> Follow Up</label>
           </div>
 
-          <div class="vitals-card" [formGroup]="vitalsGroup">
+          <div class="vitals-card vitals-card-modern">
             <div class="vitals-head">
               <strong>Vitals</strong>
               <div class="vitals-head-actions">
                 <span>{{ currentTime() }}</span>
-                <button type="button" class="vital-add-btn" (click)="addCustomVital()" aria-label="Add custom vital">
+                <button type="button" class="vital-add-btn" (click)="openVitalsModal()" aria-label="Add vitals">
                   <i class="fa fa-plus-circle"></i>
                 </button>
               </div>
             </div>
-            <label>BP <input formControlName="bp" placeholder="120/80 mmHg" /></label>
-            <label>Pulse <input formControlName="pulse" placeholder="78 /min" /></label>
-            <label>Weight <input formControlName="weight" placeholder="72 Kg" /></label>
-            <label>Temperature <input formControlName="temperature" placeholder="98.6 F" /></label>
-            <label>SpO2 <input formControlName="spo2" placeholder="98%" /></label>
+
+            <button type="button" class="vital-sidebar-row" *ngFor="let vital of sidebarVitalItems" (click)="openVitalsModal()">
+              <span class="vital-icon" [ngClass]="'tone-' + vital.iconTone">
+                <i class="fa" [ngClass]="vital.icon"></i>
+              </span>
+              <div class="vital-sidebar-body">
+                <span class="vital-label">{{ vital.label }}</span>
+                <strong class="vital-value">{{ vital.displayValue }}</strong>
+                <span class="vital-trend" [ngClass]="vital.trendClass" *ngIf="vital.compactTrend">{{ vital.compactTrend }}</span>
+                <span class="vital-trend unknown" *ngIf="!vital.compactTrend && vital.value">No previous record</span>
+              </div>
+              <span class="vital-status" [ngClass]="vitalStatusClass(vital.status)">{{ vital.statusLabel }}</span>
+            </button>
+
+            <div class="vitals-empty" *ngIf="!hasRecordedVitals()">
+              No vitals recorded yet. Tap + to add today's vitals.
+            </div>
+
+            <button type="button" class="vitals-trends-btn" (click)="openVitalsTab()">
+              <i class="fa fa-chart-line"></i>
+              View Vitals Trends
+            </button>
+
+            <div class="vitals-alerts" *ngIf="vitalAlerts.length > 0">
+              <div class="vitals-alerts-head">
+                <strong>Alerts</strong>
+                <span class="vitals-alert-count">{{ vitalAlerts.length }}</span>
+              </div>
+              <ul>
+                <li *ngFor="let alert of vitalAlerts" [ngClass]="'alert-' + alert.severity">{{ alert.message }}</li>
+              </ul>
+            </div>
           </div>
 
-          <div class="custom-vitals-card" formArrayName="customVitals" *ngIf="customVitals.length > 0">
+          <div class="custom-vitals-card">
             <div class="custom-vital-row custom-vital-head">
-              <strong>Vital Name</strong>
-              <strong>Value</strong>
-              <span></span>
+              <strong>Custom Vitals</strong>
+              <button type="button" class="btn-light" (click)="openVitalsModalWithCustomRow()">+ Add Vital</button>
             </div>
-            <div class="custom-vital-row" *ngFor="let vital of customVitals.controls; let i = index" [formGroupName]="i">
-              <input formControlName="key" placeholder="Respiratory Rate" />
-              <input formControlName="value" placeholder="18 /min" />
-              <button type="button" (click)="removeCustomVital(i)" aria-label="Remove custom vital">
-                <i class="fa fa-trash"></i>
-              </button>
+
+            <div class="vitals-custom-empty" *ngIf="arbitraryCustomVitals().length === 0">
+              Add custom vitals like Pain Scale, GRBS, etc.
             </div>
+
+            <button type="button" class="custom-vital-display-row" *ngFor="let vital of arbitraryCustomVitals()"
+              (click)="openVitalsModal()">
+              <span>{{ formatCustomVitalLabel(vital.key) }}</span>
+              <strong>{{ vital.value }}</strong>
+            </button>
           </div>
         </div>
       </div>
@@ -158,6 +187,7 @@
         <div class="rx-tabs">
           <button type="button" [class.active]="activeTab === 'prescription'"
             (click)="activeTab = 'prescription'">Prescription</button>
+          <button type="button" [class.active]="activeTab === 'vitals'" (click)="activeTab = 'vitals'">Vitals</button>
           <button type="button" [class.active]="activeTab === 'lab'" (click)="activeTab = 'lab'">Lab Tests</button>
           <button type="button" [class.active]="activeTab === 'iv'" (click)="activeTab = 'iv'">Drips / IV
             Fluids</button>
@@ -167,7 +197,294 @@
             (click)="activeTab = 'history'">Documents</button>
         </div>
 
-        <div class="rx-content-grid">
+        <section class="vitals-dashboard-panel" *ngIf="activeTab === 'vitals'">
+          <div class="vitals-dashboard-head">
+            <h3>Vitals Trends</h3>
+            <div class="vitals-range-switch">
+              <button type="button" *ngFor="let range of vitalsTrendRanges"
+                [class.active]="vitalsTrendRange === range.key"
+                (click)="setVitalsTrendRange(range.key)">
+                {{ range.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="vitals-charts-grid">
+            <article class="vital-chart-card" *ngFor="let chart of vitalMiniCharts; trackBy: trackVitalChart">
+              <div class="vital-chart-card-head">
+                <strong>{{ chart.title }}</strong>
+                <div class="vital-chart-meta">
+                  <span class="vital-chart-latest">{{ chart.latestValue }}</span>
+                  <span class="vital-chart-trend" [ngClass]="chart.trendClass" *ngIf="chart.compactTrend">{{ chart.compactTrend }}</span>
+                </div>
+              </div>
+              <div class="vital-chart-body" *ngIf="chart.hasData; else emptyChart">
+                <apx-chart
+                  [series]="chart.apex.series"
+                  [chart]="chart.apex.chart"
+                  [stroke]="chart.apex.stroke"
+                  [markers]="chart.apex.markers"
+                  [xaxis]="chart.apex.xaxis"
+                  [yaxis]="vitalChartSharedYAxis"
+                  [grid]="vitalChartSharedGrid"
+                  [dataLabels]="vitalChartSharedDataLabels"
+                  [tooltip]="vitalChartSharedTooltip"
+                  [colors]="chart.apex.colors"
+                  [autoUpdateSeries]="false">
+                </apx-chart>
+              </div>
+              <ng-template #emptyChart>
+                <div class="vital-chart-empty">No data for selected range</div>
+              </ng-template>
+            </article>
+          </div>
+
+          <div class="vitals-history-panel">
+            <div class="vitals-history-head">
+              <h3>Vitals History</h3>
+              <button type="button" class="vitals-add-link" (click)="openVitalsModal()">
+                <i class="fa fa-plus-circle"></i>
+                Add New Vitals
+              </button>
+            </div>
+
+            <div class="vitals-history-empty" *ngIf="vitalHistoryRows.length === 0">
+              No vitals history found for this patient.
+            </div>
+
+            <div class="vitals-history-table-wrap" *ngIf="vitalHistoryRows.length > 0">
+              <table class="vitals-history-table">
+                <thead>
+                  <tr>
+                    <th>Date &amp; Time</th>
+                    <th>Weight (Kg)</th>
+                    <th>Height (cm)</th>
+                    <th>BP (mmHg)</th>
+                    <th>Pulse (/min)</th>
+                    <th>Temp (°F)</th>
+                    <th>SpO2 (%)</th>
+                    <th>Resp. Rate (/min)</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of vitalHistoryRows">
+                    <td>{{ row.dateTime }}</td>
+                    <td>
+                      <span class="history-cell">
+                        <small [ngClass]="historyTrendClass(row.trends['weight'])" *ngIf="historyTrendArrow(row.trends['weight'])">{{ historyTrendArrow(row.trends['weight']) }}</small>
+                        {{ row.weight }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="history-cell">
+                        <small [ngClass]="historyTrendClass(row.trends['height'])" *ngIf="historyTrendArrow(row.trends['height'])">{{ historyTrendArrow(row.trends['height']) }}</small>
+                        {{ row.height }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="history-cell">
+                        <small [ngClass]="historyTrendClass(row.trends['bp'])" *ngIf="historyTrendArrow(row.trends['bp'])">{{ historyTrendArrow(row.trends['bp']) }}</small>
+                        {{ row.bp }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="history-cell">
+                        <small [ngClass]="historyTrendClass(row.trends['pulse'])" *ngIf="historyTrendArrow(row.trends['pulse'])">{{ historyTrendArrow(row.trends['pulse']) }}</small>
+                        {{ row.pulse }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="history-cell">
+                        <small [ngClass]="historyTrendClass(row.trends['temperature'])" *ngIf="historyTrendArrow(row.trends['temperature'])">{{ historyTrendArrow(row.trends['temperature']) }}</small>
+                        {{ row.temperature }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="history-cell">
+                        <small [ngClass]="historyTrendClass(row.trends['spo2'])" *ngIf="historyTrendArrow(row.trends['spo2'])">{{ historyTrendArrow(row.trends['spo2']) }}</small>
+                        {{ row.spo2 }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="history-cell">
+                        <small [ngClass]="historyTrendClass(row.trends['respiratoryRate'])" *ngIf="historyTrendArrow(row.trends['respiratoryRate'])">{{ historyTrendArrow(row.trends['respiratoryRate']) }}</small>
+                        {{ row.respiratoryRate }}
+                      </span>
+                    </td>
+                    <td>{{ row.notes }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="lab-tests-dashboard-panel" *ngIf="activeTab === 'lab'">
+          <div class="lab-tests-dashboard-head">
+            <h3>Lab Tests</h3>
+            <button type="button" class="btn-light lab-add-btn" (click)="openLabTestModal()">+ Add Test</button>
+          </div>
+
+          <div class="lab-filter-tabs">
+            <button type="button" *ngFor="let filter of labTestFilters"
+              [class.active]="labTestFilter === filter.key"
+              (click)="setLabTestFilter(filter.key)">
+              {{ filter.label }}
+            </button>
+          </div>
+
+          <div class="lab-tests-table-wrap">
+            <table class="lab-tests-table">
+              <thead>
+                <tr>
+                  <th>Test</th>
+                  <th>Category</th>
+                  <th>Ordered On</th>
+                  <th>Status</th>
+                  <th>Result</th>
+                  <th>Report</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of filteredLabTestRows(); trackBy: trackLabTestRow"
+                  [class.selected]="row.id === selectedLabTestId"
+                  (click)="selectLabTestRow(row)">
+                  <td><strong>{{ row.name }}</strong></td>
+                  <td>{{ row.category }}</td>
+                  <td>{{ row.orderedOn }}</td>
+                  <td>
+                    <span class="lab-status-badge" [ngClass]="labStatusClass(row.status)">
+                      {{ labStatusLabel(row.status) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="lab-result-text" [ngClass]="row.resultClass">
+                      <small *ngIf="row.resultTrend">{{ row.resultTrend }}</small>
+                      {{ row.resultSummary }}
+                    </span>
+                  </td>
+                  <td>
+                    <button type="button" class="lab-report-btn" *ngIf="row.hasReport" (click)="selectLabTestRow(row); $event.stopPropagation()">
+                      <i class="fa fa-file-text-o"></i>
+                    </button>
+                    <span *ngIf="!row.hasReport">—</span>
+                  </td>
+                  <td>
+                    <div class="lab-actions">
+                      <button type="button" class="lab-action-btn" (click)="selectLabTestRow(row); $event.stopPropagation()">
+                        <i class="fa fa-eye"></i>
+                      </button>
+                      <button type="button" class="lab-action-btn" (click)="$event.stopPropagation()">
+                        <i class="fa fa-ellipsis-v"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="filteredLabTestRows().length === 0">
+                  <td colspan="7" class="lab-empty-row">No lab tests found for this filter.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <section class="lab-test-detail-panel" *ngIf="selectedLabTestRow() as selectedLab">
+            <div class="lab-test-detail-head">
+              <div>
+                <h4>{{ selectedLab.name }} - {{ selectedLab.fullName }}</h4>
+                <p *ngIf="selectedLab.completedOn">Completed on {{ selectedLab.completedOn }}</p>
+                <p *ngIf="!selectedLab.completedOn">Ordered on {{ selectedLab.orderedOn }}</p>
+              </div>
+              <button type="button" class="btn-light" *ngIf="selectedLab.hasReport">View Full Report</button>
+            </div>
+
+            <div class="lab-detail-empty" *ngIf="selectedLab.parameters.length === 0">
+              Detailed parameters will appear once this test is completed.
+            </div>
+
+            <div class="lab-parameters-table-wrap" *ngIf="selectedLab.parameters.length > 0">
+              <table class="lab-parameters-table">
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Result</th>
+                    <th>Unit</th>
+                    <th>Reference Range</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let parameter of selectedLab.parameters">
+                    <td>{{ parameter.name }}</td>
+                    <td><strong>{{ parameter.result }}</strong></td>
+                    <td>{{ parameter.unit }}</td>
+                    <td>{{ parameter.referenceRange }}</td>
+                    <td>
+                      <span class="lab-param-badge" [ngClass]="labParameterStatusClass(parameter.status)">
+                        {{ labParameterStatusLabel(parameter.status) }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="iv-fluids-dashboard-panel" *ngIf="activeTab === 'iv'">
+          <div class="iv-fluids-dashboard-head">
+            <h3>Drips / IV Fluids</h3>
+            <button type="button" class="btn-light iv-add-btn" (click)="openIvFluidModal()">+ Add Drip</button>
+          </div>
+
+          <div class="iv-fluids-table-wrap">
+            <table class="iv-fluids-table">
+              <thead>
+                <tr>
+                  <th>Fluid / Drip</th>
+                  <th>Rate</th>
+                  <th>Quantity</th>
+                  <th>Route</th>
+                  <th>Start Date / Time</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of ivFluidRows; trackBy: trackIvFluidRow">
+                  <td><strong>{{ row.name }}</strong></td>
+                  <td>{{ row.rate }}</td>
+                  <td>{{ row.quantity }}</td>
+                  <td>{{ row.route }}</td>
+                  <td>{{ row.startDateTime }}</td>
+                  <td>
+                    <span class="iv-status-badge" [ngClass]="ivFluidStatusClass(row.status)">
+                      {{ ivFluidStatusLabel(row.status) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="iv-fluid-actions">
+                      <button type="button" class="iv-action-btn" (click)="editIvFluidRow(row)">
+                        <i class="fa fa-pencil"></i>
+                      </button>
+                      <button type="button" class="iv-action-btn delete" *ngIf="row.source === 'form'"
+                        (click)="deleteIvFluidRow(row)">
+                        <i class="fa fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="iv-fluids-summary">
+            <strong>Total Active Drips: {{ totalActiveIvFluids() }}</strong>
+          </div>
+        </section>
+
+        <div class="rx-content-grid" *ngIf="activeTab === 'prescription'">
           <section class="medicines-section">
             <div class="section-heading">
               <h3>Medicines</h3>
@@ -327,41 +644,6 @@
           </section>
 
           <aside class="orders-section">
-            <section class="order-card">
-              <div class="section-heading">
-                <h3>Lab Tests</h3>
-                <button type="button" (click)="addCustomLabTest()">+ Add Test</button>
-              </div>
-              <div formArrayName="labTests">
-                <div class="lab-row lab-head"><span></span><strong>Test</strong><strong>Category</strong></div>
-                <label class="lab-row" *ngFor="let test of labTests.controls; let i = index" [formGroupName]="i">
-                  <input type="checkbox" formControlName="selected" />
-                  <input formControlName="name" />
-                  <input formControlName="category" />
-                </label>
-              </div>
-              <div class="custom-test">
-                <span>Others</span>
-                <input formControlName="customLabTest" placeholder="Type test name" />
-                <button type="button" (click)="addCustomLabTest()"><i class="fa fa-plus-circle"></i></button>
-              </div>
-            </section>
-
-            <section class="order-card" formArrayName="ivFluids">
-              <div class="section-heading">
-                <h3>Drips / IV Fluids</h3>
-                <button type="button" (click)="addIvFluid()">+ Add Drip</button>
-              </div>
-              <div class="fluid-row fluid-head"><strong>Fluid /
-                  Drip</strong><strong>Rate</strong><strong>Duration</strong><span></span></div>
-              <div class="fluid-row" *ngFor="let fluid of ivFluids.controls; let i = index" [formGroupName]="i">
-                <input formControlName="name" placeholder="DNS" />
-                <input formControlName="rate" placeholder="80 ml/hr" />
-                <input formControlName="duration" placeholder="500 ml" />
-                <button type="button" (click)="removeIvFluid(i)"><i class="fa fa-trash"></i></button>
-              </div>
-            </section>
-
             <section class="order-card admission-card" formGroupName="admissionOrders">
               <div class="section-heading">
                 <h3>Admission Orders</h3>
@@ -618,6 +900,169 @@
 	            <p *ngFor="let line of preview.prescriptionFooterLines">{{ line }}</p>
 	          </footer>
         </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="vitalsModalOpen">
+    <form class="vitals-modal-dialog" [formGroup]="vitalsModalForm" (ngSubmit)="saveVitalsModal()">
+      <div class="medicine-library-header">
+        <div>
+          <h3>Add Vitals</h3>
+          <p>Record today's vitals and compare with the previous visit.</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeVitalsModal()">&times;</button>
+      </div>
+
+      <div class="vitals-modal-grid">
+        <label><span>Weight</span><input formControlName="weight" placeholder="12 Kg" /></label>
+        <label><span>Height</span><input formControlName="height" placeholder="95 cm" /></label>
+        <label><span>BP</span><input formControlName="bp" placeholder="120/80 mmHg" /></label>
+        <label><span>Pulse</span><input formControlName="pulse" placeholder="78 /min" /></label>
+        <label><span>Temperature</span><input formControlName="temperature" placeholder="98.6 F" /></label>
+        <label><span>SpO2</span><input formControlName="spo2" placeholder="98%" /></label>
+        <label><span>Respiratory Rate</span><input formControlName="respiratoryRate" placeholder="18 /min" /></label>
+        <label><span>Blood Sugar</span><input formControlName="bloodSugar" placeholder="90 mg/dL" /></label>
+        <label class="wide"><span>Notes</span><textarea formControlName="notes" placeholder="Vitals notes"></textarea></label>
+      </div>
+
+      <div class="vitals-custom-section">
+        <div class="vitals-custom-head">
+          <div>
+            <strong>Custom Vitals</strong>
+            <small>Add any extra vital with name and value</small>
+          </div>
+          <button type="button" class="btn-light" (click)="addVitalsModalCustomRow()">+ Add Vital</button>
+        </div>
+
+        <div class="vitals-custom-rows" formArrayName="customRows">
+          <div class="vitals-custom-row" *ngFor="let vital of vitalsModalCustomVitals.controls; let i = index" [formGroupName]="i">
+            <input formControlName="key" placeholder="Vital name e.g. Pain Scale" />
+            <input formControlName="value" placeholder="Value e.g. 3/10" />
+            <button type="button" (click)="removeVitalsModalCustomRow(i)" aria-label="Remove custom vital">
+              <i class="fa fa-trash"></i>
+            </button>
+          </div>
+          <div class="vitals-custom-empty" *ngIf="vitalsModalCustomVitals.length === 0">
+            No custom vitals added yet.
+          </div>
+        </div>
+      </div>
+
+      <div class="medicine-library-footer">
+        <div>
+          <button type="button" class="btn-light" (click)="closeVitalsModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Vitals</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="vitalsTrendModalOpen">
+    <div class="vitals-trend-dialog">
+      <div class="medicine-library-header">
+        <div>
+          <h3>Vitals Trends</h3>
+          <p>Visit-wise vitals history for {{ patientName(selectedPatient()) }}</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeVitalsTrendsModal()">&times;</button>
+      </div>
+
+      <div class="vitals-trend-empty" *ngIf="!hasVitalTrendData()">
+        No previous vitals history found for this patient.
+      </div>
+
+      <div class="vitals-trend-section" *ngFor="let key of vitalTrendKeys" [hidden]="!trendSectionHasData(key)">
+        <h4>{{ vitalTrendSectionLabel(key) }}</h4>
+        <div class="vitals-trend-row" *ngFor="let visit of vitalTrendVisits">
+          <span>{{ visit.label }}</span>
+          <strong>{{ trendVitalValue(visit, key) }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="ivFluidModalOpen">
+    <div class="iv-fluid-modal-dialog">
+      <div class="medicine-library-header">
+        <div>
+          <h3>{{ editingIvFluidIndex !== null ? 'Edit Drip' : 'Add Drip' }}</h3>
+          <p>Configure IV fluid / drip details for this patient.</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeIvFluidModal()">&times;</button>
+      </div>
+
+      <form class="iv-fluid-modal-form" [formGroup]="ivFluidModalForm" (ngSubmit)="saveIvFluidModal()">
+        <label>
+          <span>Fluid / Drip</span>
+          <select formControlName="name">
+            <option value="">Select fluid</option>
+            <option *ngFor="let option of ivFluidOptions" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+
+        <div class="iv-fluid-modal-grid">
+          <label>
+            <span>Rate</span>
+            <input formControlName="rate" placeholder="80 ml/hr" />
+          </label>
+          <label>
+            <span>Quantity</span>
+            <input formControlName="quantity" placeholder="500 ml" />
+          </label>
+        </div>
+
+        <div class="iv-fluid-modal-grid">
+          <label>
+            <span>Route</span>
+            <input formControlName="route" placeholder="IV" />
+          </label>
+          <label>
+            <span>Status</span>
+            <select formControlName="status">
+              <option value="running">Running</option>
+              <option value="completed">Completed</option>
+              <option value="planned">Planned</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          <span>Start Date / Time</span>
+          <input type="datetime-local" formControlName="startDateTime" />
+        </label>
+
+        <div class="iv-fluid-modal-actions">
+          <button type="button" class="btn-light" (click)="closeIvFluidModal()">Cancel</button>
+          <button type="submit" class="btn-primary">{{ editingIvFluidIndex !== null ? 'Save Changes' : 'Add Drip' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="labTestModalOpen">
+    <div class="lab-test-modal-dialog">
+      <div class="medicine-library-header">
+        <div>
+          <h3>Add Lab Test</h3>
+          <p>Select a test to order for this patient.</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeLabTestModal()">&times;</button>
+      </div>
+
+      <div class="lab-test-picker-grid">
+        <button type="button" class="lab-test-picker-card" *ngFor="let test of labCatalogItems"
+          [disabled]="isLabTestAlreadyOrdered(test.name)"
+          (click)="orderLabTest(test.name, test.category)">
+          <strong>{{ test.name }}</strong>
+          <span>{{ test.category }}</span>
+          <small>{{ test.fullName }}</small>
+        </button>
+      </div>
+
+      <div class="lab-test-custom-add">
+        <input [(ngModel)]="labTestCustomInput" [ngModelOptions]="{ standalone: true }" placeholder="Other test name" />
+        <button type="button" class="btn-primary" (click)="addCustomLabTest()">Add Custom Test</button>
       </div>
     </div>
   </div>

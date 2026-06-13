@@ -140,6 +140,10 @@
                 </option>
               </select>
             </label>
+            <div class="consultation-fee-card" *ngIf="appointmentForm.value.doctorId">
+              <span>Consultation Fee</span>
+              <strong>{{ formatConsultationFee(selectedDoctorConsultationFee) }}</strong>
+            </div>
             <label>
               <span>Date *</span>
               <input type="date" formControlName="appointmentDate" />
@@ -151,6 +155,13 @@
                 <option value="Follow-up">Follow-up</option>
                 <option value="Walk-in">Walk-in</option>
                 <option value="Emergency">Emergency</option>
+              </select>
+            </label>
+            <label>
+              <span>Payment Status *</span>
+              <select formControlName="paymentStatus" (change)="onPaymentStatusChange()">
+                <option value="unpaid">Unpaid</option>
+                <option value="paid">Paid</option>
               </select>
             </label>
             <label>
@@ -170,6 +181,9 @@
                 <option value="cancelled">Cancelled</option>
                 <option value="no_show">No show</option>
               </select>
+              <small class="status-hint" *ngIf="appointmentForm.value.paymentStatus === 'paid'">
+                Payment paid — appointment will be confirmed automatically.
+              </small>
             </label>
           </div>
 
@@ -194,6 +208,55 @@
             <span>Notes (Optional)</span>
             <textarea formControlName="notes" placeholder="Internal notes..."></textarea>
           </label>
+
+          <section class="appointment-vitals-panel" *ngIf="selectedPatient">
+            <div class="appointment-vitals-head">
+              <div>
+                <strong>Patient Vitals</strong>
+                <small>Optional</small>
+              </div>
+              <button type="button" class="vital-add-btn" (click)="openVitalsModal()" aria-label="Add vitals">
+                <i class="fa fa-plus-circle"></i>
+              </button>
+            </div>
+
+            <button type="button" class="vital-display-row" *ngFor="let vital of vitalDisplayItems" (click)="openVitalsModal()">
+              <div class="vital-display-main">
+                <span class="vital-label">{{ vital.label }}</span>
+                <span class="vital-trend" [ngClass]="trendClass(vital)" *ngIf="vital.trendText">{{ vital.trendText }}</span>
+                <span class="vital-trend unknown" *ngIf="!vital.trendText && vital.value">No previous record</span>
+              </div>
+              <div class="vital-display-side">
+                <strong class="vital-value">{{ vital.displayValue }}</strong>
+                <span class="vital-status" [ngClass]="vitalStatusClass(vital.status)">{{ vital.statusLabel }}</span>
+              </div>
+            </button>
+
+            <div class="vitals-empty" *ngIf="!hasRecordedVitals()">
+              Vitals are optional. Tap + to record patient vitals for this visit.
+            </div>
+
+            <button type="button" class="vitals-trends-btn" (click)="openVitalsTrendsModal()" [disabled]="!hasVitalTrendData()">
+              View Trends
+            </button>
+
+            <div class="custom-vitals-card">
+              <div class="custom-vital-row custom-vital-head">
+                <strong>Custom Vitals</strong>
+                <button type="button" class="btn-light" (click)="openVitalsModalWithCustomRow()">+ Add Vital</button>
+              </div>
+
+              <div class="vitals-custom-empty" *ngIf="arbitraryCustomVitals().length === 0">
+                Add custom vitals like Pain Scale, GRBS, etc.
+              </div>
+
+              <button type="button" class="custom-vital-display-row" *ngFor="let vital of arbitraryCustomVitals()"
+                (click)="openVitalsModal()">
+                <span>{{ formatCustomVitalLabel(vital.key) }}</span>
+                <strong>{{ vital.value }}</strong>
+              </button>
+            </div>
+          </section>
 
           <div class="form-actions">
             <button class="btn-light" type="button" (click)="resetForm()">Cancel</button>
@@ -243,6 +306,8 @@
                 <th>Doctor</th>
                 <th>Department</th>
                 <th>Date & Time</th>
+                <th>Fee</th>
+                <th>Payment</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -270,6 +335,12 @@
                 </td>
                 <td>{{ appointment.department?.name || '-' }}</td>
                 <td>{{ shortDate(appointment.appointmentDate) }}<br />{{ appointmentTimeRange(appointment) }}</td>
+                <td>{{ formatConsultationFee(appointment.consultationFee) }}</td>
+                <td>
+                  <span class="payment-pill" [class.paid]="appointment.paymentStatus === 'paid'">
+                    {{ paymentStatusLabel(appointment.paymentStatus) }}
+                  </span>
+                </td>
                 <td>
                   <span class="status-pill" [ngClass]="appointmentStatusClass(appointment.status)">
                     {{ appointment.status.replace('_', ' ') }}
@@ -292,6 +363,9 @@
                       title="Delete">
                       <i class="fa fa-trash"></i>
                     </button>
+                    <button type="button" (click)="reprintAppointmentToken(appointment)" title="Print Token">
+                      <i class="fa fa-print"></i>
+                    </button>
                     <button type="button" *ngIf="appointment.patient?.phone"
                       (click)="sendAppointmentWhatsApp(appointment)" title="Send via WhatsApp">
                       <i class="fa fa-whatsapp"></i>
@@ -300,10 +374,10 @@
                 </td>
               </tr>
               <tr *ngIf="!loading && appointments.length === 0">
-                <td colspan="7" class="empty-row">No appointments found</td>
+                <td colspan="9" class="empty-row">No appointments found</td>
               </tr>
               <tr *ngIf="loading">
-                <td colspan="7" class="empty-row">Loading...</td>
+                <td colspan="9" class="empty-row">Loading...</td>
               </tr>
             </tbody>
           </table>
@@ -407,5 +481,81 @@
         </button>
       </div>
     </form>
+  </div>
+</div>
+
+<div class="modal-backdrop-custom" *ngIf="vitalsModalOpen">
+  <form class="vitals-modal-dialog" [formGroup]="vitalsModalForm" (ngSubmit)="saveVitalsModal()">
+    <div class="vitals-modal-header">
+      <div>
+        <h3>Add Vitals</h3>
+        <p>Optional — record vitals for this appointment.</p>
+      </div>
+      <button type="button" class="vitals-modal-close" (click)="closeVitalsModal()">&times;</button>
+    </div>
+
+    <div class="vitals-modal-grid">
+      <label><span>Weight</span><input formControlName="weight" placeholder="12 Kg" /></label>
+      <label><span>Height</span><input formControlName="height" placeholder="95 cm" /></label>
+      <label><span>BP</span><input formControlName="bp" placeholder="120/80 mmHg" /></label>
+      <label><span>Pulse</span><input formControlName="pulse" placeholder="78 /min" /></label>
+      <label><span>Temperature</span><input formControlName="temperature" placeholder="98.6 F" /></label>
+      <label><span>SpO2</span><input formControlName="spo2" placeholder="98%" /></label>
+      <label><span>Respiratory Rate</span><input formControlName="respiratoryRate" placeholder="18 /min" /></label>
+      <label><span>Blood Sugar</span><input formControlName="bloodSugar" placeholder="90 mg/dL" /></label>
+      <label class="wide"><span>Notes</span><textarea formControlName="notes" placeholder="Vitals notes"></textarea></label>
+    </div>
+
+    <div class="vitals-custom-section">
+      <div class="vitals-custom-head">
+        <div>
+          <strong>Custom Vitals</strong>
+          <small>Add any extra vital with name and value</small>
+        </div>
+        <button type="button" class="btn-light" (click)="addVitalsModalCustomRow()">+ Add Vital</button>
+      </div>
+
+      <div class="vitals-custom-rows" formArrayName="customRows">
+        <div class="vitals-custom-row" *ngFor="let vital of vitalsModalCustomVitals.controls; let i = index" [formGroupName]="i">
+          <input formControlName="key" placeholder="Vital name e.g. Pain Scale" />
+          <input formControlName="value" placeholder="Value e.g. 3/10" />
+          <button type="button" (click)="removeVitalsModalCustomRow(i)" aria-label="Remove custom vital">
+            <i class="fa fa-trash"></i>
+          </button>
+        </div>
+        <div class="vitals-custom-empty" *ngIf="vitalsModalCustomVitals.length === 0">
+          No custom vitals added yet.
+        </div>
+      </div>
+    </div>
+
+    <div class="vitals-modal-actions">
+      <button type="button" class="btn-light" (click)="closeVitalsModal()">Cancel</button>
+      <button type="submit" class="btn-confirm">Save Vitals</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal-backdrop-custom" *ngIf="vitalsTrendModalOpen">
+  <div class="vitals-trend-dialog">
+    <div class="vitals-modal-header">
+      <div>
+        <h3>Vitals Trends</h3>
+        <p>Visit-wise vitals history for {{ patientName(selectedPatient) }}</p>
+      </div>
+      <button type="button" class="vitals-modal-close" (click)="closeVitalsTrendsModal()">&times;</button>
+    </div>
+
+    <div class="vitals-trend-empty" *ngIf="!hasVitalTrendData()">
+      No previous vitals history found for this patient.
+    </div>
+
+    <div class="vitals-trend-section" *ngFor="let key of vitalTrendKeys" [hidden]="!trendSectionHasData(key)">
+      <h4>{{ vitalTrendSectionLabel(key) }}</h4>
+      <div class="vitals-trend-row" *ngFor="let visit of vitalTrendVisits">
+        <span>{{ visit.label }}</span>
+        <strong>{{ trendVitalValue(visit, key) }}</strong>
+      </div>
+    </div>
   </div>
 </div>

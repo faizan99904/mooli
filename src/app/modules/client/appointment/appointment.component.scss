@@ -465,6 +465,54 @@
   width: 100%;
 }
 
+.consultation-fee-card {
+  align-items: center;
+  background: linear-gradient(135deg, #e8f7f7, #f7fbff);
+  border: 1px solid #b9e8e8;
+  border-radius: 8px;
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 12px 14px;
+}
+
+.consultation-fee-card span {
+  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.consultation-fee-card strong {
+  color: #003E86;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.status-hint {
+  color: #019C9D;
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.payment-pill {
+  background: #fff7db;
+  border-radius: 999px;
+  color: #a15c00;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 12px;
+  text-transform: capitalize;
+}
+
+.payment-pill.paid {
+  background: #e8f7f7;
+  color: #003E86;
+}
+
 .slot-row {
   margin-top: 16px;
 }
@@ -850,6 +898,398 @@
   .patient-modal {
     padding: 14px;
   }
+}
+
+.appointment-vitals-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+}
+
+.appointment-vitals-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.appointment-vitals-head strong {
+  display: block;
+  font-size: 13px;
+}
+
+.appointment-vitals-head small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.vital-add-btn {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--green);
+  display: inline-flex;
+  font-size: 18px;
+  justify-content: center;
+  padding: 0;
+}
+
+.vital-display-row {
+  align-items: flex-start;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 8px 0;
+  text-align: left;
+  width: 100%;
+}
+
+.vital-display-row:first-of-type {
+  border-top: 0;
+}
+
+.vital-display-main {
+  display: grid;
+  gap: 3px;
+}
+
+.vital-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vital-value {
+  color: var(--ink);
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.vital-display-side {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+}
+
+.vital-status {
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  text-transform: capitalize;
+}
+
+.vital-status-normal {
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.vital-status-watch {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.vital-status-warning {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.vital-status-critical {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.vital-status-unknown {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.vital-trend {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.vital-trend.normal {
+  color: #16a34a;
+}
+
+.vital-trend.watch {
+  color: #f59e0b;
+}
+
+.vital-trend.warning,
+.vital-trend.critical {
+  color: #dc2626;
+}
+
+.vital-trend.unknown {
+  color: #64748b;
+}
+
+.vitals-empty {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 8px 0 4px;
+}
+
+.vitals-trends-btn {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 8px;
+  min-height: 30px;
+  width: 100%;
+}
+
+.vitals-trends-btn:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.vitals-modal-dialog,
+.vitals-trend-dialog {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 0.22);
+  max-height: 90vh;
+  max-width: 640px;
+  overflow: auto;
+  padding: 16px;
+  width: 100%;
+}
+
+.vitals-modal-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.vitals-modal-header h3 {
+  font-size: 17px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.vitals-modal-header p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.vitals-modal-close {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 22px;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
+  width: 34px;
+}
+
+.vitals-modal-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.vitals-modal-grid label {
+  display: grid;
+  gap: 4px;
+}
+
+.vitals-modal-grid label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vitals-modal-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.vitals-modal-grid input,
+.vitals-modal-grid textarea {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+  min-height: 32px;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.vitals-modal-grid textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.vitals-modal-grid textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.vitals-custom-section {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  margin-top: 14px;
+  padding-bottom: 4px;
+  padding-top: 14px;
+}
+
+.vitals-custom-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.vitals-custom-head strong {
+  display: block;
+  font-size: 13px;
+}
+
+.vitals-custom-head small {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.vitals-custom-rows {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.vitals-custom-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 34px;
+}
+
+.vitals-custom-row input {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.vitals-custom-row button {
+  align-items: center;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #dc2626;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.vitals-custom-empty {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 2px 0 8px;
+}
+
+.custom-vitals-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px 10px 12px;
+}
+
+.custom-vital-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.custom-vital-display-row {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.custom-vital-display-row span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.custom-vital-display-row strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.vitals-modal-actions {
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 0;
+  padding-top: 14px;
+}
+
+.vitals-trend-section {
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.vitals-trend-section h4 {
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.vitals-trend-row {
+  align-items: center;
+  display: grid;
+  font-size: 12px;
+  grid-template-columns: 1fr auto;
+  padding: 4px 0;
+}
+
+.vitals-trend-row strong {
+  color: var(--ink);
+}
+
+.vitals-trend-empty {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 12px 0;
 }
 
 
