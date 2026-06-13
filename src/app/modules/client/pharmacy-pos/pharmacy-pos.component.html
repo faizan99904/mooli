@@ -43,6 +43,10 @@
                 <button type="button" class="storepos-icon-btn" title="Pharmacy reports" (click)="openReports()">
                     <i class="fa fa-bar-chart"></i>
                 </button>
+                <button type="button" class="storepos-icon-btn" title="Shortcut controls"
+                    (click)="openShortcutInfo()">
+                    <i class="fa fa-info-circle"></i>
+                </button>
                 <button type="button" class="storepos-icon-btn storepos-warn" title="Close register"
                     [disabled]="!registerOpened || !canCloseRegister" (click)="openCloseRegister()">
                     <i class="fa fa-lock"></i>
@@ -174,7 +178,8 @@
                         <div class="qty-stepper">
                             <button type="button" data-kb-cart-cell (focus)="setCartCellFocus(i, 0)"
                                 (click)="decrementLineQty(i)">-</button>
-                            <input type="number" min="0" step="1" data-kb-cart-cell (focus)="setCartCellFocus(i, 1)"
+                            <input type="number" min="0" step="1" data-kb-cart-cell aria-label="Line quantity"
+                                (focus)="setCartCellFocus(i, 1)"
                                 [(ngModel)]="line.billQty" (ngModelChange)="onQtyChange(line)" />
                             <button type="button" data-kb-cart-cell (focus)="setCartCellFocus(i, 2)"
                                 (click)="incrementLineQty(i)">+</button>
@@ -188,7 +193,6 @@
                                         [value]="lineDiscountDisplayValue(i)" (focus)="setCartCellFocus(i, 4)"
                                         [max]="lineDiscountMaxValue(i)" title="Line discount"
                                         aria-label="Line discount value" (paste)="$event.preventDefault()"
-                                        (keydown)="handleLineDiscountKeydown(i, $event)"
                                         (input)="updateLineDiscountInput(i, $any($event.target).value)" />
                                 </div>
                             </ng-container>
@@ -347,41 +351,53 @@
 </div>
 
 <div class="modern-modal-backdrop" *ngIf="shortcutInfoOpen" (click)="closeShortcutInfo()">
-    <div class="modern-register-modal shortcut-modal" (click)="$event.stopPropagation()">
+    <div class="modern-register-modal modern-shortcuts-modal" (click)="$event.stopPropagation()">
         <div class="modern-register-head">
             <div class="modern-register-badge">
                 <i class="fa fa-keyboard-o"></i>
             </div>
             <div>
-                <strong>Keyboard Shortcuts</strong>
-                <span>Frontpanel-style POS controls for hospital pharmacy billing.</span>
+                <span>POS Controls</span>
+                <strong>Keyboard shortcuts</strong>
             </div>
-            <button type="button" class="modal-close" (click)="closeShortcutInfo()">×</button>
+            <button type="button" class="modal-close" (click)="closeShortcutInfo()"
+                aria-label="Close shortcut controls">×</button>
         </div>
 
-        <div class="modern-register-body">
-            <div class="shortcut-grid">
-                <div class="shortcut-card" *ngFor="let shortcut of shortcutDefinitions">
+        <div class="modern-register-body modern-shortcuts-body">
+            <div class="modern-shortcuts-summary">
+                <div>
+                    <span>Tip</span>
+                    <strong>Use function keys or combos like Ctrl+Shift+P.</strong>
+                </div>
+                <div>
+                    <span>Close</span>
+                    <strong>Press Esc to close any open POS overlay.</strong>
+                </div>
+            </div>
+
+            <div class="modern-shortcuts-list">
+                <div class="modern-shortcut-card" *ngFor="let shortcut of shortcutDefinitions">
                     <div>
                         <strong>{{ shortcut.label }}</strong>
                         <span>{{ shortcut.description }}</span>
                     </div>
-                    <kbd>{{ shortcut.defaultCombo }}</kbd>
-                </div>
-                <div class="shortcut-card">
-                    <div>
-                        <strong>Zone Navigation</strong>
-                        <span>Use Ctrl+1 Search, Ctrl+2 Catalog, Ctrl+3 Cart, Ctrl+4 Actions.</span>
+                    <div class="modern-shortcut-inputs">
+                        <label>
+                            <span>Shortcut</span>
+                            <input type="text" [ngModel]="shortcutBinding(shortcut.id)"
+                                (ngModelChange)="updateShortcutBinding(shortcut.id, $event)"
+                                [ngModelOptions]="{ standalone: true }" [placeholder]="shortcut.defaultCombo" />
+                        </label>
+                        <small>Default: {{ shortcut.defaultCombo }}</small>
                     </div>
-                    <kbd>Ctrl+1..4</kbd>
                 </div>
-                <div class="shortcut-card">
-                    <div>
-                        <strong>Move / Select</strong>
-                        <span>Use arrows to move, Enter/Space to select, +/- for quantity, Delete to remove.</span>
-                    </div>
-                    <kbd>Arrows</kbd>
-                </div>
+            </div>
+
+            <div class="modern-shortcuts-actions">
+                <button type="button" class="secondary" (click)="resetShortcutBindings()">Reset Defaults</button>
+                <button type="button" class="secondary" (click)="closeShortcutInfo()">Close</button>
+                <button type="button" (click)="saveShortcutBindings()">Save Controls</button>
             </div>
         </div>
     </div>

@@ -715,8 +715,9 @@
   font-weight: 900;
 }
 
-.shortcut-modal {
-  max-width: 760px;
+.modern-shortcuts-modal {
+  max-height: 92vh;
+  max-width: 920px;
 }
 
 .reports-card-grid {
@@ -772,48 +773,123 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.shortcut-grid {
+.modern-shortcuts-body {
   display: grid;
-  gap: 10px;
+  gap: 16px;
+}
+
+.modern-shortcuts-summary {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.shortcut-card {
-  align-items: center;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+.modern-shortcuts-summary div,
+.modern-shortcut-card {
+  background: #fff;
+  border: 1px solid #d5e0ea;
   border-radius: 8px;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  padding: 11px 12px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
 }
 
-.shortcut-card strong,
-.shortcut-card span {
+.modern-shortcuts-summary div {
+  padding: 14px 16px;
+}
+
+.modern-shortcuts-summary span,
+.modern-shortcut-card span,
+.modern-shortcut-inputs label span,
+.modern-shortcut-inputs small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.modern-shortcuts-summary strong,
+.modern-shortcut-card strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.modern-shortcuts-summary span,
+.modern-shortcuts-summary strong,
+.modern-shortcut-card strong,
+.modern-shortcut-card span {
   display: block;
 }
 
-.shortcut-card strong {
-  color: #111827;
+.modern-shortcuts-list {
+  display: grid;
+  gap: 12px;
+  max-height: 54vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.modern-shortcut-card {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
+  padding: 16px;
+}
+
+.modern-shortcut-card > div:first-child {
+  display: grid;
+  gap: 6px;
+}
+
+.modern-shortcut-inputs {
+  display: grid;
+  gap: 8px;
+}
+
+.modern-shortcut-inputs label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.modern-shortcut-inputs input {
+  background: #fff;
+  border: 1px solid #d5e0ea;
+  border-radius: 8px;
+  color: #0f172a;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 0 12px;
+  width: 100%;
 }
 
-.shortcut-card span {
-  color: #64748b;
-  font-size: 12px;
-  margin-top: 2px;
+.modern-shortcut-inputs input:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.14);
+  outline: 0;
 }
 
-.shortcut-card kbd {
-  background: #0f2832;
-  border-radius: 6px;
+.modern-shortcuts-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modern-shortcuts-actions button {
+  background: #003e86;
+  border: 1px solid #003e86;
+  border-radius: 7px;
   color: #fff;
-  font-size: 11px;
   font-weight: 900;
-  padding: 6px 8px;
-  white-space: nowrap;
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+.modern-shortcuts-actions button.secondary {
+  background: #fff;
+  border-color: #cbd5e1;
+  color: #334155;
 }
 
 .catalog-empty {
@@ -1339,6 +1415,7 @@
   .storepos-invoice-grid,
   .prescription-banner,
   .modern-register-summary,
+  .modern-shortcuts-summary,
   .reports-card-grid {
     grid-template-columns: 1fr;
   }
@@ -1359,5 +1436,13 @@
 
   .storepos-toolbar-icons {
     flex-wrap: wrap;
+  }
+
+  .modern-shortcut-card {
+    grid-template-columns: 1fr;
+  }
+
+  .modern-shortcuts-actions button {
+    flex: 1 1 100%;
   }
 }

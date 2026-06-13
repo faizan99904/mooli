@@ -137,6 +137,7 @@ export class PharmacyPosComponent implements OnInit {
   selectedCartCellIndex = 0;
   selectedDockIndex = 0;
   shortcutBindings: Record<string, string> = {};
+  private initialProductSearchFocused = false;
   openingAmount: number | null = null;
   openingNote = '';
   closingAmount: number | null = null;
@@ -252,6 +253,10 @@ export class PharmacyPosComponent implements OnInit {
       this.closeReceiptPreview();
       this.closeSaleHistory();
       this.closeCloseRegister();
+      return;
+    }
+
+    if (event.defaultPrevented) {
       return;
     }
 
@@ -566,6 +571,7 @@ export class PharmacyPosComponent implements OnInit {
     if (!this.canReadProducts) {
       this.products = [];
       this.rebuildPrescriptionBill();
+      this.focusInitialProductSearch();
       return;
     }
 
@@ -573,13 +579,19 @@ export class PharmacyPosComponent implements OnInit {
     if (!storeId) {
       this.products = [];
       this.rebuildPrescriptionBill();
+      this.focusInitialProductSearch();
       return;
     }
 
     this.productsLoading = true;
     this.backend
       .getProducts({ limit: 100, isActive: true, storeId })
-      .pipe(finalize(() => (this.productsLoading = false)))
+      .pipe(
+        finalize(() => {
+          this.productsLoading = false;
+          this.focusInitialProductSearch();
+        }),
+      )
       .subscribe({
         next: (result) => {
           this.products = result.items || [];
@@ -2235,6 +2247,10 @@ export class PharmacyPosComponent implements OnInit {
       return false;
     }
 
+    if (this.handleCartValueStepKeydown(event)) {
+      return true;
+    }
+
     if (
       this.isEditableTarget(event.target) &&
       !this.isCartKeyboardTarget(event.target)
@@ -2470,6 +2486,15 @@ export class PharmacyPosComponent implements OnInit {
     });
   }
 
+  private focusInitialProductSearch(): void {
+    if (this.initialProductSearchFocused) {
+      return;
+    }
+
+    this.initialProductSearchFocused = true;
+    this.focusProductSearch();
+  }
+
   private focusProductCard(index: number, focus = true): void {
     const products = this.filteredProducts();
     if (!products.length) {
@@ -2618,7 +2643,7 @@ export class PharmacyPosComponent implements OnInit {
       document.querySelectorAll<HTMLElement>(
         `[data-kb-cart-index="${index}"] [data-kb-cart-cell]`,
       ),
-    );
+    ).filter((element) => !element.hasAttribute('disabled'));
   }
 
   private clampKeyboardNavigationState(): void {
@@ -2695,7 +2720,7 @@ export class PharmacyPosComponent implements OnInit {
       return true;
     }
     if (this.shortcutInfoOpen) {
-      this.closeShortcutInfo();
+      this.saveShortcutBindings();
       return true;
     }
     if (!this.registerOpened && !this.registerClosed) {
@@ -2747,6 +2772,61 @@ export class PharmacyPosComponent implements OnInit {
     return Boolean(element?.closest?.('[data-kb-cart-index]'));
   }
 
+  private handleCartValueStepKeydown(event: KeyboardEvent): boolean {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+      return false;
+    }
+
+    const cartIndex = this.resolveCartIndexFromTarget(event.target);
+    if (cartIndex < 0) {
+      return false;
+    }
+
+    if (this.isQtyInputTarget(event.target)) {
+      event.preventDefault();
+      if (event.key === 'ArrowUp') {
+        this.incrementLineQty(cartIndex);
+      } else {
+        this.decrementLineQty(cartIndex);
+      }
+      this.focusCartCell(cartIndex, this.selectedCartCellIndex);
+      return true;
+    }
+
+    if (this.isDiscountInputTarget(event.target)) {
+      event.preventDefault();
+      this.stepLineDiscount(cartIndex, event.key === 'ArrowUp' ? 0.5 : -0.5);
+      this.focusCartCell(cartIndex, this.selectedCartCellIndex);
+      return true;
+    }
+
+    return false;
+  }
+
+  private resolveCartIndexFromTarget(target: EventTarget | null): number {
+    const element = target as HTMLElement | null;
+    const row = element?.closest?.(
+      '[data-kb-cart-index]',
+    ) as HTMLElement | null;
+    if (!row) {
+      return -1;
+    }
+
+    return Number(row.dataset['kbCartIndex'] ?? -1);
+  }
+
+  private isQtyInputTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    return Boolean(element?.matches?.('input[aria-label="Line quantity"]'));
+  }
+
+  private isDiscountInputTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    return Boolean(
+      element?.matches?.('input[aria-label="Line discount value"]'),
+    );
+  }
+
   private eventShortcutCombo(event: KeyboardEvent): string {
     const segments: string[] = [];
     if (event.ctrlKey) segments.push('Ctrl');
@@ -2760,9 +2840,69 @@ export class PharmacyPosComponent implements OnInit {
   private findShortcutAction(event: KeyboardEvent): string | undefined {
     const combo = this.eventShortcutCombo(event);
     return this.shortcutDefinitions.find(
-      (definition) =>
-        this.normalizeShortcutCombo(definition.defaultCombo) === combo,
+      (definition) => this.shortcutBindings[definition.id] === combo,
     )?.id;
+  }
+
+  private defaultShortcutBindings(): Record<string, string> {
+    return Object.fromEntries(
+      this.shortcutDefinitions.map((definition) => [
+        definition.id,
+        this.normalizeShortcutCombo(definition.defaultCombo),
+      ]),
+    );
+  }
+
+  private loadShortcutBindings(): void {
+    this.shortcutBindings = this.defaultShortcutBindings();
+
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem(this.shortcutBindingsStorageKey()) || 'null',
+      ) as Record<string, unknown> | null;
+      if (!stored) {
+        return;
+      }
+
+      this.shortcutBindings =
+        this.shortcutDefinitions.reduce<Record<string, string>>(
+          (bindings, definition) => {
+            bindings[definition.id] = this.normalizeShortcutCombo(
+              typeof stored[definition.id] === 'string'
+                ? (stored[definition.id] as string)
+                : definition.defaultCombo,
+            );
+            return bindings;
+          },
+          {},
+        );
+    } catch {
+      this.shortcutBindings = this.defaultShortcutBindings();
+      localStorage.removeItem(this.shortcutBindingsStorageKey());
+    }
+  }
+
+  private findShortcutConflicts(bindings: Record<string, string>): string[] {
+    const combos = new Map<string, string[]>();
+
+    this.shortcutDefinitions.forEach((definition) => {
+      const combo = bindings[definition.id];
+      if (!combo) {
+        return;
+      }
+
+      const labels = combos.get(combo) || [];
+      labels.push(definition.label);
+      combos.set(combo, labels);
+    });
+
+    return Array.from(combos.values())
+      .filter((labels) => labels.length > 1)
+      .flat();
+  }
+
+  private shortcutBindingsStorageKey(): string {
+    return 'mooli-pharmacy-pos-shortcuts-v1';
   }
 
   private normalizeShortcutCombo(value: string): string {
