@@ -749,25 +749,33 @@
                     <td>
                       <div class="slot-dose-cell">
                         <label class="tick-cell"><input type="checkbox" formControlName="morning" (change)="onSlotToggle(i, 'morning')" /><span></span></label>
-                        <input class="slot-dose-input" formControlName="morningDose" placeholder="Quantity" aria-label="Morning dose quantity" (input)="onSlotDoseInput(i, 'morning')" />
+                        <input class="slot-dose-input" formControlName="morningDose" placeholder="Quantity"
+                          aria-label="Morning dose quantity" [attr.data-slot-dose]="i + '-morning'"
+                          (input)="onSlotDoseInput(i, 'morning')" (keydown)="handleSlotDoseKeydown($event, i, 'morning')" />
                       </div>
                     </td>
                     <td>
                       <div class="slot-dose-cell">
                         <label class="tick-cell"><input type="checkbox" formControlName="noon" (change)="onSlotToggle(i, 'noon')" /><span></span></label>
-                        <input class="slot-dose-input" formControlName="noonDose" placeholder="Quantity" aria-label="Noon dose quantity" (input)="onSlotDoseInput(i, 'noon')" />
+                        <input class="slot-dose-input" formControlName="noonDose" placeholder="Quantity"
+                          aria-label="Noon dose quantity" [attr.data-slot-dose]="i + '-noon'"
+                          (input)="onSlotDoseInput(i, 'noon')" (keydown)="handleSlotDoseKeydown($event, i, 'noon')" />
                       </div>
                     </td>
                     <td>
                       <div class="slot-dose-cell">
                         <label class="tick-cell"><input type="checkbox" formControlName="evening" (change)="onSlotToggle(i, 'evening')" /><span></span></label>
-                        <input class="slot-dose-input" formControlName="eveningDose" placeholder="Quantity" aria-label="Evening dose quantity" (input)="onSlotDoseInput(i, 'evening')" />
+                        <input class="slot-dose-input" formControlName="eveningDose" placeholder="Quantity"
+                          aria-label="Evening dose quantity" [attr.data-slot-dose]="i + '-evening'"
+                          (input)="onSlotDoseInput(i, 'evening')" (keydown)="handleSlotDoseKeydown($event, i, 'evening')" />
                       </div>
                     </td>
                     <td>
                       <div class="slot-dose-cell">
                         <label class="tick-cell"><input type="checkbox" formControlName="night" (change)="onSlotToggle(i, 'night')" /><span></span></label>
-                        <input class="slot-dose-input" formControlName="nightDose" placeholder="Quantity" aria-label="Night dose quantity" (input)="onSlotDoseInput(i, 'night')" />
+                        <input class="slot-dose-input" formControlName="nightDose" placeholder="Quantity"
+                          aria-label="Night dose quantity" [attr.data-slot-dose]="i + '-night'"
+                          (input)="onSlotDoseInput(i, 'night')" (keydown)="handleSlotDoseKeydown($event, i, 'night')" />
                       </div>
                     </td>
                     <td><textarea class="instruction-input" formControlName="instructions" placeholder="Instructions"></textarea></td>

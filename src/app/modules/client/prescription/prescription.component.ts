@@ -1416,6 +1416,70 @@ export class PrescriptionComponent implements OnInit {
     }
   }
 
+  handleSlotDoseKeydown(event: KeyboardEvent, rowIndex: number, slot: DoseSlot): void {
+    const input = event.target as HTMLInputElement | null;
+    if (!input) {
+      return;
+    }
+
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const target = event.shiftKey
+        ? this.previousSlotDoseTarget(rowIndex, slot)
+        : this.nextSlotDoseTarget(rowIndex, slot);
+
+      if (target) {
+        this.focusSlotDoseInput(target.rowIndex, target.slot);
+      }
+      return;
+    }
+
+    if (event.key === 'Backspace' && !input.value) {
+      event.preventDefault();
+      const previous = this.previousSlotDoseTarget(rowIndex, slot);
+      if (previous) {
+        this.focusSlotDoseInput(previous.rowIndex, previous.slot);
+      }
+    }
+  }
+
+  private nextSlotDoseTarget(rowIndex: number, slot: DoseSlot): { rowIndex: number; slot: DoseSlot } | null {
+    const slots: DoseSlot[] = ['morning', 'noon', 'evening', 'night'];
+    const slotIndex = slots.indexOf(slot);
+
+    if (slotIndex < slots.length - 1) {
+      return { rowIndex, slot: slots[slotIndex + 1] };
+    }
+
+    if (rowIndex < this.medicines.length - 1) {
+      return { rowIndex: rowIndex + 1, slot: 'morning' };
+    }
+
+    return null;
+  }
+
+  private previousSlotDoseTarget(rowIndex: number, slot: DoseSlot): { rowIndex: number; slot: DoseSlot } | null {
+    const slots: DoseSlot[] = ['morning', 'noon', 'evening', 'night'];
+    const slotIndex = slots.indexOf(slot);
+
+    if (slotIndex > 0) {
+      return { rowIndex, slot: slots[slotIndex - 1] };
+    }
+
+    if (rowIndex > 0) {
+      return { rowIndex: rowIndex - 1, slot: 'night' };
+    }
+
+    return null;
+  }
+
+  private focusSlotDoseInput(rowIndex: number, slot: DoseSlot): void {
+    const selector = `input.slot-dose-input[data-slot-dose="${rowIndex}-${slot}"]`;
+    const element = document.querySelector(selector) as HTMLInputElement | null;
+    element?.focus();
+    element?.select();
+  }
+
   onSlotToggle(index: number, slot: DoseSlot): void {
     const group = this.medicines.at(index);
 
@@ -2289,6 +2353,10 @@ export class PrescriptionComponent implements OnInit {
   }
 
   selectAppointment(appointment: Appointment): void {
+    if (this.isCancelledAppointment(appointment)) {
+      return;
+    }
+
     this.selectedAppointmentId = appointment._id;
     this.selectedPatientId = appointment.patientId;
     this.prescriptionForm.patchValue({
@@ -2320,6 +2388,14 @@ export class PrescriptionComponent implements OnInit {
 
     this.backend.getAppointment(appointmentId).subscribe({
       next: (freshAppointment) => {
+        if (this.isCancelledAppointment(freshAppointment)) {
+          this.appointments = this.appointments.filter((item) => item._id !== freshAppointment._id);
+          if (this.selectedAppointmentId === freshAppointment._id) {
+            this.clearCancelledAppointmentSelection();
+          }
+          return;
+        }
+
         this.appointments = this.appointments.map((item) =>
           item._id === freshAppointment._id ? { ...item, ...freshAppointment } : item
         );
@@ -2622,7 +2698,7 @@ export class PrescriptionComponent implements OnInit {
 
   visibleAppointments(): Appointment[] {
     const query = this.patientSearch.trim().toLowerCase();
-    const source = this.appointments.filter((appointment) => this.isTodayAppointment(appointment));
+    const source = this.appointments.filter((appointment) => this.isPrescriptionAppointment(appointment));
 
     if (!query) {
       return source.slice(0, 8);
@@ -2701,7 +2777,7 @@ export class PrescriptionComponent implements OnInit {
   private async applyAppointmentList(items: Appointment[]): Promise<void> {
     const localAppointments = await this.localQueuedAppointments();
     this.appointments = this.mergeAppointments([...localAppointments, ...items]).filter((appointment) =>
-      this.isTodayAppointment(appointment),
+      this.isPrescriptionAppointment(appointment),
     );
   }
 
@@ -2990,9 +3066,15 @@ export class PrescriptionComponent implements OnInit {
   private selectInitialAppointment(): void {
     if (this.selectedAppointmentId) {
       const appointment = this.appointments.find((item) => item._id === this.selectedAppointmentId);
-      if (appointment) {
+      if (appointment && !this.isCancelledAppointment(appointment)) {
         this.selectAppointment(appointment);
+        return;
       }
+
+      if (appointment && this.isCancelledAppointment(appointment)) {
+        this.clearCancelledAppointmentSelection();
+      }
+
       return;
     }
 
@@ -3000,6 +3082,23 @@ export class PrescriptionComponent implements OnInit {
     if (firstAppointment && !this.prescriptionForm.value.patientId) {
       this.selectAppointment(firstAppointment);
     }
+  }
+
+  private clearCancelledAppointmentSelection(): void {
+    this.selectedAppointmentId = '';
+    this.prescriptionForm.patchValue({
+      appointmentId: '',
+      patientId: this.routePatientId || '',
+      doctorId: this.isDoctorUser() ? this.currentUserId || '' : this.routeDoctorId || '',
+    });
+  }
+
+  private isCancelledAppointment(appointment: Appointment): boolean {
+    return appointment.status === 'cancelled';
+  }
+
+  private isPrescriptionAppointment(appointment: Appointment): boolean {
+    return this.isTodayAppointment(appointment) && !this.isCancelledAppointment(appointment);
   }
 
   private isTodayAppointment(appointment: Appointment): boolean {
