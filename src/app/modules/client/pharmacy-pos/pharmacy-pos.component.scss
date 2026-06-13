@@ -80,7 +80,9 @@
 .storepos-search-box input.keyboard-active,
 .storepos-product-card.keyboard-active,
 .storepos-table-row.keyboard-active,
-.dock-actions button.keyboard-active {
+.dock-actions button.keyboard-active,
+.dock-payment input.keyboard-active,
+.dock-payment select.keyboard-active {
   box-shadow: 0 0 0 3px rgba(1, 156, 157, 0.22);
   outline: 2px solid #019c9d;
   outline-offset: 2px;

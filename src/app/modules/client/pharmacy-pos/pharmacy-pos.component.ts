@@ -144,6 +144,8 @@ export class PharmacyPosComponent implements OnInit {
   selectedDockIndex = 0;
   shortcutBindings: Record<string, string> = {};
   private initialProductSearchFocused = false;
+  private pendingPrintSearchFocus = false;
+  private printSearchFocusAttempts = 0;
   openingAmount: number | null = null;
   openingNote = '';
   closingAmount: number | null = null;
@@ -239,6 +241,18 @@ export class PharmacyPosComponent implements OnInit {
     void this.syncOfflineWork(false);
   }
 
+  @HostListener('window:focus')
+  handleWindowFocus(): void {
+    this.flushPendingPrintSearchFocus();
+  }
+
+  @HostListener('document:visibilitychange')
+  handleVisibilityChange(): void {
+    if (!document.hidden) {
+      this.flushPendingPrintSearchFocus();
+    }
+  }
+
   private loadCompanyProfile(): void {
     this.backend.getMyCompany().subscribe({
       next: (company) => {
@@ -263,6 +277,10 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     if (event.defaultPrevented) {
+      return;
+    }
+
+    if (this.handleOverlayTab(event)) {
       return;
     }
 
@@ -759,6 +777,7 @@ export class PharmacyPosComponent implements OnInit {
             this.openingAmount = Number(registerSession.openingAmount || 0);
           }
           this.loadRecentSales();
+          this.focusInitialProductSearch();
         },
         error: () => {
           void this.loadCachedRegisterState(storeId);
@@ -802,6 +821,7 @@ export class PharmacyPosComponent implements OnInit {
             `Register opened with ${this.formatCurrency(this.registerSession?.openingAmount || this.openingAmount || 0)}.`,
             'success',
           );
+          this.focusProductSearch(true);
         },
         error: (err) => {
           this.registerOpened = false;
@@ -826,6 +846,7 @@ export class PharmacyPosComponent implements OnInit {
     this.closingAmount = this.expectedClosingAmount;
     this.closeNote = '';
     this.closeRegisterOpen = true;
+    this.focusOverlayControl('[data-kb-closing-amount]', true);
   }
 
   closeCloseRegister(): void {
@@ -833,7 +854,11 @@ export class PharmacyPosComponent implements OnInit {
       return;
     }
 
+    const wasOpen = this.closeRegisterOpen;
     this.closeRegisterOpen = false;
+    if (wasOpen) {
+      this.restoreSearchFocusAfterOverlayClose();
+    }
   }
 
   async confirmCloseRegister(): Promise<void> {
@@ -909,8 +934,14 @@ export class PharmacyPosComponent implements OnInit {
     this.saleInvoiceNo = '';
     this.billLines = [];
     this.unavailableMedicines = [];
+    this.selectedProductIndex = 0;
     this.loadProducts();
     this.refreshRegisterState();
+  }
+
+  onProductSearchChange(): void {
+    this.selectedProductIndex = 0;
+    this.clampKeyboardNavigationState();
   }
 
   handleProductSearchEnter(event: Event): void {
@@ -919,6 +950,8 @@ export class PharmacyPosComponent implements OnInit {
     if (product) {
       this.addProduct(product);
       this.productSearch = '';
+      this.selectedProductIndex = 0;
+      this.focusProductSearch();
     }
   }
 
@@ -934,6 +967,10 @@ export class PharmacyPosComponent implements OnInit {
     this.unavailableMedicines = [];
     this.saleInvoiceNo = '';
     this.productSearch = '';
+    this.selectedProductIndex = 0;
+    this.selectedCartIndex = 0;
+    this.selectedCartCellIndex = 0;
+    this.selectedDockIndex = 0;
     this.paidAmount = '0';
     this.cashReceivedAmount = '0';
   }
@@ -941,10 +978,15 @@ export class PharmacyPosComponent implements OnInit {
   openSaleHistory(): void {
     this.saleHistoryOpen = true;
     this.loadRecentSales();
+    this.focusOverlayControl('.sale-history-modal .modal-close');
   }
 
   closeSaleHistory(): void {
+    const wasOpen = this.saleHistoryOpen;
     this.saleHistoryOpen = false;
+    if (wasOpen) {
+      this.restoreSearchFocusAfterOverlayClose();
+    }
   }
 
   openReports(): void {
@@ -956,7 +998,11 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   closeReports(): void {
+    const wasOpen = this.reportsOpen;
     this.reportsOpen = false;
+    if (wasOpen) {
+      this.restoreSearchFocusAfterOverlayClose();
+    }
   }
 
   openCurrentBillPreview(): void {
@@ -965,26 +1011,36 @@ export class PharmacyPosComponent implements OnInit {
       return;
     }
 
-    this.receiptPreview = this.buildReceiptFromCurrentCart();
-    this.receiptPreviewOpen = true;
+    this.showReceiptPreview(this.buildReceiptFromCurrentCart());
   }
 
   openSaleReceipt(sale: Sale): void {
-    this.receiptPreview = this.buildReceiptFromSale(sale);
-    this.receiptPreviewOpen = true;
+    this.showReceiptPreview(this.buildReceiptFromSale(sale));
   }
 
   closeReceiptPreview(): void {
+    const wasOpen = this.receiptPreviewOpen;
     this.receiptPreviewOpen = false;
     this.receiptPreview = null;
+    if (wasOpen) {
+      this.restoreSearchFocusAfterOverlayClose();
+    }
   }
 
   openShortcutInfo(): void {
     this.shortcutInfoOpen = true;
+    this.focusOverlayControl(
+      '.modern-shortcuts-modal .modern-shortcut-inputs input',
+      true,
+    );
   }
 
   closeShortcutInfo(): void {
+    const wasOpen = this.shortcutInfoOpen;
     this.shortcutInfoOpen = false;
+    if (wasOpen) {
+      this.restoreSearchFocusAfterOverlayClose();
+    }
   }
 
   shortcutBinding(id: string): string {
@@ -1374,8 +1430,7 @@ export class PharmacyPosComponent implements OnInit {
           this.saleInvoiceNo = response.data?.sale?.invoiceNo || '';
           const completedSale = response.data?.sale || null;
           if (completedSale) {
-            this.receiptPreview = this.buildReceiptFromSale(completedSale);
-            this.receiptPreviewOpen = true;
+            this.showReceiptPreview(this.buildReceiptFromSale(completedSale));
           }
           this.showPosMessage(
             this.saleInvoiceNo
@@ -1385,6 +1440,8 @@ export class PharmacyPosComponent implements OnInit {
           );
           this.billLines = [];
           this.unavailableMedicines = [];
+          this.productSearch = '';
+          this.selectedProductIndex = 0;
           this.paidAmount = '0';
           this.cashReceivedAmount = '0';
           this.loadProducts();
@@ -1593,16 +1650,54 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private openReceiptPrintWindow(receipt: ReceiptPreviewData): void {
-    const popup = window.open('', '_blank', 'width=420,height=760,noopener');
+    const popup = window.open('', '_blank', 'width=420,height=760');
     if (!popup) {
       this.toastr.error('Allow popups to print the receipt.');
       return;
     }
 
+    this.receiptPreviewOpen = false;
+    this.receiptPreview = null;
+
+    let focusRestored = false;
+    let closedPoll: number | undefined;
+    const restoreSearchFocus = () => {
+      if (focusRestored) {
+        return;
+      }
+
+      focusRestored = true;
+      if (closedPoll !== undefined) {
+        window.clearInterval(closedPoll);
+      }
+      try {
+        if (!popup.closed) {
+          popup.close();
+        }
+      } catch {
+        // The print context may already be unavailable.
+      }
+      window.focus();
+      this.schedulePrintSearchFocus();
+    };
+
+    popup.onafterprint = restoreSearchFocus;
     popup.document.write(this.receiptHtml(receipt));
     popup.document.close();
-    popup.focus();
-    setTimeout(() => popup.print(), 250);
+    window.setTimeout(() => {
+      try {
+        popup.focus();
+        popup.print();
+      } catch {
+        restoreSearchFocus();
+      }
+    }, 250);
+
+    closedPoll = window.setInterval(() => {
+      if (popup.closed) {
+        restoreSearchFocus();
+      }
+    }, 250);
   }
 
   private receiptHtml(receipt: ReceiptPreviewData): string {
@@ -1777,6 +1872,7 @@ export class PharmacyPosComponent implements OnInit {
       this.openingAmount = Number(this.registerSession.openingAmount || 0);
     }
     this.loadRecentSales();
+    this.focusInitialProductSearch();
   }
 
   private async loadCachedRecentSales(storeId: string): Promise<void> {
@@ -1816,10 +1912,11 @@ export class PharmacyPosComponent implements OnInit {
 
     this.recentSales = this.mergeSales([sale, ...this.recentSales]);
     this.saleInvoiceNo = invoiceNo;
-    this.receiptPreview = receipt;
-    this.receiptPreviewOpen = true;
+    this.showReceiptPreview(receipt);
     this.billLines = [];
     this.unavailableMedicines = [];
+    this.productSearch = '';
+    this.selectedProductIndex = 0;
     this.paidAmount = '0';
     this.cashReceivedAmount = '0';
     this.saleSaving = false;
@@ -2385,13 +2482,33 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     if (this.isSearchInputTarget(event.target)) {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        this.focusProductCard(this.selectedProductIndex || 0);
-        return true;
+      switch (event.key) {
+        case 'ArrowDown':
+          event.preventDefault();
+          this.focusProductCard(0);
+          return true;
+        case 'ArrowUp':
+          event.preventDefault();
+          this.focusProductCard(this.filteredProducts().length - 1);
+          return true;
+        case 'Tab':
+          event.preventDefault();
+          if (event.shiftKey) {
+            const dockIndexes = this.availableActionDockIndexes();
+            if (dockIndexes.length) {
+              this.focusActionDockButton(dockIndexes.at(-1) || 0);
+            }
+          } else if (this.filteredProducts().length) {
+            this.focusProductCard(0);
+          } else if (this.billLines.length) {
+            this.focusCartRow(this.selectedCartIndex);
+          } else {
+            this.focusActionDockButton(this.selectedDockIndex);
+          }
+          return true;
+        default:
+          return false;
       }
-
-      return false;
     }
 
     if (this.handleCartValueStepKeydown(event)) {
@@ -2450,12 +2567,15 @@ export class PharmacyPosComponent implements OnInit {
         }
         return true;
       case 'Tab':
-        if (!event.shiftKey) {
-          event.preventDefault();
+        event.preventDefault();
+        if (event.shiftKey) {
+          this.focusProductSearch(true);
+        } else if (this.billLines.length) {
           this.focusCartRow(this.selectedCartIndex);
-          return true;
+        } else {
+          this.focusActionDockButton(this.selectedDockIndex);
         }
-        return false;
+        return true;
       default:
         return false;
     }
@@ -2550,11 +2670,15 @@ export class PharmacyPosComponent implements OnInit {
       case 'Tab':
         event.preventDefault();
         if (event.shiftKey) {
-          this.focusCartRow(
-            cartIndexes[Math.max(currentPosition - 1, 0)],
-            true,
-            this.selectedCartCellIndex,
-          );
+          if (currentPosition > 0) {
+            this.focusCartRow(
+              cartIndexes[currentPosition - 1],
+              true,
+              this.selectedCartCellIndex,
+            );
+          } else {
+            this.focusProductCard(this.selectedProductIndex || 0);
+          }
         } else if (currentPosition < cartIndexes.length - 1) {
           this.focusCartRow(
             cartIndexes[currentPosition + 1],
@@ -2603,12 +2727,19 @@ export class PharmacyPosComponent implements OnInit {
         this.triggerActiveActionDockButton();
         return true;
       case 'Tab':
-        if (!event.shiftKey) {
-          event.preventDefault();
+        event.preventDefault();
+        if (event.shiftKey) {
+          if (currentPosition > 0) {
+            this.focusActionDockButton(dockIndexes[currentPosition - 1]);
+          } else {
+            this.focusCartRow(this.selectedCartIndex);
+          }
+        } else if (currentPosition < dockIndexes.length - 1) {
+          this.focusActionDockButton(dockIndexes[currentPosition + 1]);
+        } else {
           this.focusProductSearch(true);
-          return true;
         }
-        return false;
+        return true;
       default:
         return false;
     }
@@ -2633,13 +2764,111 @@ export class PharmacyPosComponent implements OnInit {
     });
   }
 
+  private schedulePrintSearchFocus(): void {
+    this.pendingPrintSearchFocus = true;
+    this.printSearchFocusAttempts = 0;
+    this.flushPendingPrintSearchFocus();
+  }
+
+  private flushPendingPrintSearchFocus(): void {
+    if (!this.pendingPrintSearchFocus) {
+      return;
+    }
+
+    if (this.anyOverlayOpen()) {
+      this.pendingPrintSearchFocus = false;
+      this.printSearchFocusAttempts = 0;
+      return;
+    }
+
+    const input = document.querySelector(
+      '.storepos-search-box input[type="search"]',
+    ) as HTMLInputElement | null;
+    if (!input) {
+      this.pendingPrintSearchFocus = false;
+      this.printSearchFocusAttempts = 0;
+      return;
+    }
+
+    this.printSearchFocusAttempts += 1;
+    this.focusProductSearch();
+
+    window.setTimeout(() => {
+      if (document.activeElement === input) {
+        this.pendingPrintSearchFocus = false;
+        this.printSearchFocusAttempts = 0;
+        return;
+      }
+
+      if (this.anyOverlayOpen()) {
+        this.pendingPrintSearchFocus = false;
+        this.printSearchFocusAttempts = 0;
+        return;
+      }
+
+      if (this.printSearchFocusAttempts >= 8) {
+        this.pendingPrintSearchFocus = false;
+        this.printSearchFocusAttempts = 0;
+        return;
+      }
+
+      if (!document.hidden) {
+        this.flushPendingPrintSearchFocus();
+      }
+    }, 120);
+  }
+
   private focusInitialProductSearch(): void {
     if (this.initialProductSearchFocused) {
       return;
     }
 
+    if (!this.registerOpened && !this.registerClosed) {
+      this.focusOverlayControl('[data-kb-opening-amount]', true);
+      return;
+    }
+
     this.initialProductSearchFocused = true;
     this.focusProductSearch();
+  }
+
+  private showReceiptPreview(receipt: ReceiptPreviewData): void {
+    this.receiptPreview = receipt;
+    this.receiptPreviewOpen = true;
+    this.focusOverlayControl('[data-kb-receipt-print]');
+  }
+
+  private focusOverlayControl(
+    selector: string,
+    selectText = false,
+    attempt = 0,
+  ): void {
+    window.setTimeout(() => {
+      const element = document.querySelector(selector) as HTMLElement | null;
+      if (!element) {
+        if (attempt < 7) {
+          this.focusOverlayControl(selector, selectText, attempt + 1);
+        }
+        return;
+      }
+
+      element.focus();
+      if (selectText && element instanceof HTMLInputElement) {
+        element.select();
+      }
+    }, attempt === 0 ? 0 : 50);
+  }
+
+  private restoreSearchFocusAfterOverlayClose(): void {
+    window.setTimeout(() => {
+      const overlay = this.activeOverlayModal();
+      if (overlay) {
+        this.overlayFocusableElements(overlay)[0]?.focus();
+        return;
+      }
+
+      this.focusProductSearch(true);
+    });
   }
 
   private focusProductCard(index: number, focus = true): void {
@@ -2780,6 +3009,11 @@ export class PharmacyPosComponent implements OnInit {
     return Array.from(
       document.querySelectorAll<HTMLElement>('[data-kb-dock-index]'),
     )
+      .filter(
+        (element) =>
+          !element.hasAttribute('disabled') &&
+          element.getAttribute('aria-disabled') !== 'true',
+      )
       .map((element) => Number(element.dataset['kbDockIndex']))
       .filter((index) => Number.isFinite(index))
       .sort((first, second) => first - second);
@@ -2828,6 +3062,68 @@ export class PharmacyPosComponent implements OnInit {
       `[data-kb-dock-index="${this.selectedDockIndex}"]`,
     ) as HTMLElement | null;
     element?.click();
+  }
+
+  private handleOverlayTab(event: KeyboardEvent): boolean {
+    if (event.key !== 'Tab' || !this.anyOverlayOpen()) {
+      return false;
+    }
+
+    const overlay = this.activeOverlayModal();
+    if (!overlay) {
+      return false;
+    }
+
+    const focusable = this.overlayFocusableElements(overlay);
+    if (!focusable.length) {
+      event.preventDefault();
+      return true;
+    }
+
+    const currentIndex = focusable.indexOf(
+      document.activeElement as HTMLElement,
+    );
+    if (currentIndex < 0) {
+      event.preventDefault();
+      focusable[event.shiftKey ? focusable.length - 1 : 0].focus();
+      return true;
+    }
+
+    if (event.shiftKey && currentIndex === 0) {
+      event.preventDefault();
+      focusable[focusable.length - 1].focus();
+      return true;
+    }
+
+    if (!event.shiftKey && currentIndex === focusable.length - 1) {
+      event.preventDefault();
+      focusable[0].focus();
+      return true;
+    }
+
+    return false;
+  }
+
+  private activeOverlayModal(): HTMLElement | null {
+    const overlays = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '.modern-modal-backdrop .modern-register-modal',
+      ),
+    ).filter((element) => element.getClientRects().length > 0);
+
+    return overlays[overlays.length - 1] || null;
+  }
+
+  private overlayFocusableElements(overlay: HTMLElement): HTMLElement[] {
+    return Array.from(
+      overlay.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter(
+      (element) =>
+        element.getClientRects().length > 0 &&
+        element.getAttribute('aria-hidden') !== 'true',
+    );
   }
 
   private handleOverlayEnter(event: KeyboardEvent): boolean {

@@ -7,6 +7,7 @@
                     <i class="fa fa-search"></i>
                     <input type="search" [(ngModel)]="productSearch" placeholder="Product name / SKU / scan barcode"
                         [class.keyboard-active]="keyboardZone === 'search'" (focus)="setKeyboardZone('search')"
+                        (ngModelChange)="onProductSearchChange()"
                         (keydown.enter)="handleProductSearchEnter($event)" />
                     <i class="fa fa-barcode"></i>
                 </label>
@@ -267,7 +268,9 @@
             <div class="dock-payment">
                 <label>
                     Payment
-                    <select [(ngModel)]="paymentMethod">
+                    <select [(ngModel)]="paymentMethod" data-kb-dock-index="0"
+                        [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 0"
+                        (focus)="setKeyboardZone('actions', 0)">
                         <option value="cash">Cash</option>
                         <option value="card">Card</option>
                         <option value="bank">Bank</option>
@@ -278,11 +281,15 @@
                 </label>
                 <label>
                     Paid
-                    <input type="number" min="0" [(ngModel)]="paidAmount" />
+                    <input type="number" min="0" [(ngModel)]="paidAmount" data-kb-dock-index="1"
+                        [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 1"
+                        (focus)="setKeyboardZone('actions', 1)" />
                 </label>
                 <label *ngIf="paymentMethod === 'cash'">
                     Cash Received
-                    <input type="number" min="0" [(ngModel)]="cashReceivedAmount" />
+                    <input type="number" min="0" [(ngModel)]="cashReceivedAmount" data-kb-dock-index="2"
+                        [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 2"
+                        (focus)="setKeyboardZone('actions', 2)" />
                 </label>
                 <div class="change-due" *ngIf="paymentMethod === 'cash'">
                     Change <strong>{{ formatCurrency(changeDueAmount) }}</strong>
@@ -290,13 +297,13 @@
             </div>
 
             <div class="dock-actions">
-                <button type="button" class="cash-btn" data-kb-dock-index="0"
-                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 0"
-                    (focus)="setKeyboardZone('actions', 0)" [disabled]="!canCheckout"
+                <button type="button" class="cash-btn" data-kb-dock-index="3"
+                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 3"
+                    (focus)="setKeyboardZone('actions', 3)" [disabled]="!canCheckout"
                     (click)="checkoutWith('cash')">Cash</button>
-                <button type="button" class="pay-btn" data-kb-dock-index="1"
-                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 1"
-                    (focus)="setKeyboardZone('actions', 1)" [disabled]="!canCheckout" (click)="confirmBilling()">
+                <button type="button" class="pay-btn" data-kb-dock-index="4"
+                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 4"
+                    (focus)="setKeyboardZone('actions', 4)" [disabled]="!canCheckout" (click)="confirmBilling()">
                     <i class="fa fa-spinner fa-spin" *ngIf="saleSaving"></i>
                     Confirm Sale
                 </button>
@@ -522,8 +529,9 @@
             </section>
 
             <div class="receipt-actions">
-                <button type="button" class="btn btn-default" (click)="closeReceiptPreview()">Close</button>
-                <button type="button" class="btn btn-primary" (click)="printReceipt()">
+                <button type="button" class="btn btn-default" data-kb-receipt-close
+                    (click)="closeReceiptPreview()">Close</button>
+                <button type="button" class="btn btn-primary" data-kb-receipt-print (click)="printReceipt()">
                     <i class="fa fa-print"></i>
                     Print Bill
                 </button>
@@ -569,7 +577,8 @@
                 <span>Opening Balance</span>
                 <div class="modern-register-input">
                     <b>Rs</b>
-                    <input type="number" min="0" step="1" [(ngModel)]="openingAmount" placeholder="0.00" />
+                    <input type="number" min="0" step="1" [(ngModel)]="openingAmount" placeholder="0.00"
+                        data-kb-opening-amount />
                 </div>
             </label>
 
@@ -621,7 +630,8 @@
                 <span>Closing Cash</span>
                 <div class="modern-register-input">
                     <b>Rs</b>
-                    <input type="number" min="0" step="1" [(ngModel)]="closingAmount" placeholder="0.00" />
+                    <input type="number" min="0" step="1" [(ngModel)]="closingAmount" placeholder="0.00"
+                        data-kb-closing-amount />
                 </div>
             </label>
 
