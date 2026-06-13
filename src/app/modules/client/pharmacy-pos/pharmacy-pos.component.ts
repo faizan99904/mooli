@@ -14,14 +14,19 @@ import {
   ReceiptLetterheadSettings,
 } from '../../../shared/models/company.model';
 import {
+  CreateHeldSalePayload,
+  CreateSalesReturnPayload,
   CreateSalePayload,
+  HeldSale,
   Prescription,
   PrescriptionMedicine,
   ProductDiscountType,
   ProductCatalogItem,
   RegisterSession,
+  RestoreHeldSaleResponse,
   Sale,
   SalePaymentMethod,
+  SalesReturn,
   Store,
   User,
 } from '../../../shared/models/hospital.model';
@@ -89,12 +94,25 @@ interface PosShortcutDefinition {
 }
 
 type PosKeyboardZone = 'search' | 'products' | 'cart' | 'actions';
+type PharmacyPosPaymentMethod = SalePaymentMethod | 'credit';
 
 interface PharmacyReportCard {
   label: string;
   value: string;
   tone?: 'neutral' | 'good' | 'warn';
   note?: string;
+}
+
+interface PharmacyReturnLine {
+  productId: string;
+  name: string;
+  sku: string;
+  soldQty: number;
+  alreadyReturnedQty: number;
+  maxQty: number;
+  qty: number;
+  unitPrice: number;
+  reason: string;
 }
 
 @Component({
@@ -114,7 +132,7 @@ export class PharmacyPosComponent implements OnInit {
   selectedStoreId = '';
   prescriptionId = '';
   productSearch = '';
-  paymentMethod: SalePaymentMethod = 'cash';
+  paymentMethod: PharmacyPosPaymentMethod = 'cash';
   paidAmount = '0';
   cashReceivedAmount = '0';
   customDiscountPercent = '10';
@@ -132,8 +150,21 @@ export class PharmacyPosComponent implements OnInit {
   closeRegisterSaving = false;
   saleHistoryOpen = false;
   saleHistoryLoading = false;
+  heldSalesLoading = false;
   reportsOpen = false;
   recentSales: Sale[] = [];
+  heldSales: HeldSale[] = [];
+  saleReturnOpen = false;
+  saleReturnLoading = false;
+  saleReturnSubmitting = false;
+  saleReturnErrorMessage = '';
+  returnSaleSearch = '';
+  selectedReturnSale: Sale | null = null;
+  selectedReturnHistory: SalesReturn[] = [];
+  selectedReturnRefundCeiling = 0;
+  returnLines: PharmacyReturnLine[] = [];
+  returnRefundAmount = 0;
+  returnPaymentMethod: Exclude<SalePaymentMethod, 'check'> = 'cash';
   receiptPreviewOpen = false;
   receiptPreview: ReceiptPreviewData | null = null;
   shortcutInfoOpen = false;
@@ -146,6 +177,8 @@ export class PharmacyPosComponent implements OnInit {
   private initialProductSearchFocused = false;
   private pendingPrintSearchFocus = false;
   private printSearchFocusAttempts = 0;
+  private paidAmountTouched = false;
+  private cashReceivedTouched = false;
   openingAmount: number | null = null;
   openingNote = '';
   closingAmount: number | null = null;
@@ -174,6 +207,12 @@ export class PharmacyPosComponent implements OnInit {
       label: 'Sale History',
       description: 'Open the sale history panel.',
       defaultCombo: 'F7',
+    },
+    {
+      id: 'holdSale',
+      label: 'Hold Sale',
+      description: 'Save the current cart as a held pharmacy sale.',
+      defaultCombo: 'Ctrl+H',
     },
     {
       id: 'reports',
@@ -268,6 +307,7 @@ export class PharmacyPosComponent implements OnInit {
   handleKeyboardShortcuts(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault();
+      this.closeSaleReturn();
       this.closeReports();
       this.closeShortcutInfo();
       this.closeReceiptPreview();
@@ -502,34 +542,81 @@ export class PharmacyPosComponent implements OnInit {
     ];
   }
 
+  get returnableRecentSales(): Sale[] {
+    const search = this.returnSaleSearch.trim().toLowerCase();
+    return this.recentSales
+      .filter((sale) => this.canReturnSale(sale))
+      .filter((sale) => ['completed', 'returned'].includes(sale.status))
+      .filter((sale) => this.saleHasRemainingReturnQuantity(sale))
+      .filter((sale) => {
+        if (!search) {
+          return true;
+        }
+
+        return [
+          sale.invoiceNo,
+          sale._id,
+          sale.paymentStatus,
+          sale.status,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(search));
+      });
+  }
+
+  get selectedReturnItemsCount(): number {
+    return this.returnLines.filter((line) => line.qty > 0).length;
+  }
+
+  get saleReturnEstimatedTotal(): number {
+    return this.returnLines.reduce(
+      (sum, line) => sum + Number(line.qty || 0) * Number(line.unitPrice || 0),
+      0,
+    );
+  }
+
+  get balanceDueAmount(): number {
+    return Math.max(this.subtotal - Number(this.paidAmount || 0), 0);
+  }
+
+  get paymentStatusPreview(): 'paid' | 'partial' | 'unpaid' {
+    const paid = Number(this.paidAmount || 0);
+    if (paid <= 0) {
+      return 'unpaid';
+    }
+
+    if (paid < this.subtotal) {
+      return 'partial';
+    }
+
+    return 'paid';
+  }
+
+  get saleReturnRefundLimit(): number {
+    return Math.min(
+      this.saleReturnEstimatedTotal,
+      this.selectedReturnRefundCeiling,
+    );
+  }
+
   receiptBrandTitle(receipt: ReceiptPreviewData | null | undefined): string {
     const letterhead = this.activeReceiptLetterhead(receipt);
     return (
-      letterhead?.brandTitle?.trim() ||
-      receipt?.companyName ||
-      'Mooli Pharmacy'
+      letterhead?.brandTitle?.trim() || receipt?.companyName || 'Mooli Pharmacy'
     );
   }
 
   receiptBrandSubtitle(receipt: ReceiptPreviewData | null | undefined): string {
     const letterhead = this.activeReceiptLetterhead(receipt);
-    return (
-      letterhead?.brandSubtitle?.trim() ||
-      receipt?.storeName ||
-      ''
-    );
+    return letterhead?.brandSubtitle?.trim() || receipt?.storeName || '';
   }
 
   receiptHeaderNote(receipt: ReceiptPreviewData | null | undefined): string {
-    return (
-      this.activeReceiptLetterhead(receipt)?.headerNote?.trim() || ''
-    );
+    return this.activeReceiptLetterhead(receipt)?.headerNote?.trim() || '';
   }
 
   receiptHeaderLines(receipt: ReceiptPreviewData | null | undefined): string[] {
-    return (
-      this.activeReceiptLetterhead(receipt)?.extraHeaderLines || []
-    )
+    return (this.activeReceiptLetterhead(receipt)?.extraHeaderLines || [])
       .map((line) => String(line || '').trim())
       .filter(Boolean);
   }
@@ -555,9 +642,7 @@ export class PharmacyPosComponent implements OnInit {
     ]);
   }
 
-  receiptAddressLine(
-    receipt: ReceiptPreviewData | null | undefined,
-  ): string {
+  receiptAddressLine(receipt: ReceiptPreviewData | null | undefined): string {
     if (!receipt) {
       return '';
     }
@@ -568,9 +653,7 @@ export class PharmacyPosComponent implements OnInit {
       : address;
   }
 
-  receiptContactLine(
-    receipt: ReceiptPreviewData | null | undefined,
-  ): string {
+  receiptContactLine(receipt: ReceiptPreviewData | null | undefined): string {
     if (!receipt) {
       return '';
     }
@@ -582,12 +665,8 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     return this.uniqueReceiptLines([
-      receipt.companyPhone
-        ? `Phone: ${receipt.companyPhone}`
-        : '',
-      receipt.companyEmail
-        ? `Email: ${receipt.companyEmail}`
-        : '',
+      receipt.companyPhone ? `Phone: ${receipt.companyPhone}` : '',
+      receipt.companyEmail ? `Email: ${receipt.companyEmail}` : '',
       receipt.storePhone && receipt.storePhone !== receipt.companyPhone
         ? `Store: ${receipt.storePhone}`
         : '',
@@ -626,11 +705,7 @@ export class PharmacyPosComponent implements OnInit {
       return '';
     }
 
-    return (
-      letterhead.logoUrl?.trim() ||
-      receipt?.companyLogoUrl ||
-      ''
-    );
+    return letterhead.logoUrl?.trim() || receipt?.companyLogoUrl || '';
   }
 
   loadStores(): void {
@@ -951,7 +1026,6 @@ export class PharmacyPosComponent implements OnInit {
       this.addProduct(product);
       this.productSearch = '';
       this.selectedProductIndex = 0;
-      this.focusProductSearch();
     }
   }
 
@@ -959,6 +1033,17 @@ export class PharmacyPosComponent implements OnInit {
     this.paymentMethod = method;
     this.paidAmount = this.payableAmount;
     this.cashReceivedAmount = this.payableAmount;
+    this.paidAmountTouched = false;
+    this.cashReceivedTouched = false;
+    this.confirmBilling();
+  }
+
+  checkoutCredit(): void {
+    this.paymentMethod = 'credit';
+    this.paidAmount = '0';
+    this.cashReceivedAmount = '0';
+    this.paidAmountTouched = true;
+    this.cashReceivedTouched = false;
     this.confirmBilling();
   }
 
@@ -973,11 +1058,72 @@ export class PharmacyPosComponent implements OnInit {
     this.selectedDockIndex = 0;
     this.paidAmount = '0';
     this.cashReceivedAmount = '0';
+    this.paymentMethod = 'cash';
+    this.paidAmountTouched = false;
+    this.cashReceivedTouched = false;
+  }
+
+  onPaymentMethodChange(): void {
+    if (this.paymentMethod === 'credit') {
+      this.paidAmount = '0';
+      this.cashReceivedAmount = '0';
+      this.paidAmountTouched = true;
+      this.cashReceivedTouched = false;
+      return;
+    }
+
+    if (Number(this.paidAmount || 0) <= 0) {
+      this.paidAmountTouched = false;
+      this.paidAmount = this.payableAmount;
+    }
+
+    if (this.paymentMethod === 'cash') {
+      this.cashReceivedAmount = String(
+        Math.max(Number(this.cashReceivedAmount || 0), Number(this.paidAmount || 0)),
+      );
+    } else {
+      this.cashReceivedAmount = this.paidAmount;
+      this.cashReceivedTouched = false;
+    }
+
+    if (!this.paidAmountTouched) {
+      this.paidAmount = this.payableAmount;
+    }
+  }
+
+  onPaidAmountChange(value: string): void {
+    const normalized = this.normalizeMoneyInput(value, this.subtotal);
+    this.paidAmount = String(normalized);
+    this.paidAmountTouched = true;
+
+    if (this.paymentMethod === 'credit') {
+      if (normalized > 0) {
+        this.paymentMethod = 'cash';
+      } else {
+        this.cashReceivedAmount = '0';
+        return;
+      }
+    }
+
+    if (this.paymentMethod === 'cash') {
+      this.cashReceivedAmount = String(
+        Math.max(Number(this.cashReceivedAmount || 0), normalized),
+      );
+    } else {
+      this.cashReceivedAmount = String(normalized);
+    }
+  }
+
+  onCashReceivedAmountChange(value: string): void {
+    const normalized = Math.max(Number(value || 0), Number(this.paidAmount || 0), 0);
+    this.cashReceivedAmount = String(normalized);
+    this.cashReceivedTouched = true;
   }
 
   openSaleHistory(): void {
     this.saleHistoryOpen = true;
     this.loadRecentSales();
+    this.loadHeldSales();
     this.focusOverlayControl('.sale-history-modal .modal-close');
   }
 
@@ -985,6 +1131,57 @@ export class PharmacyPosComponent implements OnInit {
     const wasOpen = this.saleHistoryOpen;
     this.saleHistoryOpen = false;
     if (wasOpen) {
+      this.restoreSearchFocusAfterOverlayClose();
+    }
+  }
+
+  openSaleReturnPicker(): void {
+    if (!this.registerSession || this.registerSession.status !== 'open') {
+      this.showPosMessage(
+        'Open the register before processing a sales return.',
+        'warning',
+      );
+      return;
+    }
+
+    this.saleHistoryOpen = true;
+    this.loadRecentSales();
+    this.prepareSaleReturnModal();
+    this.focusOverlayControl('.sale-return-modal .modal-close');
+  }
+
+  openSaleReturn(sale: Sale): void {
+    if (!this.registerSession || this.registerSession.status !== 'open') {
+      this.showPosMessage(
+        'Open the register before processing a sales return.',
+        'warning',
+      );
+      return;
+    }
+
+    this.prepareSaleReturnModal(sale._id);
+    this.loadSaleReturnSale(sale._id);
+  }
+
+  closeSaleReturn(): void {
+    if (this.saleReturnSubmitting) {
+      return;
+    }
+
+    const wasOpen = this.saleReturnOpen;
+    this.saleReturnOpen = false;
+    this.saleReturnLoading = false;
+    this.saleReturnSubmitting = false;
+    this.saleReturnErrorMessage = '';
+    this.returnSaleSearch = '';
+    this.selectedReturnSale = null;
+    this.selectedReturnHistory = [];
+    this.selectedReturnRefundCeiling = 0;
+    this.returnLines = [];
+    this.returnRefundAmount = 0;
+    this.returnPaymentMethod = 'cash';
+
+    if (wasOpen && !this.saleHistoryOpen) {
       this.restoreSearchFocusAfterOverlayClose();
     }
   }
@@ -1076,7 +1273,10 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     this.shortcutBindings = normalizedBindings;
-    localStorage.setItem(this.shortcutBindingsStorageKey(), JSON.stringify(this.shortcutBindings));
+    localStorage.setItem(
+      this.shortcutBindingsStorageKey(),
+      JSON.stringify(this.shortcutBindings),
+    );
     this.showPosMessage('POS keyboard shortcuts updated.', 'success');
     this.closeShortcutInfo();
   }
@@ -1132,6 +1332,32 @@ export class PharmacyPosComponent implements OnInit {
       });
   }
 
+  loadHeldSales(): void {
+    if (!this.canReadSales) {
+      this.heldSales = [];
+      return;
+    }
+
+    const storeId = this.currentStoreId();
+    if (!storeId) {
+      this.heldSales = [];
+      return;
+    }
+
+    this.heldSalesLoading = true;
+    this.backend
+      .listHeldSales({ limit: 20, storeId })
+      .pipe(finalize(() => (this.heldSalesLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.heldSales = result.items || [];
+        },
+        error: () => {
+          this.heldSales = [];
+        },
+      });
+  }
+
   saleItemsSummary(sale: Sale): string {
     const count = sale.items?.length || 0;
     if (!count) {
@@ -1154,9 +1380,10 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   addProduct(product: ProductCatalogItem): void {
-    const existing = this.billLines.find(
+    const existingIndex = this.billLines.findIndex(
       (line) => line.product._id === product._id,
     );
+    const existing = existingIndex >= 0 ? this.billLines[existingIndex] : null;
     const availableQty = this.productAvailableQty(product);
 
     if (existing) {
@@ -1166,6 +1393,7 @@ export class PharmacyPosComponent implements OnInit {
       );
       this.syncLineDiscount(existing);
       this.refreshPaidAmount();
+      this.focusCartRow(existingIndex, true, 1);
       return;
     }
 
@@ -1182,6 +1410,7 @@ export class PharmacyPosComponent implements OnInit {
         product.maxDiscountType === 'percentage' ? 'percentage' : 'amount',
     });
     this.refreshPaidAmount();
+    this.focusCartRow(this.billLines.length - 1, true, 1);
   }
 
   removeLine(index: number): void {
@@ -1403,14 +1632,20 @@ export class PharmacyPosComponent implements OnInit {
       return;
     }
 
+    const paidAmount =
+      this.paymentMethod === 'credit'
+        ? 0
+        : this.normalizeMoneyInput(this.paidAmount, this.subtotal);
+
     const payload: CreateSalePayload = {
       storeId,
       saleDate: new Date().toISOString(),
       status: 'completed',
       registerSessionId: this.registerSession._id,
       items: saleItems,
-      paidAmount: Number(this.paidAmount || this.subtotal),
-      paymentMethod: this.paymentMethod,
+      paidAmount,
+      paymentMethod:
+        this.paymentMethod === 'credit' ? undefined : this.paymentMethod,
       note: this.prescription
         ? `Mooli pharmacy bill for prescription ${this.prescription._id}`
         : 'Mooli pharmacy POS bill',
@@ -1475,11 +1710,173 @@ export class PharmacyPosComponent implements OnInit {
       });
   }
 
+  saveHeldSale(): void {
+    if (!this.canCreateSale) {
+      this.toastr.error('Missing POS permission: sales.create');
+      return;
+    }
+
+    const storeId = this.currentStoreId();
+    if (!storeId) {
+      this.toastr.error('No pharmacy store is selected.');
+      return;
+    }
+
+    const items = this.buildSaleItemsFromCart();
+    if (!items.length) {
+      this.toastr.info('Add at least one medicine before holding the sale.');
+      return;
+    }
+
+    const payload: CreateHeldSalePayload = {
+      storeId,
+      items,
+      note: this.prescription
+        ? `Held pharmacy bill for prescription ${this.prescription._id}`
+        : 'Held Mooli pharmacy POS bill',
+    };
+
+    this.saleSaving = true;
+    this.backend
+      .createHeldSale(payload)
+      .pipe(finalize(() => (this.saleSaving = false)))
+      .subscribe({
+        next: (response) => {
+          const heldSale = response.data;
+          this.clearSale();
+          this.loadHeldSales();
+          this.showPosMessage(
+            `Sale held successfully: ${heldSale?.holdNo || heldSale?._id || 'Hold created'}.`,
+            'success',
+          );
+        },
+        error: (err) => {
+          this.toastr.error(err?.error?.message || 'Unable to hold pharmacy sale.');
+        },
+      });
+  }
+
+  resumeHeldSale(heldSale: HeldSale): void {
+    this.backend.restoreHeldSale(heldSale._id).subscribe({
+      next: (response) => {
+        this.applyRestoredSalePayload(response);
+        this.backend.deleteHeldSale(heldSale._id).subscribe({
+          next: () => {
+            this.heldSales = this.heldSales.filter((item) => item._id !== heldSale._id);
+          },
+        });
+        this.closeSaleHistory();
+        this.showPosMessage('Held sale loaded back into the cart.', 'success');
+      },
+      error: (err) => {
+        this.toastr.error(err?.error?.message || 'Unable to restore held sale.');
+      },
+    });
+  }
+
+  deleteHeldSale(heldSale: HeldSale): void {
+    this.backend.deleteHeldSale(heldSale._id).subscribe({
+      next: () => {
+        this.heldSales = this.heldSales.filter((item) => item._id !== heldSale._id);
+        this.showPosMessage('Held sale deleted successfully.', 'success');
+      },
+      error: (err) => {
+        this.toastr.error(err?.error?.message || 'Unable to delete held sale.');
+      },
+    });
+  }
+
+  selectSaleForReturn(saleId: string): void {
+    if (!saleId) {
+      this.saleReturnErrorMessage = 'Select a sale to continue with the return.';
+      return;
+    }
+
+    this.loadSaleReturnSale(saleId);
+  }
+
+  updateReturnRefundAmount(value: string | number): void {
+    const numericValue = Number(value || 0);
+    this.returnRefundAmount = Math.min(
+      Math.max(Number.isFinite(numericValue) ? numericValue : 0, 0),
+      this.saleReturnRefundLimit,
+    );
+  }
+
+  submitSaleReturn(): void {
+    if (!this.selectedReturnSale) {
+      this.saleReturnErrorMessage = 'Select a sale to continue with the return.';
+      return;
+    }
+
+    const items = this.returnLines
+      .filter((line) => line.qty > 0)
+      .map((line) => ({
+        productId: line.productId,
+        qty: Number(line.qty || 0),
+        reason: line.reason.trim() || undefined,
+      }));
+
+    if (!items.length) {
+      this.saleReturnErrorMessage = 'Select at least one return item quantity.';
+      return;
+    }
+
+    if (this.returnRefundAmount > this.saleReturnRefundLimit) {
+      this.saleReturnErrorMessage =
+        'Refund amount cannot exceed the selected return total.';
+      return;
+    }
+
+    const payload: CreateSalesReturnPayload = {
+      saleId: this.selectedReturnSale._id,
+      returnDate: new Date().toISOString(),
+      items,
+      refundAmount: this.returnRefundAmount || 0,
+      paymentMethod:
+        this.returnRefundAmount > 0 ? this.returnPaymentMethod : undefined,
+    };
+
+    this.saleReturnSubmitting = true;
+    this.saleReturnErrorMessage = '';
+    this.backend
+      .createSalesReturn(payload)
+      .pipe(finalize(() => (this.saleReturnSubmitting = false)))
+      .subscribe({
+        next: (salesReturn) => {
+          this.closeSaleReturn();
+          this.closeSaleHistory();
+          this.loadProducts();
+          this.loadRecentSales();
+          this.showPosMessage(
+            `Sales return ${salesReturn.returnNo || salesReturn._id} completed successfully.`,
+            'success',
+          );
+        },
+        error: (err) => {
+          this.saleReturnErrorMessage =
+            err?.error?.message || 'Unable to complete sales return.';
+        },
+      });
+  }
+
   patientName(): string {
     const patient = this.prescription?.patient;
     return (
       [patient?.firstName, patient?.lastName].filter(Boolean).join(' ') || '-'
     );
+  }
+
+  updateReturnLineQty(line: PharmacyReturnLine, value: string | number): void {
+    const qty = Math.max(0, Math.min(Number(value || 0), line.maxQty));
+    line.qty = Number.isFinite(qty) ? qty : 0;
+    if (this.returnRefundAmount > this.saleReturnRefundLimit) {
+      this.returnRefundAmount = this.saleReturnRefundLimit;
+    }
+  }
+
+  canReturnSale(sale: Sale): boolean {
+    return !String(sale._id || '').startsWith('local-');
   }
 
   doctorName(): string {
@@ -1571,13 +1968,11 @@ export class PharmacyPosComponent implements OnInit {
       cashierName: this.cashierName,
       customerName:
         this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
-      paymentMethod: this.paymentMethod,
-      paymentStatus:
-        paidAmount >= this.subtotal
-          ? 'paid'
-          : paidAmount > 0
-            ? 'partial'
-            : 'unpaid',
+      paymentMethod: this.receiptPaymentMethodLabel(
+        this.paymentMethod,
+        this.paymentStatusPreview,
+      ),
+      paymentStatus: this.paymentStatusPreview,
       items: this.billLines
         .filter((line) => line.billQty > 0)
         .map((line) => ({
@@ -1605,6 +2000,18 @@ export class PharmacyPosComponent implements OnInit {
     };
   }
 
+  private buildSaleItemsFromCart() {
+    return this.billLines
+      .filter((line) => line.billQty > 0)
+      .map((line) => ({
+        productId: line.product._id,
+        qty: line.billQty,
+        unitPrice: line.unitPrice,
+        discount: Number(line.discount || 0),
+        tax: 0,
+      }));
+  }
+
   private buildReceiptFromSale(sale: Sale): ReceiptPreviewData {
     const store = this.stores.find((item) => item._id === sale.storeId);
     const paidAmount = Number(sale.paidAmount || 0);
@@ -1624,7 +2031,7 @@ export class PharmacyPosComponent implements OnInit {
       cashierName: this.cashierName,
       customerName:
         this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
-      paymentMethod: sale.paymentStatus,
+      paymentMethod: this.resolveSalePaymentLabel(sale),
       paymentStatus: sale.paymentStatus,
       items: (sale.items || []).map((item) => ({
         name: item.name || 'Product',
@@ -1647,6 +2054,41 @@ export class PharmacyPosComponent implements OnInit {
       note: sale.note || '',
       receiptLetterhead: this.receiptLetterheadSnapshot(),
     };
+  }
+
+  private applyRestoredSalePayload(response: RestoreHeldSaleResponse): void {
+    const payload = response.salePayload;
+    const productMap = new Map(this.products.map((product) => [product._id, product]));
+
+    this.clearSale();
+    payload.items.forEach((item) => {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        return;
+      }
+
+      const qty = Number(item.qty || 0) || 0;
+      const discount = Number(item.discount || 0) || 0;
+      const availableQty = this.productAvailableQty(product);
+      const line: PharmacyBillLine = {
+        sourceMedicineName: product.name,
+        product,
+        requestedQty: qty,
+        billQty: Math.min(qty, Math.max(availableQty, 0)),
+        availableQty,
+        unitPrice: Number(item.unitPrice || this.productPrice(product) || 0),
+        discount,
+        discountInput: discount,
+        discountType: 'amount',
+      };
+      this.syncLineDiscount(line);
+      this.billLines.push(line);
+    });
+
+    this.refreshPaidAmount();
+    if (this.billLines.length) {
+      this.focusCartRow(0, true, 1);
+    }
   }
 
   private openReceiptPrintWindow(receipt: ReceiptPreviewData): void {
@@ -1784,8 +2226,6 @@ export class PharmacyPosComponent implements OnInit {
             <div class="foot">
               <p><strong>${this.escapeHtml(footerTitle)}</strong></p>
               ${footerLines.map((line) => `<p>${this.escapeHtml(line)}</p>`).join('')}
-              <p>${this.escapeHtml(receipt.note || 'Thank you')}</p>
-              <p>Powered by Mooli</p>
             </div>
           </section>
         </body>
@@ -1890,6 +2330,84 @@ export class PharmacyPosComponent implements OnInit {
     ]);
   }
 
+  private prepareSaleReturnModal(saleId = ''): void {
+    this.saleReturnOpen = true;
+    this.saleReturnLoading = false;
+    this.saleReturnSubmitting = false;
+    this.saleReturnErrorMessage = '';
+    this.returnSaleSearch = '';
+    this.selectedReturnSale = null;
+    this.selectedReturnHistory = [];
+    this.selectedReturnRefundCeiling = 0;
+    this.returnLines = [];
+    this.returnRefundAmount = 0;
+    this.returnPaymentMethod = 'cash';
+
+    if (saleId) {
+      this.focusOverlayControl('.sale-return-modal .modal-close');
+    }
+  }
+
+  private loadSaleReturnSale(saleId: string): void {
+    this.saleReturnLoading = true;
+    this.saleReturnErrorMessage = '';
+    this.selectedReturnSale = null;
+    this.selectedReturnHistory = [];
+    this.selectedReturnRefundCeiling = 0;
+    this.returnLines = [];
+
+    this.backend.getSaleById(saleId).subscribe({
+      next: (sale) => {
+        this.backend.listSalesReturns({ saleId, limit: 100 }).subscribe({
+          next: (result) => {
+            this.selectedReturnSale = sale;
+            this.selectedReturnHistory = result.items || [];
+            this.selectedReturnRefundCeiling = Math.max(
+              Number(sale.paidAmount || 0) -
+                this.selectedReturnHistory.reduce(
+                  (sum, item) => sum + Number(item.refundAmount || 0),
+                  0,
+                ),
+              0,
+            );
+            this.returnLines = (sale.items || [])
+              .map((item) => {
+                const soldQty = Number(item.qty || 0) || 0;
+                const returnedQty = this.returnedQuantityForSaleItem(
+                  item.productId,
+                  this.selectedReturnHistory,
+                );
+                const maxQty = Math.max(soldQty - returnedQty, 0);
+                return {
+                  productId: item.productId,
+                  name: item.name || 'Product',
+                  sku: item.sku || '',
+                  soldQty,
+                  alreadyReturnedQty: returnedQty,
+                  maxQty,
+                  qty: 0,
+                  unitPrice: Number(item.unitPrice || 0),
+                  reason: '',
+                };
+              })
+              .filter((line) => line.maxQty > 0);
+            this.saleReturnLoading = false;
+          },
+          error: (err) => {
+            this.saleReturnLoading = false;
+            this.saleReturnErrorMessage =
+              err?.error?.message || 'Unable to load previous return history.';
+          },
+        });
+      },
+      error: (err) => {
+        this.saleReturnLoading = false;
+        this.saleReturnErrorMessage =
+          err?.error?.message || 'Unable to load sale for return.';
+      },
+    });
+  }
+
   private async queueOfflineSale(payload: CreateSalePayload): Promise<void> {
     this.saleSaving = true;
     const localId = this.offline.buildLocalId('sale');
@@ -1975,6 +2493,15 @@ export class PharmacyPosComponent implements OnInit {
     const localId = entry.localId || entry.id;
     const invoiceNo = `OFF-${localId.slice(-6).toUpperCase()}`;
 
+    const total = payload.items.reduce((sum, item) => {
+      const qty = Number(item.qty || 0) || 0;
+      const unitPrice = Number(item.unitPrice || 0) || 0;
+      const discount = Number(item.discount || 0) || 0;
+      const tax = Number(item.tax || 0) || 0;
+      return sum + qty * unitPrice - discount + tax;
+    }, 0);
+    const paidAmount = Number(payload.paidAmount || 0) || 0;
+
     return {
       _id: localId,
       storeId: payload.storeId,
@@ -1985,9 +2512,10 @@ export class PharmacyPosComponent implements OnInit {
       subtotal: '0',
       discount: '0',
       tax: '0',
-      total: String(payload.paidAmount || 0),
-      paidAmount: String(payload.paidAmount || 0),
-      paymentStatus: Number(payload.paidAmount || 0) > 0 ? 'paid' : 'unpaid',
+      total: String(total),
+      paidAmount: String(paidAmount),
+      paymentStatus:
+        paidAmount >= total ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid',
       status: 'completed',
       note: payload.note || 'Offline Mooli pharmacy POS bill',
       createdAt: entry.createdAt,
@@ -2007,6 +2535,22 @@ export class PharmacyPosComponent implements OnInit {
         String(first.createdAt || first.saleDate || ''),
       ),
     );
+  }
+
+  private returnedQuantityForSaleItem(
+    productId: string,
+    returns: SalesReturn[],
+  ): number {
+    return returns.reduce((sum, salesReturn) => {
+      const returned = (salesReturn.items || [])
+        .filter((item) => item.productId === productId)
+        .reduce((itemSum, item) => itemSum + Number(item.qty || 0), 0);
+      return sum + returned;
+    }, 0);
+  }
+
+  private saleHasRemainingReturnQuantity(sale: Sale): boolean {
+    return ['completed', 'returned'].includes(sale.status);
   }
 
   private storesCacheKey(): string {
@@ -2313,10 +2857,46 @@ export class PharmacyPosComponent implements OnInit {
 
   refreshPaidAmount(): void {
     this.billLines.forEach((line) => this.syncLineDiscount(line));
-    this.paidAmount = this.payableAmount;
-    if (this.paymentMethod === 'cash') {
-      this.cashReceivedAmount = this.payableAmount;
+    const nextPayable = Number(this.payableAmount || 0);
+
+    if (this.paymentMethod === 'credit') {
+      this.paidAmount = '0';
+      this.cashReceivedAmount = '0';
+      return;
     }
+
+    if (!this.paidAmountTouched) {
+      this.paidAmount = this.payableAmount;
+    } else {
+      this.paidAmount = String(
+        this.normalizeMoneyInput(this.paidAmount, nextPayable),
+      );
+    }
+
+    if (this.paymentMethod === 'cash') {
+      if (!this.cashReceivedTouched) {
+        this.cashReceivedAmount = this.paidAmount;
+      } else {
+        this.cashReceivedAmount = String(
+          Math.max(Number(this.cashReceivedAmount || 0), Number(this.paidAmount || 0)),
+        );
+      }
+    } else {
+      this.cashReceivedAmount = this.paidAmount;
+      this.cashReceivedTouched = false;
+    }
+  }
+
+  private normalizeMoneyInput(
+    value: string | number | null | undefined,
+    maxValue: number,
+  ): number {
+    const numeric = Number(value || 0);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return 0;
+    }
+
+    return Math.min(numeric, Math.max(maxValue, 0));
   }
 
   private todayValue(): string {
@@ -2343,6 +2923,51 @@ export class PharmacyPosComponent implements OnInit {
     }
 
     this.toastr.info(message);
+  }
+
+  private receiptPaymentMethodLabel(
+    method: PharmacyPosPaymentMethod,
+    paymentStatus: string,
+  ): string {
+    if (method === 'credit' || paymentStatus === 'unpaid') {
+      return 'Credit';
+    }
+
+    if (paymentStatus === 'partial') {
+      return `Partial ${this.formatPaymentMethodLabel(method)}`;
+    }
+
+    return this.formatPaymentMethodLabel(method);
+  }
+
+  private resolveSalePaymentLabel(sale: Sale): string {
+    const total = Number(sale.total || 0) || 0;
+    const paidAmount = Number(sale.paidAmount || 0) || 0;
+
+    if (sale.paymentStatus === 'unpaid' || paidAmount <= 0) {
+      return 'Credit';
+    }
+
+    if (sale.paymentStatus === 'partial' || paidAmount < total) {
+      return 'Partial payment';
+    }
+
+    return 'Paid';
+  }
+
+  formatPaymentMethodLabel(value: string): string {
+    const normalized = String(value || '')
+      .replace(/[_-]+/g, ' ')
+      .trim();
+
+    if (!normalized) {
+      return 'N/A';
+    }
+
+    return normalized
+      .split(/\s+/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 
   private currentStoreAddress(): string {
@@ -2389,7 +3014,9 @@ export class PharmacyPosComponent implements OnInit {
     return letterhead?.enabled === false ? null : letterhead || null;
   }
 
-  private uniqueReceiptLines(lines: Array<string | null | undefined>): string[] {
+  private uniqueReceiptLines(
+    lines: Array<string | null | undefined>,
+  ): string[] {
     return lines.reduce<string[]>((result, line) => {
       const normalized = String(line || '').trim();
       if (
@@ -2403,8 +3030,14 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private sameReceiptText(first: string, second: string): boolean {
-    return String(first || '').trim().toLowerCase() ===
-      String(second || '').trim().toLowerCase();
+    return (
+      String(first || '')
+        .trim()
+        .toLowerCase() ===
+      String(second || '')
+        .trim()
+        .toLowerCase()
+    );
   }
 
   private runShortcutAction(action: string): void {
@@ -2421,6 +3054,9 @@ export class PharmacyPosComponent implements OnInit {
         return;
       case 'recentTransactions':
         this.openSaleHistory();
+        return;
+      case 'holdSale':
+        this.saveHeldSale();
         return;
       case 'reports':
         this.openReports();
@@ -2843,20 +3479,23 @@ export class PharmacyPosComponent implements OnInit {
     selectText = false,
     attempt = 0,
   ): void {
-    window.setTimeout(() => {
-      const element = document.querySelector(selector) as HTMLElement | null;
-      if (!element) {
-        if (attempt < 7) {
-          this.focusOverlayControl(selector, selectText, attempt + 1);
+    window.setTimeout(
+      () => {
+        const element = document.querySelector(selector) as HTMLElement | null;
+        if (!element) {
+          if (attempt < 7) {
+            this.focusOverlayControl(selector, selectText, attempt + 1);
+          }
+          return;
         }
-        return;
-      }
 
-      element.focus();
-      if (selectText && element instanceof HTMLInputElement) {
-        element.select();
-      }
-    }, attempt === 0 ? 0 : 50);
+        element.focus();
+        if (selectText && element instanceof HTMLInputElement) {
+          element.select();
+        }
+      },
+      attempt === 0 ? 0 : 50,
+    );
   }
 
   private restoreSearchFocusAfterOverlayClose(): void {
@@ -3158,6 +3797,10 @@ export class PharmacyPosComponent implements OnInit {
       this.printReceipt();
       return true;
     }
+    if (this.saleReturnOpen) {
+      this.submitSaleReturn();
+      return true;
+    }
     if (this.closeRegisterOpen) {
       void this.confirmCloseRegister();
       return true;
@@ -3178,6 +3821,7 @@ export class PharmacyPosComponent implements OnInit {
     return (
       this.reportsOpen ||
       this.saleHistoryOpen ||
+      this.saleReturnOpen ||
       this.receiptPreviewOpen ||
       this.closeRegisterOpen ||
       this.shortcutInfoOpen ||
@@ -3307,18 +3951,16 @@ export class PharmacyPosComponent implements OnInit {
         return;
       }
 
-      this.shortcutBindings =
-        this.shortcutDefinitions.reduce<Record<string, string>>(
-          (bindings, definition) => {
-            bindings[definition.id] = this.normalizeShortcutCombo(
-              typeof stored[definition.id] === 'string'
-                ? (stored[definition.id] as string)
-                : definition.defaultCombo,
-            );
-            return bindings;
-          },
-          {},
+      this.shortcutBindings = this.shortcutDefinitions.reduce<
+        Record<string, string>
+      >((bindings, definition) => {
+        bindings[definition.id] = this.normalizeShortcutCombo(
+          typeof stored[definition.id] === 'string'
+            ? (stored[definition.id] as string)
+            : definition.defaultCombo,
         );
+        return bindings;
+      }, {});
     } catch {
       this.shortcutBindings = this.defaultShortcutBindings();
       localStorage.removeItem(this.shortcutBindingsStorageKey());

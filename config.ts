@@ -28,6 +28,9 @@ export const CONFIG = {
   bills: API_BASE_URL + '/bills',
   payments: API_BASE_URL + '/payments',
   sales: API_BASE_URL + '/sales',
+  returns: {
+    sales: API_BASE_URL + '/returns/sales',
+  },
   registerSessions: API_BASE_URL + '/register-sessions',
   reports: {
     dashboard: API_BASE_URL + '/reports/dashboard',

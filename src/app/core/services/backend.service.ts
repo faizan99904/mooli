@@ -16,6 +16,8 @@ import {
   Bill,
   Category,
   CloseRegisterPayload,
+  CreateHeldSalePayload,
+  CreateSalesReturnPayload,
   CreateSalePayload,
   CreateSaleResponse,
   DashboardSummary,
@@ -30,6 +32,7 @@ import {
   Payment,
   ProductCatalogItem,
   Prescription,
+  HeldSale,
   OpenRegisterPayload,
   RegisterSession,
   RegisterSessionSummary,
@@ -38,6 +41,8 @@ import {
   RoomAllotment,
   Sale,
   Store,
+  RestoreHeldSaleResponse,
+  SalesReturn,
   User,
 } from '../../shared/models/hospital.model';
 
@@ -452,8 +457,49 @@ export class BackendService {
     return this.post<CreateSaleResponse>(CONFIG.sales, payload);
   }
 
+  getSaleById(id: string): Observable<Sale> {
+    return this.get<Sale>(`${CONFIG.sales}/${id}`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
   getSales(params?: Record<string, unknown>): Observable<ListResult<Sale>> {
     return this.get<PaginatedResponse<Sale>>(CONFIG.sales, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createHeldSale(payload: CreateHeldSalePayload): Observable<ApiResponse<HeldSale>> {
+    return this.post<HeldSale>(`${CONFIG.sales}/holds`, payload);
+  }
+
+  listHeldSales(params?: Record<string, unknown>): Observable<ListResult<HeldSale>> {
+    return this.get<PaginatedResponse<HeldSale>>(`${CONFIG.sales}/holds`, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  restoreHeldSale(id: string): Observable<RestoreHeldSaleResponse> {
+    return this.post<RestoreHeldSaleResponse>(`${CONFIG.sales}/holds/${id}/restore`, {}).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  deleteHeldSale(id: string): Observable<ApiResponse<{ deleted: boolean }>> {
+    return this.delete<{ deleted: boolean }>(`${CONFIG.sales}/holds/${id}`);
+  }
+
+  createSalesReturn(payload: CreateSalesReturnPayload): Observable<SalesReturn> {
+    return this.post<SalesReturn | { salesReturn?: SalesReturn }>(CONFIG.returns.sales, payload).pipe(
+      map((response) => {
+        const data = response.data;
+        return ('salesReturn' in data ? data.salesReturn : data) as SalesReturn;
+      })
+    );
+  }
+
+  listSalesReturns(params?: Record<string, unknown>): Observable<ListResult<SalesReturn>> {
+    return this.get<PaginatedResponse<SalesReturn>>(CONFIG.returns.sales, params).pipe(
       map((response) => this.unwrapData(response))
     );
   }

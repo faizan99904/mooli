@@ -406,6 +406,76 @@ export interface CreateSaleResponse {
   payments?: Payment[];
 }
 
+export interface CreateHeldSalePayload {
+  storeId: string;
+  customerId?: string;
+  items: SaleItem[];
+  note?: string;
+}
+
+export interface HeldSale {
+  _id: string;
+  companyId?: string;
+  storeId: string;
+  customerId?: string | null;
+  userId?: string;
+  holdNo: string;
+  items: SaleItem[];
+  subtotal: string;
+  discount: string;
+  tax: string;
+  total: string;
+  paidAmount?: string;
+  note?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RestoreHeldSaleResponse {
+  heldSale: HeldSale;
+  salePayload: CreateSalePayload;
+}
+
+export interface ReturnItem {
+  productId: string;
+  name?: string;
+  sku?: string;
+  qty: number | string;
+  unitPrice?: number | string;
+  unitCost?: number | string;
+  total?: number | string;
+  reason?: string;
+}
+
+export interface SalesReturn {
+  _id: string;
+  companyId?: string;
+  saleId: string;
+  storeId: string;
+  customerId?: string | null;
+  returnNo: string;
+  returnDate: string;
+  items: ReturnItem[];
+  total: number | string;
+  refundAmount: number | string;
+  status: string;
+  createdBy?: string | null;
+  createdAt?: string;
+}
+
+export interface CreateSalesReturnPayload {
+  saleId: string;
+  returnDate: string;
+  items: Array<{
+    productId: string;
+    qty: number;
+    reason?: string;
+  }>;
+  refundAmount?: number;
+  paymentMethod?: Exclude<SalePaymentMethod, 'check'>;
+  paymentReferenceNo?: string;
+}
+
 export interface RegisterSessionSummary {
   salesCount: number;
   totalSales: number | string;

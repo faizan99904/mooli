@@ -34,12 +34,20 @@
                 <button type="button" class="storepos-icon-btn" title="New sale" (click)="clearSale()">
                     <i class="fa fa-refresh"></i>
                 </button>
+                <button type="button" class="storepos-icon-btn" title="Hold sale"
+                    [disabled]="billLines.length === 0 || saleSaving" (click)="saveHeldSale()">
+                    <i class="fa fa-pause"></i>
+                </button>
                 <button type="button" class="storepos-icon-btn" title="Invoice preview"
                     [disabled]="billLines.length === 0" (click)="openCurrentBillPreview()">
                     <i class="fa fa-file-text-o"></i>
                 </button>
                 <button type="button" class="storepos-icon-btn" title="Sale history" (click)="openSaleHistory()">
                     <i class="fa fa-clock-o"></i>
+                </button>
+                <button type="button" class="storepos-icon-btn" title="Return sale"
+                    [disabled]="saleSaving || !registerOpened" (click)="openSaleReturnPicker()">
+                    <i class="fa fa-undo"></i>
                 </button>
                 <button type="button" class="storepos-icon-btn" title="Pharmacy reports" (click)="openReports()">
                     <i class="fa fa-bar-chart"></i>
@@ -270,8 +278,9 @@
                     Payment
                     <select [(ngModel)]="paymentMethod" data-kb-dock-index="0"
                         [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 0"
-                        (focus)="setKeyboardZone('actions', 0)">
+                        (focus)="setKeyboardZone('actions', 0)" (ngModelChange)="onPaymentMethodChange()">
                         <option value="cash">Cash</option>
+                        <option value="credit">Credit</option>
                         <option value="card">Card</option>
                         <option value="bank">Bank</option>
                         <option value="online">Online</option>
@@ -281,18 +290,26 @@
                 </label>
                 <label>
                     Paid
-                    <input type="number" min="0" [(ngModel)]="paidAmount" data-kb-dock-index="1"
+                    <input type="number" min="0" [(ngModel)]="paidAmount" (ngModelChange)="onPaidAmountChange($event)"
+                        data-kb-dock-index="1"
                         [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 1"
                         (focus)="setKeyboardZone('actions', 1)" />
                 </label>
                 <label *ngIf="paymentMethod === 'cash'">
                     Cash Received
-                    <input type="number" min="0" [(ngModel)]="cashReceivedAmount" data-kb-dock-index="2"
+                    <input type="number" min="0" [(ngModel)]="cashReceivedAmount"
+                        (ngModelChange)="onCashReceivedAmountChange($event)" data-kb-dock-index="2"
                         [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 2"
                         (focus)="setKeyboardZone('actions', 2)" />
                 </label>
                 <div class="change-due" *ngIf="paymentMethod === 'cash'">
                     Change <strong>{{ formatCurrency(changeDueAmount) }}</strong>
+                </div>
+                <div class="change-due" *ngIf="paymentMethod !== 'cash'">
+                    Balance <strong>{{ formatCurrency(balanceDueAmount) }}</strong>
+                </div>
+                <div class="change-due">
+                    Status <strong>{{ paymentStatusPreview }}</strong>
                 </div>
             </div>
 
@@ -306,6 +323,11 @@
                     (focus)="setKeyboardZone('actions', 4)" [disabled]="!canCheckout" (click)="confirmBilling()">
                     <i class="fa fa-spinner fa-spin" *ngIf="saleSaving"></i>
                     Confirm Sale
+                </button>
+                <button type="button" class="pay-btn" data-kb-dock-index="5"
+                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 5"
+                    (focus)="setKeyboardZone('actions', 5)" [disabled]="!canCheckout" (click)="checkoutCredit()">
+                    Credit
                 </button>
             </div>
         </div>
@@ -428,6 +450,36 @@
             <div class="history-loading" *ngIf="saleHistoryLoading">Loading sale history...</div>
             <div class="history-loading" *ngIf="!saleHistoryLoading && !canReadSales">Missing permission: sales.read
             </div>
+            <div class="history-loading" *ngIf="heldSalesLoading">Loading held sales...</div>
+
+            <div class="history-table" *ngIf="heldSales.length">
+                <div class="history-head">
+                    <span>Held No</span>
+                    <span>Date</span>
+                    <span>Items</span>
+                    <span>Status</span>
+                    <span>Total</span>
+                    <span>Paid</span>
+                    <span>Action</span>
+                </div>
+                <div class="history-row" *ngFor="let heldSale of heldSales">
+                    <strong>{{ heldSale.holdNo }}</strong>
+                    <span>{{ heldSale.createdAt | date:'short' }}</span>
+                    <span>{{ saleItemsSummary($any(heldSale)) }}</span>
+                    <span class="status-pill">held</span>
+                    <span>{{ formatCurrency(heldSale.total) }}</span>
+                    <span>{{ formatCurrency(heldSale.paidAmount || 0) }}</span>
+                    <div class="history-action-cell">
+                        <button type="button" class="history-print" (click)="resumeHeldSale(heldSale)">
+                            Resume
+                        </button>
+                        <button type="button" class="history-print" (click)="deleteHeldSale(heldSale)">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="history-loading" *ngIf="!saleHistoryLoading && canReadSales && recentSales.length === 0">No
                 sales found.</div>
 
@@ -449,6 +501,11 @@
                     <span>{{ formatCurrency(sale.total) }}</span>
                     <span>{{ formatCurrency(sale.paidAmount) }}</span>
                     <div class="history-action-cell">
+                        <button type="button" class="history-print" [disabled]="!registerOpened || !canReturnSale(sale)"
+                            (click)="openSaleReturn(sale)">
+                            <i class="fa fa-undo"></i>
+                            Return
+                        </button>
                         <button type="button" class="history-print" (click)="openSaleReceipt(sale)">
                             <i class="fa fa-print"></i>
                             Print
@@ -456,6 +513,134 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="modern-modal-backdrop" *ngIf="saleReturnOpen">
+    <div class="modern-register-modal sale-return-modal">
+        <div class="modern-register-head">
+            <div class="modern-register-badge">
+                <i class="fa fa-undo"></i>
+            </div>
+            <div>
+                <strong>Return Sale</strong>
+                <span *ngIf="selectedReturnSale">Process return for {{ selectedReturnSale.invoiceNo }}</span>
+                <span *ngIf="!selectedReturnSale">Select a recent sale to return.</span>
+            </div>
+            <button type="button" class="modal-close" (click)="closeSaleReturn()">×</button>
+        </div>
+
+        <div class="modern-register-body">
+            <div class="history-loading" *ngIf="saleReturnLoading">Loading return sale...</div>
+            <div class="storepos-message warning" *ngIf="saleReturnErrorMessage">{{ saleReturnErrorMessage }}</div>
+
+            <ng-container *ngIf="!saleReturnLoading && !selectedReturnSale">
+                <div class="modern-register-field">
+                    <span>Invoice Search</span>
+                    <input type="text" [(ngModel)]="returnSaleSearch" placeholder="Search invoice number" />
+                </div>
+
+                <div class="history-table" *ngIf="returnableRecentSales.length">
+                    <div class="history-head">
+                        <span>Invoice</span>
+                        <span>Date</span>
+                        <span>Items</span>
+                        <span>Status</span>
+                        <span>Total</span>
+                        <span>Paid</span>
+                        <span>Action</span>
+                    </div>
+                    <div class="history-row" *ngFor="let sale of returnableRecentSales">
+                        <strong>{{ sale.invoiceNo }}</strong>
+                        <span>{{ sale.saleDate | date:'short' }}</span>
+                        <span>{{ saleItemsSummary(sale) }}</span>
+                        <span class="status-pill">{{ sale.status }}</span>
+                        <span>{{ formatCurrency(sale.total) }}</span>
+                        <span>{{ formatCurrency(sale.paidAmount) }}</span>
+                        <div class="history-action-cell">
+                            <button type="button" class="history-print" [disabled]="!canReturnSale(sale)"
+                                (click)="selectSaleForReturn(sale._id)">
+                                Select
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="history-loading" *ngIf="!returnableRecentSales.length">No returnable sales found.</div>
+            </ng-container>
+
+            <ng-container *ngIf="!saleReturnLoading && selectedReturnSale">
+                <div class="modern-register-summary">
+                    <div>
+                        <span>Invoice</span>
+                        <strong>{{ selectedReturnSale.invoiceNo }}</strong>
+                    </div>
+                    <div>
+                        <span>Selected Items</span>
+                        <strong>{{ selectedReturnItemsCount }}</strong>
+                    </div>
+                    <div>
+                        <span>Return Total</span>
+                        <strong>{{ formatCurrency(saleReturnEstimatedTotal) }}</strong>
+                    </div>
+                    <div>
+                        <span>Refund Limit</span>
+                        <strong>{{ formatCurrency(saleReturnRefundLimit) }}</strong>
+                    </div>
+                </div>
+
+                <div class="history-table" *ngIf="returnLines.length">
+                    <div class="history-head">
+                        <span>Item</span>
+                        <span>Sold</span>
+                        <span>Returned</span>
+                        <span>Max</span>
+                        <span>Qty</span>
+                        <span>Unit Price</span>
+                        <span>Reason</span>
+                    </div>
+                    <div class="history-row" *ngFor="let line of returnLines">
+                        <strong>{{ line.name }}</strong>
+                        <span>{{ line.soldQty }}</span>
+                        <span>{{ line.alreadyReturnedQty }}</span>
+                        <span>{{ line.maxQty }}</span>
+                        <span>
+                            <input type="number" min="0" [max]="line.maxQty" [ngModel]="line.qty"
+                                (ngModelChange)="updateReturnLineQty(line, $event)" />
+                        </span>
+                        <span>{{ formatCurrency(line.unitPrice) }}</span>
+                        <span>
+                            <input type="text" [(ngModel)]="line.reason" placeholder="Optional reason" />
+                        </span>
+                    </div>
+                </div>
+
+                <div class="modern-register-field">
+                    <span>Refund Amount</span>
+                    <input type="number" min="0" [max]="saleReturnRefundLimit" [ngModel]="returnRefundAmount"
+                        (ngModelChange)="updateReturnRefundAmount($event)" />
+                </div>
+
+                <div class="modern-register-field" *ngIf="returnRefundAmount > 0">
+                    <span>Refund Method</span>
+                    <select [(ngModel)]="returnPaymentMethod">
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="bank">Bank</option>
+                        <option value="online">Online</option>
+                        <option value="wallet">Wallet</option>
+                    </select>
+                </div>
+
+                <div class="receipt-actions">
+                    <button type="button" class="btn btn-default" (click)="closeSaleReturn()">Cancel</button>
+                    <button type="button" class="btn btn-primary" [disabled]="saleReturnSubmitting"
+                        (click)="submitSaleReturn()">
+                        {{ saleReturnSubmitting ? 'Submitting...' : 'Complete Return' }}
+                    </button>
+                </div>
+            </ng-container>
         </div>
     </div>
 </div>
