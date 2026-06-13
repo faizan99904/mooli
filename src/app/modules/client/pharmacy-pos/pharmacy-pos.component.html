@@ -472,10 +472,7 @@
                     <img *ngIf="receiptLogoUrl(receipt)" class="receipt-preview-logo" [src]="receiptLogoUrl(receipt)"
                         [alt]="receiptBrandTitle(receipt)" />
                     <h2>{{ receiptBrandTitle(receipt) }}</h2>
-                    <p *ngIf="receiptBrandSubtitle(receipt)">{{ receiptBrandSubtitle(receipt) }}</p>
-                    <p *ngIf="receiptHeaderNote(receipt)">{{ receiptHeaderNote(receipt) }}</p>
-                    <p *ngFor="let line of receiptHeaderLines(receipt)">{{ line }}</p>
-                    <p>{{ receipt.storeAddress || 'Mooli Pharmacy' }}</p>
+                    <p *ngFor="let line of receiptHeaderDisplayLines(receipt)">{{ line }}</p>
                     <strong>Bill / Receipt</strong>
                 </div>
 

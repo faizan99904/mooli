@@ -109,6 +109,7 @@ export class SettingsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadHospitalFromStoredUser();
+    this.loadCompanyProfile();
     if (this.canReadHospitalSettings && this.currentHospitalId) {
       this.loadHospitalSettings();
     }
@@ -178,19 +179,35 @@ export class SettingsComponent implements OnInit {
   }
 
   receiptPreview(): ReceiptLetterheadSettings {
+    const enabled = this.receiptLetterheadEnabled;
+    const companyName = this.companyName.trim() || 'Mooli Pharmacy';
+    const addressLine = this.companyAddressLine();
+    const contactLine = this.defaultCompanyContactLine();
+
     return {
-      enabled: this.receiptLetterheadEnabled,
-      showLogo: this.receiptLetterheadShowLogo,
-      logoUrl: this.receiptLetterheadLogoUrl.trim() || this.companyLogoUrl.trim(),
-      brandTitle: this.receiptLetterheadBrandTitle.trim() || this.companyName.trim() || 'Mooli Pharmacy',
-      brandSubtitle: this.receiptLetterheadBrandSubtitle.trim() || this.companyAddress.trim(),
-      headerNote: this.receiptLetterheadHeaderNote.trim(),
-      contactLine: this.receiptLetterheadContactLine.trim() || this.companyPhone.trim(),
-      extraHeaderLines: this.textareaToLines(this.receiptLetterheadExtraHeaderLines),
+      enabled,
+      showLogo: enabled && this.receiptLetterheadShowLogo,
+      logoUrl: enabled
+        ? this.receiptLetterheadLogoUrl.trim() || this.companyLogoUrl.trim()
+        : '',
+      brandTitle: enabled
+        ? this.receiptLetterheadBrandTitle.trim() || companyName
+        : companyName,
+      brandSubtitle: enabled
+        ? this.receiptLetterheadBrandSubtitle.trim() || addressLine
+        : addressLine,
+      headerNote: enabled ? this.receiptLetterheadHeaderNote.trim() : '',
+      contactLine: enabled
+        ? this.receiptLetterheadContactLine.trim() || contactLine
+        : contactLine,
+      extraHeaderLines: enabled
+        ? this.textareaToLines(this.receiptLetterheadExtraHeaderLines)
+        : [],
       footerTitle:
-        this.receiptLetterheadFooterTitle.trim() ||
-        `Thank you for trusting ${this.companyName.trim() || 'Mooli Pharmacy'}.`,
+        (enabled ? this.receiptLetterheadFooterTitle.trim() : '') ||
+        `Thank you for trusting ${companyName}.`,
       footerLines:
+        enabled &&
         this.textareaToLines(this.receiptLetterheadFooterLines).length > 0
           ? this.textareaToLines(this.receiptLetterheadFooterLines)
           : ['Please check your items before leaving the pharmacy counter.'],
@@ -448,6 +465,22 @@ export class SettingsComponent implements OnInit {
       .map((part) => part.trim())
       .filter(Boolean)
       .join(', ');
+  }
+
+  private companyAddressLine(): string {
+    return [this.companyAddress, this.companyCity, this.companyCountry]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  private defaultCompanyContactLine(): string {
+    return [
+      this.companyPhone.trim() ? `Phone: ${this.companyPhone.trim()}` : '',
+      this.companyEmail.trim() ? `Email: ${this.companyEmail.trim()}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | ');
   }
 
   private textareaToLines(value: string | null | undefined): string[] {

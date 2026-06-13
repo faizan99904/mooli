@@ -58,8 +58,14 @@ interface ReceiptPreviewData {
   reference: string;
   saleDate: string;
   companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+  companyEmail: string;
+  companyTaxNumber: string;
+  companyLogoUrl: string;
   storeName: string;
   storeAddress: string;
+  storePhone: string;
   cashierName: string;
   customerName: string;
   paymentMethod: string;
@@ -479,42 +485,117 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   receiptBrandTitle(receipt: ReceiptPreviewData | null | undefined): string {
+    const letterhead = this.activeReceiptLetterhead(receipt);
     return (
-      receipt?.receiptLetterhead?.brandTitle?.trim() ||
+      letterhead?.brandTitle?.trim() ||
       receipt?.companyName ||
       'Mooli Pharmacy'
     );
   }
 
   receiptBrandSubtitle(receipt: ReceiptPreviewData | null | undefined): string {
+    const letterhead = this.activeReceiptLetterhead(receipt);
     return (
-      receipt?.receiptLetterhead?.brandSubtitle?.trim() ||
+      letterhead?.brandSubtitle?.trim() ||
       receipt?.storeName ||
       ''
     );
   }
 
   receiptHeaderNote(receipt: ReceiptPreviewData | null | undefined): string {
-    return receipt?.receiptLetterhead?.headerNote?.trim() || '';
-  }
-
-  receiptHeaderLines(receipt: ReceiptPreviewData | null | undefined): string[] {
-    return (receipt?.receiptLetterhead?.extraHeaderLines || []).filter((line) =>
-      Boolean(line?.trim()),
+    return (
+      this.activeReceiptLetterhead(receipt)?.headerNote?.trim() || ''
     );
   }
 
-  receiptFooterTitle(receipt: ReceiptPreviewData | null | undefined): string {
+  receiptHeaderLines(receipt: ReceiptPreviewData | null | undefined): string[] {
     return (
-      receipt?.receiptLetterhead?.footerTitle?.trim() ||
+      this.activeReceiptLetterhead(receipt)?.extraHeaderLines || []
+    )
+      .map((line) => String(line || '').trim())
+      .filter(Boolean);
+  }
+
+  receiptHeaderDisplayLines(
+    receipt: ReceiptPreviewData | null | undefined,
+  ): string[] {
+    if (!receipt) {
+      return [];
+    }
+
+    const subtitle = this.receiptBrandSubtitle(receipt);
+    return this.uniqueReceiptLines([
+      subtitle,
+      this.receiptHeaderNote(receipt),
+      this.sameReceiptText(subtitle, receipt.storeName)
+        ? ''
+        : receipt.storeName,
+      this.receiptAddressLine(receipt),
+      ...this.receiptHeaderLines(receipt),
+      this.receiptContactLine(receipt),
+      this.receiptTaxLine(receipt),
+    ]);
+  }
+
+  receiptAddressLine(
+    receipt: ReceiptPreviewData | null | undefined,
+  ): string {
+    if (!receipt) {
+      return '';
+    }
+
+    const address = receipt.companyAddress || receipt.storeAddress || '';
+    return this.sameReceiptText(address, this.receiptBrandSubtitle(receipt))
+      ? ''
+      : address;
+  }
+
+  receiptContactLine(
+    receipt: ReceiptPreviewData | null | undefined,
+  ): string {
+    if (!receipt) {
+      return '';
+    }
+
+    const configured =
+      this.activeReceiptLetterhead(receipt)?.contactLine?.trim() || '';
+    if (configured) {
+      return configured;
+    }
+
+    return this.uniqueReceiptLines([
+      receipt.companyPhone
+        ? `Phone: ${receipt.companyPhone}`
+        : '',
+      receipt.companyEmail
+        ? `Email: ${receipt.companyEmail}`
+        : '',
+      receipt.storePhone && receipt.storePhone !== receipt.companyPhone
+        ? `Store: ${receipt.storePhone}`
+        : '',
+    ]).join(' | ');
+  }
+
+  receiptTaxLine(receipt: ReceiptPreviewData | null | undefined): string {
+    return receipt?.companyTaxNumber
+      ? `Tax / NTN: ${receipt.companyTaxNumber}`
+      : '';
+  }
+
+  receiptFooterTitle(receipt: ReceiptPreviewData | null | undefined): string {
+    const letterhead = this.activeReceiptLetterhead(receipt);
+    return (
+      letterhead?.footerTitle?.trim() ||
       `Thank you for trusting ${receipt?.companyName || 'Mooli Pharmacy'}.`
     );
   }
 
   receiptFooterLines(receipt: ReceiptPreviewData | null | undefined): string[] {
     const configuredLines = (
-      receipt?.receiptLetterhead?.footerLines || []
-    ).filter((line) => Boolean(line?.trim()));
+      this.activeReceiptLetterhead(receipt)?.footerLines || []
+    )
+      .map((line) => String(line || '').trim())
+      .filter(Boolean);
 
     return configuredLines.length
       ? configuredLines
@@ -522,13 +603,14 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   receiptLogoUrl(receipt: ReceiptPreviewData | null | undefined): string {
-    if (!receipt?.receiptLetterhead?.showLogo) {
+    const letterhead = this.activeReceiptLetterhead(receipt);
+    if (!letterhead?.showLogo) {
       return '';
     }
 
     return (
-      receipt.receiptLetterhead.logoUrl?.trim() ||
-      this.companyProfile?.logoUrl ||
+      letterhead.logoUrl?.trim() ||
+      receipt?.companyLogoUrl ||
       ''
     );
   }
@@ -1403,6 +1485,9 @@ export class PharmacyPosComponent implements OnInit {
   }
 
   private buildReceiptFromCurrentCart(): ReceiptPreviewData {
+    const store = this.stores.find(
+      (item) => item._id === this.currentStoreId(),
+    );
     const rawSubtotal = this.billLines.reduce(
       (sum, line) =>
         sum + Number(line.billQty || 0) * Number(line.unitPrice || 0),
@@ -1418,8 +1503,14 @@ export class PharmacyPosComponent implements OnInit {
       reference: 'Preview',
       saleDate: new Date().toISOString(),
       companyName: this.companyProfile?.name || 'Mooli Pharmacy',
+      companyAddress: this.currentCompanyAddress(),
+      companyPhone: this.companyProfile?.phone || '',
+      companyEmail: this.companyProfile?.email || '',
+      companyTaxNumber: this.companyProfile?.taxNumber || '',
+      companyLogoUrl: this.companyProfile?.logoUrl || '',
       storeName: this.selectedStoreLabel,
       storeAddress: this.currentStoreAddress(),
+      storePhone: store?.phone || '',
       cashierName: this.cashierName,
       customerName:
         this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
@@ -1453,7 +1544,7 @@ export class PharmacyPosComponent implements OnInit {
       note: this.prescription
         ? `Prescription ${this.prescription._id}`
         : 'POS sale preview',
-      receiptLetterhead: this.companyProfile?.receiptLetterhead,
+      receiptLetterhead: this.receiptLetterheadSnapshot(),
     };
   }
 
@@ -1465,8 +1556,14 @@ export class PharmacyPosComponent implements OnInit {
       reference: sale.invoiceNo || sale._id,
       saleDate: sale.saleDate || sale.createdAt || new Date().toISOString(),
       companyName: this.companyProfile?.name || 'Mooli Pharmacy',
+      companyAddress: this.currentCompanyAddress(),
+      companyPhone: this.companyProfile?.phone || '',
+      companyEmail: this.companyProfile?.email || '',
+      companyTaxNumber: this.companyProfile?.taxNumber || '',
+      companyLogoUrl: this.companyProfile?.logoUrl || '',
       storeName: store?.name || this.selectedStoreLabel,
       storeAddress: [store?.address, store?.city].filter(Boolean).join(', '),
+      storePhone: store?.phone || '',
       cashierName: this.cashierName,
       customerName:
         this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
@@ -1491,7 +1588,7 @@ export class PharmacyPosComponent implements OnInit {
       cashReceivedAmount: paidAmount,
       changeDueAmount: 0,
       note: sale.note || '',
-      receiptLetterhead: this.companyProfile?.receiptLetterhead,
+      receiptLetterhead: this.receiptLetterheadSnapshot(),
     };
   }
 
@@ -1510,9 +1607,7 @@ export class PharmacyPosComponent implements OnInit {
 
   private receiptHtml(receipt: ReceiptPreviewData): string {
     const brandTitle = this.receiptBrandTitle(receipt);
-    const brandSubtitle = this.receiptBrandSubtitle(receipt);
-    const headerNote = this.receiptHeaderNote(receipt);
-    const headerLines = this.receiptHeaderLines(receipt);
+    const headerLines = this.receiptHeaderDisplayLines(receipt);
     const footerTitle = this.receiptFooterTitle(receipt);
     const footerLines = this.receiptFooterLines(receipt);
     const logoUrl = this.receiptLogoUrl(receipt);
@@ -1568,10 +1663,7 @@ export class PharmacyPosComponent implements OnInit {
             <div class="center">
               ${logoUrl ? `<img class="logo" src="${this.escapeHtml(logoUrl)}" alt="${this.escapeHtml(brandTitle)}" />` : ''}
               <h1>${this.escapeHtml(brandTitle)}</h1>
-              ${brandSubtitle ? `<p>${this.escapeHtml(brandSubtitle)}</p>` : ''}
-              ${headerNote ? `<p>${this.escapeHtml(headerNote)}</p>` : ''}
               ${headerLines.map((line) => `<p>${this.escapeHtml(line)}</p>`).join('')}
-              <p>${this.escapeHtml(receipt.storeAddress || 'Mooli Pharmacy')}</p>
               <p>Bill / Receipt</p>
             </div>
             <div class="meta">
@@ -2161,6 +2253,61 @@ export class PharmacyPosComponent implements OnInit {
       (item) => item._id === this.currentStoreId(),
     );
     return [store?.address, store?.city].filter(Boolean).join(', ');
+  }
+
+  private currentCompanyAddress(): string {
+    return [
+      this.companyProfile?.address,
+      this.companyProfile?.city,
+      this.companyProfile?.country,
+    ]
+      .map((part) => String(part || '').trim())
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  private receiptLetterheadSnapshot(): ReceiptLetterheadSettings {
+    const settings = this.companyProfile?.receiptLetterhead;
+
+    return {
+      enabled: settings?.enabled !== false,
+      showLogo: Boolean(settings?.showLogo),
+      logoUrl: settings?.logoUrl?.trim() || null,
+      brandTitle: settings?.brandTitle?.trim() || null,
+      brandSubtitle: settings?.brandSubtitle?.trim() || null,
+      headerNote: settings?.headerNote?.trim() || null,
+      contactLine: settings?.contactLine?.trim() || null,
+      extraHeaderLines: this.uniqueReceiptLines(
+        settings?.extraHeaderLines || [],
+      ),
+      footerTitle: settings?.footerTitle?.trim() || null,
+      footerLines: this.uniqueReceiptLines(settings?.footerLines || []),
+    };
+  }
+
+  private activeReceiptLetterhead(
+    receipt: ReceiptPreviewData | null | undefined,
+  ): ReceiptLetterheadSettings | null {
+    const letterhead = receipt?.receiptLetterhead;
+    return letterhead?.enabled === false ? null : letterhead || null;
+  }
+
+  private uniqueReceiptLines(lines: Array<string | null | undefined>): string[] {
+    return lines.reduce<string[]>((result, line) => {
+      const normalized = String(line || '').trim();
+      if (
+        normalized &&
+        !result.some((item) => this.sameReceiptText(item, normalized))
+      ) {
+        result.push(normalized);
+      }
+      return result;
+    }, []);
+  }
+
+  private sameReceiptText(first: string, second: string): boolean {
+    return String(first || '').trim().toLowerCase() ===
+      String(second || '').trim().toLowerCase();
   }
 
   private runShortcutAction(action: string): void {

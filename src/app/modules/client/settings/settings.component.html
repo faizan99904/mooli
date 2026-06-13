@@ -5,8 +5,8 @@
         <div class="block-header">
 	            <div class="row clearfix">
 	                <div class="col-xl-6 col-md-5 col-sm-12">
-	                    <h1>Hospital Settings</h1>
-	                    <span>Manage prescription header, footer, and logo details.</span>
+	                    <h1>Print Settings</h1>
+	                    <span>Manage prescription and pharmacy receipt branding.</span>
 	                </div>
 	            </div>
         </div>
@@ -15,7 +15,18 @@
             <div class="col-12">
 	                <div class="d-lg-flex justify-content-between">
 	                    <ul class="nav nav-tabs3 page-header-tab">
-	                        <li class="nav-item"><a class="nav-link active">Hospital Settings</a></li>
+	                        <li class="nav-item">
+                                <button type="button" class="nav-link" [class.active]="HospitalSettings"
+                                    (click)="onTab('8')">
+                                    Hospital Settings
+                                </button>
+                            </li>
+	                        <li class="nav-item">
+                                <button type="button" class="nav-link" [class.active]="Invoice"
+                                    (click)="onTab('5')">
+                                    Pharmacy Receipt Letterhead
+                                </button>
+                            </li>
 	                    </ul>
 	                </div>
                 <div class="tab-content">
@@ -1066,6 +1077,7 @@
                                                         <p class="mb-1" *ngIf="receiptPreview().headerNote">{{ receiptPreview().headerNote }}</p>
                                                         <p class="mb-1" *ngFor="let line of receiptPreview().extraHeaderLines">{{ line }}</p>
                                                         <p class="mb-2" *ngIf="receiptPreview().contactLine">{{ receiptPreview().contactLine }}</p>
+                                                        <p class="mb-2" *ngIf="companyTaxNumber">Tax / NTN: {{ companyTaxNumber }}</p>
                                                         <hr>
                                                         <div class="d-flex justify-content-between"><span>Invoice</span><strong>INV-10021</strong></div>
                                                         <div class="d-flex justify-content-between"><span>Total</span><strong>PKR 2,450</strong></div>
