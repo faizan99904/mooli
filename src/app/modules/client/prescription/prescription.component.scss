@@ -2639,43 +2639,112 @@ dd {
   align-items: flex-start;
   display: grid;
   grid-template-columns: 1fr 72px 1fr;
-  min-height: 88px;
+  min-height: 96px;
 }
 
 .doctor-print-left h1,
 .doctor-print-right h2 {
   color: #202048;
-  font-size: 23px;
   letter-spacing: 0.5px;
-  margin: 0 0 2px;
+  margin: 0 0 4px;
+}
+
+.doctor-print-left h1 {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.doctor-print-right h2 {
+  font-size: 19px;
+  line-height: 1.45;
+  margin: 0 0 4px;
 }
 
 .doctor-print-left,
 .doctor-print-right {
   display: grid;
-  gap: 2px;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.doctor-print-left span,
+.doctor-print-right span {
+  display: block;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.doctor-print-left span {
+  font-size: 12px;
+}
+
+.doctor-print-right span {
+  font-size: 10.5px;
+  line-height: 1.55;
 }
 
 .doctor-print-left small,
 .doctor-print-right small {
-  font-size: 10px;
-  line-height: 1.2;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.print-address-line {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+.print-address-english {
+  color: #334155;
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.15px;
+}
+
+.print-address-urdu {
+  color: #334155;
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Urdu Typesetting', Georgia, 'Times New Roman', serif;
+  font-size: 11px;
+  letter-spacing: 0;
+  line-height: 1.6;
+  unicode-bidi: plaintext;
 }
 
 .doctor-print-left strong,
 .doctor-print-right strong {
-  font-size: 13px;
+  display: block;
   letter-spacing: 2px;
+  margin: 0;
+}
+
+.doctor-print-left strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.doctor-print-right strong {
+  font-size: 11.5px;
+  letter-spacing: 0;
+  line-height: 1.55;
+}
+
+.print-urdu-block,
+.print-urdu-cell,
+.print-urdu-inline {
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Urdu Typesetting', serif;
+}
+
+.print-urdu-block {
+  line-height: 1.45;
 }
 
 .doctor-print-right {
   direction: rtl;
+  gap: 5px;
   text-align: right;
-}
-
-.doctor-print-right h2 {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 25px;
+  unicode-bidi: plaintext;
 }
 
 .print-logo-mark {
@@ -2814,7 +2883,16 @@ dd {
   background: #f3f6f9;
   color: #1f2937;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.35;
+}
+
+.print-medicine-table th.print-urdu-cell {
+  font-size: 12px;
+  height: auto;
+  line-height: 1.75;
+  min-height: 11mm;
+  padding: 7px 6px;
+  vertical-align: middle;
 }
 
 .print-medicine-table tbody tr:nth-child(even) td {
@@ -2825,13 +2903,15 @@ dd {
   background: #eef3f8 !important;
   color: #111827 !important;
   font-size: 21px !important;
-  line-height: 1.15;
+  line-height: 1.2;
   width: 69mm;
 }
 
-.print-medicine-title span {
-  color: #374151;
-  font-size: 16px;
+.print-medicine-title .print-urdu-inline {
+  display: inline-block;
+  font-size: 17px;
+  line-height: 1.8;
+  margin-top: 4px;
 }
 
 .print-med-name {
@@ -2867,23 +2947,39 @@ dd {
 .print-urdu-note {
   border-top: 2px solid #111;
   direction: rtl;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  padding: 8px 12px;
+  line-height: 2;
+  padding: 12px 16px 14px;
   text-align: center;
+}
+
+.print-urdu-note p {
+  margin: 0 0 10px;
+}
+
+.print-urdu-note p:last-child {
+  margin-bottom: 0;
 }
 
 .print-right-note {
   direction: rtl;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
-  line-height: 1.45;
-  padding: 12px 0 0 8px;
+  line-height: 1.95;
+  padding: 14px 10px 8px;
   text-align: center;
 }
 
+.print-right-note strong {
+  display: block;
+  line-height: 1.8;
+  margin-bottom: 8px;
+}
+
 .print-right-note p {
-  margin: 10px 0 0;
+  line-height: 2.05;
+  margin: 0;
 }
 
 .print-footer {

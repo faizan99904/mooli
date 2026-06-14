@@ -90,6 +90,19 @@ import {
   PatientDocumentDisplayRow,
   PatientDocumentRecord,
 } from './patient-document-data';
+import {
+  formatEnglishDoctorName,
+  formatEnglishDoctorTitle,
+  formatEnglishOrganizationName,
+  formatEnglishAddress,
+  formatUrduDoctorName,
+  formatUrduDoctorTitle,
+  formatUrduQualification,
+  formatUrduAddress,
+  formatUrduOrganizationName,
+  stripDoctorPrefix,
+  toPrescriptionUrduText,
+} from './prescription-print-urdu';
 
 interface PrintPreviewData {
   patient: Patient;
@@ -100,9 +113,16 @@ interface PrintPreviewData {
   patientAddress: string;
   patientPhone: string;
   doctorName: string;
+  doctorNamePlain: string;
+  doctorNameUrdu: string;
   doctorQualification: string;
+  doctorQualificationUrdu: string;
+  doctorTitleEnglish: string;
+  doctorTitleUrdu: string;
   hospitalName: string;
+  hospitalNameUrdu: string;
   hospitalAddress: string;
+  hospitalAddressUrdu: string;
   hospitalLogoUrl: string;
   showHospitalLogo: boolean;
   prescriptionRevisionNote: string;
@@ -3488,7 +3508,15 @@ export class PrescriptionComponent implements OnInit {
     const doctor = this.doctors.find((item) => item.userId === doctorId);
     const hospital = this.resolvePrintHospital(source);
     const settings = this.resolvePrescriptionSettings(hospital);
+    const doctorDisplayName =
+      source['doctor']?.name || (doctor ? this.doctorName(doctor) : this.selectedDoctorName());
+    const doctorQualification =
+      doctor?.qualification ||
+      (doctor?.specialization && !/consultant|physician/i.test(doctor.specialization)
+        ? doctor.specialization
+        : 'M.B.B.S., F.C.P.S.');
     const hospitalName = hospital?.name || 'MediLink City Care Hospital';
+    const hospitalAddress = this.hospitalAddressLine(hospital);
     const hospitalLogoUrl = this.safeHospitalLogoUrl(hospital?.logoUrl);
     const createdAt = source['createdAt'] || new Date();
     const followUpDate = source['followUpDate'];
@@ -3514,12 +3542,19 @@ export class PrescriptionComponent implements OnInit {
       patientAge: this.ageLabel(patient),
       patientGender: this.genderShort(patient),
       patientNo: patient.patientNo || '-',
-      patientAddress: patient.address || '-',
+      patientAddress: formatEnglishAddress(patient.address) || '-',
       patientPhone: patient.phone || '-',
-      doctorName: source['doctor']?.name || (doctor ? this.doctorName(doctor) : this.selectedDoctorName()),
-      doctorQualification: doctor?.qualification || doctor?.specialization || 'M.B.B.S., F.C.P.S.',
-      hospitalName,
-      hospitalAddress: this.hospitalAddressLine(hospital),
+      doctorName: formatEnglishDoctorName(doctorDisplayName),
+      doctorNamePlain: stripDoctorPrefix(doctorDisplayName),
+      doctorNameUrdu: formatUrduDoctorName(doctorDisplayName),
+      doctorQualification,
+      doctorQualificationUrdu: formatUrduQualification(doctorQualification),
+      doctorTitleEnglish: formatEnglishDoctorTitle(),
+      doctorTitleUrdu: formatUrduDoctorTitle(),
+      hospitalName: formatEnglishOrganizationName(hospitalName) || hospitalName,
+      hospitalNameUrdu: formatUrduOrganizationName(hospitalName) || hospitalName,
+      hospitalAddress: formatEnglishAddress(hospitalAddress),
+      hospitalAddressUrdu: formatUrduAddress(hospitalAddress) || formatEnglishAddress(hospitalAddress),
       hospitalLogoUrl,
       showHospitalLogo: settings.showLogo !== false && Boolean(hospitalLogoUrl),
       prescriptionRevisionNote: settings.revisionNote || '* Rx to be revised after Reports.',
@@ -3825,6 +3860,7 @@ export class PrescriptionComponent implements OnInit {
           <meta charset="utf-8" />
           <base href="${baseHref}" />
           <title>Prescription Print</title>
+          <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap" rel="stylesheet" />
           ${styles}
           <style>
             body {

@@ -906,22 +906,23 @@
         <section class="prescription-print-sheet" #printContent *ngIf="!printPreviewLoading && printPreviewData as preview">
           <header class="print-header">
             <div class="doctor-print-left">
-	              <h1>{{ preview.doctorName }}</h1>
-	              <strong>{{ preview.doctorQualification }}</strong>
-	              <span>Consultant Physician</span>
-	              <span>{{ preview.hospitalName }}</span>
-	              <small *ngIf="preview.hospitalAddress">{{ preview.hospitalAddress }}</small>
-	            </div>
-	            <div class="print-logo-mark" [class.has-logo]="preview.showHospitalLogo">
-	              <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl" [alt]="preview.hospitalName">
-	              <span *ngIf="!preview.showHospitalLogo">Rx</span>
-	            </div>
-	            <div class="doctor-print-right">
-	              <h2>ڈاکٹر {{ preview.doctorName }}</h2>
-	              <strong>{{ preview.doctorQualification }}</strong>
-	              <span>کنسلٹنٹ فزیشن</span>
-	              <span>{{ preview.hospitalName }}</span>
-	            </div>
+              <h1>{{ preview.doctorName }}</h1>
+              <strong>{{ preview.doctorQualification }}</strong>
+              <span>{{ preview.doctorTitleEnglish }}</span>
+              <span>{{ preview.hospitalName }}</span>
+              <small class="print-address-line print-address-english" *ngIf="preview.hospitalAddress">{{ preview.hospitalAddress }}</small>
+            </div>
+            <div class="print-logo-mark" [class.has-logo]="preview.showHospitalLogo">
+              <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl" [alt]="preview.hospitalName">
+              <span *ngIf="!preview.showHospitalLogo">Rx</span>
+            </div>
+            <div class="doctor-print-right print-urdu-block">
+              <h2>{{ preview.doctorNameUrdu }}</h2>
+              <strong>{{ preview.doctorQualificationUrdu }}</strong>
+              <span>{{ preview.doctorTitleUrdu }}</span>
+              <span>{{ preview.hospitalNameUrdu }}</span>
+              <small class="print-address-line print-address-urdu" *ngIf="preview.hospitalAddressUrdu">{{ preview.hospitalAddressUrdu }}</small>
+            </div>
           </header>
 
           <div class="print-date-box">
@@ -988,17 +989,17 @@
               <table class="print-medicine-table">
                 <thead>
                   <tr>
-                    <th class="print-medicine-title" rowspan="2">Medicines<br /><span>(دوائیاں)</span></th>
-                    <th rowspan="2">مدت</th>
-                    <th rowspan="2">غذا کے بعد</th>
-                    <th rowspan="2">غذا سے پہلے</th>
-                    <th colspan="4">وقت</th>
+                    <th class="print-medicine-title" rowspan="2">Medicines<br /><span class="print-urdu-inline">(دوائیاں)</span></th>
+                    <th class="print-urdu-cell" rowspan="2">مدت</th>
+                    <th class="print-urdu-cell" rowspan="2">غذا کے بعد</th>
+                    <th class="print-urdu-cell" rowspan="2">غذا سے پہلے</th>
+                    <th class="print-urdu-cell" colspan="4">وقت</th>
                   </tr>
                   <tr>
-                    <th>صبح</th>
-                    <th>دوپہر</th>
-                    <th>شام</th>
-                    <th>رات</th>
+                    <th class="print-urdu-cell">صبح</th>
+                    <th class="print-urdu-cell">دوپہر</th>
+                    <th class="print-urdu-cell">شام</th>
+                    <th class="print-urdu-cell">رات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1029,13 +1030,13 @@
                 </tbody>
               </table>
 
-              <div class="print-urdu-note">
-                بلڈ پریشر کے لئے نمک کم استعمال کریں۔ چکنائی کم کریں۔ روزانہ 30 منٹ پیدل چلیں۔
-                دوائی جاری رکھیں اور ڈاکٹر کے مشورے کے بغیر دوا بند نہ کریں۔
+              <div class="print-urdu-note print-urdu-block">
+                <p>بلڈ پریشر کے لئے نمک کم استعمال کریں۔ چکنائی کم کریں۔ روزانہ 30 منٹ پیدل چلیں۔</p>
+                <p>دوائی جاری رکھیں اور ڈاکٹر کے مشورے کے بغیر دوا بند نہ کریں۔</p>
               </div>
             </main>
 
-            <aside class="print-right-note">
+            <aside class="print-right-note print-urdu-block">
               <strong>نوٹ :</strong>
               <p>جس دوائی کے سامنے جاری رکھیں لکھا ہو اس دوائی کو جب تک ڈاکٹر سے مشورہ نہ لیں جاری رکھیں۔</p>
             </aside>
