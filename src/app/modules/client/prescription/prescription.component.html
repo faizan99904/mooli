@@ -870,23 +870,46 @@
               </div>
             </section>
 
-            <section class="order-card admission-card" formGroupName="admissionOrders">
+            <section class="order-card admission-card">
               <div class="section-heading">
                 <h3>Admission Orders</h3>
                 <button type="button" (click)="openAdmissionOrderModal()">+ Add Order</button>
               </div>
-              <div class="check-row">
-                <label><input type="checkbox" formControlName="regularDiet" /> Regular Diet</label>
-                <label><input type="checkbox" formControlName="npo" /> NPO</label>
+
+              <div class="admission-sidebar-list">
+                <div class="admission-sidebar-row" *ngFor="let row of sidebarAdmissionOrderRows(); trackBy: trackAdmissionOrderRow">
+                  <div class="admission-sidebar-main">
+                    <strong>{{ row.order }}</strong>
+                    <small>{{ row.category }} · {{ admissionOrderPriorityLabel(row.priority) }}</small>
+                  </div>
+                  <div class="admission-sidebar-actions">
+                    <button type="button" (click)="editAdmissionOrderRow(row)" aria-label="Edit order">
+                      <i class="fa fa-pencil"></i>
+                    </button>
+                    <button type="button" (click)="deleteAdmissionOrderRow(row)" aria-label="Remove order">
+                      <i class="fa fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="vitals-empty" *ngIf="sidebarAdmissionOrderRows().length === 0">
+                  No orders added yet.
+                </div>
               </div>
-              <label>Consultation <input formControlName="consultation" placeholder="Physiotherapy" /></label>
-              <div class="check-row" formGroupName="monitoring">
-                <label><input type="checkbox" formControlName="bp" /> BP</label>
-                <label><input type="checkbox" formControlName="pulse" /> Pulse</label>
-                <label><input type="checkbox" formControlName="spo2" /> SpO2</label>
-                <label><input type="checkbox" formControlName="rbs" /> RBS</label>
+
+              <div formGroupName="admissionOrders" class="admission-quick-fields">
+                <div class="check-row">
+                  <label><input type="checkbox" formControlName="regularDiet" /> Regular Diet</label>
+                  <label><input type="checkbox" formControlName="npo" /> NPO</label>
+                </div>
+                <label>Consultation <input formControlName="consultation" placeholder="Physiotherapy" /></label>
+                <div class="check-row" formGroupName="monitoring">
+                  <label><input type="checkbox" formControlName="bp" /> BP</label>
+                  <label><input type="checkbox" formControlName="pulse" /> Pulse</label>
+                  <label><input type="checkbox" formControlName="spo2" /> SpO2</label>
+                  <label><input type="checkbox" formControlName="rbs" /> RBS</label>
+                </div>
+                <textarea formControlName="notes" placeholder="Enter notes if any..."></textarea>
               </div>
-              <textarea formControlName="notes" placeholder="Enter notes if any..."></textarea>
             </section>
           </aside>
         </div>
@@ -896,35 +919,62 @@
         <div class="section-heading">
           <div>
             <h3>Created Prescriptions</h3>
-            <p>{{ loading ? 'Loading prescriptions...' : prescriptions.length + ' prescriptions found' }}</p>
+            <p>
+              {{ loading ? 'Loading prescriptions...' : (prescriptions.length + ' shown · latest first') }}
+              <span *ngIf="historySearch || historyDateFrom || historyDateTo"> · filtered</span>
+            </p>
           </div>
           <button type="button" (click)="loadPrescriptions()">Refresh</button>
         </div>
 
+        <div class="prescription-history-filters">
+          <input class="history-search-input" type="search" [(ngModel)]="historySearch"
+            placeholder="Search patient name or appointment no." [ngModelOptions]="{standalone: true}"
+            (keyup.enter)="applyHistoryFilters()" />
+          <input class="history-date-input" type="date" [(ngModel)]="historyDateFrom" [ngModelOptions]="{standalone: true}" />
+          <input class="history-date-input" type="date" [(ngModel)]="historyDateTo" [ngModelOptions]="{standalone: true}" />
+          <button type="button" class="btn-primary history-filter-btn" (click)="applyHistoryFilters()">Search</button>
+          <button type="button" class="btn-light history-filter-btn" (click)="clearHistoryFilters()">Clear</button>
+        </div>
+
         <div class="prescription-history-empty" *ngIf="!loading && prescriptions.length === 0">
-          No prescription created yet.
+          {{ historySearch || historyDateFrom || historyDateTo ? 'No prescriptions match your search.' : 'No prescription created yet.' }}
         </div>
 
         <div class="prescription-history-list" *ngIf="prescriptions.length > 0">
-          <article class="prescription-history-row" *ngFor="let prescription of prescriptions">
-            <div class="history-avatar">{{ initials(prescriptionPatientName(prescription)) }}</div>
-            <div class="history-main">
-              <strong>{{ prescriptionPatientName(prescription) }}</strong>
-              <span>{{ prescriptionDoctorName(prescription) }} · {{ prescriptionDate(prescription) }}</span>
-            </div>
-            <div class="history-meta">
-              <span>{{ prescriptionMedicineCount(prescription) }} medicine(s) · {{ prescriptionIvFluidCount(prescription) }} drip(s)</span>
-              <small *ngIf="prescriptionIvFluidSummary(prescription) as drips">Drips: {{ drips }}</small>
-              <small>{{ prescription.diagnosis || prescription.chiefComplaint || 'No diagnosis added' }}</small>
-            </div>
-            <div class="history-actions">
-              <button type="button" class="btn-light" *ngIf="canUpdatePrescriptions" (click)="editPrescription(prescription)">Edit</button>
-              <button type="button" class="btn-primary" (click)="openPrintPreview(prescription)">
-                <i class="fa fa-eye"></i>
-                View
-              </button>
-            </div>
-          </article>
+          <div class="history-date-group" *ngFor="let group of historyGroups; trackBy: trackHistoryGroup">
+            <div class="history-date-heading">{{ group.dateLabel }}</div>
+            <article class="prescription-history-row" *ngFor="let prescription of group.items">
+              <div class="history-avatar">{{ initials(prescriptionPatientName(prescription)) }}</div>
+              <div class="history-main">
+                <strong>{{ prescriptionPatientName(prescription) }}</strong>
+                <span>
+                  {{ prescriptionDoctorName(prescription) }}
+                  <ng-container *ngIf="prescriptionAppointmentNo(prescription) as apptNo"> · {{ apptNo }}</ng-container>
+                  · {{ prescriptionDate(prescription) }}
+                </span>
+              </div>
+              <div class="history-meta">
+                <span>{{ prescriptionMedicineCount(prescription) }} medicine(s) · {{ prescriptionIvFluidCount(prescription) }} drip(s)</span>
+                <small *ngIf="prescriptionIvFluidSummary(prescription) as drips">Drips: {{ drips }}</small>
+                <small>{{ prescription.diagnosis || prescription.chiefComplaint || 'No diagnosis added' }}</small>
+              </div>
+              <div class="history-actions">
+                <button type="button" class="btn-light" *ngIf="canUpdatePrescriptions" (click)="editPrescription(prescription)">Edit</button>
+                <button type="button" class="btn-primary" (click)="openPrintPreview(prescription)">
+                  <i class="fa fa-eye"></i>
+                  View
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="prescription-history-pagination" *ngIf="!loading && (totalPages > 1 || page > 1)">
+          <button type="button" class="btn-light" (click)="changePage(page - 1)" [disabled]="page <= 1">Prev</button>
+          <span>Page {{ page }} of {{ totalPages || 1 }}</span>
+          <button type="button" class="btn-light" (click)="changePage(page + 1)"
+            [disabled]="totalPages > 0 && page >= totalPages">Next</button>
         </div>
       </section>
     </main>

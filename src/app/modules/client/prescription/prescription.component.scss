@@ -2217,6 +2217,62 @@ dd {
   gap: 7px;
 }
 
+.admission-sidebar-list {
+  display: grid;
+  gap: 6px;
+}
+
+.admission-sidebar-row {
+  align-items: center;
+  border: 1px solid var(--rx-soft-line);
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 6px 8px;
+}
+
+.admission-sidebar-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admission-sidebar-main strong {
+  color: var(--rx-text);
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.admission-sidebar-main small {
+  color: var(--rx-muted);
+  font-size: 11px;
+}
+
+.admission-sidebar-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.admission-sidebar-actions button {
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  min-height: 28px;
+  padding: 0 6px;
+}
+
+.admission-sidebar-actions button:last-child {
+  color: #dc2626;
+}
+
+.admission-quick-fields {
+  display: grid;
+  gap: 7px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--rx-soft-line);
+}
+
 .admission-card label {
   display: grid;
   gap: 4px;
@@ -2251,6 +2307,53 @@ dd {
   color: var(--rx-muted);
   font-size: 12px;
   margin: 4px 0 0;
+}
+
+.prescription-history-filters {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(120px, 0.8fr)) auto auto;
+  margin-bottom: 10px;
+}
+
+.history-search-input,
+.history-date-input {
+  border: 1px solid var(--rx-line);
+  border-radius: 6px;
+  font-size: 12px;
+  min-height: 34px;
+  min-width: 0;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.history-filter-btn {
+  min-height: 34px;
+  white-space: nowrap;
+}
+
+.prescription-history-pagination {
+  align-items: center;
+  border-top: 1px solid var(--rx-soft-line);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.history-date-group + .history-date-group {
+  margin-top: 10px;
+}
+
+.history-date-heading {
+  background: var(--rx-blue-soft);
+  border-radius: 6px;
+  color: var(--rx-blue);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 7px;
+  padding: 6px 10px;
 }
 
 .prescription-history-empty {
@@ -2477,6 +2580,14 @@ dd {
     grid-template-columns: 42px minmax(0, 1fr);
   }
 
+  .prescription-history-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .history-search-input {
+    grid-column: 1 / -1;
+  }
+
   .history-meta,
   .history-actions {
     grid-column: 2;
@@ -2535,6 +2646,15 @@ dd {
   .prescription-history-row {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .prescription-history-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .history-search-input,
+  .history-filter-btn {
+    grid-column: auto;
   }
 
   .history-avatar,

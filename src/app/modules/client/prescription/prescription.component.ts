@@ -9,7 +9,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { finalize } from 'rxjs';
+import { debounceTime, finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import {
   ApexDataLabels,
@@ -194,8 +194,13 @@ export class PrescriptionComponent implements OnInit {
   appointmentsLoading = false;
   saving = false;
   page = 1;
-  limit = 100;
+  limit = 10;
   totalPages = 0;
+  historyGroups: Array<{ dateKey: string; dateLabel: string; items: Prescription[] }> = [];
+  private historyRequestId = 0;
+  historySearch = '';
+  historyDateFrom = '';
+  historyDateTo = '';
   selectedPatientId = '';
   selectedAppointmentId = '';
   editingId: string | null = null;
@@ -427,11 +432,10 @@ export class PrescriptionComponent implements OnInit {
     });
 
     this.loadLookups();
-    this.loadPrescriptions();
     void this.syncOfflineWork(false);
 
-    this.vitalsGroup.valueChanges.subscribe(() => this.refreshVitalAnalytics());
-    this.customVitals.valueChanges.subscribe(() => this.refreshVitalAnalytics());
+    this.vitalsGroup.valueChanges.pipe(debounceTime(80)).subscribe(() => this.refreshVitalAnalytics());
+    this.customVitals.valueChanges.pipe(debounceTime(80)).subscribe(() => this.refreshVitalAnalytics());
     this.labTests.valueChanges.subscribe(() => this.refreshLabTestRows());
     this.ivFluids.valueChanges.subscribe(() => this.refreshIvFluidRows());
     this.admissionOrderItems.valueChanges.subscribe(() => this.refreshAdmissionOrderRows());
@@ -670,6 +674,10 @@ export class PrescriptionComponent implements OnInit {
 
   trackVitalChart(_index: number, chart: VitalMiniChartData): string {
     return chart.key;
+  }
+
+  trackHistoryGroup(_index: number, group: { dateKey: string }): string {
+    return group.dateKey;
   }
 
   historyTrendArrow(trend: 'up' | 'down' | 'flat' | 'none' | undefined): string {
@@ -1891,13 +1899,15 @@ export class PrescriptionComponent implements OnInit {
   }
 
   refreshAdmissionOrderRows(): void {
-    this.admissionOrderRows = this.hasAssignedPatient()
-      ? buildAdmissionOrderDisplayRows(
-          this.patientSavedAdmissionOrders(),
-          this.admissionOrderItems.getRawValue() as AdmissionOrderItem[],
-          this.patientLegacyAdmissionOrders()
-        )
-      : [];
+    this.admissionOrderRows = buildAdmissionOrderDisplayRows(
+      this.hasAssignedPatient() ? this.patientSavedAdmissionOrders() : [],
+      this.admissionOrderItems.getRawValue() as AdmissionOrderItem[],
+      this.hasAssignedPatient() ? this.patientLegacyAdmissionOrders() : []
+    );
+  }
+
+  sidebarAdmissionOrderRows(): AdmissionOrderDisplayRow[] {
+    return this.admissionOrderRows.filter((row) => row.source === 'form');
   }
 
   totalActiveAdmissionOrders(): number {
@@ -2319,17 +2329,40 @@ export class PrescriptionComponent implements OnInit {
   }
 
   loadPrescriptions(): void {
+    const requestId = ++this.historyRequestId;
     this.loading = true;
+    const params: Record<string, unknown> = {
+      page: this.page,
+      limit: this.limit,
+      doctorId: this.isDoctorUser() ? this.currentUserId || undefined : undefined,
+    };
+
+    const search = this.historySearch.trim();
+    if (search) {
+      params['search'] = search;
+    }
+
+    if (this.historyDateFrom) {
+      params['dateFrom'] = this.historyDateFrom;
+    }
+
+    if (this.historyDateTo) {
+      params['dateTo'] = this.historyDateTo;
+    }
+
     this.backend
-      .getPrescriptions({
-        page: this.page,
-        limit: this.limit,
-        patientId: this.selectedPatientId,
-        doctorId: this.isDoctorUser() ? this.currentUserId || undefined : undefined,
-      })
-      .pipe(finalize(() => (this.loading = false)))
+      .getPrescriptions(params)
+      .pipe(finalize(() => {
+        if (requestId === this.historyRequestId) {
+          this.loading = false;
+        }
+      }))
       .subscribe({
         next: (result) => {
+          if (requestId !== this.historyRequestId) {
+            return;
+          }
+
           void this.offline.cacheValue(this.prescriptionsCacheKey(), {
             items: result.items,
             totalPages: result.pagination.totalPages,
@@ -2338,6 +2371,10 @@ export class PrescriptionComponent implements OnInit {
           this.totalPages = result.pagination.totalPages;
         },
         error: (err) => {
+          if (requestId !== this.historyRequestId) {
+            return;
+          }
+
           void this.loadCachedPrescriptions(err);
         },
       });
@@ -2470,7 +2507,6 @@ export class PrescriptionComponent implements OnInit {
     }
 
     this.loadDoctorMedicines();
-    this.loadPrescriptions();
     this.loadPatientHistoryRecords();
     this.refreshVitalAnalytics();
     this.refreshLabTestRows();
@@ -2513,11 +2549,12 @@ export class PrescriptionComponent implements OnInit {
   private applyAppointmentVitalsToForm(appointment: Appointment): void {
     const vitals = (appointment.vitals || {}) as Record<string, string>;
 
-    this.vitalsGroup.patchValue(this.extractDefaultVitals(vitals));
-    this.customVitals.clear();
+    this.vitalsGroup.patchValue(this.extractDefaultVitals(vitals), { emitEvent: false });
+    this.customVitals.clear({ emitEvent: false });
     this.extractCustomVitals(vitals).forEach((entry) =>
-      this.customVitals.push(this.createCustomVitalGroup(entry.key, entry.value))
+      this.customVitals.push(this.createCustomVitalGroup(entry.key, entry.value), { emitEvent: false })
     );
+    this.refreshVitalAnalytics();
   }
 
   editPrescription(prescription: Prescription): void {
@@ -2855,6 +2892,70 @@ export class PrescriptionComponent implements OnInit {
     this.loadPrescriptions();
   }
 
+  applyHistoryFilters(): void {
+    this.page = 1;
+    this.loadPrescriptions();
+  }
+
+  clearHistoryFilters(): void {
+    this.historySearch = '';
+    this.historyDateFrom = '';
+    this.historyDateTo = '';
+    this.page = 1;
+    this.loadPrescriptions();
+  }
+
+  private rebuildPrescriptionHistoryGroups(): void {
+    const groups = new Map<string, Prescription[]>();
+
+    this.prescriptions.forEach((prescription) => {
+      const dateKey = this.prescriptionDateKey(prescription);
+      const bucket = groups.get(dateKey) || [];
+      bucket.push(prescription);
+      groups.set(dateKey, bucket);
+    });
+
+    this.historyGroups = Array.from(groups.entries()).map(([dateKey, items]) => ({
+      dateKey,
+      dateLabel: this.formatHistoryDateLabel(dateKey),
+      items,
+    }));
+  }
+
+  prescriptionAppointmentNo(prescription: Prescription): string {
+    return prescription.appointment?.appointmentNo || '';
+  }
+
+  private prescriptionDateKey(prescription: Prescription): string {
+    const createdAt = prescription.createdAt ? new Date(prescription.createdAt) : null;
+    if (!createdAt || Number.isNaN(createdAt.getTime())) {
+      return 'unknown';
+    }
+
+    const year = createdAt.getFullYear();
+    const month = String(createdAt.getMonth() + 1).padStart(2, '0');
+    const day = String(createdAt.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private formatHistoryDateLabel(dateKey: string): string {
+    if (dateKey === 'unknown') {
+      return 'Unknown Date';
+    }
+
+    const date = new Date(`${dateKey}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return dateKey;
+    }
+
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }
+
   async syncOfflineWork(showToast = true): Promise<void> {
     if (!this.offline.online()) {
       if (showToast) {
@@ -2947,9 +3048,13 @@ export class PrescriptionComponent implements OnInit {
   }
 
   private async applyPrescriptionList(items: Prescription[], totalPages: number): Promise<void> {
-    const localPrescriptions = await this.localQueuedPrescriptions();
+    const hasHistoryFilters = Boolean(
+      this.historySearch.trim() || this.historyDateFrom || this.historyDateTo,
+    );
+    const localPrescriptions = hasHistoryFilters ? [] : await this.localQueuedPrescriptions();
     this.prescriptions = this.mergePrescriptions([...localPrescriptions, ...items]);
     this.totalPages = totalPages;
+    this.rebuildPrescriptionHistoryGroups();
     this.loadPatientHistoryRecords();
     this.refreshVitalAnalytics();
     this.refreshLabTestRows();
@@ -2973,6 +3078,7 @@ export class PrescriptionComponent implements OnInit {
     });
 
     this.prescriptions = this.mergePrescriptions([prescription, ...this.prescriptions]);
+    this.rebuildPrescriptionHistoryGroups();
     this.editingId = localId;
     this.markAppointmentCompleted(prescription.appointmentId);
     this.refreshLabTestRows();
@@ -3165,7 +3271,9 @@ export class PrescriptionComponent implements OnInit {
       'prescriptions',
       this.page,
       this.limit,
-      this.selectedPatientId || 'all',
+      this.historySearch.trim() || 'all',
+      this.historyDateFrom || 'from',
+      this.historyDateTo || 'to',
       this.isDoctorUser() ? this.currentUserId || 'doctor' : 'all',
     );
   }

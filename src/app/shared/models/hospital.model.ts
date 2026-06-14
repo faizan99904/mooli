@@ -119,6 +119,7 @@ export interface Patient {
   chronicDiseases?: string[];
   currentMedications?: string[];
   status: 'active' | 'inactive' | 'deceased';
+  createdAt?: string;
 }
 
 export interface PatientHistory {

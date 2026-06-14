@@ -4,7 +4,10 @@
             <div class="row clearfix">
                 <div class="col-lg-4 col-md-12 col-sm-12">
                     <h1>All Patients</h1>
-                    <span>Hospital patient records</span>
+                    <span>
+                        {{ loading ? 'Loading patients...' : (patients.length + ' shown · latest first') }}
+                        <ng-container *ngIf="hasActiveFilters"> · filtered</ng-container>
+                    </span>
                 </div>
                 <div class="col-lg-8 col-md-12 col-sm-12 text-lg-right">
                     <a class="btn btn-primary" [routerLink]="['/patients/add-patient']" *ngIf="can('patients.create')">Add Patient</a>
@@ -16,72 +19,85 @@
             <div class="col-sm-12">
                 <div class="card">
                     <div class="body">
-                        <div class="row mb-3">
-                            <div class="col-md-5">
-                                <input class="form-control" [(ngModel)]="search" placeholder="Search patients"
-                                    (keyup.enter)="page = 1; loadPatients()">
+                        <div class="patient-filters row mb-3">
+                            <div class="col-md-4 col-sm-12 mb-2">
+                                <input class="form-control" type="search" [(ngModel)]="search"
+                                    placeholder="Search name, patient no. or phone"
+                                    (keyup.enter)="applyFilters()">
                             </div>
-                            <div class="col-md-3">
-                                <select class="form-control" [(ngModel)]="assignedDoctorId" (change)="page = 1; loadPatients()">
+                            <div class="col-md-2 col-sm-6 mb-2">
+                                <input class="form-control" type="date" [(ngModel)]="dateFrom">
+                            </div>
+                            <div class="col-md-2 col-sm-6 mb-2">
+                                <input class="form-control" type="date" [(ngModel)]="dateTo">
+                            </div>
+                            <div class="col-md-2 col-sm-6 mb-2">
+                                <select class="form-control" [(ngModel)]="assignedDoctorId">
                                     <option value="">All doctors</option>
                                     <option *ngFor="let doctor of doctors" [value]="doctor.userId">
                                         {{ doctor.user?.name || doctor.specialization }}
                                     </option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
-                                <select class="form-control" [(ngModel)]="status" (change)="page = 1; loadPatients()">
+                            <div class="col-md-2 col-sm-6 mb-2">
+                                <select class="form-control" [(ngModel)]="status">
                                     <option value="">All statuses</option>
                                     <option value="active">Active</option>
                                     <option value="inactive">Inactive</option>
                                     <option value="deceased">Deceased</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
-                                <button class="btn btn-default btn-block" (click)="page = 1; loadPatients()">Search</button>
+                            <div class="col-md-6 col-sm-6 mb-2">
+                                <button class="btn btn-primary mr-2" (click)="applyFilters()">Search</button>
+                                <button class="btn btn-default" (click)="clearFilters()">Clear</button>
                             </div>
                         </div>
 
-                        <div class="table-responsive">
-                            <table class="table table-hover js-basic-example dataTable">
-                                <thead>
-                                    <tr>
-                                        <th>Patient No</th>
-                                        <th>Name</th>
-                                        <th>Phone</th>
-                                        <th>Doctor</th>
-                                        <th>Gender</th>
-                                        <th>Status</th>
-                                        <th class="text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr *ngFor="let patient of patients">
-                                        <td>{{ patient.patientNo }}</td>
-                                        <td>{{ patientName(patient) }}</td>
-                                        <td>{{ patient.phone || '-' }}</td>
-                                        <td>{{ patient.assignedDoctor?.name || '-' }}</td>
-                                        <td>{{ patient.gender }}</td>
-                                        <td><span class="badge badge-info">{{ patient.status }}</span></td>
-                                        <td class="text-right">
-                                            <a class="btn btn-sm btn-default mr-1" [routerLink]="['/patients/patient-profile', patient._id]">View</a>
-                                            <button class="btn btn-sm btn-primary mr-1" *ngIf="can('patients.update')"
-                                                (click)="editPatient(patient)">Edit</button>
-                                            <button class="btn btn-sm btn-danger" *ngIf="can('patients.delete')"
-                                                (click)="deletePatient(patient._id)">Delete</button>
-                                        </td>
-                                    </tr>
-                                    <tr *ngIf="!loading && patients.length === 0">
-                                        <td colspan="7" class="text-center text-muted">No patients found</td>
-                                    </tr>
-                                    <tr *ngIf="loading">
-                                        <td colspan="7" class="text-center text-muted">Loading...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="patient-empty text-center text-muted py-3" *ngIf="!loading && patients.length === 0">
+                            {{ hasActiveFilters ? 'No patients match your search.' : 'No patients found.' }}
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="patient-date-group" *ngFor="let group of patientGroups; trackBy: trackPatientGroup">
+                            <div class="patient-date-heading">{{ group.dateLabel }}</div>
+                            <div class="table-responsive">
+                                <table class="table table-hover js-basic-example dataTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Patient No</th>
+                                            <th>Name</th>
+                                            <th>Phone</th>
+                                            <th>Doctor</th>
+                                            <th>Gender</th>
+                                            <th>Status</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let patient of group.items">
+                                            <td>{{ patient.patientNo }}</td>
+                                            <td>{{ patientName(patient) }}</td>
+                                            <td>{{ patient.phone || '-' }}</td>
+                                            <td>{{ patient.assignedDoctor?.name || '-' }}</td>
+                                            <td>{{ patient.gender }}</td>
+                                            <td><span class="badge badge-info">{{ patient.status }}</span></td>
+                                            <td class="text-right">
+                                                <a class="btn btn-sm btn-default mr-1" [routerLink]="['/patients/patient-profile', patient._id]">View</a>
+                                                <button class="btn btn-sm btn-primary mr-1" *ngIf="can('patients.update')"
+                                                    (click)="editPatient(patient)">Edit</button>
+                                                <button class="btn btn-sm btn-danger" *ngIf="can('patients.delete')"
+                                                    (click)="deletePatient(patient._id)">Delete</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="patient-loading text-center text-muted py-3" *ngIf="loading">
+                            Loading patients...
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center patient-pagination" *ngIf="!loading && (totalPages > 1 || page > 1)">
                             <button class="btn btn-default" (click)="changePage(page - 1)" [disabled]="page <= 1">Prev</button>
                             <span>Page {{ page }} of {{ totalPages || 1 }}</span>
                             <button class="btn btn-default" (click)="changePage(page + 1)"

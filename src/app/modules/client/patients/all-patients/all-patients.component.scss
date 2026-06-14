@@ -3,6 +3,34 @@
   background: white;
 }
 
-.pagination {
+.patient-filters .btn {
+  min-width: 88px;
+}
+
+.patient-date-group + .patient-date-group {
   margin-top: 1rem;
+}
+
+.patient-date-heading {
+  background: #e8f7f7;
+  border-radius: 6px;
+  color: #019c9d;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.patient-pagination {
+  border-top: 1px solid #edf2f7;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+@media (max-width: 767px) {
+  .patient-filters .btn {
+    width: 100%;
+    margin-right: 0 !important;
+    margin-bottom: 0.5rem;
+  }
 }
