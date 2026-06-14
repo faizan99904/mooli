@@ -64,18 +64,24 @@
                                                 profile</a>
                                         </td>
                                         <td>{{ prescription.doctor?.name || '-' }}</td>
-                                        <td>
-                                            <div *ngFor="let medicine of prescription.medicines" class="mb-2">
+                                        <td class="medicine-preview-cell">
+                                            <div *ngFor="let medicine of tableMedicines(prescription.medicines)"
+                                                class="medicine-preview-item">
                                                 <div class="font-weight-bold">{{ medicine.name }}</div>
                                                 <div class="text-muted small">
                                                     {{ medicine.dosage || '-' }} | {{ medicine.frequency || '-' }} | {{
                                                     medicine.duration || '-' }}
                                                 </div>
                                             </div>
+                                            <div *ngIf="extraMedicineCount(prescription.medicines)"
+                                                class="medicine-preview-more text-muted small">
+                                                +{{ extraMedicineCount(prescription.medicines) }} more medicine(s)
+                                            </div>
                                         </td>
-                                        <td>
+                                        <td class="medicine-preview-cell">
                                             <ng-container *ngIf="canViewProducts; else noProductAccess">
-                                                <div *ngFor="let medicine of prescription.medicines" class="mb-2">
+                                                <div *ngFor="let medicine of tableMedicines(prescription.medicines)"
+                                                    class="medicine-preview-item">
                                                     <div *ngIf="getMedicineMatches(medicine.name).length; else noMatch">
                                                         <div *ngFor="let product of getMedicineMatches(medicine.name)"
                                                             class="small">
@@ -90,6 +96,10 @@
                                                     <ng-template #noMatch>
                                                         <span class="text-muted small">No POS medicine match</span>
                                                     </ng-template>
+                                                </div>
+                                                <div *ngIf="extraMedicineCount(prescription.medicines)"
+                                                    class="medicine-preview-more text-muted small">
+                                                    +{{ extraMedicineCount(prescription.medicines) }} more
                                                 </div>
                                             </ng-container>
                                             <ng-template #noProductAccess>
@@ -453,6 +463,19 @@
                             <p>جس دوائی کے سامنے جاری رکھیں لکھا ہو اس دوائی کو جب تک ڈاکٹر سے مشورہ نہ لیں جاری رکھیں۔
                             </p>
                         </aside>
+                    </div>
+
+                    <div class="print-clinical-notes"
+                        *ngIf="preview.patientNote || preview.consultation || preview.admissionOrderLines.length">
+                        <div class="print-patient-note" *ngIf="preview.patientNote">
+                            <strong>Note to Patient</strong>
+                            <p>{{ preview.patientNote }}</p>
+                        </div>
+                        <div class="print-order-notes" *ngIf="preview.consultation || preview.admissionOrderLines.length">
+                            <strong>Orders</strong>
+                            <p *ngIf="preview.consultation"><span>Consultation:</span> {{ preview.consultation }}</p>
+                            <p *ngFor="let line of preview.admissionOrderLines">{{ line }}</p>
+                        </div>
                     </div>
 
                     <footer class="print-footer">

@@ -92,6 +92,7 @@ export interface Doctor {
   department?: Department | null;
   specialization?: string | null;
   qualification?: string | null;
+  nameUrdu?: string | null;
   experienceYears?: number;
   consultationFee?: number;
   availableDays?: string[];

@@ -650,7 +650,11 @@
               <h3>Medicines</h3>
               <div class="medicine-heading-actions">
                 <button type="button" (click)="openDoctorMedicineModal()">+ Add Doctor Medicine</button>
-                <button type="button" (click)="addMedicine()">+ Add Medicine</button>
+                <button type="button" (click)="addMedicineFromShortcut()"
+                  [title]="'Add medicine row (' + addMedicineShortcutLabel() + ')'">
+                  + Add Medicine
+                  <small class="medicine-shortcut-hint">{{ addMedicineShortcutLabel() }}</small>
+                </button>
               </div>
             </div>
 
@@ -906,6 +910,7 @@
             <h3>Created Prescriptions</h3>
             <p>
               {{ loading ? 'Loading prescriptions...' : (prescriptions.length + ' shown · latest first') }}
+              <span *ngIf="historyPatientFilterId()"> · {{ patientName(selectedPatient()) }}</span>
               <span *ngIf="historySearch || historyDateFrom || historyDateTo"> · filtered</span>
             </p>
           </div>
@@ -923,7 +928,13 @@
         </div>
 
         <div class="prescription-history-empty" *ngIf="!loading && prescriptions.length === 0">
-          {{ historySearch || historyDateFrom || historyDateTo ? 'No prescriptions match your search.' : 'No prescription created yet.' }}
+          {{
+            historySearch || historyDateFrom || historyDateTo
+              ? 'No prescriptions match your search.'
+              : historyPatientFilterId()
+                ? 'No prescriptions found for this patient.'
+                : 'No prescription created yet.'
+          }}
         </div>
 
         <div class="prescription-history-list" *ngIf="prescriptions.length > 0">
@@ -1112,7 +1123,7 @@
               </div>
             </aside>
 
-            <main class="print-medicine-area">
+            <main class="print-medicine-area" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
               <table class="print-medicine-table">
                 <thead>
                   <tr>
@@ -1144,15 +1155,8 @@
                     <td>{{ slotDose(medicine, 'evening') }}</td>
                     <td>{{ slotDose(medicine, 'night') }}</td>
                   </tr>
-                  <tr *ngFor="let row of [1, 2, 3, 4, 5]">
-                    <td>&nbsp;</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                  <tr *ngIf="preview.medicines.length === 0">
+                    <td class="print-med-name" colspan="8">No medicines added</td>
                   </tr>
                 </tbody>
               </table>
@@ -1167,6 +1171,19 @@
               <strong>نوٹ :</strong>
               <p>جس دوائی کے سامنے جاری رکھیں لکھا ہو اس دوائی کو جب تک ڈاکٹر سے مشورہ نہ لیں جاری رکھیں۔</p>
             </aside>
+          </div>
+
+          <div class="print-clinical-notes"
+            *ngIf="preview.patientNote || preview.consultation || preview.admissionOrderLines.length">
+            <div class="print-patient-note" *ngIf="preview.patientNote">
+              <strong>Note to Patient</strong>
+              <p>{{ preview.patientNote }}</p>
+            </div>
+            <div class="print-order-notes" *ngIf="preview.consultation || preview.admissionOrderLines.length">
+              <strong>Orders</strong>
+              <p *ngIf="preview.consultation"><span>Consultation:</span> {{ preview.consultation }}</p>
+              <p *ngFor="let line of preview.admissionOrderLines">{{ line }}</p>
+            </div>
           </div>
 
 	          <footer class="print-footer">

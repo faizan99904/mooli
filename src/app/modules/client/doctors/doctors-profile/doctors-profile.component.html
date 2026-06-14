@@ -38,6 +38,7 @@
                         <div class="row" *ngIf="!loading">
                             <div class="col-md-6 mb-3"><strong>Email:</strong> {{ doctor?.user?.email || '-' }}</div>
                             <div class="col-md-6 mb-3"><strong>Phone:</strong> {{ doctor?.user?.phone || '-' }}</div>
+                            <div class="col-md-6 mb-3"><strong>Name (Urdu):</strong> {{ doctor?.nameUrdu || '-' }}</div>
                             <div class="col-md-6 mb-3"><strong>Department:</strong> {{ doctor?.department?.name || '-' }}</div>
                             <div class="col-md-6 mb-3"><strong>Qualification:</strong> {{ doctor?.qualification || '-' }}</div>
                             <div class="col-md-6 mb-3"><strong>Experience:</strong> {{ doctor?.experienceYears || 0 }} years</div>

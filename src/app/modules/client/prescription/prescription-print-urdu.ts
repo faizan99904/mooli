@@ -213,18 +213,26 @@ export const formatEnglishDoctorName = (name?: string | null): string => {
   return plain ? `Dr. ${plain}` : 'Dr.';
 };
 
-export const formatUrduDoctorName = (name?: string | null): string => {
+export const formatUrduDoctorName = (
+  name?: string | null,
+  urduName?: string | null
+): string => {
+  const manualUrdu = String(urduName || '').trim();
+  if (manualUrdu) {
+    return manualUrdu.startsWith('ڈاکٹر') ? manualUrdu : `ڈاکٹر ${manualUrdu}`;
+  }
+
   const plain = stripDoctorPrefix(name);
   if (!plain) {
     return 'ڈاکٹر';
   }
 
-  const urduName = plain
+  const transliteratedName = plain
     .split(/\s+/)
     .map((part) => transliterateToken(part))
     .join(' ');
 
-  return `ڈاکٹر ${urduName}`;
+  return `ڈاکٹر ${transliteratedName}`;
 };
 
 export const formatEnglishDoctorTitle = (_specialization?: string | null): string => 'Consultant Physician';

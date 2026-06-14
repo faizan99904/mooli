@@ -43,6 +43,7 @@ export class AddDoctorsComponent implements OnInit {
     this.doctorForm = this.fb.group({
       hospitalId: ['', Validators.required],
       name: ['', Validators.required],
+      nameUrdu: [''],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
       phone: [''],
@@ -173,6 +174,7 @@ export class AddDoctorsComponent implements OnInit {
 
     const payload: Record<string, unknown> = {
       name: value.name,
+      nameUrdu: value.nameUrdu?.trim() || '',
       email: value.email,
       phone: value.phone || undefined,
       departmentId: value.departmentId || undefined,
@@ -229,6 +231,7 @@ export class AddDoctorsComponent implements OnInit {
     this.doctorForm.patchValue({
       hospitalId: this.editingDoctor.hospitalId || this.currentHospitalId || '',
       name: this.editingDoctor.user?.name || '',
+      nameUrdu: this.editingDoctor.nameUrdu || '',
       email: this.editingDoctor.user?.email || '',
       password: '',
       phone: this.editingDoctor.user?.phone || '',

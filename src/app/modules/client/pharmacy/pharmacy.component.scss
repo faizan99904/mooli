@@ -2,6 +2,24 @@
   font-weight: 600;
 }
 
+.medicine-preview-cell {
+  max-width: 260px;
+  vertical-align: top;
+}
+
+.medicine-preview-item {
+  margin-bottom: 0.35rem;
+
+  &:last-of-type {
+    margin-bottom: 0;
+  }
+}
+
+.medicine-preview-more {
+  font-style: italic;
+  margin-top: 0.35rem;
+}
+
 .product-modal-backdrop {
   align-items: center;
   background: rgba(15, 23, 42, 0.58);
@@ -348,13 +366,15 @@
 }
 
 .print-body-grid {
+  align-items: start;
   display: grid;
-  gap: 0;
-  grid-template-columns: 34mm 1fr 24mm;
+  gap: 2mm;
+  grid-template-columns: 34mm minmax(0, 1fr) 24mm;
 }
 
 .print-side-panel {
-  padding: 28px 4px 0 0;
+  min-width: 0;
+  padding: 12px 4px 0 0;
 }
 
 .print-mini-title {
@@ -388,14 +408,25 @@
 
 .follow-up-print {
   display: grid;
-  gap: 6px;
-  margin-top: 20mm;
+  gap: 4px;
+  margin-top: 8mm;
 }
 
 .print-medicine-area {
+  align-self: start;
   border: 1.5px solid #8b95a3;
   border-radius: 2px;
+  box-sizing: border-box;
+  height: fit-content;
+  margin-left: 0;
+  max-width: 100%;
+  min-width: 0;
   overflow: hidden;
+  width: 100%;
+}
+
+.print-medicine-table {
+  table-layout: fixed;
 }
 
 .print-medicine-table th,
@@ -424,20 +455,23 @@
   color: #111827 !important;
   font-size: 21px !important;
   line-height: 1.15;
-  width: 69mm;
+  max-width: 46mm;
+  width: 36%;
 }
 
 .print-medicine-title span {
   color: #374151;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .print-med-name {
   background: #fff !important;
   line-height: 1.3;
   min-height: 10mm;
+  overflow-wrap: anywhere;
   padding: 5px 8px !important;
   text-align: left !important;
+  word-break: break-word;
 }
 
 .print-med-name strong,
@@ -462,26 +496,77 @@
   margin-top: 2px;
 }
 
+.print-urdu-note.print-urdu-block {
+  line-height: 1.3;
+}
+
 .print-urdu-note {
   border-top: 2px solid #111;
   direction: rtl;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  padding: 8px 12px;
+  line-height: 1.35;
+  padding: 4px 6px 5px;
   text-align: center;
+  unicode-bidi: plaintext;
+  width: 100%;
+}
+
+.print-urdu-note p {
+  margin: 0 0 3px;
+}
+
+.print-urdu-note p:last-child {
+  margin-bottom: 0;
 }
 
 .print-right-note {
+  align-self: start;
   direction: rtl;
   font-size: 18px;
   font-weight: 800;
   line-height: 1.45;
+  min-width: 0;
   padding: 12px 0 0 8px;
   text-align: center;
 }
 
 .print-right-note p {
   margin: 10px 0 0;
+}
+
+.print-clinical-notes {
+  border-top: 1px solid #cbd5e1;
+  display: grid;
+  gap: 8px;
+  margin-top: 3mm;
+  padding-top: 3mm;
+}
+
+.print-patient-note,
+.print-order-notes {
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.print-patient-note strong,
+.print-order-notes strong {
+  color: #111827;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.print-patient-note p,
+.print-order-notes p {
+  margin: 0 0 4px;
+  white-space: pre-wrap;
+}
+
+.print-order-notes p span {
+  font-weight: 700;
 }
 
 .print-footer {

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -81,6 +81,7 @@ import {
   admissionOrderStatusLabel as formatAdmissionOrderStatusLabel,
   buildAdmissionOrderDisplayRows,
   countActiveAdmissionOrders,
+  legacyAdmissionOrdersToItems,
   PatientAdmissionOrderRecord,
 } from './admission-order-data';
 import {
@@ -136,6 +137,9 @@ interface PrintPreviewData {
   ivFluids: Array<{ name: string; rate: string; quantity: string; route: string }>;
   medicines: Array<Record<string, unknown>>;
   followUpDate: string;
+  patientNote: string;
+  consultation: string;
+  admissionOrderLines: string[];
 }
 
 type DoseSlot = 'morning' | 'noon' | 'evening' | 'night';
@@ -347,14 +351,14 @@ export class PrescriptionComponent implements OnInit {
       customLabTest: [''],
       ivFluids: this.fb.array([this.createIvFluidGroup()]),
       admissionOrders: this.fb.group({
-        regularDiet: [true],
+        regularDiet: [false],
         npo: [false],
         consultation: [''],
         monitoring: this.fb.group({
-          bp: [true],
-          pulse: [true],
-          spo2: [true],
-          rbs: [true],
+          bp: [false],
+          pulse: [false],
+          spo2: [false],
+          rbs: [false],
         }),
         notes: [''],
       }),
@@ -576,6 +580,43 @@ export class PrescriptionComponent implements OnInit {
 
   addMedicine(): void {
     this.medicines.push(this.createMedicineGroup());
+  }
+
+  addMedicineShortcutLabel(): string {
+    const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+    return isMac ? 'Cmd+Shift+M' : 'Ctrl+Shift+M';
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handlePrescriptionShortcut(event: KeyboardEvent): void {
+    const key = event.key.toLowerCase();
+    const hasPrimaryModifier = event.ctrlKey || event.metaKey;
+
+    if (!hasPrimaryModifier || !event.shiftKey || key !== 'm' || this.isPrescriptionShortcutBlocked()) {
+      return;
+    }
+
+    event.preventDefault();
+    this.addMedicineFromShortcut();
+  }
+
+  addMedicineFromShortcut(): void {
+    const newIndex = this.medicines.length;
+    this.addMedicine();
+    this.focusMedicineRow(newIndex);
+  }
+
+  private isPrescriptionShortcutBlocked(): boolean {
+    return Boolean(
+      this.printPreviewOpen ||
+      this.medicineLibraryOpen ||
+      this.vitalsModalOpen ||
+      this.vitalsTrendModalOpen ||
+      this.labTestModalOpen ||
+      this.ivFluidModalOpen ||
+      this.admissionOrderModalOpen ||
+      this.documentModalOpen,
+    );
   }
 
   addCustomVital(): void {
@@ -1402,6 +1443,22 @@ export class PrescriptionComponent implements OnInit {
     }
 
     return medicine?.[slot] ? '1' : '';
+  }
+
+  printMedicineDensityClass(medicineCount: number): string {
+    if (medicineCount >= 12) {
+      return 'medicine-density-ultra';
+    }
+
+    if (medicineCount >= 8) {
+      return 'medicine-density-dense';
+    }
+
+    if (medicineCount >= 5) {
+      return 'medicine-density-compact';
+    }
+
+    return 'medicine-density-normal';
   }
 
   onSlotDoseInput(index: number, slot: DoseSlot): void {
@@ -2304,6 +2361,11 @@ export class PrescriptionComponent implements OnInit {
       params['dateTo'] = this.historyDateTo;
     }
 
+    const historyPatientId = this.historyPatientFilterId();
+    if (historyPatientId) {
+      params['patientId'] = historyPatientId;
+    }
+
     this.backend
       .getPrescriptions(params)
       .pipe(finalize(() => {
@@ -2416,6 +2478,7 @@ export class PrescriptionComponent implements OnInit {
       return;
     }
 
+    const isCreate = !this.editingId;
     this.saving = true;
     const request$ = this.editingId
       ? this.backend.updatePrescription(this.editingId, payload)
@@ -2425,8 +2488,13 @@ export class PrescriptionComponent implements OnInit {
       next: (response) => {
         this.toastr.success(response.message);
         this.editingId = response.data?._id || this.editingId;
-        this.markAppointmentCompleted(response.data?.appointmentId || value.appointmentId);
-        this.loadPrescriptions();
+        this.markAppointmentCompleted(
+          response.data?.appointmentId || value.appointmentId,
+          isCreate,
+        );
+        if (!isCreate) {
+          this.loadPrescriptions();
+        }
         if (printAfterSave) {
           this.openPrintPreview(response.data);
         }
@@ -2443,7 +2511,7 @@ export class PrescriptionComponent implements OnInit {
   }
 
   selectAppointment(appointment: Appointment): void {
-    if (this.isCancelledAppointment(appointment)) {
+    if (this.isCancelledAppointment(appointment) || appointment.status === 'completed') {
       return;
     }
 
@@ -2468,6 +2536,12 @@ export class PrescriptionComponent implements OnInit {
     this.refreshAdmissionOrderRows();
     this.refreshPatientDocumentRows();
     this.refreshSelectedAppointment(appointment._id);
+    this.page = 1;
+    this.loadPrescriptions();
+  }
+
+  historyPatientFilterId(): string {
+    return this.selectedAppointmentId && this.selectedPatientId ? this.selectedPatientId : '';
   }
 
   private refreshSelectedAppointment(appointmentId: string): void {
@@ -3006,7 +3080,9 @@ export class PrescriptionComponent implements OnInit {
       this.historySearch.trim() || this.historyDateFrom || this.historyDateTo,
     );
     const localPrescriptions = hasHistoryFilters ? [] : await this.localQueuedPrescriptions();
-    this.prescriptions = this.mergePrescriptions([...localPrescriptions, ...items]);
+    this.prescriptions = this.filterHistoryPrescriptions(
+      this.mergePrescriptions([...localPrescriptions, ...items]),
+    );
     this.totalPages = totalPages;
     this.rebuildPrescriptionHistoryGroups();
     this.loadPatientHistoryRecords();
@@ -3031,10 +3107,12 @@ export class PrescriptionComponent implements OnInit {
       meta: { prescription },
     });
 
-    this.prescriptions = this.mergePrescriptions([prescription, ...this.prescriptions]);
+    this.prescriptions = this.filterHistoryPrescriptions(
+      this.mergePrescriptions([prescription, ...this.prescriptions]),
+    );
     this.rebuildPrescriptionHistoryGroups();
     this.editingId = localId;
-    this.markAppointmentCompleted(prescription.appointmentId);
+    this.markAppointmentCompleted(prescription.appointmentId, true);
     this.refreshLabTestRows();
     this.refreshIvFluidRows();
     this.refreshAdmissionOrderRows();
@@ -3048,14 +3126,14 @@ export class PrescriptionComponent implements OnInit {
 
   private defaultAdmissionOrders(): Prescription['admissionOrders'] {
     return {
-      regularDiet: true,
+      regularDiet: false,
       npo: false,
       consultation: '',
       monitoring: {
-        bp: true,
-        pulse: true,
-        spo2: true,
-        rbs: true,
+        bp: false,
+        pulse: false,
+        spo2: false,
+        rbs: false,
       },
       notes: '',
     };
@@ -3192,6 +3270,15 @@ export class PrescriptionComponent implements OnInit {
     );
   }
 
+  private filterHistoryPrescriptions(items: Prescription[]): Prescription[] {
+    const patientId = this.historyPatientFilterId();
+    if (!patientId) {
+      return items;
+    }
+
+    return items.filter((item) => item.patientId === patientId);
+  }
+
   private mergePrescriptions(items: Prescription[]): Prescription[] {
     const map = new Map<string, Prescription>();
     items.forEach((item) => {
@@ -3228,6 +3315,7 @@ export class PrescriptionComponent implements OnInit {
       this.historySearch.trim() || 'all',
       this.historyDateFrom || 'from',
       this.historyDateTo || 'to',
+      this.historyPatientFilterId() || 'patient-all',
       this.isDoctorUser() ? this.currentUserId || 'doctor' : 'all',
     );
   }
@@ -3288,6 +3376,8 @@ export class PrescriptionComponent implements OnInit {
       patientId: this.routePatientId || '',
       doctorId: this.isDoctorUser() ? this.currentUserId || '' : this.routeDoctorId || '',
     });
+    this.page = 1;
+    this.loadPrescriptions();
   }
 
   private isCancelledAppointment(appointment: Appointment): boolean {
@@ -3295,7 +3385,81 @@ export class PrescriptionComponent implements OnInit {
   }
 
   private isPrescriptionAppointment(appointment: Appointment): boolean {
-    return this.isTodayAppointment(appointment) && !this.isCancelledAppointment(appointment);
+    return (
+      this.isTodayAppointment(appointment) &&
+      !this.isCancelledAppointment(appointment) &&
+      appointment.status !== 'completed'
+    );
+  }
+
+  private getTodayAppointmentQueue(): Appointment[] {
+    return this.appointments
+      .filter(
+        (appointment) =>
+          this.isTodayAppointment(appointment) && !this.isCancelledAppointment(appointment),
+      )
+      .sort((first, second) =>
+        `${first.startTime || ''}`.localeCompare(`${second.startTime || ''}`),
+      );
+  }
+
+  private prepareNextAppointment(appointment: Appointment): void {
+    this.editingId = null;
+    this.prescriptionForm.reset({
+      visitType: 'opd',
+      admissionOrders: this.defaultAdmissionOrders(),
+    });
+    this.customVitals.clear();
+    this.medicines.clear();
+    this.addMedicine();
+    this.labTests.clear();
+    this.labTestCatalog.forEach((test) => this.labTests.push(this.createLabTestGroup(test)));
+    this.ivFluids.clear();
+    this.ivFluids.push(this.createIvFluidGroup());
+    this.admissionOrderItems.clear();
+    this.patientDocuments.clear();
+
+    if (this.isDoctorUser()) {
+      this.prescriptionForm.get('doctorId')?.disable({ emitEvent: false });
+    } else {
+      this.prescriptionForm.get('doctorId')?.enable({ emitEvent: false });
+    }
+
+    this.selectAppointment(appointment);
+  }
+
+  private selectNextAppointmentAfterComplete(completedAppointmentId: string): void {
+    const queue = this.getTodayAppointmentQueue();
+    const completedIndex = queue.findIndex((appointment) => appointment._id === completedAppointmentId);
+    const nextAppointment =
+      queue
+        .slice(completedIndex + 1)
+        .find((appointment) => appointment.status !== 'completed') ||
+      queue.find(
+        (appointment) =>
+          appointment._id !== completedAppointmentId && appointment.status !== 'completed',
+      );
+
+    if (!nextAppointment) {
+      this.clearCompletedAppointmentSelection();
+      return;
+    }
+
+    this.prepareNextAppointment(nextAppointment);
+  }
+
+  private clearCompletedAppointmentSelection(): void {
+    this.selectedAppointmentId = '';
+    this.selectedPatientId = this.routePatientId || '';
+    this.editingId = null;
+    this.prescriptionForm.patchValue({
+      appointmentId: '',
+      patientId: this.routePatientId || '',
+      doctorId: this.isDoctorUser() ? this.currentUserId || '' : this.routeDoctorId || '',
+    });
+    this.page = 1;
+    this.loadPrescriptions();
+    this.toastr.info('All appointments for today are completed.');
   }
 
   private isTodayAppointment(appointment: Appointment): boolean {
@@ -3641,7 +3805,7 @@ export class PrescriptionComponent implements OnInit {
     };
   }
 
-  private markAppointmentCompleted(appointmentId?: string | null): void {
+  private markAppointmentCompleted(appointmentId?: string | null, advanceToNext = false): void {
     if (!appointmentId) {
       return;
     }
@@ -3654,6 +3818,10 @@ export class PrescriptionComponent implements OnInit {
         }
         : appointment
     );
+
+    if (advanceToNext) {
+      this.selectNextAppointmentAfterComplete(appointmentId);
+    }
   }
 
   private buildPrintPreviewData(prescription: Prescription | null = null): PrintPreviewData | null {
@@ -3723,7 +3891,7 @@ export class PrescriptionComponent implements OnInit {
       patientPhone: patient.phone || '-',
       doctorName: formatEnglishDoctorName(doctorDisplayName),
       doctorNamePlain: stripDoctorPrefix(doctorDisplayName),
-      doctorNameUrdu: formatUrduDoctorName(doctorDisplayName),
+      doctorNameUrdu: formatUrduDoctorName(doctorDisplayName, doctor?.nameUrdu),
       doctorQualification,
       doctorQualificationUrdu: formatUrduQualification(doctorQualification),
       doctorTitleEnglish: formatEnglishDoctorTitle(),
@@ -3746,7 +3914,34 @@ export class PrescriptionComponent implements OnInit {
       ivFluids,
       medicines,
       followUpDate: followUpDate ? this.shortDate(followUpDate) : '-',
+      patientNote: String(source['advice'] || '').trim(),
+      consultation: String(source['admissionOrders']?.consultation || '').trim(),
+      admissionOrderLines: this.resolvePrintAdmissionOrderLines(source),
     };
+  }
+
+  private resolvePrintAdmissionOrderLines(source: Record<string, unknown>): string[] {
+    const lines: string[] = [];
+    const consultation = String((source['admissionOrders'] as Record<string, unknown> | undefined)?.['consultation'] || '').trim();
+
+    this.safeArray(source['admissionOrderItems']).forEach((item) => {
+      const order = String((item as Record<string, unknown>)['order'] || '').trim();
+      if (order && !lines.includes(order)) {
+        lines.push(order);
+      }
+    });
+
+    const legacy = source['admissionOrders'] as Prescription['admissionOrders'];
+    if (legacy) {
+      legacyAdmissionOrdersToItems(legacy).forEach((item) => {
+        const order = String(item.order || '').trim();
+        if (order && order !== consultation && !lines.includes(order)) {
+          lines.push(order);
+        }
+      });
+    }
+
+    return lines.slice(0, 12);
   }
 
   private safeArray(value: unknown): unknown[] {
@@ -3818,7 +4013,13 @@ export class PrescriptionComponent implements OnInit {
       return null;
     }
 
-    return medicine as Record<string, unknown>;
+    const record = medicine as Record<string, unknown>;
+    const name = String(record['name'] || '').trim();
+    if (!name) {
+      return null;
+    }
+
+    return record;
   }
 
   private toBoolean(value: unknown): boolean {

@@ -16,6 +16,7 @@ import {
   Store,
   User,
 } from '../../../shared/models/hospital.model';
+import { legacyAdmissionOrdersToItems } from '../prescription/admission-order-data';
 
 interface PrintPreviewData {
   patient: Patient;
@@ -33,6 +34,9 @@ interface PrintPreviewData {
   labTests: Array<{ name: string; category: string }>;
   medicines: Prescription['medicines'];
   followUpDate: string;
+  patientNote: string;
+  consultation: string;
+  admissionOrderLines: string[];
 }
 
 interface PharmacyProductForm {
@@ -474,6 +478,17 @@ export class PharmacyComponent implements OnInit {
       : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  readonly tableMedicinePreviewLimit = 2;
+
+  tableMedicines(medicines: Prescription['medicines'] | null | undefined): Prescription['medicines'] {
+    return (medicines || []).slice(0, this.tableMedicinePreviewLimit);
+  }
+
+  extraMedicineCount(medicines: Prescription['medicines'] | null | undefined): number {
+    const total = (medicines || []).length;
+    return total > this.tableMedicinePreviewLimit ? total - this.tableMedicinePreviewLimit : 0;
+  }
+
   getMedicineMatches(medicineName: string): ProductCatalogItem[] {
     const normalizedMedicine = this.normalizeText(medicineName);
     if (!normalizedMedicine) {
@@ -794,7 +809,33 @@ export class PharmacyComponent implements OnInit {
       labTests,
       medicines: prescription.medicines || [],
       followUpDate: this.shortDate(prescription.followUpDate),
+      patientNote: String(prescription.advice || '').trim(),
+      consultation: String(prescription.admissionOrders?.consultation || '').trim(),
+      admissionOrderLines: this.resolvePrintAdmissionOrderLines(prescription),
     };
+  }
+
+  private resolvePrintAdmissionOrderLines(prescription: Prescription): string[] {
+    const lines: string[] = [];
+    const consultation = String(prescription.admissionOrders?.consultation || '').trim();
+
+    (prescription.admissionOrderItems || []).forEach((item) => {
+      const order = String(item.order || '').trim();
+      if (order && !lines.includes(order)) {
+        lines.push(order);
+      }
+    });
+
+    if (prescription.admissionOrders) {
+      legacyAdmissionOrdersToItems(prescription.admissionOrders).forEach((item) => {
+        const order = String(item.order || '').trim();
+        if (order && order !== consultation && !lines.includes(order)) {
+          lines.push(order);
+        }
+      });
+    }
+
+    return lines.slice(0, 12);
   }
 
   private resolvePrintPatient(prescription: Prescription): Patient | null {

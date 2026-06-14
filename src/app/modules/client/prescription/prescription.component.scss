@@ -1791,6 +1791,20 @@ dd {
   flex-wrap: wrap;
   gap: 6px;
   justify-content: flex-end;
+
+  button {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+  }
+}
+
+.medicine-shortcut-hint {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.9;
 }
 
 .smart-medicine-panel {
@@ -2946,6 +2960,10 @@ dd {
   width: 100%;
 }
 
+.print-medicine-table {
+  table-layout: fixed;
+}
+
 .print-patient-table {
   margin-bottom: 3mm;
 }
@@ -2967,13 +2985,15 @@ dd {
 }
 
 .print-body-grid {
+  align-items: start;
   display: grid;
-  gap: 0;
-  grid-template-columns: 34mm 1fr 24mm;
+  gap: 2mm;
+  grid-template-columns: 34mm minmax(0, 1fr) 24mm;
 }
 
 .print-side-panel {
-  padding: 28px 4px 0 0;
+  min-width: 0;
+  padding: 12px 4px 0 0;
 }
 
 .print-mini-title {
@@ -3008,14 +3028,21 @@ dd {
 
 .follow-up-print {
   display: grid;
-  gap: 6px;
-  margin-top: 20mm;
+  gap: 4px;
+  margin-top: 8mm;
 }
 
 .print-medicine-area {
+  align-self: start;
   border: 1.5px solid #8b95a3;
   border-radius: 2px;
+  box-sizing: border-box;
+  height: fit-content;
+  margin-left: 0;
+  max-width: 100%;
+  min-width: 0;
   overflow: hidden;
+  width: 100%;
 }
 
 .print-medicine-table th,
@@ -3053,22 +3080,25 @@ dd {
   color: #111827 !important;
   font-size: 21px !important;
   line-height: 1.2;
-  width: 69mm;
+  max-width: 46mm;
+  width: 36%;
 }
 
 .print-medicine-title .print-urdu-inline {
   display: inline-block;
-  font-size: 17px;
-  line-height: 1.8;
-  margin-top: 4px;
+  font-size: 15px;
+  line-height: 1.55;
+  margin-top: 2px;
 }
 
 .print-med-name {
   background: #fff !important;
   line-height: 1.3;
   min-height: 10mm;
+  overflow-wrap: anywhere;
   padding: 5px 8px !important;
   text-align: left !important;
+  word-break: break-word;
 }
 
 .print-med-name strong,
@@ -3093,18 +3123,166 @@ dd {
   margin-top: 2px;
 }
 
+.print-medicine-area.medicine-density-compact .print-medicine-table th,
+.print-medicine-area.medicine-density-compact .print-medicine-table td {
+  font-size: 10px;
+  height: 7mm;
+  padding: 2px 4px;
+}
+
+.print-medicine-area.medicine-density-compact .print-medicine-table th.print-urdu-cell {
+  font-size: 10px;
+  line-height: 1.45;
+  min-height: 8mm;
+  padding: 4px 4px;
+}
+
+.print-medicine-area.medicine-density-compact .print-medicine-title {
+  font-size: 17px !important;
+}
+
+.print-medicine-area.medicine-density-compact .print-medicine-title .print-urdu-inline {
+  font-size: 14px;
+}
+
+.print-medicine-area.medicine-density-compact .print-med-name {
+  min-height: 7mm;
+  padding: 3px 6px !important;
+}
+
+.print-medicine-area.medicine-density-compact .print-med-name strong {
+  font-size: 11px;
+}
+
+.print-medicine-area.medicine-density-compact .print-med-name span {
+  font-size: 9.5px;
+}
+
+.print-medicine-area.medicine-density-compact .print-med-name small {
+  font-size: 8.5px;
+}
+
+.print-medicine-area.medicine-density-compact .print-urdu-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  padding: 5px 8px 6px;
+}
+
+.print-medicine-area.medicine-density-dense .print-medicine-table th,
+.print-medicine-area.medicine-density-dense .print-medicine-table td {
+  font-size: 9px;
+  height: 5.8mm;
+  padding: 1px 3px;
+}
+
+.print-medicine-area.medicine-density-dense .print-medicine-table th.print-urdu-cell {
+  font-size: 9px;
+  line-height: 1.35;
+  min-height: 6.5mm;
+  padding: 3px 3px;
+}
+
+.print-medicine-area.medicine-density-dense .print-medicine-title {
+  font-size: 15px !important;
+}
+
+.print-medicine-area.medicine-density-dense .print-medicine-title .print-urdu-inline {
+  font-size: 12px;
+}
+
+.print-medicine-area.medicine-density-dense .print-med-name {
+  line-height: 1.15;
+  min-height: 5.8mm;
+  padding: 2px 5px !important;
+}
+
+.print-medicine-area.medicine-density-dense .print-med-name strong {
+  font-size: 10px;
+}
+
+.print-medicine-area.medicine-density-dense .print-med-name span {
+  font-size: 8.5px;
+}
+
+.print-medicine-area.medicine-density-dense .print-med-name small {
+  font-size: 7.5px;
+  margin-top: 0;
+}
+
+.print-medicine-area.medicine-density-dense .print-urdu-note {
+  font-size: 10px;
+  line-height: 1.35;
+  padding: 4px 6px 5px;
+}
+
+.print-medicine-area.medicine-density-ultra .print-medicine-table th,
+.print-medicine-area.medicine-density-ultra .print-medicine-table td {
+  font-size: 8px;
+  height: 4.8mm;
+  padding: 1px 2px;
+}
+
+.print-medicine-area.medicine-density-ultra .print-medicine-table th.print-urdu-cell {
+  font-size: 8px;
+  line-height: 1.25;
+  min-height: 5.5mm;
+  padding: 2px 2px;
+}
+
+.print-medicine-area.medicine-density-ultra .print-medicine-title {
+  font-size: 13px !important;
+}
+
+.print-medicine-area.medicine-density-ultra .print-medicine-title .print-urdu-inline {
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.print-medicine-area.medicine-density-ultra .print-med-name {
+  line-height: 1.1;
+  min-height: 4.8mm;
+  padding: 1px 4px !important;
+}
+
+.print-medicine-area.medicine-density-ultra .print-med-name strong {
+  font-size: 9px;
+}
+
+.print-medicine-area.medicine-density-ultra .print-med-name span,
+.print-medicine-area.medicine-density-ultra .print-med-name small {
+  display: inline;
+  font-size: 7.5px;
+  margin-left: 4px;
+}
+
+.print-medicine-area.medicine-density-ultra .print-urdu-note {
+  font-size: 8.5px;
+  line-height: 1.25;
+  padding: 3px 5px 4px;
+}
+
+.print-medicine-area.medicine-density-ultra .print-urdu-note p {
+  margin: 0 0 2px;
+}
+
+.print-urdu-note.print-urdu-block {
+  line-height: 1.3;
+}
+
 .print-urdu-note {
   border-top: 2px solid #111;
   direction: rtl;
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 700;
-  line-height: 2;
-  padding: 12px 16px 14px;
+  line-height: 1.35;
+  padding: 4px 6px 5px;
   text-align: center;
+  unicode-bidi: plaintext;
+  width: 100%;
 }
 
 .print-urdu-note p {
-  margin: 0 0 10px;
+  margin: 0 0 3px;
 }
 
 .print-urdu-note p:last-child {
@@ -3112,11 +3290,13 @@ dd {
 }
 
 .print-right-note {
+  align-self: start;
   direction: rtl;
   font-size: 17px;
   font-weight: 800;
-  line-height: 1.95;
-  padding: 14px 10px 8px;
+  line-height: 1.75;
+  min-width: 0;
+  padding: 8px 6px 4px;
   text-align: center;
 }
 
@@ -3129,6 +3309,40 @@ dd {
 .print-right-note p {
   line-height: 2.05;
   margin: 0;
+}
+
+.print-clinical-notes {
+  border-top: 1px solid #cbd5e1;
+  display: grid;
+  gap: 8px;
+  margin-top: 3mm;
+  padding-top: 3mm;
+}
+
+.print-patient-note,
+.print-order-notes {
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.print-patient-note strong,
+.print-order-notes strong {
+  color: #111827;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.print-patient-note p,
+.print-order-notes p {
+  margin: 0 0 4px;
+  white-space: pre-wrap;
+}
+
+.print-order-notes p span {
+  font-weight: 700;
 }
 
 .print-footer {
