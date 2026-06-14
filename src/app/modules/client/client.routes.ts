@@ -17,6 +17,7 @@ import { InvoicesComponent } from './payments/invoices/invoices.component';
 import { InvoiceDetailComponent } from './payments/invoices/invoice-detail/invoice-detail.component';
 import { PaymentsComponent } from './payments/payments.component';
 import { AddpaymentsComponent } from './payments/addpayments/addpayments.component';
+import { EncounterLedgerComponent } from './payments/encounter-ledger/encounter-ledger.component';
 import { DepartmentComponent } from './department/department.component';
 import { OurCentersComponent } from './our-centers/our-centers.component';
 import { OurStaffComponent } from './our-staff/our-staff.component';
@@ -190,6 +191,12 @@ export const clientRoutes: Routes = [
         component: AddpaymentsComponent,
         data: { title: 'Mooli | AddPayments' },
         canActivate: [roleGuard(BILL_MANAGE_ACCESS)],
+      },
+      {
+        path: 'payments/ledger',
+        component: EncounterLedgerComponent,
+        data: { title: 'Mooli | Patient Ledger' },
+        canActivate: [roleGuard(BILL_READ_ACCESS)],
       },
       {
         path: 'payments/invoices',

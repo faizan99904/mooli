@@ -123,6 +123,7 @@
                     <ul class="nav-dropdown" *ngIf="!PaymentCollapsed" [@collapseExpand]>
                         <li *ngIf="canViewBilling"><a [routerLink]="['/payments']">Payments</a></li>
                         <li *ngIf="canManageBilling"><a [routerLink]="['/payments/addpayment']">Add Payments</a></li>
+                        <li *ngIf="canViewBilling"><a [routerLink]="['/payments/ledger']">Patient Ledger</a></li>
                         <li *ngIf="canViewBilling"><a [routerLink]="['/payments/invoices']">Invoice</a></li>
                     </ul>
                 </li>

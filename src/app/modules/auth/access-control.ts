@@ -19,7 +19,8 @@ const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
     path: '/patients/add-patient',
     access: ['patients.create', 'patients.update'],
   },
-  { path: '/payments/invoices', access: ['bills.read'] },
+  { path: '/payments/invoices', access: ['bills.read', 'encounters.read'] },
+  { path: '/payments/ledger', access: ['encounters.read', 'bills.read'] },
   {
     path: '/payments/addpayment',
     access: ['bills.create', 'bills.update_payment'],

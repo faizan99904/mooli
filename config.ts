@@ -26,6 +26,7 @@ export const CONFIG = {
   rooms: API_BASE_URL + '/rooms',
   roomAllotments: API_BASE_URL + '/room-allotments',
   bills: API_BASE_URL + '/bills',
+  encounters: API_BASE_URL + '/encounters',
   payments: API_BASE_URL + '/payments',
   sales: API_BASE_URL + '/sales',
   returns: {

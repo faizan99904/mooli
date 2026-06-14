@@ -15,6 +15,7 @@ import {
   Appointment,
   Bill,
   Category,
+  ChargeCatalogItem,
   CloseRegisterPayload,
   CreateHeldSalePayload,
   CreateSalesReturnPayload,
@@ -25,6 +26,8 @@ import {
   Department,
   Doctor,
   DoctorMedicine,
+  Encounter,
+  EncounterLedger,
   Hospital,
   ListResult,
   Patient,
@@ -33,6 +36,8 @@ import {
   ProductCatalogItem,
   Prescription,
   HeldSale,
+  LedgerItem,
+  LedgerPayment,
   OpenRegisterPayload,
   RegisterSession,
   RegisterSessionSummary,
@@ -628,6 +633,42 @@ export class BackendService {
 
   updateBillPayment(id: string, payload: Record<string, unknown>): Observable<ApiResponse<Bill>> {
     return this.patch<Bill>(`${CONFIG.bills}/${id}/payment`, payload);
+  }
+
+  getEncounters(params?: Record<string, unknown>): Observable<ListResult<Encounter>> {
+    return this.get<PaginatedResponse<Encounter>>(CONFIG.encounters, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getEncounter(id: string): Observable<Encounter> {
+    return this.get<Encounter>(`${CONFIG.encounters}/${id}`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getEncounterLedger(id: string): Observable<EncounterLedger> {
+    return this.get<EncounterLedger>(`${CONFIG.encounters}/${id}/ledger`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createEncounterFromAppointment(appointmentId: string): Observable<ApiResponse<Encounter>> {
+    return this.post<Encounter>(`${CONFIG.encounters}/from-appointment`, { appointmentId });
+  }
+
+  addEncounterLedgerItem(encounterId: string, payload: Record<string, unknown>): Observable<ApiResponse<LedgerItem>> {
+    return this.post<LedgerItem>(`${CONFIG.encounters}/${encounterId}/ledger-items`, payload);
+  }
+
+  recordEncounterPayment(encounterId: string, payload: Record<string, unknown>): Observable<ApiResponse<LedgerPayment>> {
+    return this.post<LedgerPayment>(`${CONFIG.encounters}/${encounterId}/payments`, payload);
+  }
+
+  getChargeCatalog(params?: Record<string, unknown>): Observable<ListResult<ChargeCatalogItem>> {
+    return this.get<PaginatedResponse<ChargeCatalogItem>>(`${CONFIG.encounters}/charge-catalog`, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
   }
 
   getPayments(params?: Record<string, unknown>): Observable<ListResult<Payment>> {

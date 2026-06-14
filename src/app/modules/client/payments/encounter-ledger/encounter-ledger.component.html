@@ -1,0 +1,264 @@
+<div id="main-content" class="encounter-ledger-page">
+  <div class="container-fluid">
+    <div class="block-header">
+      <div class="row clearfix align-items-center">
+        <div class="col-lg-5 col-md-12 col-sm-12">
+          <h1>Patient Ledger</h1>
+          <span>Central encounter billing for OPD, admission, pharmacy, ward, and payments</span>
+        </div>
+        <div class="col-lg-7 col-md-12 col-sm-12 text-lg-right ledger-header-actions">
+          <button type="button" class="btn btn-default" (click)="loadEncounters()">
+            <i class="fa fa-rotate-right"></i> Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row clearfix ledger-layout">
+      <div class="col-xl-5 col-lg-12 ledger-list-col" [class.is-hidden-mobile]="showDetailPanel">
+        <div class="card ledger-card">
+          <div class="body">
+            <div class="row mb-3 g-2">
+              <div class="col-md-6 col-sm-6">
+                <label class="ledger-label">Encounter Type</label>
+                <select class="form-control" [(ngModel)]="type" (change)="page = 1; loadEncounters()">
+                  <option value="">All types</option>
+                  <option value="opd">OPD</option>
+                  <option value="admission">Admission</option>
+                  <option value="emergency">Emergency</option>
+                  <option value="follow_up">Follow Up</option>
+                </select>
+              </div>
+              <div class="col-md-6 col-sm-6">
+                <label class="ledger-label">Status</label>
+                <select class="form-control" [(ngModel)]="status" (change)="page = 1; loadEncounters()">
+                  <option value="">All status</option>
+                  <option value="open">Open</option>
+                  <option value="admitted">Admitted</option>
+                  <option value="discharged">Discharged</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="text-center text-muted py-4" *ngIf="loading">Loading encounters...</div>
+
+            <div class="table-responsive d-none d-md-block" *ngIf="!loading">
+              <table class="table table-hover ledger-table mb-0">
+                <thead>
+                  <tr>
+                    <th>Encounter</th>
+                    <th>Patient</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th class="text-right">Balance</th>
+                    <th class="text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let encounter of encounters"
+                    [class.is-selected]="encounter._id === selectedEncounterId"
+                    (click)="openLedger(encounter._id)">
+                    <td class="encounter-no">{{ encounter.encounterNo }}</td>
+                    <td>{{ patientName(encounter) }}</td>
+                    <td><span class="type-pill">{{ encounter.type }}</span></td>
+                    <td><span class="badge" [ngClass]="statusBadgeClass(encounter.status)">{{ encounter.status }}</span></td>
+                    <td class="text-right" [class.balance-due]="(encounter.summary?.balance || 0) > 0"
+                      [class.balance-credit]="(encounter.summary?.balance || 0) < 0">
+                      {{ encounter.summary?.balance || 0 | number:'1.0-0' }}
+                    </td>
+                    <td class="text-right">
+                      <button type="button" class="btn btn-sm btn-primary" (click)="openLedger(encounter._id); $event.stopPropagation()">
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="encounters.length === 0">
+                    <td colspan="6" class="text-center text-muted">No encounters found</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="encounter-cards d-md-none" *ngIf="!loading">
+              <button type="button" class="encounter-card" *ngFor="let encounter of encounters"
+                [class.is-selected]="encounter._id === selectedEncounterId"
+                (click)="openLedger(encounter._id)">
+                <div class="encounter-card-top">
+                  <strong>{{ encounter.encounterNo }}</strong>
+                  <span class="badge" [ngClass]="statusBadgeClass(encounter.status)">{{ encounter.status }}</span>
+                </div>
+                <div class="encounter-card-meta">{{ patientName(encounter) }}</div>
+                <div class="encounter-card-bottom">
+                  <span class="type-pill">{{ encounter.type }}</span>
+                  <span [class.balance-due]="(encounter.summary?.balance || 0) > 0"
+                    [class.balance-credit]="(encounter.summary?.balance || 0) < 0">
+                    Balance: {{ encounter.summary?.balance || 0 | number:'1.0-0' }}
+                  </span>
+                </div>
+              </button>
+              <div class="text-center text-muted py-3" *ngIf="encounters.length === 0">No encounters found</div>
+            </div>
+
+            <div class="ledger-pagination" *ngIf="!loading && encounters.length > 0">
+              <button type="button" class="btn btn-default btn-sm" (click)="changePage(page - 1)" [disabled]="page <= 1">Prev</button>
+              <span>Page {{ page }} of {{ totalPages || 1 }}</span>
+              <button type="button" class="btn btn-default btn-sm" (click)="changePage(page + 1)"
+                [disabled]="totalPages > 0 && page >= totalPages">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-7 col-lg-12 ledger-detail-col" [class.is-visible-mobile]="showDetailPanel" *ngIf="selectedLedger as ledger">
+        <div class="card ledger-card ledger-detail-card">
+          <div class="body">
+            <div class="detail-toolbar">
+              <button type="button" class="btn btn-default btn-sm back-btn d-xl-none" (click)="closeLedger()">
+                <i class="fa fa-arrow-left"></i> Back
+              </button>
+              <div class="detail-head">
+                <h3>{{ ledger.encounter.encounterNo }}</h3>
+                <p>{{ patientName(ledger.encounter) }} · {{ ledger.encounter.type }} · {{ ledger.encounter.status }}</p>
+              </div>
+            </div>
+
+            <div class="summary-grid">
+              <div class="summary-tile">
+                <span>Total Charges</span>
+                <strong>{{ ledger.encounter.summary?.totalCharges || 0 | number:'1.0-0' }}</strong>
+              </div>
+              <div class="summary-tile">
+                <span>Discount</span>
+                <strong>{{ ledger.encounter.summary?.totalDiscount || 0 | number:'1.0-0' }}</strong>
+              </div>
+              <div class="summary-tile">
+                <span>Net Payable</span>
+                <strong>{{ ledger.encounter.summary?.netPayable || 0 | number:'1.0-0' }}</strong>
+              </div>
+              <div class="summary-tile">
+                <span>Paid</span>
+                <strong>{{ ledger.encounter.summary?.totalPaid || 0 | number:'1.0-0' }}</strong>
+              </div>
+              <div class="summary-tile summary-tile-balance">
+                <span>Balance</span>
+                <strong [class.balance-due]="(ledger.encounter.summary?.balance || 0) > 0"
+                  [class.balance-credit]="(ledger.encounter.summary?.balance || 0) < 0">
+                  {{ ledger.encounter.summary?.balance || 0 | number:'1.0-0' }}
+                </strong>
+              </div>
+            </div>
+
+            <div class="text-center text-muted py-3" *ngIf="ledgerLoading">Loading ledger...</div>
+
+            <div class="ledger-section" *ngIf="!ledgerLoading">
+              <h4>Charges</h4>
+              <div class="table-responsive">
+                <table class="table table-hover ledger-table mb-0">
+                  <thead>
+                    <tr>
+                      <th>Source</th>
+                      <th>Title</th>
+                      <th>Qty</th>
+                      <th class="text-right">Rate</th>
+                      <th class="text-right">Net</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of ledger.items">
+                      <td><span class="source-pill">{{ item.sourceType }}</span></td>
+                      <td>{{ item.title }}</td>
+                      <td>{{ item.qty }}</td>
+                      <td class="text-right">{{ item.rate | number:'1.0-0' }}</td>
+                      <td class="text-right">{{ item.netAmount | number:'1.0-0' }}</td>
+                      <td><span class="badge" [ngClass]="item.status === 'active' ? 'badge-success' : 'badge-secondary'">{{ item.status }}</span></td>
+                    </tr>
+                    <tr *ngIf="ledger.items.length === 0">
+                      <td colspan="6" class="text-center text-muted">No charges posted yet</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="ledger-section">
+              <h4>Payments</h4>
+              <div class="table-responsive">
+                <table class="table table-hover ledger-table mb-0">
+                  <thead>
+                    <tr>
+                      <th>Receipt</th>
+                      <th>Type</th>
+                      <th>Method</th>
+                      <th class="text-right">Amount</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let payment of ledger.payments">
+                      <td>{{ payment.paymentNo }}</td>
+                      <td>{{ payment.type }}</td>
+                      <td>{{ payment.method }}</td>
+                      <td class="text-right">{{ payment.amount | number:'1.0-0' }}</td>
+                      <td>{{ payment.createdAt | date:'medium' }}</td>
+                    </tr>
+                    <tr *ngIf="ledger.payments.length === 0">
+                      <td colspan="5" class="text-center text-muted">No payments recorded yet</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="payment-panel">
+              <h4>Collect Payment</h4>
+              <div class="row g-2">
+                <div class="col-lg-3 col-md-6 col-sm-12">
+                  <label class="ledger-label">Amount</label>
+                  <input class="form-control" type="number" min="0" [(ngModel)]="paymentAmount" placeholder="Amount" />
+                </div>
+                <div class="col-lg-2 col-md-6 col-sm-6">
+                  <label class="ledger-label">Method</label>
+                  <select class="form-control" [(ngModel)]="paymentMethod">
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="bank">Bank</option>
+                    <option value="jazzcash">JazzCash</option>
+                    <option value="easypaisa">Easypaisa</option>
+                  </select>
+                </div>
+                <div class="col-lg-2 col-md-6 col-sm-6">
+                  <label class="ledger-label">Type</label>
+                  <select class="form-control" [(ngModel)]="paymentType">
+                    <option value="advance">Advance</option>
+                    <option value="partial">Partial</option>
+                    <option value="final">Final</option>
+                    <option value="refund">Refund</option>
+                  </select>
+                </div>
+                <div class="col-lg-3 col-md-6 col-sm-12">
+                  <label class="ledger-label">Note</label>
+                  <input class="form-control" type="text" [(ngModel)]="paymentNote" placeholder="Optional note" />
+                </div>
+                <div class="col-lg-2 col-md-6 col-sm-12 d-flex align-items-end">
+                  <button type="button" class="btn btn-primary btn-block" (click)="recordPayment()">Record</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-7 col-lg-12 ledger-detail-col d-none d-xl-block" *ngIf="!selectedLedger">
+        <div class="card ledger-card ledger-empty-state">
+          <div class="body text-center">
+            <i class="fa fa-file-invoice-dollar empty-icon"></i>
+            <h4>Select an encounter</h4>
+            <p class="text-muted mb-0">Choose a patient encounter from the list to view charges and payments.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

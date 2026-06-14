@@ -277,6 +277,10 @@ export interface RoomAllotment {
   patient?: Patient | null;
   roomId: string;
   room?: Room | null;
+  encounterId?: string | null;
+  consultantDoctorId?: string | null;
+  bedLabel?: string;
+  admissionReason?: string;
   admittedAt: string;
   dischargedAt?: string | null;
   status: 'admitted' | 'discharged';
@@ -307,6 +311,90 @@ export interface Bill {
   dueAmount: number;
   paymentStatus: 'unpaid' | 'partial' | 'paid';
   paymentMethod?: string | null;
+}
+
+export interface EncounterSummary {
+  totalCharges: number;
+  totalDiscount: number;
+  netPayable: number;
+  totalPaid: number;
+  totalRefunded: number;
+  balance: number;
+}
+
+export interface Encounter {
+  _id: string;
+  hospitalId: string;
+  patientId: string;
+  patient?: Patient | null;
+  encounterNo: string;
+  type: 'opd' | 'admission' | 'emergency' | 'follow_up';
+  status: 'open' | 'admitted' | 'ready_for_discharge' | 'discharged' | 'closed' | 'cancelled';
+  appointmentId?: string | null;
+  roomAllotmentId?: string | null;
+  prescriptionId?: string | null;
+  consultantDoctorId?: string | null;
+  roomId?: string | null;
+  room?: Room | null;
+  wardLabel?: string;
+  bedLabel?: string;
+  admissionReason?: string;
+  openedAt?: string;
+  closedAt?: string | null;
+  summary?: EncounterSummary;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LedgerItem {
+  _id: string;
+  encounterId: string;
+  patientId: string;
+  sourceType: string;
+  sourceId?: string;
+  category: string;
+  title: string;
+  description?: string;
+  qty: number;
+  rate: number;
+  amount: number;
+  discount: number;
+  netAmount: number;
+  status: 'active' | 'cancelled' | 'refunded';
+  reason?: string;
+  createdAt?: string;
+}
+
+export interface LedgerPayment {
+  _id: string;
+  encounterId: string;
+  patientId: string;
+  paymentNo: string;
+  amount: number;
+  method: string;
+  type: 'advance' | 'partial' | 'final' | 'refund';
+  note?: string;
+  referenceNo?: string;
+  createdAt?: string;
+}
+
+export interface EncounterLedger {
+  encounter: Encounter;
+  items: LedgerItem[];
+  payments: LedgerPayment[];
+}
+
+export interface ChargeCatalogItem {
+  _id: string;
+  name: string;
+  code?: string;
+  category: string;
+  defaultAmount: number;
+  isOptional: boolean;
+  manualAmountAllowed: boolean;
+  reasonRequired: boolean;
+  department?: string;
+  active: boolean;
 }
 
 export interface Payment {
