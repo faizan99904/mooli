@@ -2184,6 +2184,34 @@ dd {
   border: 0;
 }
 
+.document-sidebar-row {
+  align-items: center;
+  border-bottom: 1px solid var(--rx-line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 8px 0;
+}
+
+.document-sidebar-row:last-child {
+  border-bottom: 0;
+}
+
+.document-sidebar-row strong {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-sidebar-row button {
+  background: transparent;
+  border: 0;
+  color: #dc2626;
+  min-height: 28px;
+  padding: 0 6px;
+}
+
 .admission-card {
   display: grid;
   gap: 7px;
@@ -2836,7 +2864,8 @@ dd {
   padding: 2px 8px;
 }
 
-.labs-title {
+.labs-title,
+.drips-title {
   margin-top: 8px;
 }
 

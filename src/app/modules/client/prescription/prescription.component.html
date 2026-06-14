@@ -734,18 +734,24 @@
                     <td>
                       <div class="medicine-name-cell">
                         <input #medicineNameInput class="medicine-name-input" formControlName="name" placeholder="Medicine name"
-                          [attr.list]="'doctor-medicine-suggestions-' + i" (input)="onMedicineNameInput(i)"
-                          (change)="applyMedicineSuggestion(i)" />
+                          [attr.list]="'doctor-medicine-suggestions-' + i" [attr.data-medicine-field]="i + '-name'"
+                          (input)="onMedicineNameInput(i)" (change)="applyMedicineSuggestion(i)"
+                          (keydown)="handleMedicineFieldKeydown($event, i, 'name')" />
                         <datalist [id]="'doctor-medicine-suggestions-' + i">
                           <option *ngFor="let item of medicineRowSuggestions[i] || []"
                             [value]="item.value">{{ item.meta }}</option>
                         </datalist>
                       </div>
                     </td>
-                    <td><input class="medicine-dose-input" formControlName="dosage" placeholder="Dose" /></td>
-                    <td><input class="frequency-input" formControlName="frequency" placeholder="BD / TDS" /></td>
+                    <td><input class="medicine-dose-input" formControlName="dosage" placeholder="Dose"
+                        [attr.data-medicine-field]="i + '-dosage'"
+                        (keydown)="handleMedicineFieldKeydown($event, i, 'dosage')" /></td>
+                    <td><input class="frequency-input" formControlName="frequency" placeholder="BD / TDS"
+                        [attr.data-medicine-field]="i + '-frequency'"
+                        (keydown)="handleMedicineFieldKeydown($event, i, 'frequency')" /></td>
                     <td>
-                      <select class="duration-input" formControlName="duration">
+                      <select class="duration-input" formControlName="duration" [attr.data-medicine-field]="i + '-duration'"
+                        (keydown)="handleMedicineFieldKeydown($event, i, 'duration')">
                         <option *ngFor="let duration of durationOptions" [value]="duration">{{ duration }}</option>
                       </select>
                     </td>
@@ -783,7 +789,9 @@
                           (input)="onSlotDoseInput(i, 'night')" (keydown)="handleSlotDoseKeydown($event, i, 'night')" />
                       </div>
                     </td>
-                    <td><textarea class="instruction-input" formControlName="instructions" placeholder="Instructions"></textarea></td>
+                    <td><textarea class="instruction-input" formControlName="instructions" placeholder="Instructions"
+                        [attr.data-medicine-field]="i + '-instructions'"
+                        (keydown)="handleMedicineFieldKeydown($event, i, 'instructions')"></textarea></td>
                     <td>
                       <div class="medicine-row-actions">
                         <button type="button" title="Edit medicine" (click)="focusMedicineRow(i)">
@@ -810,6 +818,77 @@
               <textarea formControlName="advice"></textarea>
             </label>
           </section>
+
+          <aside class="orders-section">
+            <section class="order-card">
+              <div class="section-heading">
+                <h3>Lab Tests</h3>
+                <button type="button" (click)="openLabTestModal()">+ Add Test</button>
+              </div>
+              <div formArrayName="labTests">
+                <div class="lab-row lab-head"><span></span><strong>Test</strong><strong>Category</strong></div>
+                <label class="lab-row" *ngFor="let test of labTests.controls; let i = index" [formGroupName]="i">
+                  <input type="checkbox" formControlName="selected" />
+                  <input formControlName="name" />
+                  <input formControlName="category" />
+                </label>
+              </div>
+              <div class="custom-test">
+                <span>Others</span>
+                <input formControlName="customLabTest" placeholder="Type test name" />
+                <button type="button" (click)="addCustomLabTest()"><i class="fa fa-plus-circle"></i></button>
+              </div>
+            </section>
+
+            <section class="order-card" formArrayName="ivFluids">
+              <div class="section-heading">
+                <h3>Drips / IV Fluids</h3>
+                <button type="button" (click)="addIvFluid()">+ Add Drip</button>
+              </div>
+              <div class="fluid-row fluid-head"><strong>Fluid / Drip</strong><strong>Rate</strong><strong>Duration</strong><span></span></div>
+              <div class="fluid-row" *ngFor="let fluid of ivFluids.controls; let i = index" [formGroupName]="i">
+                <input formControlName="name" placeholder="DNS" />
+                <input formControlName="rate" placeholder="80 ml/hr" />
+                <input formControlName="duration" placeholder="500 ml" />
+                <button type="button" (click)="removeIvFluid(i)"><i class="fa fa-trash"></i></button>
+              </div>
+            </section>
+
+            <section class="order-card" formArrayName="patientDocuments">
+              <div class="section-heading">
+                <h3>Documents</h3>
+                <button type="button" (click)="openDocumentModal()">+ Add Document</button>
+              </div>
+              <div class="document-sidebar-row" *ngFor="let document of patientDocuments.controls; let i = index" [formGroupName]="i">
+                <strong>{{ document.get('name')?.value || 'Document' }}</strong>
+                <button type="button" (click)="removePatientDocument(i)" aria-label="Remove document">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </div>
+              <div class="vitals-empty" *ngIf="patientDocuments.length === 0">
+                No documents added yet.
+              </div>
+            </section>
+
+            <section class="order-card admission-card" formGroupName="admissionOrders">
+              <div class="section-heading">
+                <h3>Admission Orders</h3>
+                <button type="button" (click)="openAdmissionOrderModal()">+ Add Order</button>
+              </div>
+              <div class="check-row">
+                <label><input type="checkbox" formControlName="regularDiet" /> Regular Diet</label>
+                <label><input type="checkbox" formControlName="npo" /> NPO</label>
+              </div>
+              <label>Consultation <input formControlName="consultation" placeholder="Physiotherapy" /></label>
+              <div class="check-row" formGroupName="monitoring">
+                <label><input type="checkbox" formControlName="bp" /> BP</label>
+                <label><input type="checkbox" formControlName="pulse" /> Pulse</label>
+                <label><input type="checkbox" formControlName="spo2" /> SpO2</label>
+                <label><input type="checkbox" formControlName="rbs" /> RBS</label>
+              </div>
+              <textarea formControlName="notes" placeholder="Enter notes if any..."></textarea>
+            </section>
+          </aside>
         </div>
       </form>
 
@@ -834,14 +913,15 @@
               <span>{{ prescriptionDoctorName(prescription) }} · {{ prescriptionDate(prescription) }}</span>
             </div>
             <div class="history-meta">
-              <span>{{ prescriptionMedicineCount(prescription) }} medicine(s)</span>
+              <span>{{ prescriptionMedicineCount(prescription) }} medicine(s) · {{ prescriptionIvFluidCount(prescription) }} drip(s)</span>
+              <small *ngIf="prescriptionIvFluidSummary(prescription) as drips">Drips: {{ drips }}</small>
               <small>{{ prescription.diagnosis || prescription.chiefComplaint || 'No diagnosis added' }}</small>
             </div>
             <div class="history-actions">
               <button type="button" class="btn-light" *ngIf="canUpdatePrescriptions" (click)="editPrescription(prescription)">Edit</button>
               <button type="button" class="btn-primary" (click)="openPrintPreview(prescription)">
-                <i class="fa fa-print"></i>
-                Print
+                <i class="fa fa-eye"></i>
+                View
               </button>
             </div>
           </article>
@@ -889,8 +969,8 @@
     <div class="print-preview-dialog">
       <div class="print-preview-toolbar">
         <div>
-          <h3>Prescription Preview</h3>
-          <p>Review the prescription, then click Print.</p>
+          <h3>Prescription View</h3>
+          <p>Review prescription details. Use Print if you need a hard copy.</p>
         </div>
         <div>
           <button type="button" class="btn-light" (click)="closePrintPreview()">Close</button>
@@ -975,6 +1055,18 @@
                 </tr>
                 <tr *ngIf="preview.labTests.length === 0">
                   <th>Others</th>
+                  <td>-</td>
+                </tr>
+              </table>
+
+              <div class="print-mini-title drips-title">DRIP's</div>
+              <table>
+                <tr *ngFor="let drip of preview.ivFluids">
+                  <th>{{ drip.name }}</th>
+                  <td>{{ drip.rate }} / {{ drip.quantity }}</td>
+                </tr>
+                <tr *ngIf="preview.ivFluids.length === 0">
+                  <th>Drips</th>
                   <td>-</td>
                 </tr>
               </table>

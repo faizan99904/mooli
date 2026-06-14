@@ -133,11 +133,13 @@ interface PrintPreviewData {
   vitals: Record<string, string>;
   vitalRows: Array<{ label: string; value: string }>;
   labTests: Array<{ name: string; category: string }>;
+  ivFluids: Array<{ name: string; rate: string; quantity: string; route: string }>;
   medicines: Array<Record<string, unknown>>;
   followUpDate: string;
 }
 
 type DoseSlot = 'morning' | 'noon' | 'evening' | 'night';
+type MedicineNavField = 'name' | 'dosage' | 'frequency' | 'duration' | DoseSlot | 'instructions';
 
 interface ParsedMedicineCommand {
   medicineName: string;
@@ -339,6 +341,18 @@ export class PrescriptionComponent implements OnInit {
       labTests: this.fb.array(this.labTestCatalog.map((test) => this.createLabTestGroup(test))),
       customLabTest: [''],
       ivFluids: this.fb.array([this.createIvFluidGroup()]),
+      admissionOrders: this.fb.group({
+        regularDiet: [true],
+        npo: [false],
+        consultation: [''],
+        monitoring: this.fb.group({
+          bp: [true],
+          pulse: [true],
+          spo2: [true],
+          rbs: [true],
+        }),
+        notes: [''],
+      }),
       admissionOrderItems: this.fb.array([]),
       patientDocuments: this.fb.array([]),
       vitals: this.fb.group({
@@ -479,7 +493,7 @@ export class PrescriptionComponent implements OnInit {
     const nightDose = String(medicine?.['nightDose'] || '').trim();
 
     return this.fb.group({
-      name: [medicine?.['name'] || '', Validators.required],
+      name: [medicine?.['name'] || ''],
       dosage: [medicine?.['dosage'] || ''],
       frequency: [medicine?.['frequency'] || ''],
       duration: [medicine?.['duration'] || '1 Month'],
@@ -1438,60 +1452,100 @@ export class PrescriptionComponent implements OnInit {
   }
 
   handleSlotDoseKeydown(event: KeyboardEvent, rowIndex: number, slot: DoseSlot): void {
-    const input = event.target as HTMLInputElement | null;
-    if (!input) {
+    this.handleMedicineFieldKeydown(event, rowIndex, slot);
+  }
+
+  handleMedicineFieldKeydown(event: KeyboardEvent, rowIndex: number, field: MedicineNavField): void {
+    const target = event.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+    if (!target) {
       return;
     }
+
+    const isEmpty =
+      target instanceof HTMLSelectElement ? false : !String(target.value || '').trim();
 
     if (event.key === 'Tab') {
       event.preventDefault();
-      const target = event.shiftKey
-        ? this.previousSlotDoseTarget(rowIndex, slot)
-        : this.nextSlotDoseTarget(rowIndex, slot);
+      const next = event.shiftKey
+        ? this.previousMedicineFieldTarget(rowIndex, field)
+        : this.nextMedicineFieldTarget(rowIndex, field);
 
-      if (target) {
-        this.focusSlotDoseInput(target.rowIndex, target.slot);
+      if (next) {
+        this.focusMedicineField(next.rowIndex, next.field);
       }
       return;
     }
 
-    if (event.key === 'Backspace' && !input.value) {
+    if (event.key === 'Backspace' && isEmpty) {
       event.preventDefault();
-      const previous = this.previousSlotDoseTarget(rowIndex, slot);
+      const previous = this.previousMedicineFieldTarget(rowIndex, field);
       if (previous) {
-        this.focusSlotDoseInput(previous.rowIndex, previous.slot);
+        this.focusMedicineField(previous.rowIndex, previous.field);
       }
     }
   }
 
-  private nextSlotDoseTarget(rowIndex: number, slot: DoseSlot): { rowIndex: number; slot: DoseSlot } | null {
-    const slots: DoseSlot[] = ['morning', 'noon', 'evening', 'night'];
-    const slotIndex = slots.indexOf(slot);
+  private readonly medicineNavFields: MedicineNavField[] = [
+    'name',
+    'dosage',
+    'frequency',
+    'duration',
+    'morning',
+    'noon',
+    'evening',
+    'night',
+    'instructions',
+  ];
 
-    if (slotIndex < slots.length - 1) {
-      return { rowIndex, slot: slots[slotIndex + 1] };
+  private nextMedicineFieldTarget(
+    rowIndex: number,
+    field: MedicineNavField
+  ): { rowIndex: number; field: MedicineNavField } | null {
+    const fieldIndex = this.medicineNavFields.indexOf(field);
+
+    if (fieldIndex < this.medicineNavFields.length - 1) {
+      return { rowIndex, field: this.medicineNavFields[fieldIndex + 1] };
     }
 
     if (rowIndex < this.medicines.length - 1) {
-      return { rowIndex: rowIndex + 1, slot: 'morning' };
+      return { rowIndex: rowIndex + 1, field: 'name' };
     }
 
     return null;
   }
 
-  private previousSlotDoseTarget(rowIndex: number, slot: DoseSlot): { rowIndex: number; slot: DoseSlot } | null {
-    const slots: DoseSlot[] = ['morning', 'noon', 'evening', 'night'];
-    const slotIndex = slots.indexOf(slot);
+  private previousMedicineFieldTarget(
+    rowIndex: number,
+    field: MedicineNavField
+  ): { rowIndex: number; field: MedicineNavField } | null {
+    const fieldIndex = this.medicineNavFields.indexOf(field);
 
-    if (slotIndex > 0) {
-      return { rowIndex, slot: slots[slotIndex - 1] };
+    if (fieldIndex > 0) {
+      return { rowIndex, field: this.medicineNavFields[fieldIndex - 1] };
     }
 
     if (rowIndex > 0) {
-      return { rowIndex: rowIndex - 1, slot: 'night' };
+      return { rowIndex: rowIndex - 1, field: 'instructions' };
     }
 
     return null;
+  }
+
+  private focusMedicineField(rowIndex: number, field: MedicineNavField): void {
+    if (field === 'morning' || field === 'noon' || field === 'evening' || field === 'night') {
+      this.focusSlotDoseInput(rowIndex, field);
+      return;
+    }
+
+    const element = document.querySelector(
+      `[data-medicine-field="${rowIndex}-${field}"]`
+    ) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+
+    element?.focus();
+
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      element.select();
+    }
   }
 
   private focusSlotDoseInput(rowIndex: number, slot: DoseSlot): void {
@@ -1627,7 +1681,17 @@ export class PrescriptionComponent implements OnInit {
   }
 
   addIvFluid(): void {
-    this.openIvFluidModal();
+    this.ivFluids.push(this.createIvFluidGroup());
+    this.refreshIvFluidRows();
+  }
+
+  removePatientDocument(index: number): void {
+    if (index < 0 || index >= this.patientDocuments.length) {
+      return;
+    }
+
+    this.patientDocuments.removeAt(index);
+    this.refreshPatientDocumentRows();
   }
 
   openIvFluidModal(formIndex: number | null = null): void {
@@ -1971,8 +2035,10 @@ export class PrescriptionComponent implements OnInit {
   }
 
   removeIvFluid(index: number): void {
-    this.ivFluids.removeAt(index);
-    this.refreshIvFluidRows();
+    if (this.ivFluids.length > 1) {
+      this.ivFluids.removeAt(index);
+      this.refreshIvFluidRows();
+    }
   }
 
   loadLookups(): void {
@@ -2302,11 +2368,6 @@ export class PrescriptionComponent implements OnInit {
 
     const medicines = this.normalizeMedicinesForSave(value.medicines);
 
-    if (medicines.length === 0) {
-      this.toastr.error('Add at least one medicine');
-      return;
-    }
-
     const payload: Record<string, unknown> = {
       patientId: value.patientId,
       doctorId: value.doctorId,
@@ -2337,6 +2398,7 @@ export class PrescriptionComponent implements OnInit {
           priority: String(item['priority'] || 'normal'),
           status: String(item['status'] || 'active'),
         })),
+      admissionOrders: value.admissionOrders,
       patientDocuments: value.patientDocuments
         .filter((document: Record<string, unknown>) => String(document['name'] || '').trim())
         .map((document: Record<string, unknown>) => ({
@@ -2478,6 +2540,14 @@ export class PrescriptionComponent implements OnInit {
       advice: prescription.advice || '',
       followUpDate: prescription.followUpDate ? String(prescription.followUpDate).slice(0, 10) : '',
       vitals: this.extractDefaultVitals(prescription.vitals || {}),
+      admissionOrders: {
+        ...this.defaultAdmissionOrders(),
+        ...(prescription.admissionOrders || {}),
+        monitoring: {
+          ...this.defaultAdmissionOrders()?.monitoring,
+          ...(prescription.admissionOrders?.monitoring || {}),
+        },
+      },
     });
     this.customVitals.clear();
     this.extractCustomVitals(prescription.vitals || {}).forEach((entry) =>
@@ -2541,6 +2611,7 @@ export class PrescriptionComponent implements OnInit {
     this.editingId = null;
     this.prescriptionForm.reset({
       visitType: 'opd',
+      admissionOrders: this.defaultAdmissionOrders(),
     });
     this.customVitals.clear();
     this.medicines.clear();
@@ -2673,6 +2744,17 @@ export class PrescriptionComponent implements OnInit {
 
   prescriptionMedicineCount(prescription: Prescription): number {
     return prescription.medicines?.length || 0;
+  }
+
+  prescriptionIvFluidCount(prescription: Prescription): number {
+    return (prescription.ivFluids || []).filter((fluid) => String(fluid.name || '').trim()).length;
+  }
+
+  prescriptionIvFluidSummary(prescription: Prescription): string {
+    return (prescription.ivFluids || [])
+      .map((fluid) => String(fluid.name || '').trim())
+      .filter(Boolean)
+      .join(', ');
   }
 
   genderShort(patient?: Patient | null): string {
@@ -2904,6 +2986,21 @@ export class PrescriptionComponent implements OnInit {
     }
   }
 
+  private defaultAdmissionOrders(): Prescription['admissionOrders'] {
+    return {
+      regularDiet: true,
+      npo: false,
+      consultation: '',
+      monitoring: {
+        bp: true,
+        pulse: true,
+        spo2: true,
+        rbs: true,
+      },
+      notes: '',
+    };
+  }
+
   private buildLocalPrescription(localId: string, payload: Record<string, unknown>): Prescription {
     const appointment = this.selectedAppointment();
     const patient = this.selectedPatient();
@@ -2925,6 +3022,7 @@ export class PrescriptionComponent implements OnInit {
       labTests: (payload['labTests'] as Prescription['labTests']) || [],
       ivFluids: (payload['ivFluids'] as Prescription['ivFluids']) || [],
       admissionOrderItems: (payload['admissionOrderItems'] as Prescription['admissionOrderItems']) || [],
+      admissionOrders: (payload['admissionOrders'] as Prescription['admissionOrders']) || null,
       patientDocuments: (payload['patientDocuments'] as Prescription['patientDocuments']) || [],
       vitals: (payload['vitals'] as Record<string, string> | undefined) || {},
       advice: (payload['advice'] as string | undefined) || null,
@@ -3535,6 +3633,23 @@ export class PrescriptionComponent implements OnInit {
       .map((medicine) => this.normalizePrintMedicine(medicine))
       .filter((medicine): medicine is Record<string, unknown> => Boolean(medicine))
       .slice(0, 80);
+    const ivFluids = this.safeArray(source['ivFluids'])
+      .map((fluid) => {
+        const record = fluid as Record<string, unknown>;
+        const name = String(record['name'] || '').trim();
+        if (!name) {
+          return null;
+        }
+
+        return {
+          name,
+          rate: String(record['rate'] || '').trim() || '—',
+          quantity: String(record['duration'] || '').trim() || '—',
+          route: String(record['route'] || 'IV').trim() || 'IV',
+        };
+      })
+      .filter((fluid): fluid is { name: string; rate: string; quantity: string; route: string } => Boolean(fluid))
+      .slice(0, 20);
 
     return {
       patient,
@@ -3566,6 +3681,7 @@ export class PrescriptionComponent implements OnInit {
       vitals,
       vitalRows: this.vitalEntries(vitals),
       labTests,
+      ivFluids,
       medicines,
       followUpDate: followUpDate ? this.shortDate(followUpDate) : '-',
     };
