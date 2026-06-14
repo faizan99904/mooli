@@ -304,7 +304,7 @@
                 <th>Appointment ID</th>
                 <th>Patient</th>
                 <th>Doctor</th>
-                <th>Department</th>
+                <th>Visit Type</th>
                 <th>Date & Time</th>
                 <th>Fee</th>
                 <th>Payment</th>
@@ -329,22 +329,32 @@
                     <span class="avatar avatar-doctor">{{ initials(appointment.doctor?.name) }}</span>
                     <div>
                       <strong>{{ appointment.doctor?.name || '-' }}</strong>
-                      <small>{{ appointment.department?.name || 'Doctor' }}</small>
+                      <small>{{ visitTypeLabel(appointment.visitType) }}</small>
                     </div>
                   </div>
                 </td>
-                <td>{{ appointment.department?.name || '-' }}</td>
+                <td class="visit-type-cell">{{ visitTypeLabel(appointment.visitType) }}</td>
                 <td>{{ shortDate(appointment.appointmentDate) }}<br />{{ appointmentTimeRange(appointment) }}</td>
                 <td>{{ formatConsultationFee(appointment.consultationFee) }}</td>
-                <td>
-                  <span class="payment-pill" [class.paid]="appointment.paymentStatus === 'paid'">
-                    {{ paymentStatusLabel(appointment.paymentStatus) }}
-                  </span>
+                <td class="payment-cell">
+                  <select class="inline-payment-select" [ngModel]="appointment.paymentStatus || 'unpaid'"
+                    (ngModelChange)="changeAppointmentPaymentStatus(appointment, $event)"
+                    [disabled]="!canUpdateAppointment || isAppointmentUpdating(appointment._id)"
+                    [ngClass]="appointment.paymentStatus === 'paid' ? 'is-paid' : 'is-unpaid'">
+                    <option *ngFor="let option of appointmentPaymentOptions" [value]="option">
+                      {{ paymentStatusLabel(option) }}
+                    </option>
+                  </select>
                 </td>
-                <td>
-                  <span class="status-pill" [ngClass]="appointmentStatusClass(appointment.status)">
-                    {{ appointment.status.replace('_', ' ') }}
-                  </span>
+                <td class="status-cell">
+                  <select class="inline-status-select" [ngModel]="appointment.status"
+                    (ngModelChange)="changeAppointmentStatus(appointment, $event)"
+                    [disabled]="!canUpdateAppointmentStatus || isAppointmentUpdating(appointment._id)"
+                    [ngClass]="appointmentStatusClass(appointment.status)">
+                    <option *ngFor="let option of appointmentStatusOptions" [value]="option">
+                      {{ appointmentStatusLabel(option) }}
+                    </option>
+                  </select>
                 </td>
                 <td>
                   <div class="table-actions">

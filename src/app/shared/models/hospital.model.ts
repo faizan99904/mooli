@@ -155,6 +155,7 @@ export interface Appointment {
   startTime: string;
   endTime: string;
   reason?: string | null;
+  visitType?: 'Consultation' | 'Follow-up' | 'Walk-in' | 'Emergency' | string | null;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   consultationFee?: number;
   paymentStatus?: 'unpaid' | 'paid';

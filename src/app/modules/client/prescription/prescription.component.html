@@ -674,21 +674,6 @@
                 </button>
               </div>
 
-              <div class="medicine-shortcuts" *ngIf="favoriteDoctorMedicines().length > 0">
-                <div>
-                  <span>Saved Medicines</span>
-                  <button type="button" *ngFor="let favorite of favoriteDoctorMedicines()"
-                    (click)="addFavoriteMedicine(favorite)">{{ doctorMedicineDisplayName(favorite) }}</button>
-                </div>
-              </div>
-
-              <div class="medicine-shortcuts" *ngIf="prescriptionMedicineTemplates().length > 0">
-                <div>
-                  <span>Templates</span>
-                  <button type="button" *ngFor="let template of prescriptionMedicineTemplates()"
-                    (click)="applyTemplate(template)">{{ medicineTemplateLabel(template) }}</button>
-                </div>
-              </div>
             </div>
 
             <div class="medicine-table" formArrayName="medicines">

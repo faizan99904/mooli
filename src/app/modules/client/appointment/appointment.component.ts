@@ -68,6 +68,15 @@ export class AppointmentComponent implements OnInit {
   page = 1;
   limit = 10;
   totalPages = 0;
+  updatingAppointmentIds = new Set<string>();
+  readonly appointmentStatusOptions: Array<Appointment['status']> = [
+    'pending',
+    'confirmed',
+    'completed',
+    'cancelled',
+    'no_show',
+  ];
+  readonly appointmentPaymentOptions: Array<NonNullable<Appointment['paymentStatus']>> = ['unpaid', 'paid'];
   editingId: string | null = null;
   currentHospitalId: string | null = null;
   hospitalProfile: Hospital | null = null;
@@ -483,6 +492,7 @@ export class AppointmentComponent implements OnInit {
       reason: value.reason,
       consultationFee: Number(value.consultationFee || selectedDoctor?.consultationFee || 0),
       paymentStatus,
+      visitType: this.visitType || 'Consultation',
       status: paymentStatus === 'paid' ? 'confirmed' : value.status || 'pending',
       notes: value.notes,
     };
@@ -550,6 +560,7 @@ export class AppointmentComponent implements OnInit {
     this.patients = this.phoneMatchedPatients;
     this.phoneMatchedTotal = this.phoneMatchedPatients.length;
     this.phoneLookupPerformed = Boolean(appointment.patient);
+    this.visitType = appointment.visitType || 'Consultation';
     this.appointmentForm.patchValue({
       patientId: appointment.patientId,
       doctorId: appointment.doctorId,
@@ -572,19 +583,94 @@ export class AppointmentComponent implements OnInit {
   }
 
   updateStatus(appointment: Appointment, status: string): void {
+    this.changeAppointmentStatus(appointment, status as Appointment['status']);
+  }
+
+  isAppointmentUpdating(id: string): boolean {
+    return this.updatingAppointmentIds.has(id);
+  }
+
+  changeAppointmentStatus(appointment: Appointment, status: Appointment['status']): void {
     if (!this.canUpdateAppointmentStatus) {
       return;
     }
 
+    if (appointment.status === status) {
+      return;
+    }
+
+    const previousStatus = appointment.status;
+    appointment.status = status;
+    this.setAppointmentUpdating(appointment._id, true);
+
     this.backend
       .updateAppointmentStatus(appointment._id, { status, notes: appointment.notes || '' })
+      .pipe(finalize(() => this.setAppointmentUpdating(appointment._id, false)))
       .subscribe({
         next: (response) => {
           this.toastr.success(response.message);
-          this.loadAppointments();
+          this.patchAppointmentRow(appointment, response.data);
         },
-        error: (err) => this.toastr.error(err?.error?.message || 'Something went wrong'),
+        error: (err) => {
+          appointment.status = previousStatus;
+          this.toastr.error(err?.error?.message || 'Unable to update appointment status');
+        },
       });
+  }
+
+  changeAppointmentPaymentStatus(
+    appointment: Appointment,
+    paymentStatus: NonNullable<Appointment['paymentStatus']>,
+  ): void {
+    if (!this.canUpdateAppointment) {
+      return;
+    }
+
+    const previousPaymentStatus = appointment.paymentStatus || 'unpaid';
+    const previousStatus = appointment.status;
+
+    if (previousPaymentStatus === paymentStatus) {
+      return;
+    }
+
+    appointment.paymentStatus = paymentStatus;
+    if (paymentStatus === 'paid') {
+      appointment.status = 'confirmed';
+    }
+
+    this.setAppointmentUpdating(appointment._id, true);
+
+    this.backend
+      .updateAppointment(appointment._id, { paymentStatus })
+      .pipe(finalize(() => this.setAppointmentUpdating(appointment._id, false)))
+      .subscribe({
+        next: (response) => {
+          this.toastr.success(response.message);
+          this.patchAppointmentRow(appointment, response.data);
+        },
+        error: (err) => {
+          appointment.paymentStatus = previousPaymentStatus;
+          appointment.status = previousStatus;
+          this.toastr.error(err?.error?.message || 'Unable to update payment status');
+        },
+      });
+  }
+
+  private setAppointmentUpdating(id: string, updating: boolean): void {
+    if (updating) {
+      this.updatingAppointmentIds.add(id);
+      return;
+    }
+
+    this.updatingAppointmentIds.delete(id);
+  }
+
+  private patchAppointmentRow(target: Appointment, source?: Appointment | null): void {
+    if (!source) {
+      return;
+    }
+
+    Object.assign(target, source);
   }
 
   deleteAppointment(id: string): void {
@@ -757,6 +843,10 @@ export class AppointmentComponent implements OnInit {
 
   paymentStatusLabel(value?: string | null): string {
     return value === 'paid' ? 'Paid' : 'Unpaid';
+  }
+
+  visitTypeLabel(value?: string | null): string {
+    return value || 'Consultation';
   }
 
   doctorOptionLabel(doctor: Doctor): string {
@@ -1403,6 +1493,7 @@ export class AppointmentComponent implements OnInit {
       status: (payload['status'] as Appointment['status']) || 'pending',
       consultationFee: Number(payload['consultationFee'] || doctor?.consultationFee || 0),
       paymentStatus: (payload['paymentStatus'] as Appointment['paymentStatus']) || 'unpaid',
+      visitType: (payload['visitType'] as string | undefined) || this.visitType || 'Consultation',
       vitals: (payload['vitals'] as Record<string, string> | undefined) || {},
       notes: (payload['notes'] as string | undefined) || 'Saved offline',
     };

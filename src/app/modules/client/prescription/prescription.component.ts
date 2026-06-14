@@ -1182,52 +1182,6 @@ export class PrescriptionComponent implements OnInit {
     }
   }
 
-  addFavoriteMedicine(medicine: DoctorMedicine): void {
-    this.addMedicineFromLibrary(medicine);
-  }
-
-  favoriteDoctorMedicines(): DoctorMedicine[] {
-    return this.doctorMedicines.slice(0, 8);
-  }
-
-  prescriptionMedicineTemplates(): Prescription[] {
-    return this.prescriptions
-      .filter((prescription) => prescription.medicines?.some((medicine) => String(medicine.name || '').trim()))
-      .slice(0, 6);
-  }
-
-  medicineTemplateLabel(prescription: Prescription): string {
-    return (
-      prescription.diagnosis ||
-      prescription.chiefComplaint ||
-      `${this.prescriptionPatientName(prescription)} - ${this.prescriptionDate(prescription)}`
-    );
-  }
-
-  applyTemplate(template: Prescription): void {
-    (template.medicines || [])
-      .filter((medicine) => String(medicine.name || '').trim())
-      .forEach((medicine) =>
-        this.appendMedicineRow({
-          name: medicine.name,
-          dosage: medicine.dosage || '',
-          frequency: medicine.frequency || '',
-          duration: medicine.duration || '1 Month',
-          afterMeal: Boolean(medicine.afterMeal),
-          beforeMeal: Boolean(medicine.beforeMeal),
-          morning: Boolean(medicine.morning),
-          morningDose: medicine.morningDose || '',
-          noon: Boolean(medicine.noon),
-          noonDose: medicine.noonDose || '',
-          evening: Boolean(medicine.evening),
-          eveningDose: medicine.eveningDose || '',
-          night: Boolean(medicine.night),
-          nightDose: medicine.nightDose || '',
-          instructions: medicine.instructions || '',
-        })
-      );
-  }
-
   duplicateMedicine(index: number): void {
     const value = this.medicines.at(index)?.getRawValue();
     if (!value) {
