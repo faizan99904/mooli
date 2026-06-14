@@ -314,19 +314,15 @@
             </div>
 
             <div class="dock-actions">
-                <button type="button" class="cash-btn" data-kb-dock-index="3"
+                <button type="button" class="pay-btn" data-kb-dock-index="3"
                     [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 3"
-                    (focus)="setKeyboardZone('actions', 3)" [disabled]="!canCheckout"
-                    (click)="checkoutWith('cash')">Cash</button>
-                <button type="button" class="pay-btn" data-kb-dock-index="4"
-                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 4"
-                    (focus)="setKeyboardZone('actions', 4)" [disabled]="!canCheckout" (click)="confirmBilling()">
+                    (focus)="setKeyboardZone('actions', 3)" [disabled]="!canCheckout" (click)="confirmBilling()">
                     <i class="fa fa-spinner fa-spin" *ngIf="saleSaving"></i>
                     Confirm Sale
                 </button>
-                <button type="button" class="pay-btn" data-kb-dock-index="5"
-                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 5"
-                    (focus)="setKeyboardZone('actions', 5)" [disabled]="!canCheckout" (click)="checkoutCredit()">
+                <button type="button" class="pay-btn" data-kb-dock-index="4"
+                    [class.keyboard-active]="keyboardZone === 'actions' && selectedDockIndex === 4"
+                    (focus)="setKeyboardZone('actions', 4)" [disabled]="!canCheckout" (click)="checkoutCredit()">
                     Credit
                 </button>
             </div>
@@ -470,11 +466,13 @@
                     <span>{{ formatCurrency(heldSale.total) }}</span>
                     <span>{{ formatCurrency(heldSale.paidAmount || 0) }}</span>
                     <div class="history-action-cell">
-                        <button type="button" class="history-print" (click)="resumeHeldSale(heldSale)">
-                            Resume
+                        <button type="button" class="history-print icon-only" title="Resume held sale"
+                            aria-label="Resume held sale" (click)="resumeHeldSale(heldSale)">
+                            <i class="fa fa-play"></i>
                         </button>
-                        <button type="button" class="history-print" (click)="deleteHeldSale(heldSale)">
-                            Delete
+                        <button type="button" class="history-print icon-only danger" title="Delete held sale"
+                            aria-label="Delete held sale" (click)="deleteHeldSale(heldSale)">
+                            <i class="fa fa-trash"></i>
                         </button>
                     </div>
                 </div>
@@ -501,14 +499,14 @@
                     <span>{{ formatCurrency(sale.total) }}</span>
                     <span>{{ formatCurrency(sale.paidAmount) }}</span>
                     <div class="history-action-cell">
-                        <button type="button" class="history-print" [disabled]="!registerOpened || !canReturnSale(sale)"
+                        <button type="button" class="history-print icon-only" title="Return sale"
+                            aria-label="Return sale" [disabled]="!registerOpened || !canReturnSale(sale)"
                             (click)="openSaleReturn(sale)">
                             <i class="fa fa-undo"></i>
-                            Return
                         </button>
-                        <button type="button" class="history-print" (click)="openSaleReceipt(sale)">
+                        <button type="button" class="history-print icon-only" title="Print receipt"
+                            aria-label="Print receipt" (click)="openSaleReceipt(sale)">
                             <i class="fa fa-print"></i>
-                            Print
                         </button>
                     </div>
                 </div>

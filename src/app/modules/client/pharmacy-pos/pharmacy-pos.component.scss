@@ -648,7 +648,10 @@
   grid-template-columns: 38px minmax(0, 1fr) auto;
   padding: 7px;
   text-align: left;
-  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .storepos-product-card:hover,
@@ -1204,6 +1207,8 @@
 .history-action-cell {
   align-items: center;
   display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
   justify-content: center;
   min-width: 0;
 }
@@ -1222,7 +1227,18 @@
   min-height: 30px;
   min-width: 0;
   padding: 0 8px;
-  width: 100%;
+}
+
+.history-print.icon-only {
+  min-width: 34px;
+  padding: 0;
+  width: 34px;
+}
+
+.history-print.danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .status-pill {

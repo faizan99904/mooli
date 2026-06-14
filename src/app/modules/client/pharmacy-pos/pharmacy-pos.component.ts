@@ -1144,7 +1144,6 @@ export class PharmacyPosComponent implements OnInit {
       return;
     }
 
-    this.saleHistoryOpen = true;
     this.loadRecentSales();
     this.prepareSaleReturnModal();
     this.focusOverlayControl('.sale-return-modal .modal-close');
@@ -1159,6 +1158,7 @@ export class PharmacyPosComponent implements OnInit {
       return;
     }
 
+    this.saleHistoryOpen = false;
     this.prepareSaleReturnModal(sale._id);
     this.loadSaleReturnSale(sale._id);
   }
@@ -1385,6 +1385,8 @@ export class PharmacyPosComponent implements OnInit {
     );
     const existing = existingIndex >= 0 ? this.billLines[existingIndex] : null;
     const availableQty = this.productAvailableQty(product);
+    this.productSearch = '';
+    this.selectedProductIndex = 0;
 
     if (existing) {
       existing.billQty = Math.min(
