@@ -22,3 +22,162 @@
 .nav-dropdown::before {
   background: rgba(23, 25, 28, 0.1);
 }
+
+.sidebar-account-action {
+  border-top: 1px solid rgba(23, 25, 28, 0.08);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.password-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.58);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 1055;
+}
+
+.password-modal-dialog {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+  max-width: 470px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.password-modal-header {
+  align-items: flex-start;
+  border-bottom: 1px solid #e8edf3;
+  display: flex;
+  justify-content: space-between;
+  padding: 22px 24px 18px;
+}
+
+.password-modal-header > div {
+  align-items: center;
+  display: flex;
+  gap: 13px;
+}
+
+.password-modal-header h5 {
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.password-modal-header p {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0;
+}
+
+.password-modal-icon {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(1, 156, 157, 0.14), rgba(0, 62, 134, 0.14));
+  border-radius: 50%;
+  color: #003e86;
+  display: inline-flex;
+  flex: 0 0 42px;
+  height: 42px;
+  justify-content: center;
+}
+
+.password-modal-close {
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  font-size: 18px;
+  line-height: 1;
+  padding: 3px;
+}
+
+.password-modal-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.password-modal-body {
+  padding: 22px 24px;
+}
+
+.password-modal-body label {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.password-input {
+  position: relative;
+}
+
+.password-input .form-control {
+  height: 44px;
+  padding-right: 46px;
+}
+
+.password-input button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 44px;
+}
+
+.password-input button:hover {
+  color: #003e86;
+}
+
+.password-hint {
+  color: #7c8798;
+  display: block;
+  font-size: 12px;
+  margin-top: 7px;
+}
+
+.password-modal-footer {
+  align-items: center;
+  background: #f8fafc;
+  border-top: 1px solid #e8edf3;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 16px 24px;
+}
+
+.password-modal-footer .btn {
+  min-width: 105px;
+}
+
+@media (max-width: 575px) {
+  .password-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .password-modal-dialog {
+    border-radius: 16px 16px 0 0;
+    max-width: none;
+  }
+
+  .password-modal-header,
+  .password-modal-body,
+  .password-modal-footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .password-modal-footer .btn {
+    flex: 1;
+  }
+}

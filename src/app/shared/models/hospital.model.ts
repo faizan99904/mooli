@@ -1,6 +1,11 @@
 import { Pagination } from './api-response.model';
 
 export type Status = 'active' | 'inactive';
+export type PrescriptionTemplate =
+  | 'classic'
+  | 'clinical-blue'
+  | 'minimal-teal'
+  | 'compact-mono';
 
 export interface Role {
   _id: string;
@@ -95,6 +100,7 @@ export interface Doctor {
   nameUrdu?: string | null;
   experienceYears?: number;
   consultationFee?: number;
+  prescriptionTemplate?: PrescriptionTemplate;
   availableDays?: string[];
   availableSlots?: Array<{ day: string; startTime: string; endTime: string }>;
   status: Status;

@@ -1027,9 +1027,248 @@
         </div>
       </div>
 
+      <div class="print-template-picker" *ngIf="!printPreviewLoading && printPreviewData">
+        <div class="print-template-picker-copy">
+          <strong>Prescription Design</strong>
+          <span>Select a design to preview before printing.</span>
+        </div>
+
+        <div class="print-template-options">
+          <button type="button" class="print-template-option"
+            *ngFor="let template of prescriptionTemplates"
+            [class.active]="selectedPrescriptionTemplate === template.id"
+            (click)="selectPrescriptionTemplate(template.id)">
+            <span class="print-template-thumb" [ngClass]="'thumb-' + template.id">
+              <i class="thumb-head"></i>
+              <i class="thumb-meta"></i>
+              <i class="thumb-patient"></i>
+              <i class="thumb-body"></i>
+            </span>
+            <span>
+              <strong>{{ template.name }}</strong>
+              <small>{{ template.description }}</small>
+            </span>
+            <i class="fa fa-check print-template-check" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <button type="button" class="save-template-button"
+          *ngIf="canSavePrescriptionTemplate()"
+          [disabled]="savingPrescriptionTemplate"
+          (click)="savePrescriptionTemplate()">
+          {{ savingPrescriptionTemplate ? 'Saving...' : 'Set as Default' }}
+        </button>
+      </div>
+
       <div class="print-preview-scroll">
         <div class="print-preview-loading" *ngIf="printPreviewLoading">Loading prescription preview...</div>
-        <section class="prescription-print-sheet" #printContent *ngIf="!printPreviewLoading && printPreviewData as preview">
+        <section class="prescription-print-sheet" #printContent
+          [ngClass]="'prescription-template-' + selectedPrescriptionTemplate"
+          *ngIf="!printPreviewLoading && printPreviewData as preview">
+          <ng-container *ngIf="selectedPrescriptionTemplate === 'clinical-blue'; else standardPrescriptionLayout">
+            <div class="clinical-rx-page">
+              <header class="clinical-rx-header">
+                <div class="clinical-rx-doctor clinical-rx-doctor-en">
+                  <h1>{{ preview.doctorName }}</h1>
+                  <strong>{{ preview.doctorQualification }}</strong>
+                  <span>{{ preview.doctorTitleEnglish }}</span>
+                  <span>{{ preview.hospitalName }}</span>
+                </div>
+
+                <div class="clinical-rx-brand">
+                  <div class="clinical-rx-logo" [class.has-logo]="preview.showHospitalLogo">
+                    <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl"
+                      [alt]="preview.hospitalName">
+                    <span *ngIf="!preview.showHospitalLogo">R<sub>x</sub></span>
+                  </div>
+                </div>
+
+                <div class="clinical-rx-doctor clinical-rx-doctor-ur print-urdu-block" dir="rtl">
+                  <h2>{{ preview.doctorNameUrdu }}</h2>
+                  <strong>{{ preview.doctorQualificationUrdu }}</strong>
+                  <span>{{ preview.doctorTitleUrdu }}</span>
+                  <span>{{ preview.hospitalNameUrdu }}</span>
+                </div>
+              </header>
+
+              <section class="clinical-rx-meta">
+                <div>
+                  <i class="fa fa-calendar"></i>
+                  <span><strong>DATE:</strong> {{ preview.date }}</span>
+                </div>
+                <div>
+                  <i class="fa fa-clipboard"></i>
+                  <span><strong>PRESCRIPTION NO:</strong> {{ preview.prescriptionNo }}</span>
+                </div>
+                <div>
+                  <i class="fa fa-folder-open-o"></i>
+                  <span><strong>FILE NO:</strong> {{ preview.patientNo }}</span>
+                </div>
+                <em>NOT VALID FOR COURT OF LAW.</em>
+              </section>
+
+              <section class="clinical-rx-patient-card">
+                <div class="clinical-rx-patient-top">
+                  <div class="clinical-rx-patient-item">
+                    <i class="fa fa-user-o"></i>
+                    <span><strong>PATIENT NAME</strong>{{ preview.patientName }}</span>
+                  </div>
+                  <div class="clinical-rx-patient-item">
+                    <i class="fa fa-user-md"></i>
+                    <span><strong>AGE</strong>{{ preview.patientAge }}</span>
+                  </div>
+                  <div class="clinical-rx-patient-item">
+                    <i class="fa fa-users"></i>
+                    <span><strong>SEX</strong>{{ preview.patientGender }}</span>
+                  </div>
+                  <div class="clinical-rx-patient-item">
+                    <i class="fa fa-phone"></i>
+                    <span><strong>CELL NO</strong>{{ preview.patientPhone }}</span>
+                  </div>
+                </div>
+
+                <div class="clinical-rx-patient-bottom">
+                  <div class="clinical-rx-patient-item">
+                    <i class="fa fa-map-marker"></i>
+                    <span><strong>ADDRESS</strong>{{ preview.patientAddress }}</span>
+                  </div>
+                  <div class="clinical-rx-patient-item">
+                    <i class="fa fa-stethoscope"></i>
+                    <span><strong>DIAGNOSIS / DISEASE</strong>{{ preview.disease }}</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="clinical-rx-main">
+                <aside class="clinical-rx-sidebar">
+                  <div class="clinical-rx-card clinical-rx-observation">
+                    <h3>O / E</h3>
+                    <div><i class="fa fa-dot-circle-o"></i><strong>BP</strong><span>{{ preview.vitals['bp'] || preview.vitals['bloodPressure'] || '-' }}</span></div>
+                    <div><i class="fa fa-shopping-bag"></i><strong>WT (kg)</strong><span>{{ preview.vitals['weight'] || '-' }}</span></div>
+                    <div><i class="fa fa-heart-o"></i><strong>PR / min</strong><span>{{ preview.vitals['pulse'] || '-' }}</span></div>
+                    <div><i class="fa fa-thermometer-half"></i><strong>TEMP</strong><span>{{ preview.vitals['temperature'] || '-' }}</span></div>
+                    <div><i class="fa fa-circle-o"></i><strong>SPO2</strong><span>{{ preview.vitals['spo2'] || '-' }}</span></div>
+                  </div>
+
+                  <div class="clinical-rx-card clinical-rx-labs">
+                    <h3>LAB'S</h3>
+                    <div *ngFor="let test of preview.labTests | slice:0:3">
+                      <i class="fa fa-check-square-o"></i>
+                      <strong>{{ test.name }}</strong>
+                      <span>✓</span>
+                    </div>
+                    <div *ngIf="preview.labTests.length === 0">
+                      <i class="fa fa-square-o"></i>
+                      <strong>Others</strong>
+                      <span>-</span>
+                    </div>
+                  </div>
+
+                  <div class="clinical-rx-card clinical-rx-follow-up">
+                    <h3><i class="fa fa-calendar-plus-o"></i> FOLLOW UP</h3>
+                    <span>{{ preview.followUpDate }}</span>
+                  </div>
+                </aside>
+
+                <div class="clinical-rx-content">
+                  <section class="clinical-rx-medicines">
+                    <header>
+                      <strong>MEDICINES</strong>
+                      <span class="print-urdu-block">دوائیاں</span>
+                    </header>
+
+                    <table>
+                      <thead>
+                        <tr>
+                          <th rowspan="2">#</th>
+                          <th rowspan="2">Medicine <small class="print-urdu-inline">(دوائی)</small></th>
+                          <th rowspan="2">Dose</th>
+                          <th rowspan="2">Duration</th>
+                          <th colspan="4">Timing <small class="print-urdu-inline">(اوقات)</small></th>
+                          <th rowspan="2">Food<br><small class="print-urdu-inline">(کھانے سے)</small></th>
+                          <th rowspan="2">Instructions<br><small class="print-urdu-inline">(ہدایات)</small></th>
+                        </tr>
+                        <tr>
+                          <th>Morning<small class="print-urdu-block">صبح</small></th>
+                          <th>Noon<small class="print-urdu-block">دوپہر</small></th>
+                          <th>Evening<small class="print-urdu-block">شام</small></th>
+                          <th>Night<small class="print-urdu-block">رات</small></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let medicine of preview.medicines; let medicineIndex = index">
+                          <td>{{ medicineIndex + 1 }}</td>
+                          <td class="clinical-rx-med-name">
+                            <strong>{{ medicine['name'] || 'Medicine' }}</strong>
+                            <span>{{ medicine['dosage'] || '' }}</span>
+                            <small>{{ medicine['frequency'] || '' }}</small>
+                          </td>
+                          <td>{{ medicine['dosage'] || '-' }}</td>
+                          <td>{{ medicine['duration'] || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'noon') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'evening') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'night') || '0' }}</td>
+                          <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
+                          <td>{{ medicine['instructions'] || '-' }}</td>
+                        </tr>
+                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 5"><td colspan="10"></td></tr>
+                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 4"><td colspan="10"></td></tr>
+                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 3"><td colspan="10"></td></tr>
+                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 2"><td colspan="10"></td></tr>
+                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 1"><td colspan="10"></td></tr>
+                      </tbody>
+                    </table>
+                  </section>
+
+                  <section class="clinical-rx-instructions">
+                    <h3>
+                      <span><i class="fa fa-info-circle"></i> IMPORTANT INSTRUCTIONS</span>
+                      <span class="print-urdu-block">ضروری ہدایات</span>
+                    </h3>
+                    <div>
+                      <ul>
+                        <li>Take medicine as per doctor advice.</li>
+                        <li>Do not stop medicine without consultation.</li>
+                        <li>Contact hospital if any unusual symptoms.</li>
+                      </ul>
+                      <ul class="print-urdu-block" dir="rtl">
+                        <li>دوا ڈاکٹر کے مشورے کے مطابق استعمال کریں۔</li>
+                        <li>بغیر مشورے کے دوا بند نہ کریں۔</li>
+                        <li>کسی بھی غیر معمولی علامات کی صورت میں ہسپتال سے رابطہ کریں۔</li>
+                      </ul>
+                    </div>
+                  </section>
+                </div>
+              </section>
+
+              <section class="clinical-rx-lower">
+                <div class="clinical-rx-note">
+                  <strong><i class="fa fa-file-text-o"></i> NOTE TO PATIENT</strong>
+                  <p>{{ preview.patientNote || '-' }}</p>
+                </div>
+                <div class="clinical-rx-signature">
+                  <i class="fa fa-pencil"></i>
+                  <span></span>
+                  <strong>Doctor Signature</strong>
+                </div>
+              </section>
+
+              <footer class="clinical-rx-footer">
+                <strong *ngIf="preview.prescriptionRevisionNote">
+                  <i class="fa fa-asterisk"></i> {{ preview.prescriptionRevisionNote }}
+                </strong>
+                <p *ngIf="preview.prescriptionFollowUpLine">
+                  <i class="fa fa-phone"></i> {{ preview.prescriptionFollowUpLine }}
+                </p>
+                <p *ngFor="let line of preview.prescriptionFooterLines">
+                  <i class="fa fa-envelope-o"></i> {{ line }}
+                </p>
+              </footer>
+            </div>
+          </ng-container>
+
+          <ng-template #standardPrescriptionLayout>
           <header class="print-header">
             <div class="doctor-print-left">
               <h1>{{ preview.doctorName }}</h1>
@@ -1051,10 +1290,30 @@
             </div>
           </header>
 
-          <div class="print-date-box">
-            <strong>DATE: {{ preview.date }}</strong>
-            <span>NOT VALID FOR COURT OF LAW.</span>
-          </div>
+          <ng-container *ngIf="selectedPrescriptionTemplate === 'classic'; else alternatePrescriptionMeta">
+            <div class="print-date-box">
+              <strong>DATE: {{ preview.date }}</strong>
+              <span>NOT VALID FOR COURT OF LAW.</span>
+            </div>
+          </ng-container>
+
+          <ng-template #alternatePrescriptionMeta>
+            <div class="print-date-box">
+              <div>
+                <span>Date</span>
+                <strong>{{ preview.date }}</strong>
+              </div>
+              <div>
+                <span>Prescription No</span>
+                <strong>{{ preview.prescriptionNo }}</strong>
+              </div>
+              <div>
+                <span>File No</span>
+                <strong>{{ preview.patientNo }}</strong>
+              </div>
+              <em>NOT VALID FOR COURT OF LAW.</em>
+            </div>
+          </ng-template>
 
           <table class="print-patient-table">
             <tr>
@@ -1124,47 +1383,93 @@
             </aside>
 
             <main class="print-medicine-area" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
-              <table class="print-medicine-table">
-                <thead>
-                  <tr>
-                    <th class="print-medicine-title" rowspan="2">Medicines<br /><span class="print-urdu-inline">(دوائیاں)</span></th>
-                    <th class="print-urdu-cell" rowspan="2">مدت</th>
-                    <th class="print-urdu-cell" rowspan="2">غذا کے بعد</th>
-                    <th class="print-urdu-cell" rowspan="2">غذا سے پہلے</th>
-                    <th class="print-urdu-cell" colspan="4">وقت</th>
-                  </tr>
-                  <tr>
-                    <th class="print-urdu-cell">صبح</th>
-                    <th class="print-urdu-cell">دوپہر</th>
-                    <th class="print-urdu-cell">شام</th>
-                    <th class="print-urdu-cell">رات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let medicine of preview.medicines">
-                    <td class="print-med-name">
-                      <strong>{{ medicine['name'] || 'Medicine' }}</strong>
-                      <span>{{ medicine['dosage'] || '' }}</span>
-                      <small>{{ medicine['instructions'] || '' }}</small>
-                    </td>
-                    <td>{{ medicine['duration'] || '-' }}</td>
-                    <td>{{ medicine['afterMeal'] ? '√' : '' }}</td>
-                    <td>{{ medicine['beforeMeal'] ? '√' : '' }}</td>
-                    <td>{{ slotDose(medicine, 'morning') }}</td>
-                    <td>{{ slotDose(medicine, 'noon') }}</td>
-                    <td>{{ slotDose(medicine, 'evening') }}</td>
-                    <td>{{ slotDose(medicine, 'night') }}</td>
-                  </tr>
-                  <tr *ngIf="preview.medicines.length === 0">
-                    <td class="print-med-name" colspan="8">No medicines added</td>
-                  </tr>
-                </tbody>
-              </table>
+              <ng-container *ngIf="selectedPrescriptionTemplate === 'classic'; else alternateMedicineTable">
+                <table class="print-medicine-table">
+                  <thead>
+                    <tr>
+                      <th class="print-medicine-title" rowspan="2">Medicines<br /><span class="print-urdu-inline">(دوائیاں)</span></th>
+                      <th class="print-urdu-cell" rowspan="2">مدت</th>
+                      <th class="print-urdu-cell" rowspan="2">غذا کے بعد</th>
+                      <th class="print-urdu-cell" rowspan="2">غذا سے پہلے</th>
+                      <th class="print-urdu-cell" colspan="4">وقت</th>
+                    </tr>
+                    <tr>
+                      <th class="print-urdu-cell">صبح</th>
+                      <th class="print-urdu-cell">دوپہر</th>
+                      <th class="print-urdu-cell">شام</th>
+                      <th class="print-urdu-cell">رات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let medicine of preview.medicines">
+                      <td class="print-med-name">
+                        <strong>{{ medicine['name'] || 'Medicine' }}</strong>
+                        <span>{{ medicine['dosage'] || '' }}</span>
+                        <small>{{ medicine['instructions'] || '' }}</small>
+                      </td>
+                      <td>{{ medicine['duration'] || '-' }}</td>
+                      <td>{{ medicine['afterMeal'] ? '√' : '' }}</td>
+                      <td>{{ medicine['beforeMeal'] ? '√' : '' }}</td>
+                      <td>{{ slotDose(medicine, 'morning') }}</td>
+                      <td>{{ slotDose(medicine, 'noon') }}</td>
+                      <td>{{ slotDose(medicine, 'evening') }}</td>
+                      <td>{{ slotDose(medicine, 'night') }}</td>
+                    </tr>
+                    <tr *ngIf="preview.medicines.length === 0">
+                      <td class="print-med-name" colspan="8">No medicines added</td>
+                    </tr>
+                  </tbody>
+                </table>
 
-              <div class="print-urdu-note print-urdu-block">
-                <p>بلڈ پریشر کے لئے نمک کم استعمال کریں۔ چکنائی کم کریں۔ روزانہ 30 منٹ پیدل چلیں۔</p>
-                <p>دوائی جاری رکھیں اور ڈاکٹر کے مشورے کے بغیر دوا بند نہ کریں۔</p>
-              </div>
+                <div class="print-urdu-note print-urdu-block">
+                  <p>بلڈ پریشر کے لئے نمک کم استعمال کریں۔ چکنائی کم کریں۔ روزانہ 30 منٹ پیدل چلیں۔</p>
+                  <p>دوائی جاری رکھیں اور ڈاکٹر کے مشورے کے بغیر دوا بند نہ کریں۔</p>
+                </div>
+              </ng-container>
+
+              <ng-template #alternateMedicineTable>
+                <table class="print-medicine-table">
+                  <thead>
+                    <tr>
+                      <th class="print-row-number" rowspan="2">#</th>
+                      <th class="print-medicine-title" rowspan="2">Medicine<br /><span class="print-urdu-inline">(دوائی)</span></th>
+                      <th rowspan="2">Dose</th>
+                      <th rowspan="2">Duration</th>
+                      <th class="print-timing-heading" colspan="4">Timing <span class="print-urdu-inline">(اوقات)</span></th>
+                      <th rowspan="2">Food<br /><span class="print-urdu-inline">(کھانے سے)</span></th>
+                      <th rowspan="2">Instructions<br /><span class="print-urdu-inline">(ہدایات)</span></th>
+                    </tr>
+                    <tr>
+                      <th>Morning<br /><span class="print-urdu-inline">صبح</span></th>
+                      <th>Noon<br /><span class="print-urdu-inline">دوپہر</span></th>
+                      <th>Evening<br /><span class="print-urdu-inline">شام</span></th>
+                      <th>Night<br /><span class="print-urdu-inline">رات</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let medicine of preview.medicines; let medicineIndex = index">
+                      <td class="print-row-number">{{ medicineIndex + 1 }}</td>
+                      <td class="print-med-name">
+                        <strong>{{ medicine['name'] || 'Medicine' }}</strong>
+                        <small>{{ medicine['frequency'] || '' }}</small>
+                      </td>
+                      <td>{{ medicine['dosage'] || '-' }}</td>
+                      <td>{{ medicine['duration'] || '-' }}</td>
+                      <td>{{ slotDose(medicine, 'morning') }}</td>
+                      <td>{{ slotDose(medicine, 'noon') }}</td>
+                      <td>{{ slotDose(medicine, 'evening') }}</td>
+                      <td>{{ slotDose(medicine, 'night') }}</td>
+                      <td>
+                        {{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}
+                      </td>
+                      <td class="print-instruction-cell">{{ medicine['instructions'] || '-' }}</td>
+                    </tr>
+                    <tr *ngIf="preview.medicines.length === 0">
+                      <td class="print-med-name" colspan="10">No medicines added</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </ng-template>
             </main>
 
             <aside class="print-right-note print-urdu-block">
@@ -1172,6 +1477,25 @@
               <p>جس دوائی کے سامنے جاری رکھیں لکھا ہو اس دوائی کو جب تک ڈاکٹر سے مشورہ نہ لیں جاری رکھیں۔</p>
             </aside>
           </div>
+
+          <section class="print-important-instructions" *ngIf="selectedPrescriptionTemplate !== 'classic'">
+            <strong>
+              <span>IMPORTANT INSTRUCTIONS</span>
+              <span class="print-urdu-inline">ضروری ہدایات</span>
+            </strong>
+            <div>
+              <ul>
+                <li>Take medicine as advised by the doctor.</li>
+                <li>Do not stop medicine without consultation.</li>
+                <li>Contact the hospital for unusual symptoms.</li>
+              </ul>
+              <ul class="print-urdu-block" dir="rtl">
+                <li>دوا ڈاکٹر کے مشورے کے مطابق استعمال کریں۔</li>
+                <li>بغیر مشورے کے دوا بند نہ کریں۔</li>
+                <li>غیر معمولی علامات کی صورت میں ہسپتال سے رابطہ کریں۔</li>
+              </ul>
+            </div>
+          </section>
 
           <div class="print-clinical-notes"
             *ngIf="preview.patientNote || preview.consultation || preview.admissionOrderLines.length">
@@ -1186,11 +1510,20 @@
             </div>
           </div>
 
-	          <footer class="print-footer">
-	            <strong *ngIf="preview.prescriptionRevisionNote">{{ preview.prescriptionRevisionNote }}</strong>
-	            <p *ngIf="preview.prescriptionFollowUpLine">{{ preview.prescriptionFollowUpLine }}</p>
-	            <p *ngFor="let line of preview.prescriptionFooterLines">{{ line }}</p>
-	          </footer>
+          <div class="print-signature-row" *ngIf="selectedPrescriptionTemplate !== 'classic'">
+            <div></div>
+            <div>
+              <span></span>
+              <strong>Doctor Signature</strong>
+            </div>
+          </div>
+
+          <footer class="print-footer">
+            <strong *ngIf="preview.prescriptionRevisionNote">{{ preview.prescriptionRevisionNote }}</strong>
+            <p *ngIf="preview.prescriptionFollowUpLine">{{ preview.prescriptionFollowUpLine }}</p>
+            <p *ngFor="let line of preview.prescriptionFooterLines">{{ line }}</p>
+          </footer>
+          </ng-template>
         </section>
       </div>
     </div>

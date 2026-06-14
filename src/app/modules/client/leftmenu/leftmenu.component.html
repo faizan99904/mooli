@@ -158,6 +158,12 @@
                     <a [routerLink]="['/settings']"><i class="fa fa-gear"></i><span>Settings</span></a>
                 </li>
 
+                <li class="sidebar-account-action">
+                    <a href="javascript:void(0);" (click)="openChangePasswordModal()">
+                        <i class="fa fa-key"></i><span>Change Password</span>
+                    </a>
+                </li>
+
                 <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/contacts']"><i class="fa fa-address-book"></i><span>Contacts</span></a>
                 </li>
@@ -197,5 +203,77 @@
                 </li>
             </ul>
         </nav>
+    </div>
+</div>
+
+<div *ngIf="changePasswordModalOpen" class="password-modal-backdrop"
+    (click)="closeChangePasswordModal()">
+    <div class="password-modal-dialog vivify fadeIn" role="dialog" aria-modal="true"
+        aria-labelledby="change-password-title" (click)="$event.stopPropagation()">
+        <div class="password-modal-header">
+            <div>
+                <span class="password-modal-icon"><i class="fa fa-lock"></i></span>
+                <div>
+                    <h5 id="change-password-title">Change Password</h5>
+                    <p>Enter your current password and choose a new one.</p>
+                </div>
+            </div>
+            <button type="button" class="password-modal-close" aria-label="Close"
+                [disabled]="changePasswordLoading" (click)="closeChangePasswordModal()">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+
+        <form #changePasswordForm="ngForm" (ngSubmit)="changePassword()" novalidate>
+            <div class="password-modal-body">
+                <div class="form-group c_form_group">
+                    <label for="currentPassword">Current Password</label>
+                    <div class="password-input">
+                        <input id="currentPassword" name="currentPassword" class="form-control"
+                            [type]="showCurrentPassword ? 'text' : 'password'"
+                            [(ngModel)]="currentPassword" #currentPasswordInput="ngModel"
+                            required minlength="8" maxlength="128" autocomplete="current-password"
+                            placeholder="Enter current password">
+                        <button type="button" (click)="toggleCurrentPasswordVisibility()"
+                            [attr.aria-label]="showCurrentPassword ? 'Hide current password' : 'Show current password'">
+                            <i class="fa" [ngClass]="showCurrentPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                    <small class="text-danger"
+                        *ngIf="currentPasswordInput.invalid && currentPasswordInput.touched">
+                        Current password must be at least 8 characters.
+                    </small>
+                </div>
+
+                <div class="form-group c_form_group mb-0">
+                    <label for="newPassword">New Password</label>
+                    <div class="password-input">
+                        <input id="newPassword" name="newPassword" class="form-control"
+                            [type]="showNewPassword ? 'text' : 'password'"
+                            [(ngModel)]="newPassword" #newPasswordInput="ngModel"
+                            required minlength="8" maxlength="128" autocomplete="new-password"
+                            placeholder="Enter new password">
+                        <button type="button" (click)="toggleNewPasswordVisibility()"
+                            [attr.aria-label]="showNewPassword ? 'Hide new password' : 'Show new password'">
+                            <i class="fa" [ngClass]="showNewPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                    <small class="text-danger" *ngIf="newPasswordInput.invalid && newPasswordInput.touched">
+                        New password must be at least 8 characters.
+                    </small>
+                    <small class="password-hint">Use 8 to 128 characters and do not reuse your current password.</small>
+                </div>
+            </div>
+
+            <div class="password-modal-footer">
+                <button type="button" class="btn btn-default" [disabled]="changePasswordLoading"
+                    (click)="closeChangePasswordModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary theme-bg gradient"
+                    [disabled]="changePasswordForm.invalid || currentPassword === newPassword || changePasswordLoading">
+                    <i *ngIf="changePasswordLoading" class="fa fa-spinner fa-spin mr-1"></i>
+                    {{ changePasswordLoading ? 'Changing...' : 'Change Password' }}
+                </button>
+            </div>
+        </form>
     </div>
 </div>

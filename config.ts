@@ -6,6 +6,9 @@ export const CONFIG = {
   auth: {
     login: API_BASE_URL + '/auth/login',
     me: API_BASE_URL + '/auth/me',
+    changePassword: API_BASE_URL + '/auth/change-password',
+    forgotPassword: API_BASE_URL + '/auth/forgot-password',
+    resetPassword: API_BASE_URL + '/auth/reset-password',
   },
 
   hospitalDashboard: {

@@ -6,6 +6,34 @@
   font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Urdu Typesetting', serif;
   font-size: 1.05rem;
   line-height: 1.6;
+  padding-left: 44px;
+}
+
+.urdu-name-field {
+  position: relative;
+}
+
+.urdu-auto-fill-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #019c9d;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 42px;
+}
+
+.urdu-auto-fill-button:hover {
+  color: #003e86;
+}
+
+.urdu-auto-fill-button:disabled {
+  color: #aab4bf;
+  cursor: not-allowed;
 }
 
 .card .header {
@@ -15,4 +43,263 @@
 
 .mb {
   margin-bottom: 1rem;
+}
+
+.prescription-template-field {
+  margin-top: 8px;
+}
+
+.prescription-template-heading {
+  align-items: flex-end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.prescription-template-heading label,
+.prescription-template-heading small {
+  display: block;
+}
+
+.prescription-template-heading small {
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.prescription-template-heading > strong {
+  background: #e8f7f7;
+  border-radius: 999px;
+  color: #003e86;
+  font-size: 11px;
+  padding: 6px 10px;
+}
+
+.prescription-template-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.prescription-template-card {
+  background: #fff;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 10px;
+  position: relative;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.prescription-template-card:hover {
+  border-color: #8bd1d2;
+  box-shadow: 0 8px 22px rgb(15 23 42 / 0.08);
+  transform: translateY(-2px);
+}
+
+.prescription-template-card.selected {
+  border-color: #019c9d;
+  box-shadow: 0 0 0 3px rgb(1 156 157 / 0.12);
+}
+
+.prescription-template-card:focus-within {
+  outline: 3px solid rgb(1 156 157 / 0.18);
+  outline-offset: 2px;
+}
+
+.prescription-template-card > input {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.template-paper {
+  background: #fff;
+  border: 1px solid #d7dde5;
+  border-radius: 4px;
+  display: grid;
+  gap: 4px;
+  min-height: 142px;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.template-header {
+  align-items: center;
+  display: grid;
+  gap: 5px;
+  grid-template-columns: 1fr 24px 1fr;
+}
+
+.template-doctor-lines {
+  background: linear-gradient(#25375a 0 0) 0 0 / 78% 4px no-repeat,
+    linear-gradient(#64748b 0 0) 0 9px / 60% 2px no-repeat,
+    linear-gradient(#94a3b8 0 0) 0 15px / 86% 2px no-repeat;
+  display: block;
+  height: 20px;
+}
+
+.template-doctor-lines-right {
+  background-position: 100% 0, 100% 9px, 100% 15px;
+}
+
+.template-rx {
+  align-items: center;
+  border: 2px solid #25375a;
+  border-radius: 50%;
+  color: #25375a;
+  display: flex;
+  font-family: Georgia, serif;
+  font-size: 10px;
+  font-weight: 800;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.template-meta-line,
+.template-patient-line,
+.template-footer-line {
+  border: 1px solid #d9dee6;
+  display: block;
+}
+
+.template-meta-line {
+  background: #f8fafc;
+  height: 13px;
+}
+
+.template-patient-line {
+  border-radius: 3px;
+  height: 23px;
+}
+
+.template-content {
+  display: grid;
+  flex: 1;
+  gap: 5px;
+  grid-template-columns: 26% 1fr;
+  min-height: 62px;
+}
+
+.template-sidebar {
+  background: repeating-linear-gradient(to bottom, #eef2f7 0 10px, #fff 10px 18px);
+  border: 1px solid #d9dee6;
+}
+
+.template-table {
+  border: 1px solid #d9dee6;
+  display: grid;
+  grid-template-rows: 14px repeat(3, 1fr);
+}
+
+.template-table i {
+  border-bottom: 1px solid #e5e7eb;
+  display: block;
+}
+
+.template-table i:first-child {
+  background: #eef2f7;
+}
+
+.template-footer-line {
+  border-style: dashed none none;
+  height: 4px;
+}
+
+.template-clinical-blue {
+  border-color: #94a9c6;
+}
+
+.template-clinical-blue .template-rx {
+  border-color: #063b78;
+  color: #063b78;
+}
+
+.template-clinical-blue .template-meta-line,
+.template-clinical-blue .template-table i:first-child,
+.template-clinical-blue .template-sidebar {
+  background-color: #063b78;
+}
+
+.template-minimal-teal .template-rx {
+  border-color: #019c9d;
+  color: #019c9d;
+}
+
+.template-minimal-teal .template-meta-line,
+.template-minimal-teal .template-table i:first-child {
+  background: #dff5f2;
+  border-color: #9cded8;
+}
+
+.template-minimal-teal .template-patient-line,
+.template-minimal-teal .template-sidebar,
+.template-minimal-teal .template-table {
+  border-color: #9cded8;
+}
+
+.template-compact-mono {
+  filter: grayscale(1);
+}
+
+.template-paper.template-compact-mono {
+  gap: 2px;
+}
+
+.template-card-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.template-card-copy strong {
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.template-card-copy small {
+  color: #6b7280;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.template-selected-icon {
+  align-items: center;
+  background: #019c9d;
+  border-radius: 50%;
+  color: #fff;
+  display: none;
+  font-size: 10px;
+  height: 22px;
+  justify-content: center;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 22px;
+}
+
+.prescription-template-card.selected .template-selected-icon {
+  display: flex;
+}
+
+@media (max-width: 1100px) {
+  .prescription-template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575px) {
+  .prescription-template-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .prescription-template-grid {
+    grid-template-columns: 1fr;
+  }
 }

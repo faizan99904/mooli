@@ -160,32 +160,28 @@ export class BackendService {
     return this.patch<CompanyProfile>(`${CONFIG.companies}/me`, payload);
   }
 
-  forgetPass(payload: { email: string }): Observable<any> {
-    return of({
-      message: 'Password reset is not enabled for this backend yet.',
-      data: { email: payload.email },
-    });
+  forgetPass(payload: { email: string }): Observable<
+    ApiResponse<{ expiresInSeconds: number; resendAfterSeconds: number }>
+  > {
+    return this.post<{ expiresInSeconds: number; resendAfterSeconds: number }>(
+      CONFIG.auth.forgotPassword,
+      payload
+    );
   }
 
   verifyOtp(payload: {
     email: string;
     otp: string;
-    newPassword?: string;
-  }): Observable<any> {
-    return of({
-      message: 'OTP flow is not enabled for this backend yet.',
-      data: payload,
-    });
+    newPassword: string;
+  }): Observable<ApiResponse<null>> {
+    return this.post<null>(CONFIG.auth.resetPassword, payload);
   }
 
   changePass(payload: {
+    currentPassword: string;
     newPassword: string;
-    oldPassword: string;
-  }): Observable<any> {
-    return of({
-      message: 'Password change is not enabled for this backend yet.',
-      data: payload,
-    });
+  }): Observable<ApiResponse<null>> {
+    return this.patch<null>(CONFIG.auth.changePassword, payload);
   }
 
   getHospitalDashboardSummary(): Observable<DashboardSummary> {

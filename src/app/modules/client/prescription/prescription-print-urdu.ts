@@ -1,3 +1,5 @@
+import { transliterateDoctorNameToUrdu } from '../../../shared/utils/urdu-transliteration';
+
 const URDU_WORD_MAP: Record<string, string> = {
   dr: 'ڈاکٹر',
   doctor: 'ڈاکٹر',
@@ -227,12 +229,7 @@ export const formatUrduDoctorName = (
     return 'ڈاکٹر';
   }
 
-  const transliteratedName = plain
-    .split(/\s+/)
-    .map((part) => transliterateToken(part))
-    .join(' ');
-
-  return `ڈاکٹر ${transliteratedName}`;
+  return transliterateDoctorNameToUrdu(plain) || 'ڈاکٹر';
 };
 
 export const formatEnglishDoctorTitle = (_specialization?: string | null): string => 'Consultant Physician';

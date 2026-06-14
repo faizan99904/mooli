@@ -410,77 +410,81 @@
   </div>
 </div>
 
-<div class="modal-backdrop-custom" *ngIf="addPatientModalOpen">
-  <div class="patient-modal">
+<div class="modal-backdrop-custom patient-modal-backdrop" *ngIf="addPatientModalOpen">
+  <div class="patient-modal" role="dialog" aria-modal="true" aria-labelledby="add-patient-modal-title">
     <div class="patient-modal-header">
       <div>
-        <h3>Add New Patient</h3>
+        <h3 id="add-patient-modal-title">Add New Patient</h3>
         <span>Create patient and continue appointment booking</span>
       </div>
-      <button type="button" (click)="closeAddPatientModal()"><i class="fa fa-times"></i></button>
+      <button type="button" aria-label="Close add patient modal" (click)="closeAddPatientModal()">
+        <i class="fa fa-times"></i>
+      </button>
     </div>
 
-    <form [formGroup]="patientForm" (ngSubmit)="submitPatientFromModal()">
-      <div class="modal-grid">
-        <label>
-          <span>Mobile Number *</span>
-          <input formControlName="phone" placeholder="03XXXXXXXXX" />
-        </label>
-        <label>
-          <span>First Name *</span>
-          <input formControlName="firstName" placeholder="e.g. Muhammad" />
-        </label>
-        <label>
-          <span>Last Name *</span>
-          <input formControlName="lastName" placeholder="Ali" />
-        </label>
-        <label>
-          <span>Gender *</span>
-          <select formControlName="gender">
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-          </select>
-        </label>
-        <label>
-          <span>Date of Birth</span>
-          <input type="date" formControlName="dateOfBirth" />
-        </label>
-        <label>
-          <span>Blood Group</span>
-          <select formControlName="bloodGroup">
-            <option value="">Select blood group</option>
-            <option *ngFor="let bloodGroup of bloodGroups" [value]="bloodGroup">{{ bloodGroup }}</option>
-          </select>
-        </label>
-        <label>
-          <span>Email</span>
-          <input formControlName="email" placeholder="e.g. ali@example.com" />
-        </label>
-        <label class="wide">
-          <span>Address</span>
-          <textarea formControlName="address" placeholder="Enter full address"></textarea>
-        </label>
-        <label>
-          <span>Emergency Contact Name</span>
-          <input formControlName="emergencyContactName" />
-        </label>
-        <label>
-          <span>Emergency Contact Phone</span>
-          <input formControlName="emergencyContactPhone" />
-        </label>
-        <label>
-          <span>Allergies</span>
-          <input formControlName="allergies" placeholder="Comma separated" />
-        </label>
-        <label>
-          <span>Chronic Diseases</span>
-          <input formControlName="chronicDiseases" placeholder="Comma separated" />
-        </label>
-        <label class="wide">
-          <span>Current Medications</span>
-          <input formControlName="currentMedications" placeholder="Comma separated" />
-        </label>
+    <form class="patient-modal-form" [formGroup]="patientForm" (ngSubmit)="submitPatientFromModal()">
+      <div class="patient-modal-body">
+        <div class="modal-grid">
+          <label>
+            <span>Mobile Number *</span>
+            <input formControlName="phone" placeholder="03XXXXXXXXX" />
+          </label>
+          <label>
+            <span>First Name *</span>
+            <input formControlName="firstName" placeholder="e.g. Muhammad" />
+          </label>
+          <label>
+            <span>Last Name *</span>
+            <input formControlName="lastName" placeholder="Ali" />
+          </label>
+          <label>
+            <span>Gender *</span>
+            <select formControlName="gender">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label>
+            <span>Date of Birth</span>
+            <input type="date" formControlName="dateOfBirth" />
+          </label>
+          <label>
+            <span>Blood Group</span>
+            <select formControlName="bloodGroup">
+              <option value="">Select blood group</option>
+              <option *ngFor="let bloodGroup of bloodGroups" [value]="bloodGroup">{{ bloodGroup }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Email</span>
+            <input formControlName="email" placeholder="e.g. ali@example.com" />
+          </label>
+          <label class="wide">
+            <span>Address</span>
+            <textarea formControlName="address" placeholder="Enter full address"></textarea>
+          </label>
+          <label>
+            <span>Emergency Contact Name</span>
+            <input formControlName="emergencyContactName" />
+          </label>
+          <label>
+            <span>Emergency Contact Phone</span>
+            <input formControlName="emergencyContactPhone" />
+          </label>
+          <label>
+            <span>Allergies</span>
+            <input formControlName="allergies" placeholder="Comma separated" />
+          </label>
+          <label>
+            <span>Chronic Diseases</span>
+            <input formControlName="chronicDiseases" placeholder="Comma separated" />
+          </label>
+          <label class="wide">
+            <span>Current Medications</span>
+            <input formControlName="currentMedications" placeholder="Comma separated" />
+          </label>
+        </div>
       </div>
 
       <div class="patient-modal-actions">

@@ -29,6 +29,7 @@ import {
   Patient,
   PatientDocumentItem,
   PatientHistory,
+  PrescriptionTemplate,
   PrescriptionPrintSettings,
   ProductCatalogItem,
   Prescription,
@@ -106,6 +107,7 @@ import {
 } from './prescription-print-urdu';
 
 interface PrintPreviewData {
+  template: PrescriptionTemplate;
   patient: Patient;
   patientName: string;
   patientAge: string;
@@ -129,6 +131,7 @@ interface PrintPreviewData {
   prescriptionRevisionNote: string;
   prescriptionFollowUpLine: string;
   prescriptionFooterLines: string[];
+  prescriptionNo: string;
   date: string;
   disease: string;
   vitals: Record<string, string>;
@@ -221,6 +224,34 @@ export class PrescriptionComponent implements OnInit {
   printPreviewLoading = false;
   previewPrescription: Prescription | null = null;
   printPreviewData: PrintPreviewData | null = null;
+  selectedPrescriptionTemplate: PrescriptionTemplate = 'classic';
+  savingPrescriptionTemplate = false;
+  readonly prescriptionTemplates: Array<{
+    id: PrescriptionTemplate;
+    name: string;
+    description: string;
+  }> = [
+    {
+      id: 'classic',
+      name: 'Classic',
+      description: 'Traditional bilingual layout',
+    },
+    {
+      id: 'clinical-blue',
+      name: 'Clinical Blue',
+      description: 'Detailed hospital style',
+    },
+    {
+      id: 'minimal-teal',
+      name: 'Minimal Teal',
+      description: 'Clean modern print',
+    },
+    {
+      id: 'compact-mono',
+      name: 'Compact Mono',
+      description: 'Space-efficient monochrome',
+    },
+  ];
   smartMedicineInput = '';
   smartMedicineSuggestions: MedicineSuggestionOption[] = [];
   activeMedicineSuggestionIndex = -1;
@@ -2854,6 +2885,7 @@ export class PrescriptionComponent implements OnInit {
         }
 
         this.printPreviewData = previewData;
+        this.selectedPrescriptionTemplate = previewData.template;
       } catch (error) {
         console.error('Unable to build prescription preview', error);
         this.printPreviewOpen = false;
@@ -2877,7 +2909,63 @@ export class PrescriptionComponent implements OnInit {
       return;
     }
 
-    this.openPrescriptionPrintWindow(this.printContent.nativeElement.innerHTML);
+    this.openPrescriptionPrintWindow(this.printContent.nativeElement.outerHTML);
+  }
+
+  selectPrescriptionTemplate(template: PrescriptionTemplate): void {
+    this.selectedPrescriptionTemplate = template;
+  }
+
+  canSavePrescriptionTemplate(): boolean {
+    return Boolean(this.resolvePreviewDoctorProfile()) && this.backend.hasPermission('doctors.update');
+  }
+
+  savePrescriptionTemplate(): void {
+    const doctor = this.resolvePreviewDoctorProfile();
+
+    if (!doctor) {
+      this.toastr.error('Doctor profile is not available for this prescription.');
+      return;
+    }
+
+    if (!this.backend.hasPermission('doctors.update')) {
+      this.toastr.error('You do not have permission to update the doctor profile.');
+      return;
+    }
+
+    this.savingPrescriptionTemplate = true;
+    this.backend
+      .updateDoctor(doctor._id, {
+        prescriptionTemplate: this.selectedPrescriptionTemplate,
+      })
+      .pipe(finalize(() => (this.savingPrescriptionTemplate = false)))
+      .subscribe({
+        next: (response) => {
+          const updatedDoctor = response.data;
+          this.doctors = this.doctors.map((item) =>
+            item._id === doctor._id
+              ? {
+                ...item,
+                prescriptionTemplate:
+                  updatedDoctor?.prescriptionTemplate || this.selectedPrescriptionTemplate,
+              }
+              : item
+          );
+
+          if (this.printPreviewData) {
+            this.printPreviewData = {
+              ...this.printPreviewData,
+              template: this.selectedPrescriptionTemplate,
+            };
+          }
+
+          void this.offline.cacheValue(this.doctorsCacheKey(), this.doctors);
+          this.toastr.success('Default prescription design updated.');
+        },
+        error: (err) => {
+          this.toastr.error(err?.error?.message || 'Unable to save prescription design.');
+        },
+      });
   }
 
   visibleAppointments(): Appointment[] {
@@ -3882,6 +3970,7 @@ export class PrescriptionComponent implements OnInit {
       .slice(0, 20);
 
     return {
+      template: doctor?.prescriptionTemplate || 'classic',
       patient,
       patientName: this.patientName(patient),
       patientAge: this.ageLabel(patient),
@@ -3906,6 +3995,7 @@ export class PrescriptionComponent implements OnInit {
       prescriptionFollowUpLine:
         settings.followUpLine || `For appointment and follow up, contact ${hospitalName}.`,
       prescriptionFooterLines: this.prescriptionFooterLines(hospital, settings),
+      prescriptionNo: this.formatPrescriptionNumber(source['_id']),
       date: this.formatPrintDate(createdAt),
       disease: source['diagnosis'] || source['chiefComplaint'] || source['history'] || '-',
       vitals,
@@ -3942,6 +4032,27 @@ export class PrescriptionComponent implements OnInit {
     }
 
     return lines.slice(0, 12);
+  }
+
+  private resolvePreviewDoctorProfile(): Doctor | null {
+    const doctorId = String(
+      this.previewPrescription?.doctorId ||
+      this.prescriptionForm.getRawValue().doctorId ||
+      ''
+    );
+
+    return this.doctors.find((doctor) => doctor.userId === doctorId) || null;
+  }
+
+  private formatPrescriptionNumber(value: unknown): string {
+    const rawValue = String(value || '').trim();
+
+    if (!rawValue) {
+      return 'DRAFT';
+    }
+
+    const compactValue = rawValue.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    return `RX-${compactValue.slice(-6).padStart(6, '0')}`;
   }
 
   private safeArray(value: unknown): unknown[] {

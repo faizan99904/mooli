@@ -125,7 +125,7 @@ export class SettingsComponent implements OnInit {
 
   changePass() {
     const payload = {
-      oldPassword: this.oldPassword,
+      currentPassword: this.oldPassword,
       newPassword: this.newPassword,
     };
 

@@ -48,10 +48,19 @@
 
                                 <div class="col-md-4 form-group">
                                     <label>Name (Urdu)</label>
-                                    <input class="form-control doctor-urdu-name-input" formControlName="nameUrdu"
-                                        placeholder="ڈاکٹر عائشہ خان" dir="rtl">
+                                    <div class="urdu-name-field">
+                                        <input class="form-control doctor-urdu-name-input" formControlName="nameUrdu"
+                                            placeholder="ڈاکٹر عائشہ خان" dir="rtl"
+                                            (input)="onUrduNameInput()">
+                                        <button type="button" class="urdu-auto-fill-button"
+                                            [disabled]="!doctorForm.get('name')?.value"
+                                            (click)="autoFillUrduName()" title="Auto fill Urdu name"
+                                            aria-label="Auto fill Urdu name">
+                                            <i class="fa fa-language"></i>
+                                        </button>
+                                    </div>
                                     <small class="text-muted">
-                                        Prescription print ke liye — khali chhorain to auto convert hoga.
+                                        The Urdu name fills automatically as you type the English name. You can also edit the spelling manually.
                                     </small>
                                 </div>
 
@@ -120,6 +129,48 @@
                                 <div class="col-md-2 form-group">
                                     <label>Consultation Fee</label>
                                     <input class="form-control" type="number" formControlName="consultationFee">
+                                </div>
+
+                                <div class="col-md-12 form-group prescription-template-field">
+                                    <div class="prescription-template-heading">
+                                        <div>
+                                            <label>Default Prescription Design</label>
+                                            <small>Select the design that will open by default for this doctor.</small>
+                                        </div>
+                                        <strong>{{ doctorForm.get('prescriptionTemplate')?.value | titlecase }}</strong>
+                                    </div>
+
+                                    <div class="prescription-template-grid">
+                                        <label class="prescription-template-card"
+                                            *ngFor="let template of prescriptionTemplates"
+                                            [class.selected]="doctorForm.get('prescriptionTemplate')?.value === template.id">
+                                            <input type="radio" formControlName="prescriptionTemplate"
+                                                [value]="template.id">
+
+                                            <span class="template-paper" [ngClass]="'template-' + template.id">
+                                                <span class="template-header">
+                                                    <span class="template-doctor-lines"></span>
+                                                    <span class="template-rx">Rx</span>
+                                                    <span class="template-doctor-lines template-doctor-lines-right"></span>
+                                                </span>
+                                                <span class="template-meta-line"></span>
+                                                <span class="template-patient-line"></span>
+                                                <span class="template-content">
+                                                    <span class="template-sidebar"></span>
+                                                    <span class="template-table">
+                                                        <i></i><i></i><i></i><i></i>
+                                                    </span>
+                                                </span>
+                                                <span class="template-footer-line"></span>
+                                            </span>
+
+                                            <span class="template-card-copy">
+                                                <strong>{{ template.name }}</strong>
+                                                <small>{{ template.description }}</small>
+                                            </span>
+                                            <i class="fa fa-check template-selected-icon" aria-hidden="true"></i>
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <div class="col-md-12 form-group">

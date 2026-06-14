@@ -1,13 +1,10 @@
 import { CommonModule } from '@angular/common';
 import {
-  AfterViewInit,
   Component,
   ElementRef,
-  EventEmitter,
-  OnInit,
-  Output,
+  OnDestroy,
   QueryList,
-  ViewChild,
+  ViewChildren,
 } from '@angular/core';
 import {
   FormBuilder,
@@ -16,8 +13,11 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { BackendService } from '../../../core/services/backend.service';
+import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { BackendService } from '../../../core/services/backend.service';
+
+type ResetStep = 'email' | 'reset' | 'success';
 
 @Component({
   selector: 'app-forgot-password',
@@ -25,235 +25,252 @@ import { ToastrService } from 'ngx-toastr';
   templateUrl: './forgot-password.component.html',
   styleUrl: './forgot-password.component.scss',
 })
-export class ForgotPasswordComponent implements OnInit, AfterViewInit {
-  isOtp: boolean = false;
-  recoveryForm!: FormGroup;
+export class ForgotPasswordComponent implements OnDestroy {
+  @ViewChildren('otpInput')
+  otpInputs!: QueryList<ElementRef<HTMLInputElement>>;
+
+  step: ResetStep = 'email';
+  requestLoading = false;
+  resetLoading = false;
   showNewPassword = false;
   showConfirmPassword = false;
-  countdownTime: number = 300;
-  countdownDisplay: string = '05:00';
-  showCountdown: boolean = true;
-  isChangePass: boolean = true;
-  resLoader: boolean = false;
-  verLoader: boolean = false;
-  private countdownInterval: any;
-  @ViewChild('otpInput') otpInputs!: QueryList<ElementRef>;
-  @Output() otpVerified = new EventEmitter<{
-    otp: string;
-    newPassword: string;
-  }>();
-  @Output() resendOtp = new EventEmitter<void>();
-  @ViewChild('otpInput0') otpInput0!: ElementRef;
-  @ViewChild('otpInput1') otpInput1!: ElementRef;
-  @ViewChild('otpInput2') otpInput2!: ElementRef;
-  @ViewChild('otpInput3') otpInput3!: ElementRef;
-  @ViewChild('otpInput4') otpInput4!: ElementRef;
-  @ViewChild('otpInput5') otpInput5!: ElementRef;
+  expiresRemaining = 300;
+  resendRemaining = 0;
 
-  otpForm!: FormGroup;
+  recoveryForm: FormGroup;
+  resetForm: FormGroup;
+
+  private countdownInterval?: ReturnType<typeof setInterval>;
+  private navigationTimeout?: ReturnType<typeof setTimeout>;
 
   constructor(
     private fb: FormBuilder,
     private backend: BackendService,
     private router: Router,
     private toaster: ToastrService
-  ) {}
-
-  ngOnInit() {
+  ) {
     this.recoveryForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
     });
 
-    this.otpForm = this.fb.group({
-      digit0: ['', [Validators.required, Validators.pattern('[0-9]')]],
-      digit1: ['', [Validators.required, Validators.pattern('[0-9]')]],
-      digit2: ['', [Validators.required, Validators.pattern('[0-9]')]],
-      digit3: ['', [Validators.required, Validators.pattern('[0-9]')]],
-      digit4: ['', [Validators.required, Validators.pattern('[0-9]')]],
-      digit5: ['', [Validators.required, Validators.pattern('[0-9]')]],
-      newPassword: ['', [Validators.required]],
+    this.resetForm = this.fb.group({
+      digit0: ['', [Validators.required, Validators.pattern(/^\d$/)]],
+      digit1: ['', [Validators.required, Validators.pattern(/^\d$/)]],
+      digit2: ['', [Validators.required, Validators.pattern(/^\d$/)]],
+      digit3: ['', [Validators.required, Validators.pattern(/^\d$/)]],
+      digit4: ['', [Validators.required, Validators.pattern(/^\d$/)]],
+      digit5: ['', [Validators.required, Validators.pattern(/^\d$/)]],
+      newPassword: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(128)]],
+      confirmPassword: ['', [Validators.required]],
     });
   }
 
-  changePass() {
-    const otpFields = [
-      this.otpForm.value.digit0,
-      this.otpForm.value.digit1,
-      this.otpForm.value.digit2,
-      this.otpForm.value.digit3,
-      this.otpForm.value.digit4,
-      this.otpForm.value.digit5,
-    ];
+  get maskedEmail(): string {
+    const email = String(this.recoveryForm.value.email || '');
+    const [localPart, domain] = email.split('@');
 
-    const allFilled = otpFields.every(
-      (val) => val && val.toString().length === 1
-    );
-
-    if (allFilled) {
-      this.isChangePass = !this.isChangePass;
-    } else {
-      this.toaster.warning('Please fill all OTP digits.');
+    if (!localPart || !domain) {
+      return email;
     }
+
+    const visible = localPart.slice(0, Math.min(2, localPart.length));
+    return `${visible}${'*'.repeat(Math.max(2, localPart.length - visible.length))}@${domain}`;
   }
 
-  togglePasswordVisibility(field: 'newPassword') {
-    if (field === 'newPassword') {
+  get expiryDisplay(): string {
+    return this.formatSeconds(this.expiresRemaining);
+  }
+
+  get resendDisplay(): string {
+    return this.formatSeconds(this.resendRemaining);
+  }
+
+  get passwordMismatch(): boolean {
+    const newPassword = this.resetForm.get('newPassword')?.value;
+    const confirmPassword = this.resetForm.get('confirmPassword')?.value;
+    return Boolean(confirmPassword && newPassword !== confirmPassword);
+  }
+
+  requestOtp(): void {
+    if (this.recoveryForm.invalid) {
+      this.recoveryForm.markAllAsTouched();
+      return;
+    }
+
+    this.sendOtpRequest(false);
+  }
+
+  resendOtp(): void {
+    if (this.resendRemaining > 0 || this.requestLoading) {
+      return;
+    }
+
+    this.sendOtpRequest(true);
+  }
+
+  submitReset(): void {
+    if (this.resetForm.invalid || this.passwordMismatch) {
+      this.resetForm.markAllAsTouched();
+      return;
+    }
+
+    const otp = this.getOtp();
+
+    if (!/^\d{6}$/.test(otp)) {
+      this.toaster.warning('Enter the complete 6-digit verification code.');
+      return;
+    }
+
+    this.resetLoading = true;
+    this.backend
+      .verifyOtp({
+        email: this.recoveryForm.value.email,
+        otp,
+        newPassword: this.resetForm.value.newPassword,
+      })
+      .pipe(finalize(() => (this.resetLoading = false)))
+      .subscribe({
+        next: (response) => {
+          this.clearCountdown();
+          this.step = 'success';
+          this.toaster.success(response.message || 'Password reset successfully.');
+          this.navigationTimeout = setTimeout(
+            () => this.router.navigateByUrl('/login/access'),
+            1800
+          );
+        },
+        error: (error) => {
+          this.toaster.error(
+            error?.error?.message || 'Unable to reset password. Please request a new code.'
+          );
+        },
+      });
+  }
+
+  editEmail(): void {
+    this.clearCountdown();
+    this.step = 'email';
+    this.resetForm.reset();
+  }
+
+  togglePasswordVisibility(field: 'new' | 'confirm'): void {
+    if (field === 'new') {
       this.showNewPassword = !this.showNewPassword;
+      return;
+    }
+
+    this.showConfirmPassword = !this.showConfirmPassword;
+  }
+
+  handleOtpInput(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    const digit = input.value.replace(/\D/g, '').slice(-1);
+    input.value = digit;
+    this.resetForm.get(`digit${index}`)?.setValue(digit);
+
+    if (digit && index < 5) {
+      this.focusOtp(index + 1);
     }
   }
 
-  ngAfterViewInit() {
-    this.otpInput0.nativeElement.focus();
-  }
+  handleOtpKeydown(event: KeyboardEvent, index: number): void {
+    const input = event.target as HTMLInputElement;
 
-  handleKeyUp(event: any, index: number) {
-    const value = event.target.value;
-    if (value.length === 1) {
-      if (index < 5) {
-        this.focusInput(index + 1);
-      }
+    if (event.key === 'Backspace' && !input.value && index > 0) {
+      this.focusOtp(index - 1);
     }
   }
 
-  handleKeyDown(event: any, index: number) {
-    if (event.key === 'Backspace' && !event.target.value && index > 0) {
-      this.focusInput(index - 1);
-    }
-  }
-
-  handlePaste(event: ClipboardEvent) {
+  handleOtpPaste(event: ClipboardEvent): void {
     event.preventDefault();
-    const clipboardData = event.clipboardData || (window as any).clipboardData;
-    const pastedText = clipboardData.getData('text');
-    const otp = pastedText.replace(/\D/g, '').substring(0, 6);
-    for (let i = 0; i < otp.length; i++) {
-      this.otpForm.get(`digit${i}`)?.setValue(otp[i]);
-    }
-    this.focusInput(Math.min(5, otp.length - 1));
-  }
+    const otp = (event.clipboardData?.getData('text') || '')
+      .replace(/\D/g, '')
+      .slice(0, 6);
 
-  private focusInput(index: number) {
-    switch (index) {
-      case 0:
-        this.otpInput0.nativeElement.focus();
-        break;
-      case 1:
-        this.otpInput1.nativeElement.focus();
-        break;
-      case 2:
-        this.otpInput2.nativeElement.focus();
-        break;
-      case 3:
-        this.otpInput3.nativeElement.focus();
-        break;
-      case 4:
-        this.otpInput4.nativeElement.focus();
-        break;
-      case 5:
-        this.otpInput5.nativeElement.focus();
-        break;
+    otp.split('').forEach((digit, index) => {
+      this.resetForm.get(`digit${index}`)?.setValue(digit);
+      const input = this.otpInputs.get(index)?.nativeElement;
+      if (input) {
+        input.value = digit;
+      }
+    });
+
+    if (otp.length > 0) {
+      this.focusOtp(Math.min(otp.length, 6) - 1);
     }
   }
 
-  startCountdown() {
-    this.showCountdown = true;
-    this.countdownTime = 300;
-    this.updateCountdownDisplay();
+  ngOnDestroy(): void {
+    this.clearCountdown();
+
+    if (this.navigationTimeout) {
+      clearTimeout(this.navigationTimeout);
+    }
+  }
+
+  private sendOtpRequest(isResend: boolean): void {
+    this.requestLoading = true;
+    this.backend
+      .forgetPass({ email: this.recoveryForm.value.email })
+      .pipe(finalize(() => (this.requestLoading = false)))
+      .subscribe({
+        next: (response) => {
+          this.step = 'reset';
+          this.resetForm.reset();
+          this.startCountdown(
+            response.data?.expiresInSeconds || 300,
+            response.data?.resendAfterSeconds || 60
+          );
+          this.toaster.success(
+            isResend
+              ? 'A new verification code has been sent.'
+              : response.message || 'Verification code sent.'
+          );
+          setTimeout(() => this.focusOtp(0));
+        },
+        error: (error) => {
+          this.toaster.error(
+            error?.error?.message || 'Unable to send verification code.'
+          );
+        },
+      });
+  }
+
+  private getOtp(): string {
+    return Array.from({ length: 6 }, (_, index) =>
+      String(this.resetForm.get(`digit${index}`)?.value || '')
+    ).join('');
+  }
+
+  private focusOtp(index: number): void {
+    this.otpInputs.get(index)?.nativeElement.focus();
+  }
+
+  private startCountdown(expiresInSeconds: number, resendAfterSeconds: number): void {
+    this.clearCountdown();
+    this.expiresRemaining = expiresInSeconds;
+    this.resendRemaining = resendAfterSeconds;
 
     this.countdownInterval = setInterval(() => {
-      this.countdownTime--;
-      this.updateCountdownDisplay();
+      this.expiresRemaining = Math.max(0, this.expiresRemaining - 1);
+      this.resendRemaining = Math.max(0, this.resendRemaining - 1);
 
-      if (this.countdownTime <= 0) {
-        clearInterval(this.countdownInterval);
-        this.showCountdown = false;
+      if (this.expiresRemaining === 0 && this.resendRemaining === 0) {
+        this.clearCountdown();
       }
     }, 1000);
   }
 
-  updateCountdownDisplay() {
-    const minutes = Math.floor(this.countdownTime / 60);
-    const seconds = this.countdownTime % 60;
-    this.countdownDisplay = `${minutes.toString().padStart(2, '0')}:${seconds
-      .toString()
-      .padStart(2, '0')}`;
-  }
-
-  onSubmit() {
-    if (this.otpForm.valid) {
-      const otp = Object.values(this.otpForm.value).slice(0, 6).join('');
-      const newPassword = this.otpForm.value.newPassword;
-      const payload = {
-        otp,
-        newPassword,
-      };
-      this.otpVerified.emit(payload);
+  private clearCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = undefined;
     }
   }
 
-  resend() {
-    this.resetPass();
-    this.startCountdown();
-  }
-
-  resetPass() {
-    if (this.recoveryForm.valid) {
-      this.resLoader = true;
-      const payload = this.recoveryForm.value;
-      this.backend.forgetPass(payload).subscribe({
-        next: (response: any) => {
-          this.resLoader = false;
-          this.toaster.success(response?.message || 'Otp sent successfully!');
-          this.isOtp = true;
-          this.startCountdown();
-          console.log(response);
-        },
-        error: (err) => {
-          this.resLoader = false;
-          this.toaster.error(err.error?.message || 'Something went wrong!');
-        },
-      });
-      console.log(this.recoveryForm.value);
-    } else {
-      this.recoveryForm.markAllAsTouched();
-    }
-  }
-
-  verifyOtp() {
-    if (this.otpForm.value) {
-      this.verLoader = true;
-      const otp = [
-        this.otpForm.value.digit0,
-        this.otpForm.value.digit1,
-        this.otpForm.value.digit2,
-        this.otpForm.value.digit3,
-        this.otpForm.value.digit4,
-        this.otpForm.value.digit5,
-      ].join('');
-
-      const payload = {
-        otp,
-        email: this.recoveryForm.get('email')?.value,
-        newPassword: this.otpForm.get('newPassword')?.value,
-      };
-
-      console.log(payload, 'OTP');
-      this.backend.verifyOtp(payload).subscribe({
-        next: (response: any) => {
-          this.verLoader = false;
-          this.toaster.success(
-            response?.message || 'OTP verified successfully!'
-          );
-          this.router.navigateByUrl('/login/access');
-        },
-        error: (err) => {
-          this.verLoader = false;
-          this.toaster.error(err.error?.message || 'Something went wrong!');
-        },
-      });
-    } else {
-      this.otpForm.markAllAsTouched();
-      this.recoveryForm.markAllAsTouched();
-    }
+  private formatSeconds(value: number): string {
+    const minutes = Math.floor(value / 60);
+    const seconds = value % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 }
