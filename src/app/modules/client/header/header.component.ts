@@ -160,6 +160,10 @@ export class HeaderComponent implements OnInit {
     this.router.navigate(['/pharmacy/pos'], { queryParams });
   }
 
+  goToSettings(): void {
+    this.router.navigate(['/settings']);
+  }
+
   private getStoredUser(): User | null {
     try {
       return JSON.parse(localStorage.getItem('user') || 'null') as User | null;

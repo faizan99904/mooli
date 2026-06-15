@@ -459,6 +459,8 @@ export interface Bill {
   dueAmount: number;
   paymentStatus: 'unpaid' | 'partial' | 'paid';
   paymentMethod?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface EncounterSummary {

@@ -23,6 +23,9 @@ export class PatientProfileComponent implements OnInit {
   prescriptions: Prescription[] = [];
   bills: Bill[] = [];
   loading = false;
+  historyLoading = false;
+  prescriptionsLoading = false;
+  billsLoading = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -54,32 +57,44 @@ export class PatientProfileComponent implements OnInit {
   }
 
   loadRelated(id: string): void {
-    this.backend.getPatientHistory(id, { limit: 100 }).subscribe({
-      next: (result) => {
-        this.history = result.items;
-      },
-      error: () => {
-        this.history = [];
-      },
-    });
+    this.historyLoading = true;
+    this.backend
+      .getPatientHistory(id, { limit: 100 })
+      .pipe(finalize(() => (this.historyLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.history = result.items;
+        },
+        error: () => {
+          this.history = [];
+        },
+      });
 
-    this.backend.getPatientPrescriptions(id, { limit: 100 }).subscribe({
-      next: (result) => {
-        this.prescriptions = result.items;
-      },
-      error: () => {
-        this.prescriptions = [];
-      },
-    });
+    this.prescriptionsLoading = true;
+    this.backend
+      .getPatientPrescriptions(id, { limit: 100 })
+      .pipe(finalize(() => (this.prescriptionsLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.prescriptions = result.items;
+        },
+        error: () => {
+          this.prescriptions = [];
+        },
+      });
 
-    this.backend.getPatientBills(id, { limit: 100 }).subscribe({
-      next: (result) => {
-        this.bills = result.items;
-      },
-      error: () => {
-        this.bills = [];
-      },
-    });
+    this.billsLoading = true;
+    this.backend
+      .getPatientBills(id, { limit: 100 })
+      .pipe(finalize(() => (this.billsLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.bills = result.items;
+        },
+        error: () => {
+          this.bills = [];
+        },
+      });
   }
 
   patientName(): string {
@@ -100,5 +115,54 @@ export class PatientProfileComponent implements OnInit {
       permissions.includes('prescriptions.read') ||
       permissions.includes('prescriptions.create')
     );
+  }
+
+  canViewBills(): boolean {
+    const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
+    return permissions.includes('*') || permissions.includes('bills.read');
+  }
+
+  ageLabel(): string {
+    if (!this.patient?.dateOfBirth) {
+      return '-';
+    }
+
+    const dob = new Date(this.patient.dateOfBirth);
+    if (Number.isNaN(dob.getTime())) {
+      return '-';
+    }
+
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const monthDiff = now.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+      age -= 1;
+    }
+
+    return `${age} years`;
+  }
+
+  primaryMedicine(prescription: Prescription): string {
+    if (!prescription.medicines?.length) {
+      return '-';
+    }
+
+    const names = prescription.medicines
+      .map((medicine) => medicine.name?.trim())
+      .filter((name): name is string => Boolean(name));
+
+    if (names.length === 0) {
+      return '-';
+    }
+
+    if (names.length === 1) {
+      return names[0];
+    }
+
+    return `${names[0]} +${names.length - 1} more`;
+  }
+
+  historySummary(item: PatientHistory): string {
+    return item.notes || item.symptoms || item.diagnosis || '-';
   }
 }

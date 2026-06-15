@@ -11,3 +11,96 @@
 .mt {
   margin-top: 0 !important;
 }
+
+.patient-profile-page {
+  padding-bottom: 24px;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.profile-card .body,
+.summary-card .body {
+  margin-bottom: 0;
+}
+
+.profile-avatar {
+  display: flex;
+  justify-content: center;
+}
+
+.profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.profile-badges .badge {
+  background: #eef2ff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summary-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+}
+
+.summary-item span {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.summary-item strong {
+  color: #0f172a;
+  font-size: 24px;
+}
+
+.record-section .body {
+  margin-top: 0;
+}
+
+.section-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.section-header span {
+  color: #64748b;
+  display: block;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+@media (max-width: 991px) {
+  .profile-actions {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

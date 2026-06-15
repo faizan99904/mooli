@@ -154,6 +154,14 @@ export class BackendService {
     return this.get<User>(CONFIG.auth.me).pipe(map((response) => this.unwrapData(response)));
   }
 
+  updateMe(payload: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  }): Observable<ApiResponse<User>> {
+    return this.patch<User>(CONFIG.auth.me, payload);
+  }
+
   getMyCompany(): Observable<CompanyProfile> {
     return this.get<CompanyProfile>(`${CONFIG.companies}/me`).pipe(
       map((response) => this.unwrapData(response))

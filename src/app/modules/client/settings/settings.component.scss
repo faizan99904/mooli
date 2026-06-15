@@ -3,6 +3,93 @@
   margin-bottom: 1rem;
 }
 
+.settings-page {
+  padding-bottom: 24px;
+}
+
+.settings-shell {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+
+.settings-nav {
+  align-self: start;
+  position: sticky;
+  top: 86px;
+}
+
+.settings-nav .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 0;
+  padding: 20px;
+}
+
+.settings-tab {
+  background: #f8fafc;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  color: #334155;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 14px;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.settings-tab:hover,
+.settings-tab.active {
+  background: linear-gradient(135deg, #0f766e, #0ea5a4);
+  border-color: #0f766e;
+  color: #fff;
+}
+
+.settings-content .card-header {
+  background: #fff;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.profile-meta {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  display: grid;
+  gap: 6px;
+  min-height: calc(100% - 16px);
+  padding: 18px;
+}
+
+.meta-label {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.settings-preview {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef6ff 100%);
+  border-radius: 16px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.settings-preview .card-body {
+  margin-bottom: 0;
+}
+
 .flex {
   display: flex;
   align-items: center;
@@ -19,41 +106,22 @@
   cursor: pointer;
 }
 
-.hospital-logo-preview,
-.hospital-prescription-preview > div {
-  align-items: center;
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: 8px;
-  display: inline-flex;
-  height: 86px;
-  justify-content: center;
-  width: 86px;
-}
+@media (max-width: 991px) {
+  .settings-shell {
+    grid-template-columns: 1fr;
+  }
 
-.hospital-logo-preview img,
-.hospital-prescription-preview img {
-  max-height: 72px;
-  max-width: 72px;
-  object-fit: contain;
-}
+  .settings-nav {
+    position: static;
+  }
 
-.hospital-logo-preview span,
-.hospital-prescription-preview span {
-  color: #1f2937;
-  font-size: 22px;
-  font-weight: 800;
-}
+  .settings-nav .card-body {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
 
-.hospital-prescription-preview {
-  text-align: center;
-}
-
-.hospital-prescription-preview h5 {
-  font-weight: 800;
-  margin: 10px 0 4px;
-}
-
-.hospital-prescription-preview p {
-  margin-bottom: 4px;
+  .settings-tab {
+    flex: 1 1 160px;
+    text-align: center;
+  }
 }

@@ -209,14 +209,7 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewSettings(): boolean {
-    return (
-      this.isOwner ||
-      this.isSuperAdmin ||
-      this.hasWildcardPermission ||
-      this.hasPermission('company.manage') ||
-      this.hasPermission('hospitals.read') ||
-      this.hasPermission('hospitals.update')
-    );
+    return true;
   }
 
   get canManageBilling(): boolean {
