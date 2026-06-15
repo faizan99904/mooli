@@ -204,6 +204,11 @@ export class RolesComponent implements OnInit {
   }
 
   loadRoles(): void {
+    if (this.canSelectHospital && !this.selectedHospitalId) {
+      this.roles = [];
+      return;
+    }
+
     if (!this.selectedHospitalId && !this.canSelectHospital) {
       this.roles = [];
       return;
@@ -315,8 +320,8 @@ export class RolesComponent implements OnInit {
       return;
     }
 
-    if (role.isSystemRole) {
-      this.toastr.info('System roles are shared templates and cannot be edited here.');
+    if (this.isProtectedRole(role)) {
+      this.toastr.info('Super Admin role cannot be edited here.');
       return;
     }
 
@@ -339,7 +344,7 @@ export class RolesComponent implements OnInit {
     }
 
     if (role.isSystemRole) {
-      this.toastr.info('System roles are shared templates and cannot be deleted here.');
+      this.toastr.info('System roles cannot be deleted here.');
       return;
     }
 
@@ -412,5 +417,9 @@ export class RolesComponent implements OnInit {
           this.toastr.error(err?.error?.message || 'Unable to load hospitals.');
         },
       });
+  }
+
+  private isProtectedRole(role: Role): boolean {
+    return Boolean(role.permissions?.includes('*'));
   }
 }
