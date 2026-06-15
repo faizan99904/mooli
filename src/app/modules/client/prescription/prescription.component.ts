@@ -8,7 +8,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { debounceTime, finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import {
@@ -177,7 +177,7 @@ interface MedicineSuggestionOption {
 
 @Component({
   selector: 'app-prescription',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgApexchartsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgApexchartsModule, RouterLink],
   templateUrl: './prescription.component.html',
   styleUrl: './prescription.component.scss',
 })
@@ -464,6 +464,7 @@ export class PrescriptionComponent implements OnInit {
       this.applyRouteDefaults();
       this.page = 1;
       this.loadPrescriptions();
+      this.selectInitialAppointment();
     });
 
     this.loadLookups();
@@ -2973,12 +2974,12 @@ export class PrescriptionComponent implements OnInit {
     const source = this.appointments.filter((appointment) => this.isPrescriptionAppointment(appointment));
 
     if (!query) {
-      return source.slice(0, 8);
+      return source;
     }
 
-    return source
-      .filter((appointment) => `${this.patientName(appointment.patient)} ${appointment.appointmentNo}`.toLowerCase().includes(query))
-      .slice(0, 8);
+    return source.filter((appointment) =>
+      `${this.patientName(appointment.patient)} ${appointment.appointmentNo}`.toLowerCase().includes(query),
+    );
   }
 
   deletePrescription(id: string): void {

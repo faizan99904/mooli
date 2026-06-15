@@ -3,7 +3,7 @@
     <aside class="appointments-panel">
       <div class="panel-heading">
         <div>
-          <h2>Today's Appointments</h2>
+          <h2 routerLink="/appointments" style="cursor: pointer;">Today's Appointments</h2>
           <span>{{ visibleAppointments().length }}</span>
         </div>
         <div class="panel-heading-actions">
@@ -14,14 +14,16 @@
         </div>
       </div>
 
-      <button class="appointment-row" type="button" *ngFor="let appointment of visibleAppointments()"
-        [class.active]="appointment._id === selectedAppointmentId" (click)="selectAppointment(appointment)">
-        <strong>{{ appointment.startTime }}</strong>
-        <span>{{ patientName(appointment.patient) }}</span>
-        <small [ngClass]="appointmentStatusClass(appointment.status)">
-          {{ appointmentStatusLabel(appointment.status) }}
-        </small>
-      </button>
+      <div class="appointments-list-scroll">
+        <button class="appointment-row" type="button" *ngFor="let appointment of visibleAppointments()"
+          [class.active]="appointment._id === selectedAppointmentId" (click)="selectAppointment(appointment)">
+          <strong>{{ appointment.startTime }}</strong>
+          <span>{{ patientName(appointment.patient) }}</span>
+          <small [ngClass]="appointmentStatusClass(appointment.status)">
+            {{ appointmentStatusLabel(appointment.status) }}
+          </small>
+        </button>
+      </div>
 
       <div class="patient-card" *ngIf="selectedPatient() as patient">
         <div class="patient-identity">
@@ -1174,7 +1176,7 @@
                   <section class="clinical-rx-medicines">
                     <header>
                       <strong>MEDICINES</strong>
-                      <span class="print-urdu-block">دوائیاں</span>
+                      <span class="print-urdu-block" style="margin-top: -12px;">دوائیاں</span>
                     </header>
 
                     <table>

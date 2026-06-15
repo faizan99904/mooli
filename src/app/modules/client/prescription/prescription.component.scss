@@ -172,6 +172,14 @@
   font-size: 7px;
 }
 
+.appointments-list-scroll {
+  height: 200px;
+  margin-bottom: 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .appointment-row {
   align-items: center;
   background: transparent;
@@ -199,6 +207,10 @@
 .appointment-row span {
   color: var(--rx-ink);
   font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .appointment-row small {

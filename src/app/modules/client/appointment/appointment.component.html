@@ -313,7 +313,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let appointment of appointments">
+              <tr *ngFor="let appointment of appointments" class="appointment-row-link"
+                [class.is-clickable]="canOpenPrescriptions() && appointment.status !== 'cancelled'"
+                (click)="openPrescriptionForAppointment(appointment)">
                 <td>{{ appointment.appointmentNo }}</td>
                 <td>
                   <div class="person-cell">
@@ -339,6 +341,7 @@
                 <td class="payment-cell">
                   <select class="inline-payment-select" [ngModel]="appointment.paymentStatus || 'unpaid'"
                     (ngModelChange)="changeAppointmentPaymentStatus(appointment, $event)"
+                    (click)="$event.stopPropagation()"
                     [disabled]="!canUpdateAppointment || isAppointmentUpdating(appointment._id)"
                     [ngClass]="appointment.paymentStatus === 'paid' ? 'is-paid' : 'is-unpaid'">
                     <option *ngFor="let option of appointmentPaymentOptions" [value]="option">
@@ -349,6 +352,7 @@
                 <td class="status-cell">
                   <select class="inline-status-select" [ngModel]="appointment.status"
                     (ngModelChange)="changeAppointmentStatus(appointment, $event)"
+                    (click)="$event.stopPropagation()"
                     [disabled]="!canUpdateAppointmentStatus || isAppointmentUpdating(appointment._id)"
                     [ngClass]="appointmentStatusClass(appointment.status)">
                     <option *ngFor="let option of appointmentStatusOptions" [value]="option">
@@ -358,26 +362,31 @@
                 </td>
                 <td>
                   <div class="table-actions">
-                    <a [routerLink]="['/patients/patient-profile', appointment.patientId]" title="Patient">
+                    <button type="button" *ngIf="canOpenPrescriptions() && appointment.status !== 'cancelled'"
+                      (click)="openPrescriptionForAppointment(appointment, $event)" title="Open Prescription">
+                      <i class="fa fa-file-text-o"></i>
+                    </button>
+                    <a [routerLink]="['/patients/patient-profile', appointment.patientId]" title="Patient"
+                      (click)="$event.stopPropagation()">
                       <i class="fa fa-eye"></i>
                     </a>
-                    <button type="button" *ngIf="canUpdateAppointment" (click)="editAppointment(appointment)"
+                    <button type="button" *ngIf="canUpdateAppointment" (click)="editAppointment(appointment); $event.stopPropagation()"
                       title="Edit">
                       <i class="fa fa-pencil"></i>
                     </button>
                     <button type="button" *ngIf="canUpdateAppointmentStatus"
-                      (click)="updateStatus(appointment, 'completed')" title="Complete">
+                      (click)="updateStatus(appointment, 'completed'); $event.stopPropagation()" title="Complete">
                       <i class="fa fa-check"></i>
                     </button>
-                    <button type="button" *ngIf="canDeleteAppointment" (click)="deleteAppointment(appointment._id)"
+                    <button type="button" *ngIf="canDeleteAppointment" (click)="deleteAppointment(appointment._id); $event.stopPropagation()"
                       title="Delete">
                       <i class="fa fa-trash"></i>
                     </button>
-                    <button type="button" (click)="reprintAppointmentToken(appointment)" title="Print Token">
+                    <button type="button" (click)="reprintAppointmentToken(appointment); $event.stopPropagation()" title="Print Token">
                       <i class="fa fa-print"></i>
                     </button>
                     <button type="button" *ngIf="appointment.patient?.phone"
-                      (click)="sendAppointmentWhatsApp(appointment)" title="Send via WhatsApp">
+                      (click)="sendAppointmentWhatsApp(appointment); $event.stopPropagation()" title="Send via WhatsApp">
                       <i class="fa fa-whatsapp"></i>
                     </button>
                   </div>

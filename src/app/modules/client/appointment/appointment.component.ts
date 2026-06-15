@@ -8,7 +8,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
@@ -107,7 +107,8 @@ export class AppointmentComponent implements OnInit {
     private fb: FormBuilder,
     private backend: BackendService,
     readonly offline: MooliOfflineService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private router: Router
   ) {
     this.appointmentForm = this.fb.group({
       patientId: ['', Validators.required],
@@ -2131,6 +2132,28 @@ export class AppointmentComponent implements OnInit {
 
   canOpenPrescriptions(): boolean {
     return this.backend.hasPermission('prescriptions.read') || this.backend.hasPermission('prescriptions.create');
+  }
+
+  openPrescriptionForAppointment(appointment: Appointment, event?: Event): void {
+    event?.stopPropagation();
+
+    if (!this.canOpenPrescriptions()) {
+      this.toastr.error('You do not have permission to open prescriptions.');
+      return;
+    }
+
+    if (appointment.status === 'cancelled') {
+      this.toastr.error('Cancelled appointments cannot be opened in prescriptions.');
+      return;
+    }
+
+    void this.router.navigate(['/prescriptions'], {
+      queryParams: {
+        appointmentId: appointment._id,
+        patientId: appointment.patientId,
+        doctorId: appointment.doctorId,
+      },
+    });
   }
 
   changePage(nextPage: number): void {
