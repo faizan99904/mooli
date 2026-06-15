@@ -141,7 +141,7 @@
 
                 <div class="role-pill-card__actions">
                   <button class="btn btn-sm btn-default mr-1" *ngIf="can('roles.update')" (click)="editRole(role)"
-                    [disabled]="role.isSystemRole">
+                    [disabled]="role.permissions?.includes('*')">
                     Edit
                   </button>
                   <button class="btn btn-sm btn-danger" *ngIf="can('roles.delete')" (click)="deleteRole(role)"
