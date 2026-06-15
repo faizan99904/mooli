@@ -172,6 +172,7 @@ export class RolesComponent implements OnInit {
   status = '';
   editingRoleId: string | null = null;
   canSelectHospital = false;
+  isHospitalScopedUser = false;
   currentHospitalId = '';
   currentHospitalName = '';
   selectedHospitalId = '';
@@ -191,6 +192,7 @@ export class RolesComponent implements OnInit {
 
   ngOnInit(): void {
     this.setHospitalContext();
+    this.loadCurrentHospitalSummary();
     this.loadHospitals();
     this.loadRoles();
   }
@@ -215,11 +217,16 @@ export class RolesComponent implements OnInit {
     }
 
     this.loading = true;
+    const params: Record<string, unknown> = {
+      context: this.roleContext,
+    };
+
+    if (this.canSelectHospital && this.selectedHospitalId) {
+      params['hospitalId'] = this.selectedHospitalId;
+    }
+
     this.backend
-      .getRoles({
-        context: this.roleContext,
-        hospitalId: this.selectedHospitalId || undefined,
-      })
+      .getRoles(params)
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (roles) => {
@@ -300,7 +307,10 @@ export class RolesComponent implements OnInit {
 
     this.saving = true;
     const request$ = this.editingRoleId
-      ? this.backend.updateRole(this.editingRoleId, payload, { context: this.roleContext })
+      ? this.backend.updateRole(this.editingRoleId, payload, {
+          context: this.roleContext,
+          hospitalId: this.canSelectHospital ? this.selectedHospitalId || undefined : undefined,
+        })
       : this.backend.createRole(payload);
 
     request$.pipe(finalize(() => (this.saving = false))).subscribe({
@@ -355,7 +365,7 @@ export class RolesComponent implements OnInit {
     this.backend
       .deleteRole(role._id, {
         context: this.roleContext,
-        hospitalId: this.selectedHospitalId || undefined,
+        hospitalId: this.canSelectHospital ? this.selectedHospitalId || undefined : undefined,
       })
       .subscribe({
       next: (response) => {
@@ -393,10 +403,30 @@ export class RolesComponent implements OnInit {
   private setHospitalContext(): void {
     const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
     const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
-    this.canSelectHospital = permissions.includes('*');
-    this.currentHospitalId = String(currentUser?.hospitalId || '');
+    this.currentHospitalId = this.resolveId(
+      currentUser?.hospitalId || currentUser?.hospital || null
+    );
+    this.isHospitalScopedUser = Boolean(this.currentHospitalId);
+    this.canSelectHospital = permissions.includes('*') && !this.isHospitalScopedUser;
     this.currentHospitalName = currentUser?.hospital?.name || '';
-    this.selectedHospitalId = this.canSelectHospital ? '' : this.currentHospitalId;
+    this.selectedHospitalId = this.isHospitalScopedUser ? this.currentHospitalId : '';
+  }
+
+  private loadCurrentHospitalSummary(): void {
+    if (this.canSelectHospital || !this.currentHospitalId || this.currentHospitalName) {
+      return;
+    }
+
+    this.backend.getHospital(this.currentHospitalId).subscribe({
+      next: (hospital) => {
+        this.currentHospitalName = hospital.name || this.currentHospitalName;
+      },
+      error: () => {
+        if (!this.currentHospitalName) {
+          this.currentHospitalName = 'Assigned hospital';
+        }
+      },
+    });
   }
 
   private loadHospitals(): void {
@@ -421,5 +451,21 @@ export class RolesComponent implements OnInit {
 
   private isProtectedRole(role: Role): boolean {
     return Boolean(role.permissions?.includes('*'));
+  }
+
+  private resolveId(value: unknown): string {
+    if (!value) {
+      return '';
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (typeof value === 'object' && value !== null && '_id' in value) {
+      return String((value as { _id?: unknown })._id || '');
+    }
+
+    return '';
   }
 }
