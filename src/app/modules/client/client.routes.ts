@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LayoutComponent } from '../../layout/layout.component';
 import { SignupComponent } from './pages/signup/signup.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { DoctorDashboardComponent } from './doctor-dashboard/doctor-dashboard.component';
 import { EmailComponent } from './email/email.component';
 import { ChatComponent } from './chat/chat.component';
 import { ChartsComponent } from './charts/charts.component';
@@ -112,6 +113,12 @@ export const clientRoutes: Routes = [
         component: DashboardComponent,
         data: { title: 'Mooli | Dashboard' },
         canActivate: [roleGuard(HOSPITAL_DASHBOARD_ACCESS)],
+      },
+      {
+        path: 'doctor-dashboard',
+        component: DoctorDashboardComponent,
+        data: { title: 'Mooli | Doctor Dashboard' },
+        canActivate: [roleGuard([])],
       },
       {
         path: 'app-inbox',

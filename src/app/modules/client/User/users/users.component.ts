@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { AppDialogService } from '../../../../core/services/app-dialog.service';
 import { BackendService } from '../../../../core/services/backend.service';
 import { User } from '../../../../shared/models/hospital.model';
 
@@ -22,7 +23,8 @@ export class UsersComponent implements OnInit {
   constructor(
     private backend: BackendService,
     private toast: ToastrService,
-    private router: Router
+    private router: Router,
+    private dialog: AppDialogService
   ) {}
 
   ngOnInit(): void {
@@ -74,13 +76,19 @@ export class UsersComponent implements OnInit {
     return this.hasPermission('users.delete');
   }
 
-  deleteUser(id: string) {
+  async deleteUser(id: string): Promise<void> {
     if (!this.canDeleteUser()) {
       this.toast.error('You do not have permission to delete users.');
       return;
     }
 
-    if (!confirm('Delete this user?')) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete User',
+      message: 'Delete this user? This action cannot be undone.',
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

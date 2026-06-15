@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { AppDialogService } from '../../../../core/services/app-dialog.service';
 import { BackendService } from '../../../../core/services/backend.service';
 import { Doctor, Patient } from '../../../../shared/models/hospital.model';
 
@@ -37,7 +38,8 @@ export class AllPatientsComponent implements OnInit {
   constructor(
     private backend: BackendService,
     private toastr: ToastrService,
-    private router: Router
+    private router: Router,
+    private dialog: AppDialogService
   ) {}
 
   ngOnInit(): void {
@@ -144,13 +146,19 @@ export class AllPatientsComponent implements OnInit {
     return group.dateKey;
   }
 
-  deletePatient(id: string): void {
+  async deletePatient(id: string): Promise<void> {
     if (!this.can('patients.delete')) {
       this.toastr.error('You do not have permission to delete patients.');
       return;
     }
 
-    if (!confirm('Delete this patient?')) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Patient',
+      message: 'Delete this patient? This action cannot be undone.',
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

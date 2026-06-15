@@ -15,13 +15,13 @@ export const roleGuard = (accessRequirement: AccessRequirement): CanActivateFn =
   return (_route, state) => {
     const permissions = readStoredPermissions();
     const router = inject(Router);
+    const currentPath = state.url.split('?')[0];
 
     if (hasRouteAccess(accessRequirement, permissions)) {
       return true;
     }
 
     const fallbackRoute = resolveDefaultRoute(permissions);
-    const currentPath = state.url.split('?')[0];
 
     if (fallbackRoute !== currentPath) {
       return router.parseUrl(fallbackRoute);

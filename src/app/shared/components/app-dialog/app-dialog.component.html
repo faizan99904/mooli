@@ -1,0 +1,35 @@
+<div class="app-dialog-backdrop" *ngIf="dialog() as current" (click)="dismiss()">
+  <div
+    class="app-dialog-card"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'app-dialog-title'"
+    (click)="$event.stopPropagation()">
+    <div class="app-dialog-header">
+      <div class="app-dialog-badge" [class.app-dialog-badge-danger]="current.tone === 'danger'">
+        {{ current.mode === 'confirm' ? '?' : '!' }}
+      </div>
+      <div>
+        <h3 id="app-dialog-title">{{ current.title }}</h3>
+        <p>{{ current.message }}</p>
+      </div>
+    </div>
+
+    <div class="app-dialog-actions">
+      <button
+        *ngIf="current.mode === 'confirm'"
+        type="button"
+        class="btn btn-default"
+        (click)="close(false)">
+        {{ current.cancelText }}
+      </button>
+      <button
+        type="button"
+        class="btn"
+        [ngClass]="current.tone === 'danger' ? 'btn-danger' : 'btn-primary theme-bg gradient'"
+        (click)="close(true)">
+        {{ current.confirmText }}
+      </button>
+    </div>
+  </div>
+</div>

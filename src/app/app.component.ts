@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, OnInit, inject } from '@angular/core';
+import { AfterViewInit, Component, HostListener, OnInit, inject } from '@angular/core';
 import {
   Router,
   RouterOutlet,
@@ -8,11 +8,12 @@ import {
 import { Title } from '@angular/platform-browser';
 import { filter } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
+import { AppDialogComponent } from './shared/components/app-dialog/app-dialog.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule],
+  imports: [RouterOutlet, CommonModule, AppDialogComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
@@ -182,5 +183,32 @@ export class AppComponent implements OnInit, AfterViewInit {
     document.querySelector('.sticky-note')?.classList.remove('open');
     document.querySelector('.overlay')?.classList.remove('open');
     document.body.classList.remove('offcanvas-active');
+  }
+
+  @HostListener('document:click', ['$event'])
+  focusFormGroupControlFromLabel(event: MouseEvent): void {
+    const label = (event.target as HTMLElement | null)?.closest('label');
+    if (!label) {
+      return;
+    }
+
+    if (label.htmlFor || label.querySelector('input, textarea, select')) {
+      return;
+    }
+
+    const formGroup = label.closest('.form-group');
+    if (!formGroup) {
+      return;
+    }
+
+    const control = formGroup.querySelector<HTMLElement>(
+      'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
+    );
+
+    if (!control) {
+      return;
+    }
+
+    control.focus();
   }
 }

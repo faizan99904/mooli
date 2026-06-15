@@ -1,0 +1,90 @@
+.navbar-nav {
+  display: flex;
+}
+
+.dashboard-header-metric {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: rgba(1, 156, 157, 0.08);
+}
+
+.dashboard-header-metric span {
+  color: #6b7280;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dashboard-header-metric strong {
+  font-size: 26px;
+  color: #003e86;
+}
+
+.dashboard-hero .body {
+  background: linear-gradient(45deg, #019c9d, #003e86) !important;
+  // border-radius: 14px;
+}
+
+.dashboard-stat-card {
+  border: 0;
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.dashboard-stat-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  background: rgba(1, 156, 157, 0.12);
+  color: #fff;
+  font-size: 20px;
+}
+
+.dashboard-stat-label {
+  color: #fff;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dashboard-stat-value {
+  margin-top: 8px;
+  font-size: 34px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.quick-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.snapshot-item {
+  margin-bottom: 22px;
+}
+
+.progress-bar {
+  background-color: #2c83b6;
+}
+
+.success-bar {
+  background-color: #019c9d;
+}
+
+.warning-bar {
+  background-color: #f39c12;
+}
+
+@media (max-width: 991px) {
+  .dashboard-header-metric {
+    align-items: flex-start;
+    margin-top: 16px;
+  }
+}

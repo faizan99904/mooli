@@ -88,7 +88,11 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewDashboard(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('hospital_dashboard.read');
+    return this.isDoctor || this.canViewAllRoutes || this.hasPermission('hospital_dashboard.read');
+  }
+
+  get dashboardRoute(): string {
+    return this.isDoctor ? '/doctor-dashboard' : '/';
   }
 
   get canViewDoctors(): boolean {

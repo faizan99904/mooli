@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { BackendService } from '../../../core/services/backend.service';
 import { Hospital } from '../../../shared/models/hospital.model';
 
@@ -21,7 +22,8 @@ export class HospitalsComponent implements OnInit {
   constructor(
     private backend: BackendService,
     private toast: ToastrService,
-    private router: Router
+    private router: Router,
+    private dialog: AppDialogService
   ) { }
 
   ngOnInit(): void {
@@ -82,12 +84,18 @@ export class HospitalsComponent implements OnInit {
     });
   }
 
-  deleteHospital(id: string): void {
+  async deleteHospital(id: string): Promise<void> {
     if (!this.can('hospitals.delete')) {
       return;
     }
 
-    if (!confirm('Delete this hospital?')) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Hospital',
+      message: 'Delete this hospital? This action cannot be undone.',
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

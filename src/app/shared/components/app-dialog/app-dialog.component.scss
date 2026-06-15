@@ -1,0 +1,90 @@
+.app-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.48);
+  backdrop-filter: blur(4px);
+}
+
+.app-dialog-card {
+  width: min(100%, 460px);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  overflow: hidden;
+}
+
+.app-dialog-header {
+  display: flex;
+  gap: 16px;
+  padding: 24px 24px 16px;
+}
+
+.app-dialog-header h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.app-dialog-header p {
+  margin: 0;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.app-dialog-badge {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.app-dialog-badge-danger {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0 24px 24px;
+}
+
+.app-dialog-actions .btn {
+  min-width: 110px;
+}
+
+@media (max-width: 576px) {
+  .app-dialog-backdrop {
+    padding: 16px;
+  }
+
+  .app-dialog-card {
+    border-radius: 18px;
+  }
+
+  .app-dialog-header {
+    padding: 20px 20px 12px;
+  }
+
+  .app-dialog-actions {
+    padding: 0 20px 20px;
+    flex-direction: column-reverse;
+  }
+
+  .app-dialog-actions .btn {
+    width: 100%;
+  }
+}

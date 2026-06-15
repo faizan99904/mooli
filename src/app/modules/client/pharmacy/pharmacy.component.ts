@@ -6,6 +6,7 @@ import { finalize, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { BackendService } from '../../../core/services/backend.service';
 import {
   Category,
@@ -107,7 +108,8 @@ export class PharmacyComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private backend: BackendService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private dialog: AppDialogService
   ) {}
 
   ngOnInit(): void {
@@ -413,13 +415,18 @@ export class PharmacyComponent implements OnInit {
       });
   }
 
-  deleteProduct(product: ProductCatalogItem): void {
+  async deleteProduct(product: ProductCatalogItem): Promise<void> {
     if (!this.canDeleteProducts) {
       this.toastr.error('This role needs products.delete to remove pharmacy medicines.');
       return;
     }
 
-    const confirmed = window.confirm(`Delete ${product.name} from product management?`);
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Product',
+      message: `Delete ${product.name} from product management? This action cannot be undone.`,
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
     if (!confirmed) {
       return;
     }

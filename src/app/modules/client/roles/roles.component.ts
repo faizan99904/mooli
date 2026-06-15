@@ -11,6 +11,7 @@ import {
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 
+import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { BackendService } from '../../../core/services/backend.service';
 import { Hospital, Role, User } from '../../../shared/models/hospital.model';
 
@@ -180,7 +181,8 @@ export class RolesComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private backend: BackendService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private dialog: AppDialogService
   ) {
     this.roleForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
@@ -347,7 +349,7 @@ export class RolesComponent implements OnInit {
     });
   }
 
-  deleteRole(role: Role): void {
+  async deleteRole(role: Role): Promise<void> {
     if (!this.can('roles.delete')) {
       this.toastr.error('You do not have permission to delete roles.');
       return;
@@ -358,7 +360,13 @@ export class RolesComponent implements OnInit {
       return;
     }
 
-    if (!confirm(`Delete the "${role.name}" role?`)) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Role',
+      message: `Delete the "${role.name}" role? This action cannot be undone.`,
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

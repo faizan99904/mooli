@@ -10,6 +10,7 @@ import {
 } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { BackendService } from '../../../core/services/backend.service';
 import { Department, Hospital, User } from '../../../shared/models/hospital.model';
 
@@ -38,7 +39,8 @@ export class DepartmentComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private backend: BackendService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private dialog: AppDialogService
   ) {
     this.departmentForm = this.fb.group({
       hospitalId: ['', Validators.required],
@@ -136,12 +138,18 @@ export class DepartmentComponent implements OnInit {
     });
   }
 
-  deleteDepartment(id: string): void {
+  async deleteDepartment(id: string): Promise<void> {
     if (!this.can('departments.delete')) {
       return;
     }
 
-    if (!confirm('Delete this department?')) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Department',
+      message: 'Delete this department? This action cannot be undone.',
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

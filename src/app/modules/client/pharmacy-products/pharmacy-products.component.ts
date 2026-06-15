@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { BackendService } from '../../../core/services/backend.service';
 import {
   Category,
@@ -83,6 +84,7 @@ export class PharmacyProductsComponent implements OnInit {
     private route: ActivatedRoute,
     private backend: BackendService,
     private toastr: ToastrService,
+    private dialog: AppDialogService,
   ) {}
 
   ngOnInit(): void {
@@ -512,7 +514,7 @@ export class PharmacyProductsComponent implements OnInit {
       });
   }
 
-  deleteProduct(product: ProductCatalogItem): void {
+  async deleteProduct(product: ProductCatalogItem): Promise<void> {
     if (!this.canDeleteProducts) {
       this.toastr.error(
         'This role needs products.delete to remove pharmacy medicines.',
@@ -520,9 +522,12 @@ export class PharmacyProductsComponent implements OnInit {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Delete ${product.name} from product management?`,
-    );
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Product',
+      message: `Delete ${product.name} from product management? This action cannot be undone.`,
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
     if (!confirmed) {
       return;
     }

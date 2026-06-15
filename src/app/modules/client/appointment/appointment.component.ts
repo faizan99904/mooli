@@ -12,6 +12,7 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
+import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/mooli-offline.service';
 import {
   Appointment,
@@ -108,7 +109,8 @@ export class AppointmentComponent implements OnInit {
     private backend: BackendService,
     readonly offline: MooliOfflineService,
     private toastr: ToastrService,
-    private router: Router
+    private router: Router,
+    private dialog: AppDialogService
   ) {
     this.appointmentForm = this.fb.group({
       patientId: ['', Validators.required],
@@ -674,12 +676,18 @@ export class AppointmentComponent implements OnInit {
     Object.assign(target, source);
   }
 
-  deleteAppointment(id: string): void {
+  async deleteAppointment(id: string): Promise<void> {
     if (!this.canDeleteAppointment) {
       return;
     }
 
-    if (!confirm('Delete this appointment?')) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Appointment',
+      message: 'Delete this appointment? This action cannot be undone.',
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

@@ -26,8 +26,9 @@
                     <div class="form-group c_form_group">
                         <label for="password">Password</label>
                         <div class="input-group flex">
-                            <input autocomplete="off" [type]="showNewPassword ? 'text' : 'password'"
-                                class="form-control" formControlName="password">
+                            <input id="password" name="password" autocomplete="current-password"
+                                [type]="showNewPassword ? 'text' : 'password'" class="form-control password-input"
+                                formControlName="password" placeholder="Enter your password" />
                             <div class="input-group-append">
                                 <i (click)="togglePasswordVisibility('password')" class="fa"
                                     [ngClass]="{'fa-eye': !showNewPassword, 'fa-eye-slash': showNewPassword}"></i>

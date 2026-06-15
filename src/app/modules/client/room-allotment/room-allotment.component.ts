@@ -9,6 +9,7 @@ import {
 } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { BackendService } from '../../../core/services/backend.service';
 import { Room } from '../../../shared/models/hospital.model';
 
@@ -35,7 +36,8 @@ export class RoomAllotmentComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private backend: BackendService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private dialog: AppDialogService
   ) {
     this.roomForm = this.fb.group({
       roomNo: ['', Validators.required],
@@ -127,12 +129,18 @@ export class RoomAllotmentComponent implements OnInit {
     this.roomForm.patchValue(room);
   }
 
-  deleteRoom(id: string): void {
+  async deleteRoom(id: string): Promise<void> {
     if (!this.can('rooms.delete')) {
       return;
     }
 
-    if (!confirm('Delete this room?')) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Room',
+      message: 'Delete this room? This action cannot be undone.',
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

@@ -10,6 +10,7 @@ import {
 import { ActivatedRoute, Data, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { BackendService } from '../../../core/services/backend.service';
 import {
   Appointment,
@@ -57,7 +58,8 @@ export class CareRecordsComponent implements OnInit {
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private backend: BackendService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private dialog: AppDialogService
   ) {
     this.recordForm = this.fb.group({
       patientId: ['', Validators.required],
@@ -291,12 +293,18 @@ export class CareRecordsComponent implements OnInit {
     });
   }
 
-  deleteRecord(record: PatientHistory): void {
+  async deleteRecord(record: PatientHistory): Promise<void> {
     if (!this.canDelete) {
       return;
     }
 
-    if (!confirm('Delete this record?')) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Record',
+      message: 'Delete this record? This action cannot be undone.',
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

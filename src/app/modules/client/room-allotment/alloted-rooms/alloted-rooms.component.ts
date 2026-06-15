@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { AppDialogService } from '../../../../core/services/app-dialog.service';
 import { BackendService } from '../../../../core/services/backend.service';
 import { RoomAllotment } from '../../../../shared/models/hospital.model';
 
@@ -23,7 +24,8 @@ export class AllotedRoomsComponent implements OnInit {
 
   constructor(
     private backend: BackendService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private dialog: AppDialogService
   ) {}
 
   ngOnInit(): void {
@@ -55,12 +57,18 @@ export class AllotedRoomsComponent implements OnInit {
       });
   }
 
-  discharge(allotment: RoomAllotment): void {
+  async discharge(allotment: RoomAllotment): Promise<void> {
     if (!this.can('room_allotments.update')) {
       return;
     }
 
-    if (!confirm('Discharge this patient from the room?')) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Discharge Patient',
+      message: 'Discharge this patient from the room? You can still review the allotment record later.',
+      confirmText: 'Discharge',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

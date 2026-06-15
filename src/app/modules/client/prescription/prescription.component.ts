@@ -18,6 +18,7 @@ import {
   ApexYAxis,
   NgApexchartsModule,
 } from 'ng-apexcharts';
+import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { BackendService } from '../../../core/services/backend.service';
 import { MooliOfflineService, MooliQueuedWork } from '../../../core/services/mooli-offline.service';
 import {
@@ -358,7 +359,8 @@ export class PrescriptionComponent implements OnInit {
     private route: ActivatedRoute,
     private backend: BackendService,
     readonly offline: MooliOfflineService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private dialog: AppDialogService
   ) {
     this.prescriptionForm = this.fb.group({
       patientId: ['', Validators.required],
@@ -2983,12 +2985,18 @@ export class PrescriptionComponent implements OnInit {
     );
   }
 
-  deletePrescription(id: string): void {
+  async deletePrescription(id: string): Promise<void> {
     if (!this.canDeletePrescriptions) {
       return;
     }
 
-    if (!confirm('Delete this prescription?')) {
+    const confirmed = await this.dialog.confirm({
+      title: 'Delete Prescription',
+      message: 'Delete this prescription? This action cannot be undone.',
+      confirmText: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 

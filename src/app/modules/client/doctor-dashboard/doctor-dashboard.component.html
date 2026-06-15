@@ -1,0 +1,194 @@
+<div id="main-content" class="doctor-aware-dashboard">
+  <div class="container-fluid">
+    <div class="block-header">
+      <div class="row clearfix">
+        <div class="col-lg-4 col-md-12 col-sm-12">
+          <h1>Hi, Welcomeback!</h1>
+          <span>JustDo Dashboard,</span>
+        </div>
+        <div class="col-lg-8 col-md-12 col-sm-12 text-lg-right">
+          <div class="d-flex align-items-center justify-content-lg-end mt-4 mt-lg-0 flex-wrap vivify pullUp delay-550">
+            <div class="border-right pr-4 mr-4 mb-2 mb-xl-0 hidden-xs">
+              <p class="text-muted mb-1">Operation <span id="mini-bar-chart3" class="mini-bar-chart"></span></p>
+              <h5 class="mb-0">{{ summary.completedAppointments }}</h5>
+            </div>
+            <div class="border-right pr-4 mr-4 mb-2 mb-xl-0">
+              <p class="text-muted mb-1">Earning <span id="mini-bar-chart2" class="mini-bar-chart"></span></p>
+              <h5 class="mb-0">{{ summary.totalRevenue | currency:'USD':'symbol':'1.0-0' }}</h5>
+            </div>
+            <div class="mb-3 mb-xl-0">
+              <p class="text-muted mb-1">Revenue <span id="mini-bar-chart1" class="mini-bar-chart"></span></p>
+              <h5 class="mb-0">{{ doctorPrescriptionCount }}</h5>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row clearfix">
+      <div class="col-12">
+        <nav class="navbar navbar-expand-lg page_menu">
+          <a class="navbar-brand" href="javascript:void(0)">M.</a>
+          <button class="navbar-toggler" (click)="dashboardMenu()" type="button" aria-label="Toggle navigation">
+            <i class="fa fa-bars text-muted"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNavDropdown">
+            <ul class="navbar-nav mr-auto">
+              <li class="nav-item active">
+                <a class="nav-link" [routerLink]="['/doctor-dashboard']" href="javascript:void(0)">Dashboard</a>
+              </li>
+              <li class="nav-item" *ngIf="canOpenClinicalRecords">
+                <a class="nav-link" [routerLink]="['/clinical-records']" href="javascript:void(0)">Clinical Records</a>
+              </li>
+              <li class="nav-item" *ngIf="canOpenPrescriptions">
+                <a class="nav-link" [routerLink]="['/prescriptions']" href="javascript:void(0)">Prescriptions</a>
+              </li>
+            </ul>
+            <div class="ml-auto">
+              <a [routerLink]="['/settings']" href="javascript:void(0)" class="btn btn-default">Settings</a>
+            </div>
+          </div>
+        </nav>
+      </div>
+
+      <div class="col-12">
+        <div class="card theme-bg gradient dashboard-hero">
+          <div class="body">
+            <div class="row">
+              <div class="col-lg-3 col-md-6" *ngFor="let card of cards">
+                <div class="card dashboard-stat-card">
+                  <div class="body">
+                    <div class="dashboard-stat-icon">
+                      <i class="fa" [ngClass]="card.icon"></i>
+                    </div>
+                    <div class="dashboard-stat-label">{{ card.label }}</div>
+                    <div class="dashboard-stat-value">{{ loading ? '...' : card.value }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row clearfix row-deck">
+      <div class="col-lg-8 col-md-12">
+        <div class="card">
+          <div class="header">
+            <h2>{{ scheduleHeading }}</h2>
+            <small class="text-muted">Appointments assigned to you only.</small>
+          </div>
+          <div class="body table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Patient</th>
+                  <th>Department</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let appointment of summary.upcomingAppointments">
+                  <td>{{ appointmentPatientName(appointment) }}</td>
+                  <td>{{ appointment.department?.name || '-' }}</td>
+                  <td>{{ formatDate(appointment.appointmentDate) }}</td>
+                  <td>{{ appointment.startTime || '-' }}</td>
+                  <td><span class="badge badge-info text-uppercase">{{ appointment.status }}</span></td>
+                </tr>
+                <tr *ngIf="!loading && summary.upcomingAppointments.length === 0">
+                  <td colspan="5" class="text-center text-muted">{{ emptyAppointmentsMessage }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-12">
+        <div class="card">
+          <div class="header">
+            <h2>Quick Actions</h2>
+            <small class="text-muted">Open the tools you use most often.</small>
+          </div>
+          <div class="body quick-actions">
+            <a *ngFor="let link of quickLinks" [routerLink]="[link.route]" class="btn btn-default btn-block"
+              [class.d-none]="!link.visible">
+              {{ link.label }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row clearfix row-deck">
+      <div class="col-lg-7 col-md-12">
+        <div class="card">
+          <div class="header">
+            <h2>{{ patientSectionHeading }}</h2>
+            <small class="text-muted">Patients connected to your care.</small>
+          </div>
+          <div class="body table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Patient</th>
+                  <th>Phone</th>
+                  <th>Gender</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let patient of summary.recentPatients">
+                  <td>{{ patientName(patient) }}</td>
+                  <td>{{ patient.phone || '-' }}</td>
+                  <td>{{ patient.gender || '-' }}</td>
+                  <td><span class="badge badge-light text-uppercase">{{ patient.status }}</span></td>
+                </tr>
+                <tr *ngIf="!loading && summary.recentPatients.length === 0">
+                  <td colspan="4" class="text-center text-muted">{{ emptyPatientsMessage }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-5 col-md-12">
+        <div class="card">
+          <div class="header">
+            <h2>Activity Snapshot</h2>
+            <small class="text-muted">Your current care workload at a glance.</small>
+          </div>
+          <div class="body">
+            <div class="snapshot-item">
+              <label class="d-block">Pending <span class="float-right">{{ summary.pendingAppointments }}</span></label>
+              <div class="progress progress-xs">
+                <div class="progress-bar" role="progressbar" [style.width.%]="summary.pendingAppointments ? 100 : 8">
+                </div>
+              </div>
+            </div>
+            <div class="snapshot-item">
+              <label class="d-block">Completed <span class="float-right">{{ summary.completedAppointments
+                  }}</span></label>
+              <div class="progress progress-xs">
+                <div class="progress-bar success-bar" role="progressbar"
+                  [style.width.%]="summary.completedAppointments ? 100 : 8"></div>
+              </div>
+            </div>
+            <div class="snapshot-item mb-0">
+              <label class="d-block">Prescriptions <span class="float-right">{{ doctorPrescriptionCount
+                  }}</span></label>
+              <div class="progress progress-xs">
+                <div class="progress-bar warning-bar" role="progressbar"
+                  [style.width.%]="doctorPrescriptionCount ? 100 : 8"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

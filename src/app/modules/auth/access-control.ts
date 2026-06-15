@@ -82,6 +82,17 @@ const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
 export const normalizeAccessKey = (value: string) =>
   value.trim().replace(/[\s_-]/g, '').toLowerCase();
 
+export const readStoredRole = (): string => {
+  try {
+    return String(localStorage.getItem('role') || '');
+  } catch {
+    return '';
+  }
+};
+
+export const isDoctorRole = (role: string): boolean =>
+  normalizeAccessKey(role) === 'doctor';
+
 export const sanitizePermissions = (permissions: unknown): string[] => {
   if (!Array.isArray(permissions)) {
     return [];
@@ -127,7 +138,14 @@ export const hasRouteAccess = (
   return passesAny && passesAll;
 };
 
-export const resolveDefaultRoute = (permissions: string[]): string => {
+export const resolveDefaultRoute = (
+  permissions: string[],
+  role = readStoredRole()
+): string => {
+  if (isDoctorRole(role)) {
+    return '/doctor-dashboard';
+  }
+
   return (
     DEFAULT_ROUTE_ACCESS.find((routeAccess) =>
       hasRouteAccess(routeAccess.access, permissions)
