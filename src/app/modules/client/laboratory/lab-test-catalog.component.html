@@ -1,0 +1,67 @@
+<div id="main-content" class="lab-page">
+  <div class="lab-shell">
+    <div class="lab-heading">
+      <div>
+        <h1>Test Catalog</h1>
+        <p>Master record for CBC, RFT, LFT, electrolytes, radiology, etc.</p>
+      </div>
+      <div class="lab-heading-actions">
+        <a class="btn-light" routerLink="/laboratory">Dashboard</a>
+        <button type="button" class="btn-light" (click)="seedDefaults()">Seed Defaults</button>
+        <button type="button" class="btn-primary" (click)="showForm = !showForm">Add New Test</button>
+      </div>
+    </div>
+
+    <div class="lab-toolbar">
+      <input type="search" [(ngModel)]="search" placeholder="Search test name or code"
+        (keyup.enter)="loadTests()" />
+      <button type="button" class="btn-primary" (click)="loadTests()">Search</button>
+    </div>
+
+    <section class="lab-card catalog-form" *ngIf="showForm">
+      <h2>New Test</h2>
+      <div class="form-grid">
+        <label>Test Name<input [(ngModel)]="form.name" /></label>
+        <label>Short Code<input [(ngModel)]="form.shortCode" /></label>
+        <label>Department<input [(ngModel)]="form.department" /></label>
+        <label>Sample Type<input [(ngModel)]="form.sampleType" /></label>
+        <label>Tube Type<input [(ngModel)]="form.tubeType" /></label>
+        <label>Price<input type="number" [(ngModel)]="form.price" /></label>
+        <label>TAT (hours)<input type="number" [(ngModel)]="form.turnaroundHours" /></label>
+      </div>
+      <button type="button" class="btn-primary" [disabled]="saving" (click)="saveTest()">Save Test</button>
+    </section>
+
+    <div class="lab-table-wrap">
+      <table class="lab-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Test Name</th>
+            <th>Department</th>
+            <th>Sample</th>
+            <th>Tube</th>
+            <th>Price</th>
+            <th>TAT</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let test of tests">
+            <td><strong>{{ test.shortCode }}</strong></td>
+            <td>{{ test.name }}</td>
+            <td>{{ test.department }}</td>
+            <td>{{ test.sampleType }}</td>
+            <td>{{ test.tubeType || '—' }}</td>
+            <td>Rs. {{ test.price }}</td>
+            <td>{{ test.turnaroundHours }}h</td>
+            <td>{{ test.isActive ? 'Active' : 'Inactive' }}</td>
+          </tr>
+          <tr *ngIf="!loading && tests.length === 0">
+            <td colspan="8" class="lab-empty">No tests in catalog.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

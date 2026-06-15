@@ -35,6 +35,10 @@ import {
   Payment,
   ProductCatalogItem,
   Prescription,
+  LabOrder,
+  LabTestCatalog,
+  LabDashboardStats,
+  LabComparisonRow,
   HeldSale,
   LedgerItem,
   LedgerPayment,
@@ -408,6 +412,78 @@ export class BackendService {
 
   createDoctorMedicine(payload: Record<string, unknown>): Observable<ApiResponse<DoctorMedicine>> {
     return this.post<DoctorMedicine>(`${CONFIG.prescriptions}/doctor-medicines`, payload);
+  }
+
+  getLabTests(params?: Record<string, unknown>): Observable<ListResult<LabTestCatalog>> {
+    return this.get<PaginatedResponse<LabTestCatalog>>(`${CONFIG.laboratory}/tests`, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createLabTest(payload: Record<string, unknown>): Observable<ApiResponse<LabTestCatalog>> {
+    return this.post<LabTestCatalog>(`${CONFIG.laboratory}/tests`, payload);
+  }
+
+  updateLabTest(id: string, payload: Record<string, unknown>): Observable<ApiResponse<LabTestCatalog>> {
+    return this.patch<LabTestCatalog>(`${CONFIG.laboratory}/tests/${id}`, payload);
+  }
+
+  seedDefaultLabTests(): Observable<ApiResponse<{ seeded: number }>> {
+    return this.post<{ seeded: number }>(`${CONFIG.laboratory}/tests/seed-defaults`, {});
+  }
+
+  getLabDashboardStats(): Observable<LabDashboardStats> {
+    return this.get<LabDashboardStats>(`${CONFIG.laboratory}/dashboard/stats`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getLabOrders(params?: Record<string, unknown>): Observable<ListResult<LabOrder>> {
+    return this.get<PaginatedResponse<LabOrder>>(`${CONFIG.laboratory}/orders`, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getLabOrder(id: string): Observable<LabOrder> {
+    return this.get<LabOrder>(`${CONFIG.laboratory}/orders/${id}`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createLabOrder(payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
+    return this.post<LabOrder>(`${CONFIG.laboratory}/orders`, payload);
+  }
+
+  addTestsToLabOrder(id: string, payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
+    return this.post<LabOrder>(`${CONFIG.laboratory}/orders/${id}/tests`, payload);
+  }
+
+  collectLabSample(id: string, payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
+    return this.post<LabOrder>(`${CONFIG.laboratory}/orders/${id}/collect-sample`, payload);
+  }
+
+  saveLabItemResults(orderId: string, itemId: string, payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
+    return this.post<LabOrder>(`${CONFIG.laboratory}/orders/${orderId}/items/${itemId}/results`, payload);
+  }
+
+  uploadLabItemReport(orderId: string, itemId: string, payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
+    return this.post<LabOrder>(`${CONFIG.laboratory}/orders/${orderId}/items/${itemId}/upload-report`, payload);
+  }
+
+  verifyLabOrderItem(orderId: string, itemId: string, payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
+    return this.post<LabOrder>(`${CONFIG.laboratory}/orders/${orderId}/items/${itemId}/verify`, payload);
+  }
+
+  getPatientLabComparison(patientId: string, params?: Record<string, unknown>): Observable<LabComparisonRow[]> {
+    return this.get<LabComparisonRow[]>(`${CONFIG.laboratory}/patients/${patientId}/comparison`, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getPatientLabHistory(patientId: string): Observable<LabOrder[]> {
+    return this.get<LabOrder[]>(`${CONFIG.laboratory}/patients/${patientId}/history`).pipe(
+      map((response) => this.unwrapData(response))
+    );
   }
 
   getCategories(params?: Record<string, unknown>): Observable<ListResult<Category>> {

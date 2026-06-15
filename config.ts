@@ -23,6 +23,7 @@ export const CONFIG = {
   patientHistory: API_BASE_URL + '/patient-history',
   appointments: API_BASE_URL + '/appointments',
   prescriptions: API_BASE_URL + '/prescriptions',
+  laboratory: API_BASE_URL + '/laboratory',
   categories: API_BASE_URL + '/categories',
   products: API_BASE_URL + '/products',
   inventory: API_BASE_URL + '/inventory',

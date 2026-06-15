@@ -1,0 +1,82 @@
+<div id="main-content" class="lab-page">
+  <div class="lab-shell lab-form-shell">
+    <div class="lab-heading">
+      <div>
+        <h1>Create Lab Order</h1>
+        <p>Walk-in, admission, emergency, or manual lab order</p>
+      </div>
+      <a class="btn-light" routerLink="/laboratory">Back to Dashboard</a>
+    </div>
+
+    <div class="lab-form-grid">
+      <section class="lab-card">
+        <h2>Patient</h2>
+        <input type="search" [(ngModel)]="patientSearch" placeholder="Search patient by name, MRN, phone" />
+        <div class="patient-picks">
+          <button type="button" *ngFor="let patient of filteredPatients()" [class.active]="selectedPatientId === patient._id"
+            (click)="selectPatient(patient)">
+            <strong>{{ patientName(patient) }}</strong>
+            <span>{{ patient.patientNo }} · {{ patient.phone || 'No phone' }}</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="lab-card">
+        <h2>Order Information</h2>
+        <label>Order Source
+          <select [(ngModel)]="source">
+            <option value="walk-in">Walk-in</option>
+            <option value="doctor">Doctor Prescribed</option>
+            <option value="admission">Admission</option>
+            <option value="emergency">Emergency</option>
+          </select>
+        </label>
+        <label>Referred By
+          <input [(ngModel)]="referredBy" placeholder="Doctor name optional" />
+        </label>
+        <label>Priority
+          <select [(ngModel)]="priority">
+            <option value="normal">Normal</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </label>
+        <label>Notes
+          <textarea [(ngModel)]="notes" placeholder="Collection notes, fasting, etc."></textarea>
+        </label>
+      </section>
+
+      <section class="lab-card lab-card-wide">
+        <h2>Select Tests</h2>
+        <input type="search" [(ngModel)]="testSearch" placeholder="Search CBC, HbA1c, RFT, LFT..." />
+        <div class="catalog-grid">
+          <button type="button" *ngFor="let test of filteredCatalog()" [class.active]="isSelected(test)"
+            (click)="toggleTest(test)">
+            <strong>{{ test.shortCode }}</strong>
+            <span>{{ test.name }}</span>
+            <small>{{ test.department }} · Rs. {{ test.price }}</small>
+          </button>
+        </div>
+      </section>
+
+      <aside class="lab-card lab-summary">
+        <h2>Selected Tests</h2>
+        <div class="selected-test" *ngFor="let test of selectedTests">
+          <span>{{ test.shortCode }} · {{ test.name }}</span>
+          <strong>Rs. {{ test.price }}</strong>
+        </div>
+        <div class="selected-test empty" *ngIf="selectedTests.length === 0">No tests selected yet.</div>
+        <div class="payment-box">
+          <div><span>Total</span><strong>Rs. {{ totalAmount() }}</strong></div>
+          <label>Paid
+            <input type="number" min="0" [(ngModel)]="paidAmount" />
+          </label>
+          <div class="balance"><span>Balance</span><strong>Rs. {{ balanceAmount() }}</strong></div>
+        </div>
+        <div class="summary-actions">
+          <button type="button" class="btn-light" [disabled]="saving" (click)="saveOrder(false)">Save Order</button>
+          <button type="button" class="btn-primary" [disabled]="saving" (click)="saveOrder(true)">Save & Print Receipt</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>

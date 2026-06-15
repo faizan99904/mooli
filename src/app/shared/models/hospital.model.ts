@@ -270,6 +270,144 @@ export interface Prescription {
   updatedAt?: string;
 }
 
+export type LabOrderSource = 'doctor' | 'walk-in' | 'admission' | 'emergency';
+export type LabOrderStatus =
+  | 'ordered'
+  | 'sample_collected'
+  | 'processing'
+  | 'result_entered'
+  | 'verified'
+  | 'completed'
+  | 'cancelled';
+export type LabParameterStatus = 'low' | 'normal' | 'high' | 'critical';
+export type LabParameterTrend = 'improved' | 'worsened' | 'stable' | 'unknown';
+
+export interface LabTestParameterTemplate {
+  parameterName: string;
+  unit?: string;
+  referenceMin?: number | null;
+  referenceMax?: number | null;
+  referenceText?: string;
+  criticalMin?: number | null;
+  criticalMax?: number | null;
+  sortOrder?: number;
+}
+
+export interface LabTestCatalog {
+  _id: string;
+  hospitalId: string;
+  name: string;
+  shortCode: string;
+  department: string;
+  sampleType: string;
+  tubeType?: string;
+  price: number;
+  reportType: 'structured' | 'uploaded_report' | 'both';
+  turnaroundHours?: number;
+  requiresFasting?: boolean;
+  parameters: LabTestParameterTemplate[];
+  isActive: boolean;
+}
+
+export interface LabResultParameter {
+  _id?: string;
+  parameterName: string;
+  resultValue?: string;
+  unit?: string;
+  referenceMin?: number | null;
+  referenceMax?: number | null;
+  referenceText?: string;
+  status?: LabParameterStatus;
+  previousValue?: string;
+  changeValue?: string;
+  changePercent?: number | null;
+  trend?: LabParameterTrend;
+}
+
+export interface LabReportFile {
+  _id?: string;
+  fileUrl: string;
+  fileType: 'pdf' | 'image';
+  reportType?: string;
+  reportDate?: string;
+  status?: 'pending' | 'verified';
+}
+
+export interface LabOrderItem {
+  _id: string;
+  testId?: string | null;
+  testName: string;
+  shortCode?: string;
+  department?: string;
+  sampleType?: string;
+  tubeType?: string;
+  price: number;
+  status: LabOrderStatus;
+  resultMode: 'structured' | 'uploaded_report' | 'both';
+  parameters: LabResultParameter[];
+  reportFiles: LabReportFile[];
+  remarks?: string;
+  collectedAt?: string;
+  resultEnteredAt?: string;
+  verifiedAt?: string;
+  addedLater?: boolean;
+}
+
+export interface LabOrder {
+  _id: string;
+  hospitalId: string;
+  orderNo: string;
+  patientId: string;
+  patient?: Patient | null;
+  prescriptionId?: string | null;
+  appointmentId?: string | null;
+  source: LabOrderSource;
+  doctorId?: string | null;
+  doctor?: User | null;
+  referredBy?: string;
+  status: LabOrderStatus;
+  priority: 'normal' | 'urgent';
+  totalAmount: number;
+  paidAmount: number;
+  balanceAmount: number;
+  sampleCollectionAt?: string;
+  notes?: string;
+  items: LabOrderItem[];
+  criticalAlerts?: Array<{
+    testName: string;
+    parameterName: string;
+    resultValue: string;
+    message: string;
+  }>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LabDashboardStats {
+  pendingOrders: number;
+  sampleCollected: number;
+  resultPending: number;
+  readyToVerify: number;
+  completedToday: number;
+}
+
+export interface LabComparisonRow {
+  testName: string;
+  parameterName: string;
+  unit?: string;
+  referenceText?: string;
+  referenceMin?: number | null;
+  referenceMax?: number | null;
+  history: Array<{
+    orderId: string;
+    orderNo: string;
+    date?: string;
+    resultValue?: string;
+    status?: LabParameterStatus;
+    trend?: LabParameterTrend;
+  }>;
+}
+
 export interface Room {
   _id: string;
   hospitalId: string;

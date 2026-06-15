@@ -1,0 +1,251 @@
+<div id="main-content" class="lab-page lab-detail-page" *ngIf="order as current">
+  <div class="lab-shell">
+    <header class="detail-hero">
+      <div class="detail-hero-main">
+        <span class="detail-order-badge">{{ current.orderNo }}</span>
+        <h1>{{ patientName() }}</h1>
+        <div class="detail-meta">
+          <span class="status-pill" [ngClass]="orderStatusClass(current.status)">{{ statusLabel(current.status) }}</span>
+          <span class="meta-chip">{{ sourceLabel(current.source) }}</span>
+          <span class="priority-pill" [class.urgent]="current.priority === 'urgent'">{{ current.priority }}</span>
+          <span class="meta-muted" *ngIf="current.createdAt">Ordered {{ current.createdAt | date:'medium' }}</span>
+        </div>
+      </div>
+      <div class="detail-hero-actions">
+        <a class="btn-light" routerLink="/laboratory"><i class="fa fa-arrow-left"></i> Dashboard</a>
+        <button type="button" class="btn-light" (click)="collectSample()" *ngIf="current.status === 'ordered'">
+          <i class="fa fa-flask"></i> Collect Sample
+        </button>
+        <button type="button" class="btn-primary" (click)="printReport()">
+          <i class="fa fa-print"></i> Print Report
+        </button>
+      </div>
+    </header>
+
+    <div class="summary-cards">
+      <article class="summary-card">
+        <span class="summary-label">Patient</span>
+        <strong>{{ patientName() }}</strong>
+        <small>{{ patientMeta() }}</small>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Referred By</span>
+        <strong>{{ current.referredBy || current.doctor?.name || '—' }}</strong>
+        <small>{{ sourceLabel(current.source) }} order</small>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Payment</span>
+        <strong>Rs. {{ current.totalAmount | number:'1.0-0' }}</strong>
+        <small>Paid Rs. {{ current.paidAmount | number:'1.0-0' }} · Balance Rs. {{ current.balanceAmount | number:'1.0-0' }}</small>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Active Test</span>
+        <strong>{{ activeItem()?.shortCode || activeItem()?.testName || '—' }}</strong>
+        <small>{{ activeItem()?.department || '—' }} · {{ activeItem()?.sampleType || '—' }}</small>
+      </article>
+    </div>
+
+    <section class="test-tabs-panel">
+      <div class="panel-head">
+        <h2>Ordered Tests</h2>
+        <span>{{ current.items.length }} test(s)</span>
+      </div>
+      <div class="test-tabs">
+        <button type="button" class="test-tab" *ngFor="let item of current.items"
+          [class.active]="activeItemId === item._id" (click)="selectItem(item)">
+          <span class="test-tab-code">{{ item.shortCode || item.testName }}</span>
+          <span class="test-tab-name">{{ item.testName }}</span>
+          <span class="status-pill test-tab-status" [ngClass]="orderStatusClass(item.status)">{{ statusLabel(item.status) }}</span>
+          <span class="addon-tag" *ngIf="item.addedLater">Add-on</span>
+        </button>
+      </div>
+    </section>
+
+    <div class="detail-workspace" *ngIf="activeItem() as item">
+      <div class="workspace-main">
+        <section class="lab-panel result-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Result Entry</h2>
+              <p>{{ item.testName }} · {{ item.sampleType || 'Sample' }}<span *ngIf="item.tubeType"> / {{ item.tubeType }}</span></p>
+            </div>
+            <span class="mode-badge">{{ resultModeLabel(item.resultMode) }}</span>
+          </div>
+
+          <div class="result-table-wrap" *ngIf="item.parameters.length > 0; else noParameters">
+            <table class="result-table">
+              <thead>
+                <tr>
+                  <th class="col-parameter">Parameter</th>
+                  <th class="col-result">Result</th>
+                  <th class="col-unit">Unit</th>
+                  <th class="col-range">Reference Range</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-prev">Previous</th>
+                  <th class="col-trend">Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let parameter of item.parameters" [class.row-critical]="parameter.status === 'critical'">
+                  <td class="col-parameter"><strong>{{ parameter.parameterName }}</strong></td>
+                  <td class="col-result">
+                    <input type="text" [(ngModel)]="parameter.resultValue" placeholder="Enter value" />
+                  </td>
+                  <td class="col-unit">{{ parameter.unit || '—' }}</td>
+                  <td class="col-range">{{ parameter.referenceText || formatRange(parameter) }}</td>
+                  <td class="col-status">
+                    <span class="param-status" [ngClass]="paramStatusClass(parameter.status)">
+                      {{ parameter.status || '—' }}
+                    </span>
+                  </td>
+                  <td class="col-prev">{{ parameter.previousValue ?? '—' }}</td>
+                  <td class="col-trend">
+                    <span class="trend-pill" [ngClass]="trendClass(parameter.trend)" *ngIf="parameter.trend; else noTrend">
+                      {{ trendLabel(parameter.trend) }}
+                    </span>
+                    <ng-template #noTrend>—</ng-template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #noParameters>
+            <div class="panel-empty">No structured parameters for this test. Use upload report instead.</div>
+          </ng-template>
+
+          <div class="remarks-block">
+            <label class="field-label" for="lab-remarks">Remarks</label>
+            <textarea id="lab-remarks" [(ngModel)]="remarks" rows="3" placeholder="Verification notes, manual review comments..."></textarea>
+          </div>
+
+          <div class="panel-actions">
+            <button type="button" class="btn-light" [disabled]="saving" (click)="saveResults(false)">Save Draft</button>
+            <button type="button" class="btn-primary" [disabled]="saving" (click)="saveResults(true)">Send for Verification</button>
+            <button type="button" class="btn-verify" (click)="verifyItem()">Verify Result</button>
+          </div>
+        </section>
+
+        <section class="lab-panel comparison-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Previous Comparison</h2>
+              <p>Historical values for {{ item.testName }}</p>
+            </div>
+          </div>
+
+          <div class="comparison-table-wrap" *ngIf="comparisonForActiveTest().length > 0; else noComparison">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Ref Range</th>
+                  <th *ngFor="let date of comparisonDates()">{{ date | date:'dd MMM' }}</th>
+                  <th>Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of comparisonForActiveTest()">
+                  <td><strong>{{ row.parameterName }}</strong></td>
+                  <td>{{ row.referenceText || formatComparisonRange(row) }}</td>
+                  <td *ngFor="let date of comparisonDates()">
+                    <ng-container *ngIf="comparisonPoint(row, date) as point; else emptyPoint">
+                      <span class="comparison-value" [ngClass]="paramStatusClass(point.status)">{{ point.resultValue || '—' }}</span>
+                    </ng-container>
+                    <ng-template #emptyPoint>—</ng-template>
+                  </td>
+                  <td>
+                    <span class="trend-pill" [ngClass]="trendClass(latestTrend(row))" *ngIf="latestTrend(row); else noRowTrend">
+                      {{ trendLabel(latestTrend(row)) }}
+                    </span>
+                    <ng-template #noRowTrend>—</ng-template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #noComparison>
+            <div class="panel-empty">No previous results for this test yet.</div>
+          </ng-template>
+        </section>
+      </div>
+
+      <aside class="workspace-side">
+        <section class="lab-panel side-panel">
+          <div class="panel-head compact">
+            <h2>Upload Report</h2>
+          </div>
+          <p class="side-help">PDF or image report URL for labs that do not use structured entry.</p>
+          <label class="field-label" for="report-url">Report File URL</label>
+          <input id="report-url" type="url" [(ngModel)]="uploadUrl" placeholder="https://.../report.pdf" />
+          <button type="button" class="btn-primary btn-block" [disabled]="saving" (click)="uploadReport()">Upload Report</button>
+          <div class="report-files" *ngIf="item.reportFiles?.length">
+            <div class="report-file" *ngFor="let file of item.reportFiles">
+              <a [href]="file.fileUrl" target="_blank" rel="noopener">{{ file.reportType || 'Report' }}</a>
+              <span class="status-pill" [ngClass]="orderStatusClass(file.status)">{{ file.status }}</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="lab-panel side-panel">
+          <div class="panel-head compact">
+            <h2>Add Extra Tests</h2>
+          </div>
+          <input class="addon-search" type="search" [(ngModel)]="addonSearch" placeholder="Search HbA1c, HBC, RFT..." />
+          <div class="addon-list">
+            <label class="addon-item" *ngFor="let test of filteredAddons()">
+              <input type="checkbox" [checked]="selectedAddonIds.includes(test._id)" (change)="toggleAddon(test)" />
+              <span class="addon-copy">
+                <strong>{{ test.shortCode }}</strong>
+                <small>{{ test.name }}</small>
+              </span>
+              <span class="addon-price">Rs. {{ test.price | number:'1.0-0' }}</span>
+            </label>
+          </div>
+          <div class="panel-empty compact" *ngIf="filteredAddons().length === 0">No more tests available to add.</div>
+          <button type="button" class="btn-primary btn-block" [disabled]="selectedAddonIds.length === 0" (click)="addExtraTests()">
+            Add Selected Tests
+          </button>
+        </section>
+
+        <section class="lab-panel side-panel workflow-panel">
+          <div class="panel-head compact">
+            <h2>Workflow</h2>
+          </div>
+          <ol class="workflow-steps">
+            <li [class.done]="isStepDone('ordered')" [class.current]="current.status === 'ordered'">Ordered</li>
+            <li [class.done]="isStepDone('sample_collected')" [class.current]="current.status === 'sample_collected'">Sample Collected</li>
+            <li [class.done]="isStepDone('processing')" [class.current]="current.status === 'processing'">Processing</li>
+            <li [class.done]="isStepDone('result_entered')" [class.current]="current.status === 'result_entered'">Result Entered</li>
+            <li [class.done]="isStepDone('verified')" [class.current]="current.status === 'verified'">Verified</li>
+            <li [class.done]="isStepDone('completed')" [class.current]="current.status === 'completed'">Completed</li>
+          </ol>
+        </section>
+      </aside>
+    </div>
+
+    <section class="lab-panel critical-panel" *ngIf="current.criticalAlerts?.length">
+      <div class="panel-head">
+        <h2><i class="fa fa-exclamation-triangle"></i> Critical Alerts</h2>
+      </div>
+      <div class="critical-alert" *ngFor="let alert of current.criticalAlerts">
+        <strong>{{ alert.parameterName }}</strong>
+        <span>{{ alert.message }}</span>
+        <small>{{ alert.testName }} · {{ alert.resultValue }}</small>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="lab-page lab-detail-page" *ngIf="loading">
+  <div class="lab-shell">
+    <div class="lab-loading">Loading lab order...</div>
+  </div>
+</div>
+
+<div class="lab-page lab-detail-page" *ngIf="!order && !loading">
+  <div class="lab-shell">
+    <div class="lab-empty">Lab order not found.</div>
+  </div>
+</div>

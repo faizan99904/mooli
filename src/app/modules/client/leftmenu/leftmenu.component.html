@@ -82,8 +82,17 @@
                     </ul>
                 </li>
 
-                <li *ngIf="canViewLaboratory" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
-                    <a [routerLink]="['/laboratory']"><i class="fa fa-flask"></i><span>Laboratory</span></a>
+                <li *ngIf="canViewLaboratory">
+                    <a (click)="LaboratoryCollapsed = !LaboratoryCollapsed" [attr.aria-expanded]="!LaboratoryCollapsed"
+                        class="has-arrow">
+                        <i class="fa fa-flask"></i><span>Laboratory</span>
+                    </a>
+                    <ul class="nav-dropdown" *ngIf="!LaboratoryCollapsed" [@collapseExpand]>
+                        <li><a [routerLink]="['/laboratory']">Lab Dashboard</a></li>
+                        <li *ngIf="canManageLaboratory"><a [routerLink]="['/laboratory/create-order']">Create Lab Order</a></li>
+                        <li><a [routerLink]="['/laboratory/catalog']">Test Catalog</a></li>
+                        <li><a [routerLink]="['/laboratory/records']">Legacy Notes</a></li>
+                    </ul>
                 </li>
 
                 <li *ngIf="canViewWardAdmin" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">

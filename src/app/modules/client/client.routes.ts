@@ -47,6 +47,10 @@ import { RolesComponent } from './roles/roles.component';
 import { CareRecordsComponent } from './care-records/care-records.component';
 import { PrescriptionComponent } from './prescription/prescription.component';
 import { CreatedPrescriptionsComponent } from './prescription/created-prescriptions.component';
+import { LabDashboardComponent } from './laboratory/lab-dashboard.component';
+import { LabOrderCreateComponent } from './laboratory/lab-order-create.component';
+import { LabTestCatalogComponent } from './laboratory/lab-test-catalog.component';
+import { LabOrderDetailComponent } from './laboratory/lab-order-detail.component';
 import { PharmacyComponent } from './pharmacy/pharmacy.component';
 import { PharmacyProductsComponent } from './pharmacy-products/pharmacy-products.component';
 import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
@@ -89,7 +93,8 @@ const PHARMACY_POS_ACCESS = {
     'register_sessions.close',
   ],
 };
-const LABORATORY_ACCESS = ['patients_history.read'];
+const LAB_ACCESS = ['lab_orders.read', 'lab_tests.read', 'patients_history.read'];
+const LAB_MANAGE_ACCESS = ['lab_orders.create', 'lab_orders.update', 'lab_tests.create', 'patients_history.create'];
 const WARD_ADMIN_ACCESS = ['patients_history.read'];
 
 export const clientRoutes: Routes = [
@@ -312,14 +317,38 @@ export const clientRoutes: Routes = [
       },
       {
         path: 'laboratory',
+        component: LabDashboardComponent,
+        data: { title: 'Mooli | Laboratory' },
+        canActivate: [roleGuard(LAB_ACCESS)],
+      },
+      {
+        path: 'laboratory/create-order',
+        component: LabOrderCreateComponent,
+        data: { title: 'Mooli | Create Lab Order' },
+        canActivate: [roleGuard(LAB_MANAGE_ACCESS)],
+      },
+      {
+        path: 'laboratory/catalog',
+        component: LabTestCatalogComponent,
+        data: { title: 'Mooli | Test Catalog' },
+        canActivate: [roleGuard(LAB_ACCESS)],
+      },
+      {
+        path: 'laboratory/orders/:id',
+        component: LabOrderDetailComponent,
+        data: { title: 'Mooli | Lab Order' },
+        canActivate: [roleGuard(LAB_ACCESS)],
+      },
+      {
+        path: 'laboratory/records',
         component: CareRecordsComponent,
         data: {
-          title: 'Mooli | Laboratory',
+          title: 'Mooli | Laboratory Records',
           pageTitle: 'Laboratory Records',
-          pageSubtitle: 'CBC, test notes, and patient lab result updates',
+          pageSubtitle: 'Legacy free-text laboratory notes',
           recordType: 'laboratory',
         },
-        canActivate: [roleGuard(LABORATORY_ACCESS)],
+        canActivate: [roleGuard(HISTORY_ACCESS)],
       },
       {
         path: 'ward-admin',

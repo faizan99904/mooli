@@ -45,6 +45,7 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   PatientCollapsed = true;
   PharmacyCollapsed = true;
   PrescriptionCollapsed = true;
+  LaboratoryCollapsed = true;
   changePasswordModalOpen = false;
   changePasswordLoading = false;
   showCurrentPassword = false;
@@ -149,7 +150,21 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewLaboratory(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('patients_history.read');
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('lab_orders.read') ||
+      this.hasPermission('lab_tests.read') ||
+      this.hasPermission('patients_history.read')
+    );
+  }
+
+  get canManageLaboratory(): boolean {
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('lab_orders.create') ||
+      this.hasPermission('lab_orders.update') ||
+      this.hasPermission('patients_history.create')
+    );
   }
 
   get canViewWardAdmin(): boolean {

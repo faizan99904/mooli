@@ -1,0 +1,116 @@
+@import './lab-dashboard.component.scss';
+
+.lab-form-shell {
+  max-width: 1180px;
+}
+
+.lab-form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lab-card {
+  background: var(--lab-panel);
+  border: 1px solid var(--lab-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.lab-card-wide {
+  grid-column: 1 / -1;
+}
+
+.lab-card h2 {
+  font-size: 14px;
+  margin: 0;
+}
+
+.lab-card label {
+  display: grid;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 4px;
+}
+
+.lab-card input,
+.lab-card select,
+.lab-card textarea {
+  border: 1px solid var(--lab-line);
+  border-radius: 6px;
+  font-size: 12px;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.lab-card textarea {
+  min-height: 72px;
+  padding: 8px 10px;
+}
+
+.patient-picks,
+.catalog-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.catalog-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.patient-picks button,
+.catalog-grid button {
+  background: #fff;
+  border: 1px solid var(--lab-line);
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.patient-picks button.active,
+.catalog-grid button.active {
+  background: var(--lab-blue-soft);
+  border-color: var(--lab-blue);
+}
+
+.selected-test {
+  align-items: center;
+  border-bottom: 1px solid var(--lab-line);
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.selected-test.empty {
+  color: var(--lab-muted);
+  justify-content: center;
+}
+
+.payment-box {
+  background: #f8fafc;
+  border: 1px solid var(--lab-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.payment-box .balance strong {
+  color: #b91c1c;
+}
+
+.summary-actions {
+  display: grid;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .lab-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
