@@ -44,6 +44,7 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   RoomCollapsed = true;
   PatientCollapsed = true;
   PharmacyCollapsed = true;
+  PrescriptionCollapsed = true;
   changePasswordModalOpen = false;
   changePasswordLoading = false;
   showCurrentPassword = false;

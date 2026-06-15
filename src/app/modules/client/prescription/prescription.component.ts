@@ -197,17 +197,9 @@ export class PrescriptionComponent implements OnInit {
   prescriptionForm: FormGroup;
   doctorMedicineForm: FormGroup;
   vitalsModalForm: FormGroup;
-  loading = false;
   appointmentsLoading = false;
   saving = false;
-  page = 1;
-  limit = 10;
-  totalPages = 0;
-  historyGroups: Array<{ dateKey: string; dateLabel: string; items: Prescription[] }> = [];
-  private historyRequestId = 0;
-  historySearch = '';
-  historyDateFrom = '';
-  historyDateTo = '';
+  private patientContextRequestId = 0;
   selectedPatientId = '';
   selectedAppointmentId = '';
   editingId: string | null = null;
@@ -243,13 +235,13 @@ export class PrescriptionComponent implements OnInit {
     },
     {
       id: 'minimal-teal',
-      name: 'Minimal Teal',
-      description: 'Clean modern print',
+      name: 'Structure B · Green',
+      description: 'Stacked card layout · Forest green',
     },
     {
       id: 'compact-mono',
-      name: 'Compact Mono',
-      description: 'Space-efficient monochrome',
+      name: 'Structure C · Purple',
+      description: 'Sectioned blocks · Deep purple',
     },
   ];
   smartMedicineInput = '';
@@ -462,9 +454,9 @@ export class PrescriptionComponent implements OnInit {
       this.selectedPatientId = this.routePatientId;
       this.selectedAppointmentId = this.routeAppointmentId;
       this.applyRouteDefaults();
-      this.page = 1;
-      this.loadPrescriptions();
+      this.loadPatientContextPrescriptions();
       this.selectInitialAppointment();
+      this.handlePrescriptionRouteAction(params.get('prescriptionId') || '', params.get('mode') || '');
     });
 
     this.loadLookups();
@@ -747,10 +739,6 @@ export class PrescriptionComponent implements OnInit {
 
   trackVitalChart(_index: number, chart: VitalMiniChartData): string {
     return chart.key;
-  }
-
-  trackHistoryGroup(_index: number, group: { dateKey: string }): string {
-    return group.dateKey;
   }
 
   historyTrendArrow(trend: 'up' | 'down' | 'flat' | 'none' | undefined): string {
@@ -1478,19 +1466,27 @@ export class PrescriptionComponent implements OnInit {
   }
 
   printMedicineDensityClass(medicineCount: number): string {
-    if (medicineCount >= 12) {
+    if (medicineCount >= 9) {
       return 'medicine-density-ultra';
     }
 
-    if (medicineCount >= 8) {
+    if (medicineCount >= 6) {
       return 'medicine-density-dense';
     }
 
-    if (medicineCount >= 5) {
+    if (medicineCount >= 4) {
       return 'medicine-density-compact';
     }
 
     return 'medicine-density-normal';
+  }
+
+  clinicalRxEmptyRowCount(medicineCount: number): number[] {
+    if (medicineCount === 0 || medicineCount >= 4) {
+      return [];
+    }
+
+    return Array.from({ length: 4 - medicineCount }, (_, index) => index);
   }
 
   onSlotDoseInput(index: number, slot: DoseSlot): void {
@@ -2371,61 +2367,71 @@ export class PrescriptionComponent implements OnInit {
       .join(' | ');
   }
 
-  loadPrescriptions(): void {
-    const requestId = ++this.historyRequestId;
-    this.loading = true;
+  loadPatientContextPrescriptions(): void {
+    const patientId = this.prescriptionForm.getRawValue().patientId || this.selectedPatientId;
+    if (!patientId) {
+      void this.applyPatientContextPrescriptions([], 0);
+      return;
+    }
+
+    const requestId = ++this.patientContextRequestId;
     const params: Record<string, unknown> = {
-      page: this.page,
-      limit: this.limit,
+      page: 1,
+      limit: 100,
+      patientId,
       doctorId: this.isDoctorUser() ? this.currentUserId || undefined : undefined,
     };
 
-    const search = this.historySearch.trim();
-    if (search) {
-      params['search'] = search;
-    }
-
-    if (this.historyDateFrom) {
-      params['dateFrom'] = this.historyDateFrom;
-    }
-
-    if (this.historyDateTo) {
-      params['dateTo'] = this.historyDateTo;
-    }
-
-    const historyPatientId = this.historyPatientFilterId();
-    if (historyPatientId) {
-      params['patientId'] = historyPatientId;
-    }
-
     this.backend
       .getPrescriptions(params)
-      .pipe(finalize(() => {
-        if (requestId === this.historyRequestId) {
-          this.loading = false;
-        }
-      }))
       .subscribe({
         next: (result) => {
-          if (requestId !== this.historyRequestId) {
+          if (requestId !== this.patientContextRequestId) {
             return;
           }
 
-          void this.offline.cacheValue(this.prescriptionsCacheKey(), {
+          void this.offline.cacheValue(this.prescriptionsCacheKey(patientId), {
             items: result.items,
             totalPages: result.pagination.totalPages,
           });
-          void this.applyPrescriptionList(result.items, result.pagination.totalPages);
-          this.totalPages = result.pagination.totalPages;
+          void this.applyPatientContextPrescriptions(result.items, result.pagination.totalPages);
         },
         error: (err) => {
-          if (requestId !== this.historyRequestId) {
+          if (requestId !== this.patientContextRequestId) {
             return;
           }
 
-          void this.loadCachedPrescriptions(err);
+          void this.loadCachedPatientContextPrescriptions(patientId, err);
         },
       });
+  }
+
+  private handlePrescriptionRouteAction(prescriptionId: string, mode: string): void {
+    if (!prescriptionId || !mode) {
+      return;
+    }
+
+    const cached = this.prescriptions.find((item) => item._id === prescriptionId);
+    if (cached) {
+      this.applyPrescriptionRouteAction(cached, mode);
+      return;
+    }
+
+    this.backend.getPrescription(prescriptionId).subscribe({
+      next: (prescription) => this.applyPrescriptionRouteAction(prescription, mode),
+      error: (err) => this.toastr.error(err?.error?.message || 'Unable to load prescription.'),
+    });
+  }
+
+  private applyPrescriptionRouteAction(prescription: Prescription, mode: string): void {
+    if (mode === 'view') {
+      this.openPrintPreview(prescription);
+      return;
+    }
+
+    if (mode === 'edit' && this.canUpdatePrescriptions) {
+      this.editPrescription(prescription);
+    }
   }
 
   submitPrescription(printAfterSave = false): void {
@@ -2525,7 +2531,7 @@ export class PrescriptionComponent implements OnInit {
           isCreate,
         );
         if (!isCreate) {
-          this.loadPrescriptions();
+          this.loadPatientContextPrescriptions();
         }
         if (printAfterSave) {
           this.openPrintPreview(response.data);
@@ -2568,12 +2574,7 @@ export class PrescriptionComponent implements OnInit {
     this.refreshAdmissionOrderRows();
     this.refreshPatientDocumentRows();
     this.refreshSelectedAppointment(appointment._id);
-    this.page = 1;
-    this.loadPrescriptions();
-  }
-
-  historyPatientFilterId(): string {
-    return this.selectedAppointmentId && this.selectedPatientId ? this.selectedPatientId : '';
+    this.loadPatientContextPrescriptions();
   }
 
   private refreshSelectedAppointment(appointmentId: string): void {
@@ -2994,82 +2995,9 @@ export class PrescriptionComponent implements OnInit {
     this.backend.deletePrescription(id).subscribe({
       next: (response) => {
         this.toastr.success(response.message);
-        this.loadPrescriptions();
+        this.loadPatientContextPrescriptions();
       },
       error: (err) => this.toastr.error(err?.error?.message || 'Something went wrong'),
-    });
-  }
-
-  changePage(nextPage: number): void {
-    if (nextPage < 1 || (this.totalPages && nextPage > this.totalPages)) {
-      return;
-    }
-
-    this.page = nextPage;
-    this.loadPrescriptions();
-  }
-
-  applyHistoryFilters(): void {
-    this.page = 1;
-    this.loadPrescriptions();
-  }
-
-  clearHistoryFilters(): void {
-    this.historySearch = '';
-    this.historyDateFrom = '';
-    this.historyDateTo = '';
-    this.page = 1;
-    this.loadPrescriptions();
-  }
-
-  private rebuildPrescriptionHistoryGroups(): void {
-    const groups = new Map<string, Prescription[]>();
-
-    this.prescriptions.forEach((prescription) => {
-      const dateKey = this.prescriptionDateKey(prescription);
-      const bucket = groups.get(dateKey) || [];
-      bucket.push(prescription);
-      groups.set(dateKey, bucket);
-    });
-
-    this.historyGroups = Array.from(groups.entries()).map(([dateKey, items]) => ({
-      dateKey,
-      dateLabel: this.formatHistoryDateLabel(dateKey),
-      items,
-    }));
-  }
-
-  prescriptionAppointmentNo(prescription: Prescription): string {
-    return prescription.appointment?.appointmentNo || '';
-  }
-
-  private prescriptionDateKey(prescription: Prescription): string {
-    const createdAt = prescription.createdAt ? new Date(prescription.createdAt) : null;
-    if (!createdAt || Number.isNaN(createdAt.getTime())) {
-      return 'unknown';
-    }
-
-    const year = createdAt.getFullYear();
-    const month = String(createdAt.getMonth() + 1).padStart(2, '0');
-    const day = String(createdAt.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private formatHistoryDateLabel(dateKey: string): string {
-    if (dateKey === 'unknown') {
-      return 'Unknown Date';
-    }
-
-    const date = new Date(`${dateKey}T00:00:00`);
-    if (Number.isNaN(date.getTime())) {
-      return dateKey;
-    }
-
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
     });
   }
 
@@ -3084,7 +3012,7 @@ export class PrescriptionComponent implements OnInit {
     const result = await this.offline.syncQueuedWork();
     if (result.syncedCount > 0) {
       this.loadLookups();
-      this.loadPrescriptions();
+      this.loadPatientContextPrescriptions();
       if (showToast) {
         this.toastr.success(`${result.syncedCount} offline item(s) synced.`);
       }
@@ -3153,27 +3081,22 @@ export class PrescriptionComponent implements OnInit {
     afterLoad?.();
   }
 
-  private async loadCachedPrescriptions(error: unknown): Promise<void> {
+  private async loadCachedPatientContextPrescriptions(patientId: string, error: unknown): Promise<void> {
     const cached = await this.offline.readCachedValue<{ items: Prescription[]; totalPages: number }>(
-      this.prescriptionsCacheKey(),
+      this.prescriptionsCacheKey(patientId),
       { items: [], totalPages: 0 },
     );
-    await this.applyPrescriptionList(cached.items, cached.totalPages);
+    await this.applyPatientContextPrescriptions(cached.items, cached.totalPages);
     if (!this.offline.shouldQueue(error) && cached.items.length === 0) {
       this.toastr.error((error as { error?: { message?: string } })?.error?.message || 'Something went wrong');
     }
   }
 
-  private async applyPrescriptionList(items: Prescription[], totalPages: number): Promise<void> {
-    const hasHistoryFilters = Boolean(
-      this.historySearch.trim() || this.historyDateFrom || this.historyDateTo,
-    );
-    const localPrescriptions = hasHistoryFilters ? [] : await this.localQueuedPrescriptions();
-    this.prescriptions = this.filterHistoryPrescriptions(
+  private async applyPatientContextPrescriptions(items: Prescription[], _totalPages: number): Promise<void> {
+    const localPrescriptions = await this.localQueuedPrescriptions();
+    this.prescriptions = this.filterPatientContextPrescriptions(
       this.mergePrescriptions([...localPrescriptions, ...items]),
     );
-    this.totalPages = totalPages;
-    this.rebuildPrescriptionHistoryGroups();
     this.loadPatientHistoryRecords();
     this.refreshVitalAnalytics();
     this.refreshLabTestRows();
@@ -3196,10 +3119,9 @@ export class PrescriptionComponent implements OnInit {
       meta: { prescription },
     });
 
-    this.prescriptions = this.filterHistoryPrescriptions(
+    this.prescriptions = this.filterPatientContextPrescriptions(
       this.mergePrescriptions([prescription, ...this.prescriptions]),
     );
-    this.rebuildPrescriptionHistoryGroups();
     this.editingId = localId;
     this.markAppointmentCompleted(prescription.appointmentId, true);
     this.refreshLabTestRows();
@@ -3359,8 +3281,8 @@ export class PrescriptionComponent implements OnInit {
     );
   }
 
-  private filterHistoryPrescriptions(items: Prescription[]): Prescription[] {
-    const patientId = this.historyPatientFilterId();
+  private filterPatientContextPrescriptions(items: Prescription[]): Prescription[] {
+    const patientId = this.prescriptionForm.getRawValue().patientId || this.selectedPatientId;
     if (!patientId) {
       return items;
     }
@@ -3396,15 +3318,10 @@ export class PrescriptionComponent implements OnInit {
     );
   }
 
-  private prescriptionsCacheKey(): string {
+  private prescriptionsCacheKey(patientId: string): string {
     return this.offline.cacheKey(
-      'prescriptions',
-      this.page,
-      this.limit,
-      this.historySearch.trim() || 'all',
-      this.historyDateFrom || 'from',
-      this.historyDateTo || 'to',
-      this.historyPatientFilterId() || 'patient-all',
+      'prescription-patient-context',
+      patientId,
       this.isDoctorUser() ? this.currentUserId || 'doctor' : 'all',
     );
   }
@@ -3465,8 +3382,7 @@ export class PrescriptionComponent implements OnInit {
       patientId: this.routePatientId || '',
       doctorId: this.isDoctorUser() ? this.currentUserId || '' : this.routeDoctorId || '',
     });
-    this.page = 1;
-    this.loadPrescriptions();
+    this.loadPatientContextPrescriptions();
   }
 
   private isCancelledAppointment(appointment: Appointment): boolean {
@@ -3546,8 +3462,7 @@ export class PrescriptionComponent implements OnInit {
       patientId: this.routePatientId || '',
       doctorId: this.isDoctorUser() ? this.currentUserId || '' : this.routeDoctorId || '',
     });
-    this.page = 1;
-    this.loadPrescriptions();
+    this.loadPatientContextPrescriptions();
     this.toastr.info('All appointments for today are completed.');
   }
 
