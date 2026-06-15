@@ -154,6 +154,7 @@
             <button type="button" class="btn-light" [disabled]="!offline.online() || offline.syncing() || offline.pendingCount() === 0" (click)="syncOfflineWork()">
               Sync
             </button>
+            <a class="btn-light" routerLink="/prescriptions/created">Created Prescriptions</a>
             <button type="button" class="btn-light" [disabled]="saving" (click)="submitPrescription(false)">Save
               Draft</button>
             <button type="button" class="btn-primary" [disabled]="saving" (click)="submitPrescription(true)">
@@ -905,76 +906,6 @@
           </aside>
         </div>
       </form>
-
-      <section class="prescription-history-panel">
-        <div class="section-heading">
-          <div>
-            <h3>Created Prescriptions</h3>
-            <p>
-              {{ loading ? 'Loading prescriptions...' : (prescriptions.length + ' shown · latest first') }}
-              <span *ngIf="historyPatientFilterId()"> · {{ patientName(selectedPatient()) }}</span>
-              <span *ngIf="historySearch || historyDateFrom || historyDateTo"> · filtered</span>
-            </p>
-          </div>
-          <button type="button" (click)="loadPrescriptions()">Refresh</button>
-        </div>
-
-        <div class="prescription-history-filters">
-          <input class="history-search-input" type="search" [(ngModel)]="historySearch"
-            placeholder="Search patient name or appointment no." [ngModelOptions]="{standalone: true}"
-            (keyup.enter)="applyHistoryFilters()" />
-          <input class="history-date-input" type="date" [(ngModel)]="historyDateFrom" [ngModelOptions]="{standalone: true}" />
-          <input class="history-date-input" type="date" [(ngModel)]="historyDateTo" [ngModelOptions]="{standalone: true}" />
-          <button type="button" class="btn-primary history-filter-btn" (click)="applyHistoryFilters()">Search</button>
-          <button type="button" class="btn-light history-filter-btn" (click)="clearHistoryFilters()">Clear</button>
-        </div>
-
-        <div class="prescription-history-empty" *ngIf="!loading && prescriptions.length === 0">
-          {{
-            historySearch || historyDateFrom || historyDateTo
-              ? 'No prescriptions match your search.'
-              : historyPatientFilterId()
-                ? 'No prescriptions found for this patient.'
-                : 'No prescription created yet.'
-          }}
-        </div>
-
-        <div class="prescription-history-list" *ngIf="prescriptions.length > 0">
-          <div class="history-date-group" *ngFor="let group of historyGroups; trackBy: trackHistoryGroup">
-            <div class="history-date-heading">{{ group.dateLabel }}</div>
-            <article class="prescription-history-row" *ngFor="let prescription of group.items">
-              <div class="history-avatar">{{ initials(prescriptionPatientName(prescription)) }}</div>
-              <div class="history-main">
-                <strong>{{ prescriptionPatientName(prescription) }}</strong>
-                <span>
-                  {{ prescriptionDoctorName(prescription) }}
-                  <ng-container *ngIf="prescriptionAppointmentNo(prescription) as apptNo"> · {{ apptNo }}</ng-container>
-                  · {{ prescriptionDate(prescription) }}
-                </span>
-              </div>
-              <div class="history-meta">
-                <span>{{ prescriptionMedicineCount(prescription) }} medicine(s) · {{ prescriptionIvFluidCount(prescription) }} drip(s)</span>
-                <small *ngIf="prescriptionIvFluidSummary(prescription) as drips">Drips: {{ drips }}</small>
-                <small>{{ prescription.diagnosis || prescription.chiefComplaint || 'No diagnosis added' }}</small>
-              </div>
-              <div class="history-actions">
-                <button type="button" class="btn-light" *ngIf="canUpdatePrescriptions" (click)="editPrescription(prescription)">Edit</button>
-                <button type="button" class="btn-primary" (click)="openPrintPreview(prescription)">
-                  <i class="fa fa-eye"></i>
-                  View
-                </button>
-              </div>
-            </article>
-          </div>
-        </div>
-
-        <div class="prescription-history-pagination" *ngIf="!loading && (totalPages > 1 || page > 1)">
-          <button type="button" class="btn-light" (click)="changePage(page - 1)" [disabled]="page <= 1">Prev</button>
-          <span>Page {{ page }} of {{ totalPages || 1 }}</span>
-          <button type="button" class="btn-light" (click)="changePage(page + 1)"
-            [disabled]="totalPages > 0 && page >= totalPages">Next</button>
-        </div>
-      </section>
     </main>
   </div>
 
@@ -1067,8 +998,8 @@
         <section class="prescription-print-sheet" #printContent
           [ngClass]="'prescription-template-' + selectedPrescriptionTemplate"
           *ngIf="!printPreviewLoading && printPreviewData as preview">
-          <ng-container *ngIf="selectedPrescriptionTemplate === 'clinical-blue'; else standardPrescriptionLayout">
-            <div class="clinical-rx-page">
+          <ng-container *ngIf="selectedPrescriptionTemplate === 'clinical-blue'; else themedPrescriptionLayout">
+            <div class="clinical-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
               <header class="clinical-rx-header">
                 <div class="clinical-rx-doctor clinical-rx-doctor-en">
                   <h1>{{ preview.doctorName }}</h1>
@@ -1173,12 +1104,13 @@
                 </aside>
 
                 <div class="clinical-rx-content">
-                  <section class="clinical-rx-medicines">
+                  <section class="clinical-rx-medicines" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
                     <header>
                       <strong>MEDICINES</strong>
                       <span class="print-urdu-block" style="margin-top: -12px;">دوائیاں</span>
                     </header>
 
+                    <div class="clinical-rx-medicines-body">
                     <table>
                       <thead>
                         <tr>
@@ -1214,13 +1146,15 @@
                           <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
                           <td>{{ medicine['instructions'] || '-' }}</td>
                         </tr>
-                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 5"><td colspan="10"></td></tr>
-                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 4"><td colspan="10"></td></tr>
-                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 3"><td colspan="10"></td></tr>
-                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 2"><td colspan="10"></td></tr>
-                        <tr class="clinical-rx-empty-row" *ngIf="preview.medicines.length < 1"><td colspan="10"></td></tr>
+                        <tr *ngIf="preview.medicines.length === 0" class="clinical-rx-no-medicine-row">
+                          <td colspan="10">No medicine prescribed</td>
+                        </tr>
+                        <tr *ngFor="let _ of clinicalRxEmptyRowCount(preview.medicines.length)" class="clinical-rx-empty-row">
+                          <td colspan="10"></td>
+                        </tr>
                       </tbody>
                     </table>
+                    </div>
                   </section>
 
                   <section class="clinical-rx-instructions">
@@ -1269,6 +1203,275 @@
               </footer>
             </div>
           </ng-container>
+
+          <ng-template #themedPrescriptionLayout>
+            <ng-container *ngIf="selectedPrescriptionTemplate === 'minimal-teal'; else purplePrescriptionLayout">
+              <div class="stacked-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
+                <header class="stacked-rx-header">
+                  <div class="stacked-rx-doctor stacked-rx-doctor-en">
+                    <h1>{{ preview.doctorName }}</h1>
+                    <strong>{{ preview.doctorQualification }}</strong>
+                    <span>{{ preview.doctorTitleEnglish }}</span>
+                    <span>{{ preview.hospitalName }}</span>
+                  </div>
+                  <div class="stacked-rx-brand">
+                    <div class="stacked-rx-logo" [class.has-logo]="preview.showHospitalLogo">
+                      <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl" [alt]="preview.hospitalName">
+                      <span *ngIf="!preview.showHospitalLogo">R<sub>x</sub></span>
+                    </div>
+                  </div>
+                  <div class="stacked-rx-doctor stacked-rx-doctor-ur print-urdu-block" dir="rtl">
+                    <h2>{{ preview.doctorNameUrdu }}</h2>
+                    <strong>{{ preview.doctorQualificationUrdu }}</strong>
+                    <span>{{ preview.doctorTitleUrdu }}</span>
+                    <span>{{ preview.hospitalNameUrdu }}</span>
+                  </div>
+                </header>
+
+                <section class="stacked-rx-meta-cards">
+                  <div><span>Date</span><strong>{{ preview.date }}</strong></div>
+                  <div><span>Prescription No</span><strong>{{ preview.prescriptionNo }}</strong></div>
+                  <div><span>File No</span><strong>{{ preview.patientNo }}</strong></div>
+                </section>
+
+                <div class="stacked-rx-disclaimer">NOT VALID FOR COURT OF LAW.</div>
+
+                <table class="stacked-rx-patient-table">
+                  <tr>
+                    <th>Patient Name</th><td>{{ preview.patientName }}</td>
+                    <th>Age</th><td>{{ preview.patientAge }}</td>
+                    <th>Sex</th><td>{{ preview.patientGender }}</td>
+                  </tr>
+                  <tr>
+                    <th>Cell No</th><td>{{ preview.patientPhone }}</td>
+                    <th>Address</th><td colspan="3">{{ preview.patientAddress }}</td>
+                  </tr>
+                  <tr>
+                    <th>Diagnosis / Disease</th><td colspan="5">{{ preview.disease }}</td>
+                  </tr>
+                </table>
+
+                <section class="stacked-rx-strip">
+                  <h3>VITALS (O/E)</h3>
+                  <div class="stacked-rx-strip-grid">
+                    <div><i class="fa fa-heartbeat"></i><strong>BP</strong><span>{{ preview.vitals['bp'] || preview.vitals['bloodPressure'] || '-' }}</span></div>
+                    <div><i class="fa fa-balance-scale"></i><strong>WT</strong><span>{{ preview.vitals['weight'] || '-' }}</span></div>
+                    <div><i class="fa fa-heart-o"></i><strong>PR</strong><span>{{ preview.vitals['pulse'] || '-' }}</span></div>
+                    <div><i class="fa fa-thermometer-half"></i><strong>TEMP</strong><span>{{ preview.vitals['temperature'] || '-' }}</span></div>
+                    <div><i class="fa fa-tint"></i><strong>SPO2</strong><span>{{ preview.vitals['spo2'] || '-' }}</span></div>
+                  </div>
+                </section>
+
+                <section class="stacked-rx-strip stacked-rx-labs-strip">
+                  <h3>LAB TESTS</h3>
+                  <div class="stacked-rx-strip-grid labs">
+                    <div *ngFor="let test of preview.labTests | slice:0:4">
+                      <i class="fa fa-check-square"></i><strong>{{ test.name }}</strong><span>✓</span>
+                    </div>
+                    <div *ngIf="preview.labTests.length === 0"><i class="fa fa-square-o"></i><strong>CBC</strong><span>-</span></div>
+                    <div *ngIf="preview.labTests.length === 0"><i class="fa fa-square-o"></i><strong>CRP</strong><span>-</span></div>
+                  </div>
+                </section>
+
+                <section class="stacked-rx-medicines" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
+                  <header><strong>MEDICINES</strong><span class="print-urdu-block">دوائیاں</span></header>
+                  <div class="stacked-rx-medicines-body">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th rowspan="2">#</th>
+                        <th rowspan="2">Medicine</th>
+                        <th rowspan="2">Dose</th>
+                        <th rowspan="2">Duration</th>
+                        <th colspan="4">Timing</th>
+                        <th rowspan="2">Food</th>
+                        <th rowspan="2">Instructions</th>
+                      </tr>
+                      <tr>
+                        <th>Morning</th><th>Noon</th><th>Evening</th><th>Night</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let medicine of preview.medicines; let i = index">
+                        <td>{{ i + 1 }}</td>
+                        <td class="stacked-rx-med-name"><strong>{{ medicine['name'] || 'Medicine' }}</strong></td>
+                        <td>{{ medicine['dosage'] || '-' }}</td>
+                        <td>{{ medicine['duration'] || '-' }}</td>
+                        <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
+                        <td>{{ slotDose(medicine, 'noon') || '0' }}</td>
+                        <td>{{ slotDose(medicine, 'evening') || '0' }}</td>
+                        <td>{{ slotDose(medicine, 'night') || '0' }}</td>
+                        <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
+                        <td>{{ medicine['instructions'] || '-' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  </div>
+                </section>
+
+                <section class="stacked-rx-instructions">
+                  <h3><span><i class="fa fa-info-circle"></i> IMPORTANT INSTRUCTIONS</span><span class="print-urdu-block">ضروری ہدایات</span></h3>
+                  <div>
+                    <ul>
+                      <li>Take medicine as per doctor advice.</li>
+                      <li>Do not stop medicine without consultation.</li>
+                    </ul>
+                    <ul class="print-urdu-block" dir="rtl">
+                      <li>دوا ڈاکٹر کے مشورے کے مطابق استعمال کریں۔</li>
+                      <li>بغیر مشورے کے دوا بند نہ کریں۔</li>
+                    </ul>
+                  </div>
+                </section>
+
+                <section class="stacked-rx-bottom-cards">
+                  <div><h4><i class="fa fa-calendar-plus-o"></i> FOLLOW UP</h4><p>{{ preview.followUpDate }}</p></div>
+                  <div><h4><i class="fa fa-file-text-o"></i> NOTE TO PATIENT</h4><p>{{ preview.patientNote || '-' }}</p></div>
+                </section>
+
+                <div class="stacked-rx-signature"><i class="fa fa-pencil"></i><span></span><strong>Doctor Signature</strong></div>
+
+                <footer class="stacked-rx-footer">
+                  <p *ngIf="preview.prescriptionRevisionNote">{{ preview.prescriptionRevisionNote }}</p>
+                  <div class="stacked-rx-footer-bar">
+                    <span *ngFor="let line of preview.prescriptionFooterLines"><i class="fa fa-envelope-o"></i> {{ line }}</span>
+                    <span class="stacked-rx-page-no">Page 1 of 1</span>
+                  </div>
+                </footer>
+              </div>
+            </ng-container>
+
+            <ng-template #purplePrescriptionLayout>
+              <ng-container *ngIf="selectedPrescriptionTemplate === 'compact-mono'; else standardPrescriptionLayout">
+                <div class="sectioned-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
+                  <header class="sectioned-rx-header">
+                    <div class="sectioned-rx-doctor sectioned-rx-doctor-en">
+                      <h1>{{ preview.doctorName }}</h1>
+                      <strong>{{ preview.doctorQualification }}</strong>
+                      <span>{{ preview.doctorTitleEnglish }}</span>
+                      <span>{{ preview.hospitalName }}</span>
+                    </div>
+                    <div class="sectioned-rx-brand">
+                      <div class="sectioned-rx-logo" [class.has-logo]="preview.showHospitalLogo">
+                        <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl" [alt]="preview.hospitalName">
+                        <span *ngIf="!preview.showHospitalLogo">R<sub>x</sub></span>
+                      </div>
+                    </div>
+                    <div class="sectioned-rx-doctor sectioned-rx-doctor-ur print-urdu-block" dir="rtl">
+                      <h2>{{ preview.doctorNameUrdu }}</h2>
+                      <strong>{{ preview.doctorQualificationUrdu }}</strong>
+                      <span>{{ preview.doctorTitleUrdu }}</span>
+                      <span>{{ preview.hospitalNameUrdu }}</span>
+                    </div>
+                  </header>
+
+                  <section class="sectioned-rx-meta">
+                    <div><i class="fa fa-calendar"></i><span><strong>DATE:</strong> {{ preview.date }}</span></div>
+                    <div><i class="fa fa-clipboard"></i><span><strong>PRESCRIPTION NO:</strong> {{ preview.prescriptionNo }}</span></div>
+                    <div><i class="fa fa-folder-open-o"></i><span><strong>FILE NO:</strong> {{ preview.patientNo }}</span></div>
+                    <em>NOT VALID FOR COURT OF LAW.</em>
+                  </section>
+
+                  <section class="sectioned-rx-block sectioned-rx-patient">
+                    <h3>PATIENT INFORMATION</h3>
+                    <div class="sectioned-rx-patient-grid">
+                      <div><strong>Patient Name</strong><span>{{ preview.patientName }}</span></div>
+                      <div><strong>Age</strong><span>{{ preview.patientAge }}</span></div>
+                      <div><strong>Sex</strong><span>{{ preview.patientGender }}</span></div>
+                      <div><strong>Cell No</strong><span>{{ preview.patientPhone }}</span></div>
+                      <div class="wide"><strong>Address</strong><span>{{ preview.patientAddress }}</span></div>
+                      <div class="wide"><strong>Diagnosis / Disease</strong><span>{{ preview.disease }}</span></div>
+                    </div>
+                  </section>
+
+                  <section class="sectioned-rx-split">
+                    <div class="sectioned-rx-block">
+                      <h3>VITALS (O/E)</h3>
+                      <div class="sectioned-rx-list">
+                        <div><strong>BP</strong><span>{{ preview.vitals['bp'] || preview.vitals['bloodPressure'] || '-' }}</span></div>
+                        <div><strong>WT (kg)</strong><span>{{ preview.vitals['weight'] || '-' }}</span></div>
+                        <div><strong>PR / min</strong><span>{{ preview.vitals['pulse'] || '-' }}</span></div>
+                        <div><strong>TEMP</strong><span>{{ preview.vitals['temperature'] || '-' }}</span></div>
+                        <div><strong>SPO2</strong><span>{{ preview.vitals['spo2'] || '-' }}</span></div>
+                      </div>
+                    </div>
+                    <div class="sectioned-rx-block">
+                      <h3>LAB TESTS</h3>
+                      <div class="sectioned-rx-list">
+                        <div *ngFor="let test of preview.labTests | slice:0:4"><strong>{{ test.name }}</strong><span>✓</span></div>
+                        <div *ngIf="preview.labTests.length === 0"><strong>CBC</strong><span>-</span></div>
+                        <div *ngIf="preview.labTests.length === 0"><strong>CRP</strong><span>-</span></div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="sectioned-rx-medicines" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
+                    <header><strong>MEDICINES</strong><span class="print-urdu-block">دوائیاں</span></header>
+                    <div class="sectioned-rx-medicines-body">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th rowspan="2">#</th>
+                          <th rowspan="2">Medicine</th>
+                          <th rowspan="2">Dose</th>
+                          <th rowspan="2">Duration</th>
+                          <th colspan="4">Timing</th>
+                          <th rowspan="2">Food</th>
+                          <th rowspan="2">Instructions</th>
+                        </tr>
+                        <tr>
+                          <th>Morning</th><th>Noon</th><th>Evening</th><th>Night</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let medicine of preview.medicines; let i = index">
+                          <td>{{ i + 1 }}</td>
+                          <td class="sectioned-rx-med-name"><strong>{{ medicine['name'] || 'Medicine' }}</strong></td>
+                          <td>{{ medicine['dosage'] || '-' }}</td>
+                          <td>{{ medicine['duration'] || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'noon') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'evening') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'night') || '0' }}</td>
+                          <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
+                          <td>{{ medicine['instructions'] || '-' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    </div>
+                  </section>
+
+                  <section class="sectioned-rx-instructions">
+                    <h3><span><i class="fa fa-info-circle"></i> IMPORTANT INSTRUCTIONS</span><span class="print-urdu-block">ضروری ہدایات</span></h3>
+                    <div>
+                      <ul>
+                        <li>Take medicine as per doctor advice.</li>
+                        <li>Do not stop medicine without consultation.</li>
+                      </ul>
+                      <ul class="print-urdu-block" dir="rtl">
+                        <li>دوا ڈاکٹر کے مشورے کے مطابق استعمال کریں۔</li>
+                        <li>بغیر مشورے کے دوا بند نہ کریں۔</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                  <section class="sectioned-rx-bottom-cards">
+                    <div><h4><i class="fa fa-calendar-plus-o"></i> FOLLOW UP</h4><p>{{ preview.followUpDate }}</p></div>
+                    <div><h4><i class="fa fa-file-text-o"></i> NOTE TO PATIENT</h4><p>{{ preview.patientNote || '-' }}</p></div>
+                  </section>
+
+                  <div class="sectioned-rx-signature"><i class="fa fa-pencil"></i><span></span><strong>Doctor Signature</strong></div>
+
+                  <footer class="sectioned-rx-footer">
+                    <p *ngIf="preview.prescriptionRevisionNote">{{ preview.prescriptionRevisionNote }}</p>
+                    <div class="sectioned-rx-footer-bar">
+                      <span *ngFor="let line of preview.prescriptionFooterLines"><i class="fa fa-envelope-o"></i> {{ line }}</span>
+                      <span class="sectioned-rx-page-no">Page 1 of 1</span>
+                    </div>
+                  </footer>
+                </div>
+              </ng-container>
+            </ng-template>
+          </ng-template>
 
           <ng-template #standardPrescriptionLayout>
           <header class="print-header">

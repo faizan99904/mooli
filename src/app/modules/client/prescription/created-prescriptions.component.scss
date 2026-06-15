@@ -1,0 +1,247 @@
+.created-prescriptions-page {
+  --rx-blue: #1168c8;
+  --rx-blue-soft: #eaf3ff;
+  --rx-ink: #111827;
+  --rx-muted: #6b7280;
+  --rx-line: #e5e7eb;
+  --rx-soft-line: #edf1f7;
+  --rx-panel: #ffffff;
+  background: #fbfcfe;
+  box-sizing: border-box;
+  color: #1f2937;
+  font-size: 12px;
+  min-height: 100vh;
+  padding: 10px 12px !important;
+}
+
+.created-prescriptions-page *,
+.created-prescriptions-page *::before,
+.created-prescriptions-page *::after {
+  box-sizing: border-box;
+}
+
+.created-prescriptions-shell {
+  margin: 0 auto;
+  max-width: 1180px;
+}
+
+.page-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.page-heading h1 {
+  color: var(--rx-ink);
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.page-heading p {
+  color: var(--rx-muted);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.page-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-light,
+.btn-primary {
+  align-items: center;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  text-decoration: none;
+}
+
+.btn-light {
+  background: #fff;
+  border: 1px solid var(--rx-line);
+  color: #334155;
+}
+
+.btn-primary {
+  background: #019c9d;
+  border: 1px solid #019c9d;
+  color: #fff;
+}
+
+.prescription-history-panel {
+  background: var(--rx-panel);
+  border: 1px solid var(--rx-line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.prescription-history-filters {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(120px, 0.8fr)) auto auto;
+  margin-bottom: 10px;
+}
+
+.history-search-input,
+.history-date-input {
+  border: 1px solid var(--rx-line);
+  border-radius: 6px;
+  font-size: 12px;
+  min-height: 34px;
+  min-width: 0;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.history-filter-btn {
+  min-height: 34px;
+  white-space: nowrap;
+}
+
+.prescription-history-pagination {
+  align-items: center;
+  border-top: 1px solid var(--rx-soft-line);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.history-date-group + .history-date-group {
+  margin-top: 10px;
+}
+
+.history-date-heading {
+  background: var(--rx-blue-soft);
+  border-radius: 6px;
+  color: var(--rx-blue);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 7px;
+  padding: 6px 10px;
+}
+
+.prescription-history-empty {
+  border: 1px dashed var(--rx-line);
+  border-radius: 6px;
+  color: var(--rx-muted);
+  padding: 12px;
+  text-align: center;
+}
+
+.prescription-history-list {
+  display: grid;
+  gap: 7px;
+}
+
+.prescription-history-row {
+  align-items: center;
+  border: 1px solid var(--rx-soft-line);
+  border-radius: 7px;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 34px minmax(150px, 1fr) minmax(150px, 0.9fr) auto;
+  padding: 8px 10px;
+}
+
+.history-avatar {
+  align-items: center;
+  background: var(--rx-blue-soft);
+  border-radius: 50%;
+  color: var(--rx-blue);
+  display: inline-flex;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.history-main,
+.history-meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.history-main strong,
+.history-meta span {
+  color: var(--rx-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-main span,
+.history-meta small {
+  color: var(--rx-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.history-actions .btn-light,
+.history-actions .btn-primary {
+  min-height: 28px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .page-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .prescription-history-row {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .prescription-history-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .history-search-input {
+    grid-column: 1 / -1;
+  }
+
+  .history-meta,
+  .history-actions {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .created-prescriptions-page {
+    padding: 10px !important;
+  }
+
+  .prescription-history-row {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .prescription-history-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .page-heading-actions {
+    flex-direction: column;
+  }
+}

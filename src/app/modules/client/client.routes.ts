@@ -46,6 +46,7 @@ import { CreateHospitalComponent } from './create-hospital/create-hospital.compo
 import { RolesComponent } from './roles/roles.component';
 import { CareRecordsComponent } from './care-records/care-records.component';
 import { PrescriptionComponent } from './prescription/prescription.component';
+import { CreatedPrescriptionsComponent } from './prescription/created-prescriptions.component';
 import { PharmacyComponent } from './pharmacy/pharmacy.component';
 import { PharmacyProductsComponent } from './pharmacy-products/pharmacy-products.component';
 import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
@@ -330,6 +331,12 @@ export const clientRoutes: Routes = [
           recordType: 'ward',
         },
         canActivate: [roleGuard(WARD_ADMIN_ACCESS)],
+      },
+      {
+        path: 'prescriptions/created',
+        component: CreatedPrescriptionsComponent,
+        data: { title: 'Mooli | Created Prescriptions' },
+        canActivate: [roleGuard(PRESCRIPTION_ACCESS)],
       },
       {
         path: 'prescriptions',
