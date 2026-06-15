@@ -33,7 +33,8 @@
                                         <input class="form-control mb-2" type="search"
                                             [formControl]="hospitalSearchControl"
                                             placeholder="Search hospitals by name, code, or city" />
-                                        <select class="form-control" formControlName="hospitalId">
+                                        <select class="form-control" formControlName="hospitalId"
+                                            (change)="onHospitalChange()">
                                             <option value="">Select Hospital</option>
                                             <option *ngFor="let hospital of hospitals" [value]="hospital._id">
                                                 {{ hospital.name }}
@@ -110,6 +111,10 @@
                                         </select>
                                         <small class="text-danger form-hint" *ngIf="rolesError">
                                             {{ rolesError }}
+                                        </small>
+                                        <small class="text-muted form-hint"
+                                            *ngIf="!rolesLoading && !rolesError && isHospitalAdminUser">
+                                            Hospital Admin users cannot create another Hospital Admin user.
                                         </small>
                                         <small class="text-danger form-hint"
                                             *ngIf="userForm.get('roleId')?.touched && userForm.get('roleId')?.invalid">

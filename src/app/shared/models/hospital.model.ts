@@ -10,6 +10,7 @@ export type PrescriptionTemplate =
 export interface Role {
   _id: string;
   companyId?: string | null;
+  hospitalId?: string | null;
   context?: 'pos' | 'hospital';
   name: string;
   description?: string;

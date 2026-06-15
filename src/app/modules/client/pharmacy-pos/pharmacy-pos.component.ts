@@ -1050,6 +1050,8 @@ export class PharmacyPosComponent implements OnInit {
   clearSale(): void {
     this.billLines = [];
     this.unavailableMedicines = [];
+    this.prescription = null;
+    this.prescriptionId = '';
     this.saleInvoiceNo = '';
     this.productSearch = '';
     this.selectedProductIndex = 0;
@@ -1675,12 +1677,7 @@ export class PharmacyPosComponent implements OnInit {
               : 'Sale completed successfully.',
             'success',
           );
-          this.billLines = [];
-          this.unavailableMedicines = [];
-          this.productSearch = '';
-          this.selectedProductIndex = 0;
-          this.paidAmount = '0';
-          this.cashReceivedAmount = '0';
+          this.clearSale();
           this.loadProducts();
           this.refreshRegisterState();
         },

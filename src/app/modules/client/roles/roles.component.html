@@ -10,6 +10,27 @@
     </div>
 
     <div class="row clearfix">
+      <div class="col-lg-5 col-md-12">
+        <div class="card role-editor-card">
+          <div class="body">
+            <div class="form-group mb-0" *ngIf="canSelectHospital; else assignedHospitalInfo">
+              <label>Hospital Scope</label>
+              <select class="form-control" [(ngModel)]="selectedHospitalId" (change)="onHospitalChange()">
+                <option value="">Select Hospital</option>
+                <option *ngFor="let hospital of hospitals" [value]="hospital._id">{{ hospital.name }}</option>
+              </select>
+              <small class="text-muted" *ngIf="hospitalsLoading">Loading hospitals...</small>
+            </div>
+            <ng-template #assignedHospitalInfo>
+              <label>Hospital Scope</label>
+              <input class="form-control" [value]="currentHospitalName || currentHospitalId || 'Assigned hospital'" readonly />
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row clearfix">
       <div class="col-lg-5 col-md-12" *ngIf="can('roles.create') || can('roles.update') || editingRoleId">
         <div class="card role-editor-card">
           <div class="header">
@@ -103,9 +124,13 @@
                     <h5>{{ role.name }}</h5>
                     <p>{{ role.description || 'No description provided.' }}</p>
                   </div>
-                  <span class="badge" [ngClass]="role.isActive !== false ? 'badge-success' : 'badge-warning'">
-                    {{ role.isActive !== false ? 'active' : 'inactive' }}
-                  </span>
+                  <div class="text-right">
+                    <span class="badge d-inline-block mb-1"
+                      [ngClass]="role.isActive !== false ? 'badge-success' : 'badge-warning'">
+                      {{ role.isActive !== false ? 'active' : 'inactive' }}
+                    </span>
+                    <span class="badge badge-info d-block" *ngIf="role.isSystemRole">system</span>
+                  </div>
                 </div>
 
                 <div class="role-pill-card__permissions">
@@ -115,10 +140,12 @@
                 </div>
 
                 <div class="role-pill-card__actions">
-                  <button class="btn btn-sm btn-default mr-1" *ngIf="can('roles.update')" (click)="editRole(role)">
+                  <button class="btn btn-sm btn-default mr-1" *ngIf="can('roles.update')" (click)="editRole(role)"
+                    [disabled]="role.isSystemRole">
                     Edit
                   </button>
-                  <button class="btn btn-sm btn-danger" *ngIf="can('roles.delete')" (click)="deleteRole(role)">
+                  <button class="btn btn-sm btn-danger" *ngIf="can('roles.delete')" (click)="deleteRole(role)"
+                    [disabled]="role.isSystemRole">
                     Delete
                   </button>
                 </div>

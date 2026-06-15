@@ -12,7 +12,7 @@ import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 
 import { BackendService } from '../../../core/services/backend.service';
-import { Role } from '../../../shared/models/hospital.model';
+import { Hospital, Role, User } from '../../../shared/models/hospital.model';
 
 interface PermissionGroup {
   title: string;
@@ -35,7 +35,6 @@ export class RolesComponent implements OnInit {
     {
       title: 'Hospitals',
       permissions: [
-        { key: 'hospitals.create', label: 'Create Hospitals' },
         { key: 'hospitals.read', label: 'View Hospitals' },
         { key: 'hospitals.update', label: 'Update Hospitals' },
         { key: 'hospitals.delete', label: 'Delete Hospitals' },
@@ -165,11 +164,17 @@ export class RolesComponent implements OnInit {
   readonly roleForm: FormGroup;
 
   roles: Role[] = [];
+  hospitals: Hospital[] = [];
   loading = false;
   saving = false;
+  hospitalsLoading = false;
   search = '';
   status = '';
   editingRoleId: string | null = null;
+  canSelectHospital = false;
+  currentHospitalId = '';
+  currentHospitalName = '';
+  selectedHospitalId = '';
 
   constructor(
     private fb: FormBuilder,
@@ -185,6 +190,8 @@ export class RolesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.setHospitalContext();
+    this.loadHospitals();
     this.loadRoles();
   }
 
@@ -197,9 +204,17 @@ export class RolesComponent implements OnInit {
   }
 
   loadRoles(): void {
+    if (!this.selectedHospitalId && !this.canSelectHospital) {
+      this.roles = [];
+      return;
+    }
+
     this.loading = true;
     this.backend
-      .getRoles({ context: this.roleContext })
+      .getRoles({
+        context: this.roleContext,
+        hospitalId: this.selectedHospitalId || undefined,
+      })
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (roles) => {
@@ -264,11 +279,17 @@ export class RolesComponent implements OnInit {
     }
 
     const raw = this.roleForm.getRawValue();
+    if (!this.selectedHospitalId && this.canSelectHospital) {
+      this.toastr.error('Select a hospital before saving a hospital role.');
+      return;
+    }
+
     const payload = {
       name: String(raw.name || '').trim(),
       description: String(raw.description || '').trim(),
       isActive: Boolean(raw.isActive),
       context: this.roleContext,
+      hospitalId: this.selectedHospitalId || undefined,
       permissions: [...new Set((raw.permissions || []).map((permission: string) => String(permission)))],
     };
 
@@ -294,6 +315,11 @@ export class RolesComponent implements OnInit {
       return;
     }
 
+    if (role.isSystemRole) {
+      this.toastr.info('System roles are shared templates and cannot be edited here.');
+      return;
+    }
+
     this.editingRoleId = role._id;
     this.roleForm.patchValue({
       name: role.name,
@@ -312,11 +338,21 @@ export class RolesComponent implements OnInit {
       return;
     }
 
+    if (role.isSystemRole) {
+      this.toastr.info('System roles are shared templates and cannot be deleted here.');
+      return;
+    }
+
     if (!confirm(`Delete the "${role.name}" role?`)) {
       return;
     }
 
-    this.backend.deleteRole(role._id, { context: this.roleContext }).subscribe({
+    this.backend
+      .deleteRole(role._id, {
+        context: this.roleContext,
+        hospitalId: this.selectedHospitalId || undefined,
+      })
+      .subscribe({
       next: (response) => {
         this.toastr.success(response?.message || 'Role deleted successfully.');
         if (this.editingRoleId === role._id) {
@@ -327,7 +363,7 @@ export class RolesComponent implements OnInit {
       error: (err) => {
         this.toastr.error(err?.error?.message || 'Unable to delete hospital role.');
       },
-    });
+      });
   }
 
   resetForm(): void {
@@ -342,5 +378,39 @@ export class RolesComponent implements OnInit {
 
   visibleRoles(): Role[] {
     return this.roles;
+  }
+
+  onHospitalChange(): void {
+    this.resetForm();
+    this.loadRoles();
+  }
+
+  private setHospitalContext(): void {
+    const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
+    const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
+    this.canSelectHospital = permissions.includes('*');
+    this.currentHospitalId = String(currentUser?.hospitalId || '');
+    this.currentHospitalName = currentUser?.hospital?.name || '';
+    this.selectedHospitalId = this.canSelectHospital ? '' : this.currentHospitalId;
+  }
+
+  private loadHospitals(): void {
+    if (!this.canSelectHospital) {
+      return;
+    }
+
+    this.hospitalsLoading = true;
+    this.backend
+      .getHospitals({ limit: 100 })
+      .pipe(finalize(() => (this.hospitalsLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.hospitals = result.items || [];
+        },
+        error: (err) => {
+          this.hospitals = [];
+          this.toastr.error(err?.error?.message || 'Unable to load hospitals.');
+        },
+      });
   }
 }

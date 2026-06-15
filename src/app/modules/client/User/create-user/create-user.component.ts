@@ -31,6 +31,7 @@ export class CreateUserComponent implements OnInit, OnDestroy {
   currentHospitalName = '';
   canSelectHospital = false;
   canAssignPosStore = false;
+  isHospitalAdminUser = false;
   rolesLoading = false;
   rolesError = '';
   hospitalsLoading = false;
@@ -170,12 +171,16 @@ export class CreateUserComponent implements OnInit, OnDestroy {
     this.currentUser = JSON.parse(localStorage.getItem('user') || 'null') as User | null;
 
     const permissions = JSON.parse(localStorage.getItem('permissions') || '[]') as string[];
+    const currentRoleName = String(
+      this.currentUser?.role?.name || localStorage.getItem('role') || ''
+    );
 
     this.canSelectHospital = permissions.includes('*');
     this.canAssignPosStore =
       this.canSelectHospital ||
       permissions.includes('stores.read') ||
       permissions.includes('stores.manage');
+    this.isHospitalAdminUser = this.normalizeRoleName(currentRoleName) === 'hospitaladmin';
 
     this.currentHospitalId = this.currentUser?.hospitalId || null;
     this.currentHospitalName = this.currentUser?.hospital?.name || '';
@@ -194,11 +199,22 @@ export class CreateUserComponent implements OnInit, OnDestroy {
   }
 
   private loadRoles(): void {
+    const hospitalId = this.getResolvedHospitalId();
+    if (this.canSelectHospital && !hospitalId) {
+      this.roles = [];
+      this.rolesLoading = false;
+      this.rolesError = '';
+      return;
+    }
+
     this.rolesLoading = true;
     this.rolesError = '';
 
     this.backend
-      .getRoles({ context: 'hospital' })
+      .getRoles({
+        context: 'hospital',
+        hospitalId: hospitalId || undefined,
+      })
       .pipe(finalize(() => (this.rolesLoading = false)))
       .subscribe({
         next: (roles) => {
@@ -247,11 +263,23 @@ export class CreateUserComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const hospitalId = this.getResolvedHospitalId();
+    if (this.canSelectHospital && !hospitalId) {
+      this.stores = [];
+      this.storesLoading = false;
+      this.storesError = '';
+      return;
+    }
+
     this.storesLoading = true;
     this.storesError = '';
 
     this.backend
-      .getStores({ limit: 100, isActive: true })
+      .getStores({
+        limit: 100,
+        isActive: true,
+        hospitalId: hospitalId || undefined,
+      })
       .pipe(finalize(() => (this.storesLoading = false)))
       .subscribe({
         next: (result) => {
@@ -302,13 +330,21 @@ export class CreateUserComponent implements OnInit, OnDestroy {
   }
 
   private filterAssignableRoles(roles: Role[]): Role[] {
-    const activeRoles = roles.filter((role) => role.isActive !== false);
+    return roles.filter((role) => {
+      if (role.isActive === false) {
+        return false;
+      }
 
-    if (this.canSelectHospital) {
-      return activeRoles;
-    }
+      if (!this.canSelectHospital && this.isWildcardRole(role)) {
+        return false;
+      }
 
-    return activeRoles.filter((role) => !this.isWildcardRole(role));
+      if (this.isHospitalAdminUser && this.isHospitalAdminRole(role)) {
+        return false;
+      }
+
+      return true;
+    });
   }
 
   private canAssignSelectedRole(roleId: string): boolean {
@@ -317,6 +353,17 @@ export class CreateUserComponent implements OnInit, OnDestroy {
 
   private isWildcardRole(role: Role): boolean {
     return Boolean(role.permissions?.includes('*'));
+  }
+
+  private isHospitalAdminRole(role: Role): boolean {
+    return this.normalizeRoleName(role.name) === 'hospitaladmin';
+  }
+
+  private normalizeRoleName(value: string | null | undefined): string {
+    return String(value || '')
+      .trim()
+      .replace(/[\s_-]/g, '')
+      .toLowerCase();
   }
 
   private getResolvedHospitalId(): string {
@@ -329,4 +376,14 @@ export class CreateUserComponent implements OnInit, OnDestroy {
     return this.currentHospitalId || formHospitalId;
   }
 
+  onHospitalChange(): void {
+    this.userForm.patchValue({
+      roleId: '',
+      storeId: '',
+    });
+    this.roles = [];
+    this.stores = [];
+    this.loadRoles();
+    this.loadStores();
+  }
 }
