@@ -2551,7 +2551,11 @@ export class PrescriptionComponent implements OnInit {
   }
 
   selectAppointment(appointment: Appointment): void {
-    if (this.isCancelledAppointment(appointment) || appointment.status === 'completed') {
+    if (this.isCancelledAppointment(appointment)) {
+      return;
+    }
+
+    if (!this.editingId && appointment.status === 'completed') {
       return;
     }
 
@@ -2598,7 +2602,18 @@ export class PrescriptionComponent implements OnInit {
           item._id === freshAppointment._id ? { ...item, ...freshAppointment } : item
         );
 
-        if (this.selectedAppointmentId !== freshAppointment._id || this.editingId) {
+        if (this.selectedAppointmentId !== freshAppointment._id) {
+          return;
+        }
+
+        if (this.editingId) {
+          const currentVitals = this.buildVitalsPayload(
+            this.vitalsGroup.getRawValue() as Record<string, unknown>,
+            this.customVitals.getRawValue() as Array<Record<string, unknown>>
+          );
+          if (!this.hasAnyVitals(currentVitals) && this.hasAnyVitals(freshAppointment.vitals)) {
+            this.applyVitalsToForm(this.mergeVitalRecords(currentVitals, freshAppointment.vitals || {}));
+          }
           return;
         }
 
@@ -2610,14 +2625,84 @@ export class PrescriptionComponent implements OnInit {
   }
 
   private applyAppointmentVitalsToForm(appointment: Appointment): void {
-    const vitals = (appointment.vitals || {}) as Record<string, string>;
+    this.applyVitalsToForm((appointment.vitals || {}) as Record<string, string>);
+  }
 
+  private applyVitalsToForm(vitals: Record<string, string>): void {
     this.vitalsGroup.patchValue(this.extractDefaultVitals(vitals), { emitEvent: false });
     this.customVitals.clear({ emitEvent: false });
     this.extractCustomVitals(vitals).forEach((entry) =>
       this.customVitals.push(this.createCustomVitalGroup(entry.key, entry.value), { emitEvent: false })
     );
     this.refreshVitalAnalytics();
+  }
+
+  private hasAnyVitals(vitals?: Record<string, string> | null): boolean {
+    return Boolean(vitals && Object.values(vitals).some((value) => String(value || '').trim()));
+  }
+
+  private mergeVitalRecords(
+    primary?: Record<string, string> | null,
+    fallback?: Record<string, string> | null
+  ): Record<string, string> {
+    const merged: Record<string, string> = { ...(fallback || {}) };
+    Object.entries(primary || {}).forEach(([key, value]) => {
+      if (String(value || '').trim()) {
+        merged[key] = String(value);
+      }
+    });
+    return merged;
+  }
+
+  private syncEditModeVitals(prescription: Prescription): void {
+    const prescriptionVitals = (prescription.vitals || {}) as Record<string, string>;
+    const appointmentVitals = (prescription.appointment?.vitals || {}) as Record<string, string>;
+    const mergedFromPrescription = this.mergeVitalRecords(prescriptionVitals, appointmentVitals);
+
+    if (this.hasAnyVitals(mergedFromPrescription)) {
+      this.applyVitalsToForm(mergedFromPrescription);
+      return;
+    }
+
+    const appointmentId = prescription.appointmentId || '';
+    if (!appointmentId || !this.offline.online()) {
+      this.applyVitalsToForm(prescriptionVitals);
+      return;
+    }
+
+    this.backend.getAppointment(appointmentId).subscribe({
+      next: (appointment) => {
+        this.rememberAppointment(appointment);
+        const merged = this.mergeVitalRecords(prescriptionVitals, appointment.vitals || {});
+        this.applyVitalsToForm(merged);
+      },
+      error: () => {
+        this.applyVitalsToForm(prescriptionVitals);
+      },
+    });
+  }
+
+  private rememberAppointment(appointment: Appointment): void {
+    if (this.appointments.some((item) => item._id === appointment._id)) {
+      return;
+    }
+
+    this.appointments = [...this.appointments, appointment];
+  }
+
+  private ensureEditAppointmentLoaded(appointmentId: string): void {
+    if (!appointmentId || !this.offline.online()) {
+      return;
+    }
+
+    if (this.appointments.some((item) => item._id === appointmentId)) {
+      return;
+    }
+
+    this.backend.getAppointment(appointmentId).subscribe({
+      next: (appointment) => this.rememberAppointment(appointment),
+      error: () => undefined,
+    });
   }
 
   editPrescription(prescription: Prescription): void {
@@ -2639,7 +2724,6 @@ export class PrescriptionComponent implements OnInit {
       diagnosis: prescription.diagnosis || '',
       advice: prescription.advice || '',
       followUpDate: prescription.followUpDate ? String(prescription.followUpDate).slice(0, 10) : '',
-      vitals: this.extractDefaultVitals(prescription.vitals || {}),
       admissionOrders: {
         ...this.defaultAdmissionOrders(),
         ...(prescription.admissionOrders || {}),
@@ -2650,9 +2734,6 @@ export class PrescriptionComponent implements OnInit {
       },
     });
     this.customVitals.clear();
-    this.extractCustomVitals(prescription.vitals || {}).forEach((entry) =>
-      this.customVitals.push(this.createCustomVitalGroup(entry.key, entry.value))
-    );
 
     this.medicines.clear();
     (prescription.medicines || []).forEach((medicine) => this.medicines.push(this.createMedicineGroup(medicine as any)));
@@ -2698,6 +2779,8 @@ export class PrescriptionComponent implements OnInit {
       this.patientDocuments.push(this.createPatientDocumentGroup(document))
     );
 
+    this.ensureEditAppointmentLoaded(prescription.appointmentId || '');
+    this.syncEditModeVitals(prescription);
     this.loadDoctorMedicines();
     this.loadPatientHistoryRecords();
     this.refreshVitalAnalytics();
@@ -3366,12 +3449,21 @@ export class PrescriptionComponent implements OnInit {
     if (this.selectedAppointmentId) {
       const appointment = this.appointments.find((item) => item._id === this.selectedAppointmentId);
       if (appointment && !this.isCancelledAppointment(appointment)) {
+        if (this.editingId) {
+          this.rememberAppointment(appointment);
+          return;
+        }
+
         this.selectAppointment(appointment);
         return;
       }
 
       if (appointment && this.isCancelledAppointment(appointment)) {
         this.clearCancelledAppointmentSelection();
+      }
+
+      if (this.editingId) {
+        this.ensureEditAppointmentLoaded(this.selectedAppointmentId);
       }
 
       return;
