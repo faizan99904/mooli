@@ -83,30 +83,60 @@
           <input type="hidden" formControlName="patientId" />
 
           <div class="patient-lookup-panel" *ngIf="phoneLookupPerformed">
-            <div class="lookup-summary" *ngIf="phoneMatchedTotal > 0">
-              {{ phoneMatchedTotal }} patient{{ phoneMatchedTotal === 1 ? '' : 's' }} found against this phone.
+            <div class="lookup-header" *ngIf="phoneMatchedTotal > 0">
+              <div class="lookup-header-main">
+                <span class="lookup-icon" aria-hidden="true"><i class="fa fa-users fa-fw"></i></span>
+                <div>
+                  <strong>{{ phoneMatchedTotal }} patient{{ phoneMatchedTotal === 1 ? '' : 's' }} found</strong>
+                  <span class="lookup-header-phone">Registered on {{ patientPhone || 'this number' }}</span>
+                </div>
+              </div>
+              <span class="lookup-count-badge" [class.is-wide]="phoneMatchedTotal > 9">{{ phoneMatchedTotal }}</span>
             </div>
 
-            <div class="patient-card" *ngFor="let patient of phoneMatchedPatients"
-              [class.selected]="selectedPatient?._id === patient._id">
-              <div class="avatar avatar-green">{{ initials(patientName(patient)) }}</div>
-              <div class="patient-card-main">
-                <strong>{{ patientName(patient) }}</strong>
-                <span>{{ patient.patientNo }}</span>
+            <div class="lookup-empty" *ngIf="phoneMatchedTotal === 0">
+              <span class="lookup-empty-icon" aria-hidden="true"><i class="fa fa-search fa-fw"></i></span>
+              <div>
+                <strong>No patient found</strong>
+                <span>No record exists for {{ patientPhone || 'this number' }} yet.</span>
               </div>
-              <div class="patient-card-meta">
-                <span>{{ patientMeta(patient) }}</span>
-                <span>{{ patient.phone || 'No phone' }}</span>
-              </div>
-              <button type="button" (click)="selectPatient(patient)">
-                {{ selectedPatient?._id === patient._id ? 'Selected' : 'Book Appointment' }}
+            </div>
+
+            <div class="patient-results" *ngIf="phoneMatchedTotal > 0">
+              <button type="button" class="patient-result-card" *ngFor="let patient of phoneMatchedPatients"
+                [class.is-selected]="selectedPatient?._id === patient._id" (click)="selectPatient(patient)">
+                <div class="patient-result-left">
+                  <div class="avatar avatar-green">{{ initials(patientName(patient)) }}</div>
+                  <div class="patient-result-info">
+                    <strong>{{ patientName(patient) }}</strong>
+                    <span class="patient-id">{{ patient.patientNo }}</span>
+                    <div class="patient-tags">
+                      <span class="patient-tag" *ngIf="patientMeta(patient) !== '-'">
+                        <i class="fa fa-user" aria-hidden="true"></i>
+                        {{ patientMeta(patient) }}
+                      </span>
+                      <span class="patient-tag">
+                        <i class="fa fa-phone" aria-hidden="true"></i>
+                        {{ patient.phone || 'No phone' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <span class="patient-select-action" [class.is-selected]="selectedPatient?._id === patient._id">
+                  <i class="fa" aria-hidden="true"
+                    [ngClass]="selectedPatient?._id === patient._id ? 'fa-check' : 'fa-calendar-plus-o'"></i>
+                  {{ selectedPatient?._id === patient._id ? 'Selected' : 'Book' }}
+                </span>
               </button>
             </div>
 
-            <div class="not-found-row">
-              <span>{{ phoneMatchedTotal === 0 ? 'Patient not found?' : 'Need another record on this phone?' }}</span>
-              <button type="button" *ngIf="canCreatePatients" (click)="openAddPatientModal()">
-                <i class="fa fa-user-plus"></i>
+            <div class="lookup-footer">
+              <div class="lookup-footer-text">
+                <i class="fa fa-info-circle" aria-hidden="true"></i>
+                <span>{{ phoneMatchedTotal === 0 ? 'Patient not found?' : 'Need another record on this phone?' }}</span>
+              </div>
+              <button type="button" class="lookup-add-btn" *ngIf="canCreatePatients" (click)="openAddPatientModal()">
+                <i class="fa fa-user-plus" aria-hidden="true"></i>
                 Add New Patient
               </button>
             </div>

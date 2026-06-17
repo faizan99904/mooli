@@ -156,6 +156,10 @@
               Sync
             </button>
             <a class="btn-light" routerLink="/prescriptions/created">Created Prescriptions</a>
+            <button type="button" class="btn-light theme-select-btn" (click)="openPrescriptionThemeModal()">
+              <i class="fa fa-paint-brush"></i>
+              Theme: {{ activePrescriptionTemplateLabel }}
+            </button>
             <button type="button" class="btn-light" [disabled]="saving" (click)="submitPrescription(false)">Save
               Draft</button>
             <button type="button" class="btn-primary" [disabled]="saving" (click)="submitPrescription(true)">
@@ -1022,12 +1026,81 @@
     </form>
   </div>
 
+  <div class="prescription-theme-backdrop" *ngIf="themeModalOpen" (click)="closePrescriptionThemeModal()">
+    <div class="prescription-theme-dialog" role="dialog" aria-labelledby="prescription-theme-title"
+      (click)="$event.stopPropagation()">
+      <div class="prescription-theme-hero">
+        <div class="prescription-theme-hero-main">
+          <span class="prescription-theme-icon" aria-hidden="true"><i class="fa fa-file-text-o"></i></span>
+          <div>
+            <span class="prescription-theme-eyebrow">Prescription Layout</span>
+            <h3 id="prescription-theme-title">Select Prescription Theme</h3>
+            <p>Pick a print design for this consultation. Pharmacy and saved views will always use the same theme.</p>
+          </div>
+        </div>
+        <button type="button" class="prescription-theme-close" (click)="closePrescriptionThemeModal()"
+          aria-label="Close theme dialog">
+          <i class="fa fa-times" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="prescription-theme-selected-pill">
+        <i class="fa fa-paint-brush" aria-hidden="true"></i>
+        <span>Current selection:</span>
+        <strong>{{ activePrescriptionTemplateLabel }}</strong>
+      </div>
+
+      <div class="prescription-theme-grid">
+        <button type="button" class="prescription-theme-card"
+          *ngFor="let template of prescriptionTemplates"
+          [class.is-active]="selectedPrescriptionTemplate === template.id"
+          (click)="selectPrescriptionTemplate(template.id)">
+          <span class="prescription-theme-card-badge" *ngIf="selectedPrescriptionTemplate === template.id">Selected</span>
+          <div class="prescription-theme-preview" [ngClass]="'preview-' + template.id">
+            <span class="preview-line preview-line-head"></span>
+            <span class="preview-line preview-line-sub"></span>
+            <span class="preview-block preview-block-side"></span>
+            <span class="preview-block preview-block-main"></span>
+            <span class="preview-block preview-block-footer"></span>
+          </div>
+          <div class="prescription-theme-card-body">
+            <strong>{{ template.name }}</strong>
+            <span>{{ template.description }}</span>
+          </div>
+          <span class="prescription-theme-radio" aria-hidden="true">
+            <i class="fa fa-check"></i>
+          </span>
+        </button>
+      </div>
+
+      <div class="prescription-theme-note">
+        <i class="fa fa-info-circle" aria-hidden="true"></i>
+        <span>The selected theme is stored with this prescription and cannot be changed in view-only mode.</span>
+      </div>
+
+      <div class="prescription-theme-actions">
+        <button type="button" class="prescription-theme-secondary"
+          *ngIf="canSavePrescriptionTemplate()"
+          [disabled]="savingPrescriptionTemplate"
+          (click)="savePrescriptionTemplate()">
+          <i class="fa fa-star-o" aria-hidden="true"></i>
+          {{ savingPrescriptionTemplate ? 'Saving...' : 'Set as Doctor Default' }}
+        </button>
+        <button type="button" class="prescription-theme-primary" (click)="confirmPrescriptionTheme()">
+          <i class="fa fa-check" aria-hidden="true"></i>
+          Use This Theme
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="print-preview-backdrop" *ngIf="printPreviewOpen">
     <div class="print-preview-dialog">
       <div class="print-preview-toolbar">
         <div>
           <h3>Prescription View</h3>
-          <p>Review prescription details. Use Print if you need a hard copy.</p>
+          <p *ngIf="!isPrintPreviewViewOnly">Review prescription details. Use Print if you need a hard copy.</p>
+          <p *ngIf="isPrintPreviewViewOnly">Saved prescription · Theme: <strong>{{ printPreviewTemplateLabel }}</strong></p>
         </div>
         <div>
           <button type="button" class="btn-light" (click)="closePrintPreview()">Close</button>
@@ -1038,7 +1111,7 @@
         </div>
       </div>
 
-      <div class="print-template-picker" *ngIf="!printPreviewLoading && printPreviewData">
+      <div class="print-template-picker" *ngIf="!printPreviewLoading && printPreviewData && !isPrintPreviewViewOnly">
         <div class="print-template-picker-copy">
           <strong>Prescription Design</strong>
           <span>Select a design to preview before printing.</span>
@@ -1074,9 +1147,9 @@
       <div class="print-preview-scroll">
         <div class="print-preview-loading" *ngIf="printPreviewLoading">Loading prescription preview...</div>
         <section class="prescription-print-sheet" #printContent
-          [ngClass]="'prescription-template-' + selectedPrescriptionTemplate"
+          [ngClass]="'prescription-template-' + printPreviewTemplate"
           *ngIf="!printPreviewLoading && printPreviewData as preview">
-          <ng-container *ngIf="selectedPrescriptionTemplate === 'clinical-blue'; else themedPrescriptionLayout">
+          <ng-container *ngIf="printPreviewTemplate === 'clinical-blue'; else themedPrescriptionLayout">
             <div class="clinical-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
               <header class="clinical-rx-header">
                 <div class="clinical-rx-doctor clinical-rx-doctor-en">
@@ -1283,7 +1356,7 @@
           </ng-container>
 
           <ng-template #themedPrescriptionLayout>
-            <ng-container *ngIf="selectedPrescriptionTemplate === 'minimal-teal'; else purplePrescriptionLayout">
+            <ng-container *ngIf="printPreviewTemplate === 'minimal-teal'; else purplePrescriptionLayout">
               <div class="stacked-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
                 <header class="stacked-rx-header">
                   <div class="stacked-rx-doctor stacked-rx-doctor-en">
@@ -1419,7 +1492,7 @@
             </ng-container>
 
             <ng-template #purplePrescriptionLayout>
-              <ng-container *ngIf="selectedPrescriptionTemplate === 'compact-mono'; else standardPrescriptionLayout">
+              <ng-container *ngIf="printPreviewTemplate === 'compact-mono'; else standardPrescriptionLayout">
                 <div class="sectioned-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
                   <header class="sectioned-rx-header">
                     <div class="sectioned-rx-doctor sectioned-rx-doctor-en">
@@ -1573,7 +1646,7 @@
             </div>
           </header>
 
-          <ng-container *ngIf="selectedPrescriptionTemplate === 'classic'; else alternatePrescriptionMeta">
+          <ng-container *ngIf="printPreviewTemplate === 'classic'; else alternatePrescriptionMeta">
             <div class="print-date-box">
               <strong>DATE: {{ preview.date }}</strong>
               <span>NOT VALID FOR COURT OF LAW.</span>
@@ -1666,7 +1739,7 @@
             </aside>
 
             <main class="print-medicine-area" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
-              <ng-container *ngIf="selectedPrescriptionTemplate === 'classic'; else alternateMedicineTable">
+              <ng-container *ngIf="printPreviewTemplate === 'classic'; else alternateMedicineTable">
                 <table class="print-medicine-table">
                   <thead>
                     <tr>
@@ -1761,7 +1834,7 @@
             </aside>
           </div>
 
-          <section class="print-important-instructions" *ngIf="selectedPrescriptionTemplate !== 'classic'">
+          <section class="print-important-instructions" *ngIf="printPreviewTemplate !== 'classic'">
             <strong>
               <span>IMPORTANT INSTRUCTIONS</span>
               <span class="print-urdu-inline">ضروری ہدایات</span>
@@ -1793,7 +1866,7 @@
             </div>
           </div>
 
-          <div class="print-signature-row" *ngIf="selectedPrescriptionTemplate !== 'classic'">
+          <div class="print-signature-row" *ngIf="printPreviewTemplate !== 'classic'">
             <div></div>
             <div>
               <span></span>

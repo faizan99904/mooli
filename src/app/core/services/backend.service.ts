@@ -262,12 +262,22 @@ export class BackendService {
     );
   }
 
+  getMyDoctorProfile(): Observable<Doctor> {
+    return this.get<Doctor>(`${CONFIG.doctors}/me`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
   createDoctor(payload: Record<string, unknown>): Observable<ApiResponse<Doctor>> {
     return this.post<Doctor>(CONFIG.doctors, payload);
   }
 
   updateDoctor(id: string, payload: Record<string, unknown>): Observable<ApiResponse<Doctor>> {
     return this.patch<Doctor>(`${CONFIG.doctors}/${id}`, payload);
+  }
+
+  updateMyPrescriptionTemplate(payload: { prescriptionTemplate: string }): Observable<ApiResponse<Doctor>> {
+    return this.patch<Doctor>(`${CONFIG.doctors}/me/prescription-template`, payload);
   }
 
   deleteDoctor(id: string): Observable<ApiResponse<Doctor>> {

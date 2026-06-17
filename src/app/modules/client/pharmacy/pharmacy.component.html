@@ -301,12 +301,14 @@
         <div class="print-preview-dialog">
             <div class="print-preview-toolbar">
                 <div>
-                    <h3>Prescription Preview</h3>
-                    <p>Pharmacy can review and print the doctor's prescription.</p>
+                    <h3>Prescription View</h3>
+                    <p>
+                        {{ printPreviewLoading ? 'Loading latest prescription...' : 'Theme: ' + viewTemplateLabel }}
+                    </p>
                 </div>
                 <div>
                     <button type="button" class="btn btn-default" (click)="closePrintPreview()">Close</button>
-                    <button type="button" class="btn btn-primary" [disabled]="printPreviewLoading"
+                    <button type="button" class="btn btn-primary" [disabled]="printPreviewLoading || !printPreviewData"
                         (click)="printPrescription()">
                         <i class="fa fa-print"></i>
                         Print
@@ -315,175 +317,14 @@
             </div>
 
             <div class="print-preview-scroll">
-                <div class="print-preview-loading" *ngIf="printPreviewLoading">Loading prescription preview...</div>
-                <section class="prescription-print-sheet" #printContent
-                    *ngIf="!printPreviewLoading && printPreviewData as preview">
-                    <header class="print-header">
-                        <div class="doctor-print-left">
-                            <h1>{{ preview.doctorName }}</h1>
-                            <strong>{{ preview.doctorQualification }}</strong>
-                            <span>Consultant Physician</span>
-                            <span>MediLink City Care Hospital</span>
-                        </div>
-                        <div class="print-logo-mark">Rx</div>
-                        <div class="doctor-print-right">
-                            <h2>ڈاکٹر {{ preview.doctorName }}</h2>
-                            <strong>{{ preview.doctorQualification }}</strong>
-                            <span>کنسلٹنٹ فزیشن</span>
-                            <span>میڈی لنک سٹی کیئر ہسپتال</span>
-                        </div>
-                    </header>
-
-                    <div class="print-date-box">
-                        <strong>DATE: {{ preview.date }}</strong>
-                        <span>NOT VALID FOR COURT OF LAW.</span>
-                    </div>
-
-                    <table class="print-patient-table">
-                        <tr>
-                            <th>Patient Name</th>
-                            <td>{{ preview.patientName }}</td>
-                            <th>Age</th>
-                            <td>{{ preview.patientAge }}</td>
-                            <th>Sex</th>
-                            <td>{{ preview.patientGender }}</td>
-                            <th>F.No.</th>
-                            <td>{{ preview.patientNo }}</td>
-                        </tr>
-                        <tr>
-                            <th>Address</th>
-                            <td colspan="3">{{ preview.patientAddress }}</td>
-                            <th colspan="2">CELL NO</th>
-                            <td colspan="2">{{ preview.patientPhone }}</td>
-                        </tr>
-                        <tr>
-                            <th>Disease</th>
-                            <td colspan="7">{{ preview.disease }}</td>
-                        </tr>
-                    </table>
-
-                    <div class="print-body-grid">
-                        <aside class="print-side-panel">
-                            <div class="print-mini-title">O/E</div>
-                            <table>
-                                <tr>
-                                    <th>BP</th>
-                                    <td>{{ preview.vitals['bp'] || '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>WT kg</th>
-                                    <td>{{ preview.vitals['weight'] || '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>PR/min</th>
-                                    <td>{{ preview.vitals['pulse'] || '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>TEMP</th>
-                                    <td>{{ preview.vitals['temperature'] || '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>SPO2</th>
-                                    <td>{{ preview.vitals['spo2'] || '-' }}</td>
-                                </tr>
-                            </table>
-
-                            <div class="print-mini-title labs-title">LAB's</div>
-                            <table>
-                                <tr *ngFor="let test of preview.labTests">
-                                    <th>{{ test.name }}</th>
-                                    <td>✓</td>
-                                </tr>
-                                <tr *ngIf="preview.labTests.length === 0">
-                                    <th>Others</th>
-                                    <td>-</td>
-                                </tr>
-                            </table>
-
-                            <div class="follow-up-print">
-                                <strong>FOLLOW UP:</strong>
-                                <span>{{ preview.followUpDate }}</span>
-                            </div>
-                        </aside>
-
-                        <main class="print-medicine-area">
-                            <table class="print-medicine-table">
-                                <thead>
-                                    <tr>
-                                        <th class="print-medicine-title" rowspan="2">
-                                            Medicines<br /><span>(دوائیاں)</span></th>
-                                        <th rowspan="2">مدت</th>
-                                        <th rowspan="2">غذا کے بعد</th>
-                                        <th rowspan="2">غذا سے پہلے</th>
-                                        <th colspan="4">وقت</th>
-                                    </tr>
-                                    <tr>
-                                        <th>صبح</th>
-                                        <th>دوپہر</th>
-                                        <th>شام</th>
-                                        <th>رات</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr *ngFor="let medicine of preview.medicines">
-                                        <td class="print-med-name">
-                                            <strong>{{ medicine.name || 'Medicine' }}</strong>
-                                            <span>{{ medicine.dosage || '' }}</span>
-                                            <small>{{ medicine.instructions || '' }}</small>
-                                        </td>
-                                        <td>{{ medicine.duration || '-' }}</td>
-                                        <td>{{ medicine.afterMeal ? '√' : '' }}</td>
-                                        <td>{{ medicine.beforeMeal ? '√' : '' }}</td>
-                                        <td>{{ slotDose(medicine, 'morning') }}</td>
-                                        <td>{{ slotDose(medicine, 'noon') }}</td>
-                                        <td>{{ slotDose(medicine, 'evening') }}</td>
-                                        <td>{{ slotDose(medicine, 'night') }}</td>
-                                    </tr>
-                                    <tr *ngFor="let row of [1, 2, 3, 4, 5]">
-                                        <td>&nbsp;</td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <div class="print-urdu-note">
-                                بلڈ پریشر کے لئے نمک کم استعمال کریں۔ چکنائی کم کریں۔ روزانہ 30 منٹ پیدل چلیں۔
-                                دوائی جاری رکھیں اور ڈاکٹر کے مشورے کے بغیر دوا بند نہ کریں۔
-                            </div>
-                        </main>
-
-                        <aside class="print-right-note">
-                            <strong>نوٹ :</strong>
-                            <p>جس دوائی کے سامنے جاری رکھیں لکھا ہو اس دوائی کو جب تک ڈاکٹر سے مشورہ نہ لیں جاری رکھیں۔
-                            </p>
-                        </aside>
-                    </div>
-
-                    <div class="print-clinical-notes"
-                        *ngIf="preview.patientNote || preview.consultation || preview.admissionOrderLines.length">
-                        <div class="print-patient-note" *ngIf="preview.patientNote">
-                            <strong>Note to Patient</strong>
-                            <p>{{ preview.patientNote }}</p>
-                        </div>
-                        <div class="print-order-notes" *ngIf="preview.consultation || preview.admissionOrderLines.length">
-                            <strong>Orders</strong>
-                            <p *ngIf="preview.consultation"><span>Consultation:</span> {{ preview.consultation }}</p>
-                            <p *ngFor="let line of preview.admissionOrderLines">{{ line }}</p>
-                        </div>
-                    </div>
-
-                    <footer class="print-footer">
-                        <strong>* Rx to be revised after Reports.</strong>
-                        <p>For appointment and follow up, contact MediLink City Care Hospital.</p>
-                        <p>Email: info&#64;medilink.local | Phone: 0300-0000000</p>
-                    </footer>
-                </section>
+                <div class="print-preview-loading" *ngIf="printPreviewLoading && !printPreviewData">
+                    Loading prescription view...
+                </div>
+                <app-prescription-print-sheet
+                    *ngIf="printPreviewData"
+                    [preview]="printPreviewData"
+                    [template]="printPreviewTemplate">
+                </app-prescription-print-sheet>
             </div>
         </div>
     </div>

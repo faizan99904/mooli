@@ -266,6 +266,7 @@ export interface Prescription {
   vitals?: Record<string, string> | null;
   advice?: string | null;
   followUpDate?: string | null;
+  prescriptionTemplate?: PrescriptionTemplate;
   createdAt?: string;
   updatedAt?: string;
 }

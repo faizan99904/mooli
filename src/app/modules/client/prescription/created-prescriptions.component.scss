@@ -203,6 +203,77 @@
   white-space: nowrap;
 }
 
+.created-view-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.58);
+  box-sizing: border-box;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  overflow-y: auto;
+  padding: clamp(12px, 3vh, 28px);
+  position: fixed;
+  z-index: 1050;
+}
+
+.created-view-dialog {
+  background: #f8fafc;
+  border-radius: 8px;
+  box-shadow: 0 22px 70px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 36px);
+  max-width: 1120px;
+  overflow: hidden;
+  width: min(1120px, 100%);
+}
+
+.created-view-toolbar {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid var(--rx-line);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.created-view-toolbar h3 {
+  color: var(--rx-ink);
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.created-view-toolbar p {
+  color: var(--rx-muted);
+  margin: 3px 0 0;
+}
+
+.created-view-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.created-view-scroll {
+  flex: 1 1 auto;
+  max-height: calc(100vh - 120px);
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+}
+
+.created-view-scroll .prescription-print-sheet {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.created-view-loading {
+  color: var(--rx-muted);
+  padding: 22px;
+  text-align: center;
+}
+
 @media (max-width: 900px) {
   .page-heading {
     align-items: stretch;
@@ -243,5 +314,22 @@
 
   .page-heading-actions {
     flex-direction: column;
+  }
+
+  .created-view-backdrop {
+    padding: 8px;
+  }
+
+  .created-view-dialog {
+    max-height: calc(100vh - 16px);
+  }
+
+  .created-view-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .created-view-actions {
+    justify-content: flex-end;
   }
 }

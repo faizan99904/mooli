@@ -1,44 +1,39 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { AppDialogService } from '../../../core/services/app-dialog.service';
 import { BackendService } from '../../../core/services/backend.service';
 import {
   Category,
+  Doctor,
+  Hospital,
   Patient,
   Prescription,
+  PrescriptionPrintSettings,
+  PrescriptionTemplate,
   ProductDiscountType,
   ProductCatalogItem,
   Store,
   User,
 } from '../../../shared/models/hospital.model';
 import { legacyAdmissionOrdersToItems } from '../prescription/admission-order-data';
-
-interface PrintPreviewData {
-  patient: Patient;
-  patientName: string;
-  patientAge: string;
-  patientGender: string;
-  patientNo: string;
-  patientAddress: string;
-  patientPhone: string;
-  doctorName: string;
-  doctorQualification: string;
-  date: string;
-  disease: string;
-  vitals: Record<string, string>;
-  labTests: Array<{ name: string; category: string }>;
-  medicines: Prescription['medicines'];
-  followUpDate: string;
-  patientNote: string;
-  consultation: string;
-  admissionOrderLines: string[];
-}
+import { PrescriptionPrintPreviewData } from '../prescription/prescription-print-data.model';
+import { PrescriptionPrintSheetComponent } from '../prescription/prescription-print-sheet.component';
+import {
+  formatEnglishAddress,
+  formatEnglishDoctorName,
+  formatEnglishDoctorTitle,
+  formatEnglishOrganizationName,
+  formatUrduAddress,
+  formatUrduDoctorName,
+  formatUrduDoctorTitle,
+  formatUrduOrganizationName,
+  formatUrduQualification,
+  stripDoctorPrefix,
+} from '../prescription/prescription-print-urdu';
 
 interface PharmacyProductForm {
   name: string;
@@ -65,18 +60,22 @@ interface PharmacyProductForm {
 @Component({
   selector: 'app-pharmacy',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, PrescriptionPrintSheetComponent],
   templateUrl: './pharmacy.component.html',
   styleUrl: './pharmacy.component.scss',
 })
 export class PharmacyComponent implements OnInit {
-  @ViewChild('printContent', { static: false }) printContent!: ElementRef;
+  @ViewChild(PrescriptionPrintSheetComponent, { static: false })
+  printSheet?: PrescriptionPrintSheetComponent;
 
   prescriptions: Prescription[] = [];
   products: ProductCatalogItem[] = [];
   categories: Category[] = [];
   stores: Store[] = [];
   patients: Patient[] = [];
+  doctors: Doctor[] = [];
+  currentHospital: Hospital | null = null;
+  currentHospitalId: string | null = null;
   selectedPatientId = '';
   loading = false;
   productsLoading = false;
@@ -88,7 +87,22 @@ export class PharmacyComponent implements OnInit {
   printPreviewOpen = false;
   printPreviewLoading = false;
   previewPrescription: Prescription | null = null;
-  printPreviewData: PrintPreviewData | null = null;
+  printPreviewData: PrescriptionPrintPreviewData | null = null;
+  readonly prescriptionTemplates: Array<{ id: PrescriptionTemplate; name: string }> = [
+    { id: 'classic', name: 'Classic' },
+    { id: 'clinical-blue', name: 'Clinical Blue' },
+    { id: 'minimal-teal', name: 'Structure B · Green' },
+    { id: 'compact-mono', name: 'Structure C · Purple' },
+  ];
+  readonly defaultVitalKeys = new Set(['bp', 'pulse', 'weight', 'temperature', 'spo2']);
+  readonly defaultVitalLabels: Record<string, string> = {
+    bp: 'BP',
+    pulse: 'Pulse',
+    weight: 'Weight',
+    temperature: 'Temperature',
+    spo2: 'SpO2',
+  };
+  private viewRequestId = 0;
   page = 1;
   limit = 10;
   totalPages = 0;
@@ -124,6 +138,8 @@ export class PharmacyComponent implements OnInit {
     });
 
     this.loadPatients();
+    this.loadDoctors();
+    this.refreshCurrentHospital();
     this.refreshCurrentUser();
     this.loadStores();
     this.loadCategories();
@@ -172,6 +188,44 @@ export class PharmacyComponent implements OnInit {
     return `Missing POS permissions: ${this.missingPosPermissions.join(', ')}`;
   }
 
+  get viewTemplateLabel(): string {
+    return (
+      this.prescriptionTemplates.find((template) => template.id === this.printPreviewTemplate)?.name ||
+      'Classic'
+    );
+  }
+
+  get printPreviewTemplate(): PrescriptionTemplate {
+    return this.printPreviewData?.template || 'classic';
+  }
+
+  loadDoctors(): void {
+    this.backend.getDoctors({ limit: 100, status: 'active' }).subscribe({
+      next: (result) => {
+        this.doctors = result.items;
+        this.prescriptions = this.prescriptions.map((item) => ({
+          ...item,
+          prescriptionTemplate: this.resolvePrescriptionTemplate(item),
+        }));
+        this.refreshOpenViewPreview();
+      },
+      error: () => {
+        this.doctors = [];
+      },
+    });
+  }
+
+  refreshCurrentHospital(): void {
+    this.backend.getMe().subscribe({
+      next: (user) => {
+        this.currentHospitalId = user.hospitalId || this.currentHospitalId;
+        this.currentHospital = user.hospital || this.currentHospital;
+        this.refreshOpenViewPreview();
+      },
+      error: () => undefined,
+    });
+  }
+
   loadPatients(): void {
     this.backend.getPatients({ limit: 100, status: 'active' }).subscribe({
       next: (result) => (this.patients = result.items),
@@ -211,7 +265,10 @@ export class PharmacyComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (result) => {
-          this.prescriptions = result.items;
+          this.prescriptions = result.items.map((item) => ({
+            ...item,
+            prescriptionTemplate: this.resolvePrescriptionTemplate(item),
+          }));
           this.totalPages = result.pagination.totalPages;
         },
         error: (err) => {
@@ -556,62 +613,74 @@ export class PharmacyComponent implements OnInit {
   }
 
   openPrintPreview(prescription: Prescription): void {
-    this.previewPrescription = prescription;
-    this.printPreviewData = this.buildPrintPreviewData(prescription);
+    const requestId = ++this.viewRequestId;
+    const fallbackTemplate = this.resolvePrescriptionTemplate(prescription);
+
     this.printPreviewOpen = true;
     this.printPreviewLoading = true;
+    this.previewPrescription = {
+      ...prescription,
+      prescriptionTemplate: fallbackTemplate,
+    };
+    this.printPreviewData = this.buildPrintPreviewData(this.previewPrescription, fallbackTemplate);
 
     this.backend
       .getPrescription(prescription._id)
-      .pipe(finalize(() => (this.printPreviewLoading = false)))
+      .pipe(
+        finalize(() => {
+          if (requestId === this.viewRequestId) {
+            this.printPreviewLoading = false;
+          }
+        })
+      )
       .subscribe({
-        next: (result) => {
-          this.previewPrescription = result;
-          this.printPreviewData = this.buildPrintPreviewData(result);
+        next: (freshPrescription) => {
+          if (requestId !== this.viewRequestId) {
+            return;
+          }
+
+          const resolvedTemplate = this.resolvePrescriptionTemplate(freshPrescription, fallbackTemplate);
+          const resolvedPrescription: Prescription = {
+            ...freshPrescription,
+            prescriptionTemplate: resolvedTemplate,
+          };
+
+          this.previewPrescription = resolvedPrescription;
+          this.printPreviewData = this.buildPrintPreviewData(resolvedPrescription, resolvedTemplate);
+          this.prescriptions = this.prescriptions.map((item) =>
+            item._id === resolvedPrescription._id ? resolvedPrescription : item
+          );
         },
         error: (err) => {
-          this.toastr.error(err?.error?.message || 'Unable to load prescription preview.');
+          if (requestId !== this.viewRequestId) {
+            return;
+          }
+
+          if (!this.printPreviewData) {
+            this.printPreviewOpen = false;
+            this.toastr.error(err?.error?.message || 'Unable to load prescription view.');
+          } else {
+            this.toastr.info('Showing cached prescription view.');
+          }
         },
       });
   }
 
   closePrintPreview(): void {
+    this.viewRequestId += 1;
     this.printPreviewOpen = false;
     this.printPreviewLoading = false;
     this.previewPrescription = null;
     this.printPreviewData = null;
   }
 
-  slotDose(medicine: Prescription['medicines'][number] | null | undefined, slot: 'morning' | 'noon' | 'evening' | 'night'): string {
-    const doseKey = `${slot}Dose` as 'morningDose' | 'noonDose' | 'eveningDose' | 'nightDose';
-    const dose = String(medicine?.[doseKey] || '').trim();
-    if (dose) {
-      return dose;
-    }
-
-    return medicine?.[slot] ? '1' : '';
-  }
-
   printPrescription(): void {
-    if (!this.printContent?.nativeElement) {
+    const content = this.printSheet?.printContent?.nativeElement?.outerHTML;
+    if (!content) {
       return;
     }
 
-    html2canvas(this.printContent.nativeElement, {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      useCORS: true,
-    }).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
-      (pdf as any).autoPrint?.();
-      const printUrl = pdf.output('bloburl');
-      window.open(printUrl, '_blank');
-    });
+    this.openPrescriptionPrintWindow(content);
   }
 
   private normalizeText(value: string): string {
@@ -786,35 +855,76 @@ export class PharmacyComponent implements OnInit {
       .slice(0, 30) || 'MED';
   }
 
-  private buildPrintPreviewData(prescription: Prescription): PrintPreviewData | null {
+  private buildPrintPreviewData(
+    prescription: Prescription,
+    fallbackTemplate?: PrescriptionTemplate
+  ): PrescriptionPrintPreviewData | null {
     const patient = this.resolvePrintPatient(prescription);
     if (!patient) {
       return null;
     }
 
-    const labTests = (prescription.labTests || [])
-      .filter((test) => Boolean(test.name))
-      .map((test) => ({
-        name: test.name,
-        category: test.category || '',
-      }));
+    const doctor = this.resolveViewDoctor(prescription);
+    const hospital = this.currentHospital;
+    const settings = this.resolvePrescriptionSettings(hospital);
+    const vitals = this.safeStringRecord(prescription.vitals);
+    const hospitalName = hospital?.name || 'MediLink City Care Hospital';
+    const hospitalAddress = this.hospitalAddressLine(hospital);
+    const hospitalLogoUrl = this.safeHospitalLogoUrl(hospital?.logoUrl);
+    const doctorDisplayName = prescription.doctor?.name || this.doctorName(doctor);
+    const doctorQualification =
+      doctor?.qualification ||
+      (doctor?.specialization && !/consultant|physician/i.test(doctor.specialization)
+        ? doctor.specialization
+        : 'M.B.B.S., F.C.P.S.');
 
     return {
+      template: this.resolvePrescriptionTemplate(prescription, fallbackTemplate),
       patient,
       patientName: this.patientName(patient),
       patientAge: this.ageLabel(patient),
       patientGender: this.genderShort(patient),
       patientNo: patient.patientNo || '-',
-      patientAddress: patient.address || '-',
       patientPhone: patient.phone || '-',
-      doctorName: prescription.doctor?.name || '-',
-      doctorQualification: 'M.B.B.S., F.C.P.S.',
+      patientAddress: formatEnglishAddress(patient.address) || '-',
+      doctorName: formatEnglishDoctorName(doctorDisplayName),
+      doctorNamePlain: stripDoctorPrefix(doctorDisplayName),
+      doctorNameUrdu: formatUrduDoctorName(doctorDisplayName, doctor?.nameUrdu),
+      doctorQualification,
+      doctorQualificationUrdu: formatUrduQualification(doctorQualification),
+      doctorTitleEnglish: formatEnglishDoctorTitle(),
+      doctorTitleUrdu: formatUrduDoctorTitle(),
+      hospitalName: formatEnglishOrganizationName(hospitalName) || hospitalName,
+      hospitalNameUrdu: formatUrduOrganizationName(hospitalName) || hospitalName,
+      hospitalAddress: formatEnglishAddress(hospitalAddress),
+      hospitalAddressUrdu: formatUrduAddress(hospitalAddress) || formatEnglishAddress(hospitalAddress),
+      hospitalLogoUrl,
+      showHospitalLogo: settings.showLogo !== false && Boolean(hospitalLogoUrl),
+      prescriptionRevisionNote: settings.revisionNote || '* Rx to be revised after Reports.',
+      prescriptionFollowUpLine:
+        settings.followUpLine || `For appointment and follow up, contact ${hospitalName}.`,
+      prescriptionFooterLines: this.prescriptionFooterLines(hospital, settings),
       date: this.formatPrintDate(prescription.createdAt || new Date()),
+      prescriptionNo: this.formatPrescriptionNumber(prescription._id),
       disease: prescription.diagnosis || prescription.chiefComplaint || prescription.history || '-',
-      vitals: prescription.vitals || {},
-      labTests,
-      medicines: prescription.medicines || [],
-      followUpDate: this.shortDate(prescription.followUpDate),
+      vitals,
+      vitalRows: this.vitalEntries(vitals),
+      labTests: (prescription.labTests || [])
+        .filter((test) => String(test.name || '').trim())
+        .map((test) => ({
+          name: String(test.name || '').trim(),
+          category: String(test.category || '').trim(),
+        })),
+      ivFluids: (prescription.ivFluids || [])
+        .filter((fluid) => String(fluid.name || '').trim())
+        .map((fluid) => ({
+          name: String(fluid.name || '').trim(),
+          rate: String(fluid.rate || '').trim() || '-',
+          quantity: String(fluid.duration || '').trim() || '-',
+          route: String(fluid.route || 'IV').trim() || 'IV',
+        })),
+      medicines: (prescription.medicines || []).map((medicine) => ({ ...medicine })),
+      followUpDate: prescription.followUpDate ? this.shortDate(prescription.followUpDate) : '-',
       patientNote: String(prescription.advice || '').trim(),
       consultation: String(prescription.admissionOrders?.consultation || '').trim(),
       admissionOrderLines: this.resolvePrintAdmissionOrderLines(prescription),
@@ -889,5 +999,200 @@ export class PharmacyComponent implements OnInit {
       })
       .replace(/ /g, '-')
       .toUpperCase();
+  }
+
+  private refreshOpenViewPreview(): void {
+    if (!this.previewPrescription || !this.printPreviewData || !this.printPreviewOpen) {
+      return;
+    }
+
+    const template = this.resolvePrescriptionTemplate(this.previewPrescription);
+    this.previewPrescription = {
+      ...this.previewPrescription,
+      prescriptionTemplate: template,
+    };
+    this.printPreviewData = this.buildPrintPreviewData(this.previewPrescription, template);
+  }
+
+  private resolvePrescriptionTemplate(
+    prescription: Prescription | null | undefined,
+    fallbackTemplate?: PrescriptionTemplate
+  ): PrescriptionTemplate {
+    const savedTemplate = prescription?.prescriptionTemplate;
+    const doctor = this.resolveViewDoctor(prescription);
+    const doctorTemplate = doctor?.prescriptionTemplate;
+
+    if (this.isPrescriptionTemplate(doctorTemplate) && doctorTemplate !== 'classic') {
+      return doctorTemplate;
+    }
+
+    if (this.isPrescriptionTemplate(savedTemplate)) {
+      return savedTemplate;
+    }
+
+    if (this.isPrescriptionTemplate(fallbackTemplate)) {
+      return fallbackTemplate;
+    }
+
+    return 'classic';
+  }
+
+  private resolveViewDoctor(prescription: Prescription | null | undefined): Doctor | null {
+    const ids = [prescription?.doctorId, prescription?.doctor?._id]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+
+    return (
+      this.doctors.find((doctor) => {
+        const doctorProfileId = String(doctor._id || '').trim();
+        const doctorUserId = String(doctor.userId || '').trim();
+        return ids.includes(doctorProfileId) || ids.includes(doctorUserId);
+      }) || null
+    );
+  }
+
+  private doctorName(doctor?: Doctor | null): string {
+    return doctor?.user?.name || doctor?.specialization || '-';
+  }
+
+  private isPrescriptionTemplate(value: unknown): value is PrescriptionTemplate {
+    return this.prescriptionTemplates.some((template) => template.id === value);
+  }
+
+  private safeStringRecord(value: unknown): Record<string, string> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {};
+    }
+
+    return Object.entries(value as Record<string, unknown>).reduce((record, [key, entryValue]) => {
+      const safeKey = String(key || '').trim();
+      if (safeKey) {
+        record[safeKey] = String(entryValue ?? '').trim();
+      }
+      return record;
+    }, {} as Record<string, string>);
+  }
+
+  private vitalEntries(vitals: Record<string, string> | null | undefined): Array<{ label: string; value: string }> {
+    const source = vitals || {};
+    const orderedDefaultEntries = ['bp', 'weight', 'pulse', 'temperature', 'spo2']
+      .filter((key) => Object.prototype.hasOwnProperty.call(source, key))
+      .map((key) => ({
+        label: this.defaultVitalLabels[key] || key,
+        value: String(source[key] || '').trim() || '-',
+      }));
+
+    const customEntries = Object.entries(source)
+      .filter(([key]) => !this.defaultVitalKeys.has(key))
+      .map(([key, value]) => ({
+        label: this.formatVitalLabel(key),
+        value: String(value || '').trim() || '-',
+      }));
+
+    return [...orderedDefaultEntries, ...customEntries];
+  }
+
+  private resolvePrescriptionSettings(hospital: Hospital | null): PrescriptionPrintSettings {
+    return {
+      showLogo: hospital?.prescriptionSettings?.showLogo !== false,
+      revisionNote: hospital?.prescriptionSettings?.revisionNote || '* Rx to be revised after Reports.',
+      followUpLine: hospital?.prescriptionSettings?.followUpLine || '',
+      contactLine: hospital?.prescriptionSettings?.contactLine || '',
+      footerLines: hospital?.prescriptionSettings?.footerLines || [],
+    };
+  }
+
+  private hospitalAddressLine(hospital: Hospital | null): string {
+    return [hospital?.address, hospital?.city, hospital?.country].filter(Boolean).join(', ');
+  }
+
+  private prescriptionFooterLines(hospital: Hospital | null, settings: PrescriptionPrintSettings): string[] {
+    const configuredLines = (settings.footerLines || []).filter((line) => Boolean(line?.trim()));
+
+    if (configuredLines.length > 0) {
+      return configuredLines;
+    }
+
+    const contactLine = settings.contactLine || this.defaultHospitalContactLine(hospital);
+    return contactLine ? [contactLine] : [];
+  }
+
+  private defaultHospitalContactLine(hospital: Hospital | null): string {
+    const parts = [
+      hospital?.email ? `Email: ${hospital.email}` : '',
+      hospital?.phone ? `Phone: ${hospital.phone}` : '',
+    ].filter(Boolean);
+
+    return parts.join(' | ') || 'Email: info@medilink.local | Phone: 0300-0000000';
+  }
+
+  private safeHospitalLogoUrl(value: unknown): string {
+    const logoUrl = String(value || '').trim();
+    if (!logoUrl) {
+      return '';
+    }
+
+    return logoUrl.startsWith('data:image/') && logoUrl.length > 1000000 ? '' : logoUrl;
+  }
+
+  private formatVitalLabel(key: string): string {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/_/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^./, (letter) => letter.toUpperCase());
+  }
+
+  private formatPrescriptionNumber(value: unknown): string {
+    const rawValue = String(value || '').trim();
+    if (!rawValue) {
+      return 'DRAFT';
+    }
+
+    const compactValue = rawValue.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    return `RX-${compactValue.slice(-6).padStart(6, '0')}`;
+  }
+
+  private openPrescriptionPrintWindow(content: string): void {
+    const iframe = document.createElement('iframe');
+    const baseHref = document.baseURI || window.location.href;
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const printDocument = iframe.contentWindow?.document;
+    const printWindow = iframe.contentWindow;
+    if (!printDocument || !printWindow) {
+      iframe.remove();
+      return;
+    }
+
+    printDocument.open();
+    printDocument.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <base href="${baseHref}">
+          <title>Prescription Print</title>
+          ${Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+            .map((node) => node.outerHTML)
+            .join('')}
+        </head>
+        <body>${content}</body>
+      </html>
+    `);
+    printDocument.close();
+
+    printWindow.focus();
+    window.setTimeout(() => {
+      printWindow.print();
+      window.setTimeout(() => iframe.remove(), 1000);
+    }, 250);
   }
 }

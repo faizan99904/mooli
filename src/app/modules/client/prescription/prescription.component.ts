@@ -227,6 +227,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   routePatientId = '';
   routeDoctorId = '';
   routeAppointmentId = '';
+  routePrescriptionTemplate: PrescriptionTemplate | null = null;
   activeTab = 'prescription';
   patientSearch = '';
   printPreviewOpen = false;
@@ -234,7 +235,12 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   previewPrescription: Prescription | null = null;
   printPreviewData: PrintPreviewData | null = null;
   selectedPrescriptionTemplate: PrescriptionTemplate = 'classic';
+  draftPrescriptionTemplate: PrescriptionTemplate | null = null;
+  private prescriptionThemeTouched = false;
   savingPrescriptionTemplate = false;
+  themeModalOpen = false;
+  prescriptionThemeConfirmed = false;
+  private themeModalInitialized = false;
   readonly prescriptionTemplates: Array<{
     id: PrescriptionTemplate;
     name: string;
@@ -471,6 +477,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       this.routePatientId = params.get('patientId') || '';
       this.routeDoctorId = params.get('doctorId') || '';
       this.routeAppointmentId = params.get('appointmentId') || '';
+      this.routePrescriptionTemplate = this.readPrescriptionTemplateParam(params.get('template'));
       this.selectedPatientId = this.routePatientId;
       this.selectedAppointmentId = this.routeAppointmentId;
       this.applyRouteDefaults();
@@ -495,6 +502,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.refreshIvFluidRows();
     this.refreshAdmissionOrderRows();
     this.refreshPatientDocumentRows();
+    window.setTimeout(() => this.maybeOpenThemeModal(), 0);
   }
 
   ngOnDestroy(): void {
@@ -539,6 +547,29 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   get canUpdatePrescriptions(): boolean {
     return this.backend.hasPermission('prescriptions.update');
+  }
+
+  get isPrintPreviewViewOnly(): boolean {
+    const previewId = String(this.previewPrescription?._id || '').trim();
+    return Boolean(previewId) && previewId !== String(this.editingId || '').trim();
+  }
+
+  get activePrescriptionTemplateLabel(): string {
+    return (
+      this.prescriptionTemplates.find((template) => template.id === this.getActivePrescriptionTheme())?.name ||
+      'Classic'
+    );
+  }
+
+  get printPreviewTemplate(): PrescriptionTemplate {
+    return this.printPreviewData?.template || this.getActivePrescriptionTheme();
+  }
+
+  get printPreviewTemplateLabel(): string {
+    return (
+      this.prescriptionTemplates.find((template) => template.id === this.printPreviewTemplate)?.name ||
+      'Classic'
+    );
   }
 
   get canDeletePrescriptions(): boolean {
@@ -659,6 +690,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   private isPrescriptionShortcutBlocked(): boolean {
     return Boolean(
+      this.themeModalOpen ||
       this.printPreviewOpen ||
       this.medicineLibraryOpen ||
       this.vitalsModalOpen ||
@@ -2132,6 +2164,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       next: (result) => {
         this.doctors = result.items;
         void this.offline.cacheValue(this.doctorsCacheKey(), this.doctors);
+        this.maybeOpenThemeModal();
+        this.refreshOpenPreviewData();
       },
       error: () => {
         void this.loadCachedDoctors();
@@ -2492,7 +2526,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   openPatientHistoryView(prescription: Prescription): void {
-    this.openPrintPreview(prescription);
+    this.openPrintPreviewWithFreshData(prescription);
   }
 
   openPatientHistoryEdit(prescription: Prescription): void {
@@ -2501,6 +2535,11 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   private handlePrescriptionRouteAction(prescriptionId: string, mode: string): void {
     if (!prescriptionId || !mode) {
+      return;
+    }
+
+    if (mode === 'view') {
+      this.openPrintPreviewWithFreshData({ _id: prescriptionId } as Prescription);
       return;
     }
 
@@ -2596,6 +2635,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       ),
       advice: value.advice || undefined,
       followUpDate: value.followUpDate || undefined,
+      prescriptionTemplate: this.getActivePrescriptionTheme(),
     };
 
     if (!this.editingId) {
@@ -2616,16 +2656,27 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     request$.pipe(finalize(() => (this.saving = false))).subscribe({
       next: (response) => {
         this.toastr.success(response.message);
-        this.editingId = response.data?._id || this.editingId;
+        const savedPrescription = this.enrichPrescriptionTemplate(response.data, {
+          allowFallback: true,
+          fallbackTemplate: this.getActivePrescriptionTheme(),
+        });
+        if (savedPrescription?.prescriptionTemplate) {
+          this.draftPrescriptionTemplate = savedPrescription.prescriptionTemplate;
+          this.selectedPrescriptionTemplate = savedPrescription.prescriptionTemplate;
+        }
+        this.editingId = savedPrescription?._id || this.editingId;
         this.markAppointmentCompleted(
-          response.data?.appointmentId || value.appointmentId,
+          savedPrescription?.appointmentId || value.appointmentId,
           isCreate,
         );
+        if (savedPrescription) {
+          this.prescriptions = this.mergePrescriptions([savedPrescription, ...this.prescriptions]);
+        }
         if (!isCreate) {
           this.loadPatientContextPrescriptions();
         }
-        if (printAfterSave) {
-          this.openPrintPreview(response.data);
+        if (printAfterSave && savedPrescription) {
+          this.openPrintPreview(savedPrescription);
         }
       },
       error: (err) => {
@@ -2671,6 +2722,10 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.refreshPatientDocumentRows();
     this.refreshSelectedAppointment(appointment._id);
     this.loadPatientContextPrescriptions();
+
+    if (!this.editingId && !this.prescriptionThemeTouched) {
+      this.applyDoctorPrescriptionTheme();
+    }
   }
 
   private refreshSelectedAppointment(appointmentId: string): void {
@@ -2803,6 +2858,11 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.editingId = prescription._id;
     this.selectedPatientId = prescription.patientId;
     this.selectedAppointmentId = prescription.appointmentId || '';
+    if (prescription.prescriptionTemplate) {
+      this.selectedPrescriptionTemplate = prescription.prescriptionTemplate;
+      this.draftPrescriptionTemplate = prescription.prescriptionTemplate;
+      this.prescriptionThemeConfirmed = true;
+    }
     this.prescriptionForm.patchValue({
       patientId: prescription.patientId,
       doctorId: prescription.doctorId,
@@ -3040,7 +3100,19 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   openPrintPreview(prescription: Prescription | null = null): void {
     const requestId = ++this.printPreviewRequestId;
-    this.previewPrescription = prescription;
+    const resolvedPrescription = prescription
+      ? this.enrichPrescriptionTemplate(prescription, {
+          allowFallback: prescription._id === this.editingId,
+          fallbackTemplate: this.getActivePrescriptionTheme(),
+        })
+      : null;
+
+    if (resolvedPrescription?.prescriptionTemplate && this.isPrintPreviewViewOnly) {
+      this.selectedPrescriptionTemplate = resolvedPrescription.prescriptionTemplate;
+      this.draftPrescriptionTemplate = resolvedPrescription.prescriptionTemplate;
+    }
+
+    this.previewPrescription = resolvedPrescription;
     this.printPreviewData = null;
     this.printPreviewLoading = true;
     this.printPreviewOpen = true;
@@ -3051,9 +3123,9 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       }
 
       try {
-        const previewData =
-          this.buildPrintPreviewData(prescription) ||
-          this.buildPrintPreviewData();
+        const previewData = resolvedPrescription
+          ? this.buildPrintPreviewData(resolvedPrescription)
+          : this.buildPrintPreviewData();
 
         if (!previewData) {
           this.printPreviewOpen = false;
@@ -3062,7 +3134,14 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
         }
 
         this.printPreviewData = previewData;
-        this.selectedPrescriptionTemplate = previewData.template;
+
+        if (!this.isPrintPreviewViewOnly) {
+          this.selectedPrescriptionTemplate = this.getActivePrescriptionTheme();
+          this.draftPrescriptionTemplate = this.selectedPrescriptionTemplate;
+        } else {
+          this.selectedPrescriptionTemplate = previewData.template;
+          this.draftPrescriptionTemplate = previewData.template;
+        }
       } catch (error) {
         console.error('Unable to build prescription preview', error);
         this.printPreviewOpen = false;
@@ -3090,43 +3169,82 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   selectPrescriptionTemplate(template: PrescriptionTemplate): void {
+    if (this.isPrintPreviewViewOnly) {
+      return;
+    }
+
+    this.prescriptionThemeTouched = true;
     this.selectedPrescriptionTemplate = template;
+    this.draftPrescriptionTemplate = template;
+    this.persistDraftPrescriptionTheme();
+
+    if (this.printPreviewData) {
+      this.printPreviewData = {
+        ...this.printPreviewData,
+        template,
+      };
+    }
+  }
+
+  openPrescriptionThemeModal(): void {
+    if (!this.canCreatePrescriptions && !this.editingId) {
+      return;
+    }
+
+    this.themeModalOpen = true;
+  }
+
+  confirmPrescriptionTheme(): void {
+    this.prescriptionThemeTouched = true;
+    this.draftPrescriptionTemplate = this.selectedPrescriptionTemplate;
+    this.prescriptionThemeConfirmed = true;
+    this.themeModalOpen = false;
+    this.persistDraftPrescriptionTheme();
+  }
+
+  closePrescriptionThemeModal(): void {
+    if (!this.prescriptionThemeConfirmed) {
+      this.confirmPrescriptionTheme();
+      return;
+    }
+
+    this.themeModalOpen = false;
   }
 
   canSavePrescriptionTemplate(): boolean {
-    return Boolean(this.resolvePreviewDoctorProfile()) && this.backend.hasPermission('doctors.update');
+    return this.isDoctorUser() || (Boolean(this.resolvePreviewDoctorProfile()) && this.backend.hasPermission('doctors.update'));
   }
 
   savePrescriptionTemplate(): void {
     const doctor = this.resolvePreviewDoctorProfile();
 
-    if (!doctor) {
+    if (!doctor && !this.isDoctorUser()) {
       this.toastr.error('Doctor profile is not available for this prescription.');
       return;
     }
 
-    if (!this.backend.hasPermission('doctors.update')) {
+    if (!this.isDoctorUser() && !this.backend.hasPermission('doctors.update')) {
       return;
     }
 
     this.savingPrescriptionTemplate = true;
-    this.backend
-      .updateDoctor(doctor._id, {
-        prescriptionTemplate: this.selectedPrescriptionTemplate,
-      })
+    const request$ = this.isDoctorUser()
+      ? this.backend.updateMyPrescriptionTemplate({
+          prescriptionTemplate: this.selectedPrescriptionTemplate,
+        })
+      : this.backend.updateDoctor(doctor!._id, {
+          prescriptionTemplate: this.selectedPrescriptionTemplate,
+        });
+
+    request$
       .pipe(finalize(() => (this.savingPrescriptionTemplate = false)))
       .subscribe({
         next: (response) => {
           const updatedDoctor = response.data;
-          this.doctors = this.doctors.map((item) =>
-            item._id === doctor._id
-              ? {
-                ...item,
-                prescriptionTemplate:
-                  updatedDoctor?.prescriptionTemplate || this.selectedPrescriptionTemplate,
-              }
-              : item
-          );
+          this.upsertPrescriptionTemplateDoctor(updatedDoctor || doctor || null);
+          this.draftPrescriptionTemplate = this.selectedPrescriptionTemplate;
+          this.prescriptionThemeTouched = true;
+          this.persistDraftPrescriptionTheme();
 
           if (this.printPreviewData) {
             this.printPreviewData = {
@@ -3142,6 +3260,27 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
           this.toastr.error(err?.error?.message || 'Unable to save prescription design.');
         },
       });
+  }
+
+  private upsertPrescriptionTemplateDoctor(doctor: Doctor | null): void {
+    if (!doctor?._id) {
+      return;
+    }
+
+    const resolvedDoctor = {
+      ...doctor,
+      prescriptionTemplate: doctor.prescriptionTemplate || this.selectedPrescriptionTemplate,
+    };
+    const index = this.doctors.findIndex((item) => item._id === resolvedDoctor._id);
+
+    if (index >= 0) {
+      this.doctors = this.doctors.map((item) =>
+        item._id === resolvedDoctor._id ? resolvedDoctor : item
+      );
+      return;
+    }
+
+    this.doctors = [...this.doctors, resolvedDoctor];
   }
 
   visibleAppointments(): Appointment[] {
@@ -3244,6 +3383,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   private async loadCachedDoctors(): Promise<void> {
     this.doctors = await this.offline.readCachedValue<Doctor[]>(this.doctorsCacheKey(), []);
+    this.refreshOpenPreviewData();
   }
 
   private async loadCachedAppointments(): Promise<void> {
@@ -3448,6 +3588,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       advice: (payload['advice'] as string | undefined) || null,
       visitType: (payload['visitType'] as string | undefined) || 'opd',
       followUpDate: (payload['followUpDate'] as string | undefined) || null,
+      prescriptionTemplate:
+        (payload['prescriptionTemplate'] as PrescriptionTemplate | undefined) || this.getActivePrescriptionTheme(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -4114,6 +4256,212 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     }
   }
 
+  private maybeOpenThemeModal(): void {
+    if (!this.canCreatePrescriptions || this.editingId || this.themeModalOpen || this.prescriptionThemeConfirmed) {
+      return;
+    }
+
+    const prescriptionId = this.route.snapshot.queryParamMap.get('prescriptionId');
+    const mode = this.route.snapshot.queryParamMap.get('mode');
+    if (prescriptionId && mode) {
+      return;
+    }
+
+    if (!this.themeModalInitialized) {
+      if (!this.prescriptionThemeTouched) {
+        const storedTheme = this.readStoredDraftPrescriptionTheme();
+        this.selectedPrescriptionTemplate = storedTheme || this.resolveDefaultPrescriptionTemplate();
+        this.draftPrescriptionTemplate = this.selectedPrescriptionTemplate;
+      }
+      this.themeModalInitialized = true;
+    }
+
+    this.themeModalOpen = true;
+  }
+
+  private getActivePrescriptionTheme(): PrescriptionTemplate {
+    return this.draftPrescriptionTemplate || this.selectedPrescriptionTemplate || 'classic';
+  }
+
+  private persistDraftPrescriptionTheme(): void {
+    try {
+      sessionStorage.setItem(this.prescriptionThemeStorageKey(), this.getActivePrescriptionTheme());
+    } catch {
+      // Ignore storage failures in private mode or restricted contexts.
+    }
+  }
+
+  private readStoredDraftPrescriptionTheme(): PrescriptionTemplate | null {
+    try {
+      const stored = sessionStorage.getItem(this.prescriptionThemeStorageKey());
+      if (stored && this.prescriptionTemplates.some((template) => template.id === stored)) {
+        return stored as PrescriptionTemplate;
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  private prescriptionThemeStorageKey(): string {
+    return `prescription-theme:${this.currentHospitalId || 'default'}:${this.currentUserId || 'user'}`;
+  }
+
+  private readPrescriptionTemplateParam(value: string | null): PrescriptionTemplate | null {
+    return this.isPrescriptionTemplate(value) ? value : null;
+  }
+
+  private isPrescriptionTemplate(value: unknown): value is PrescriptionTemplate {
+    return this.prescriptionTemplates.some((template) => template.id === value);
+  }
+
+  private openPrintPreviewWithFreshData(prescription: Prescription): void {
+    if (!prescription?._id || prescription._id.startsWith('local-')) {
+      this.openPrintPreview(prescription);
+      return;
+    }
+
+    this.printPreviewLoading = true;
+    this.printPreviewOpen = true;
+    this.backend.getPrescription(prescription._id).subscribe({
+      next: (freshPrescription) => {
+        this.openPrintPreview(freshPrescription);
+      },
+      error: (err) => {
+        this.printPreviewOpen = false;
+        this.printPreviewLoading = false;
+        this.toastr.error(err?.error?.message || 'Unable to load prescription preview.');
+      },
+    });
+  }
+
+  private enrichPrescriptionTemplate(
+    prescription: Prescription | null | undefined,
+    options: { fallbackTemplate?: PrescriptionTemplate; allowFallback?: boolean } = {},
+  ): Prescription | null {
+    if (!prescription) {
+      return null;
+    }
+
+    if (prescription.prescriptionTemplate) {
+      return prescription;
+    }
+
+    const allowFallback = options.allowFallback ?? prescription._id === this.editingId;
+    const template = options.fallbackTemplate || this.getActivePrescriptionTheme();
+    if (!allowFallback || !template) {
+      return prescription;
+    }
+
+    return {
+      ...prescription,
+      prescriptionTemplate: template,
+    };
+  }
+
+  private resolveDefaultPrescriptionTemplate(): PrescriptionTemplate {
+    const doctor = this.resolvePrescriptionDoctor({ doctorId: this.activeDoctorId() });
+    return doctor?.prescriptionTemplate || 'classic';
+  }
+
+  private applyDoctorPrescriptionTheme(): void {
+    const template = this.resolveDefaultPrescriptionTemplate();
+    this.selectedPrescriptionTemplate = template;
+    this.draftPrescriptionTemplate = template;
+    this.persistDraftPrescriptionTheme();
+  }
+
+  private resolvePrescriptionSourceId(
+    source?: Prescription | Record<string, unknown> | null,
+  ): string {
+    if (!source || !('_id' in source)) {
+      return '';
+    }
+
+    return String(source['_id'] || '').trim();
+  }
+
+  private resolvePrescriptionDoctorIds(
+    source?: Prescription | Record<string, unknown> | null,
+  ): string[] {
+    const doctorRecord = source?.['doctor'] as { _id?: string } | null | undefined;
+    const doctorId = source?.['doctorId'];
+
+    return [
+      typeof doctorId === 'object' && doctorId && '_id' in doctorId
+        ? String((doctorId as { _id?: string })._id || '')
+        : String(doctorId || ''),
+      doctorRecord?._id,
+      this.activeDoctorId(),
+      this.isDoctorUser() ? this.currentUserId : null,
+    ]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+  }
+
+  private resolvePrescriptionDoctor(
+    source?: Prescription | Record<string, unknown> | null,
+  ): Doctor | null {
+    const ids = this.resolvePrescriptionDoctorIds(source);
+    if (ids.length === 0) {
+      return null;
+    }
+
+    return (
+      this.doctors.find((doctor) => {
+        const doctorProfileId = String(doctor._id || '').trim();
+        const doctorUserId = String(doctor.userId || '').trim();
+        return ids.includes(doctorProfileId) || ids.includes(doctorUserId);
+      }) || null
+    );
+  }
+
+  private resolvePrescriptionTemplate(
+    source?: Prescription | Record<string, unknown> | null,
+    doctor?: Doctor | null,
+  ): PrescriptionTemplate {
+    const savedTemplate = source?.['prescriptionTemplate'] as PrescriptionTemplate | undefined | null;
+    const sourceId = this.resolvePrescriptionSourceId(source);
+    const isSavedPrescription = Boolean(sourceId) && !sourceId.startsWith('local-');
+    const isEditingCurrentPrescription = isSavedPrescription && sourceId === this.editingId;
+    const resolvedDoctor = doctor || this.resolvePrescriptionDoctor(source);
+    const doctorTemplate = resolvedDoctor?.prescriptionTemplate;
+    const activeTheme = this.getActivePrescriptionTheme();
+
+    if (!isSavedPrescription || isEditingCurrentPrescription) {
+      if (this.isPrescriptionTemplate(activeTheme)) {
+        return activeTheme;
+      }
+    }
+
+    if (isSavedPrescription) {
+      if (this.isPrescriptionTemplate(doctorTemplate) && doctorTemplate !== 'classic') {
+        return doctorTemplate;
+      }
+
+      if (this.isPrescriptionTemplate(savedTemplate)) {
+        return savedTemplate;
+      }
+
+      if (this.isPrescriptionTemplate(this.routePrescriptionTemplate)) {
+        return this.routePrescriptionTemplate;
+      }
+
+      return 'classic';
+    }
+
+    if (this.isPrescriptionTemplate(doctorTemplate)) {
+      return doctorTemplate;
+    }
+
+    if (this.isPrescriptionTemplate(savedTemplate)) {
+      return savedTemplate;
+    }
+
+    return 'classic';
+  }
+
   private buildPrintPreviewData(prescription: Prescription | null = null): PrintPreviewData | null {
     const source: Record<string, any> = prescription || this.prescriptionForm.getRawValue();
     const patient = this.resolvePrintPatient(source);
@@ -4122,8 +4470,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       return null;
     }
 
-    const doctorId = String(source['doctorId'] || '');
-    const doctor = this.doctors.find((item) => item.userId === doctorId);
+    const doctor = this.resolvePrescriptionDoctor(source);
     const hospital = this.resolvePrintHospital(source);
     const settings = this.resolvePrescriptionSettings(hospital);
     const doctorDisplayName =
@@ -4172,7 +4519,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       .slice(0, 20);
 
     return {
-      template: doctor?.prescriptionTemplate || 'classic',
+      template: this.resolvePrescriptionTemplate(source, doctor),
       patient,
       patientName: this.patientName(patient),
       patientAge: this.ageLabel(patient),
@@ -4237,13 +4584,11 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   private resolvePreviewDoctorProfile(): Doctor | null {
-    const doctorId = String(
-      this.previewPrescription?.doctorId ||
-      this.prescriptionForm.getRawValue().doctorId ||
-      ''
+    return (
+      this.resolvePrescriptionDoctor(this.previewPrescription) ||
+      this.resolvePrescriptionDoctor(this.prescriptionForm.getRawValue()) ||
+      null
     );
-
-    return this.doctors.find((doctor) => doctor.userId === doctorId) || null;
   }
 
   private formatPrescriptionNumber(value: unknown): string {
@@ -4462,9 +4807,18 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     }
 
     try {
-      this.printPreviewData =
+      const previewData =
         this.buildPrintPreviewData(this.previewPrescription) ||
         this.printPreviewData;
+
+      if (previewData) {
+        this.printPreviewData = previewData;
+
+        if (this.isPrintPreviewViewOnly) {
+          this.selectedPrescriptionTemplate = previewData.template;
+          this.draftPrescriptionTemplate = previewData.template;
+        }
+      }
     } catch (error) {
       console.error('Unable to refresh prescription preview', error);
     }

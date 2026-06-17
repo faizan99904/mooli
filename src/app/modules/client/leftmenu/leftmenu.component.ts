@@ -104,10 +104,6 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewAppointments(): boolean {
-    if (this.isDoctor) {
-      return false;
-    }
-
     return this.canViewAllRoutes || this.hasPermission('appointments.read');
   }
 
