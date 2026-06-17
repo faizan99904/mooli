@@ -910,6 +910,83 @@
     </main>
   </div>
 
+  <section class="prescription-history-panel patient-history-panel"
+    *ngIf="hasAssignedPatient() && !editingId">
+    <div class="section-heading">
+      <div>
+        <h3>Previous Prescriptions</h3>
+        <p>
+          {{
+            patientHistoryLoading
+              ? 'Loading patient history...'
+              : visiblePatientHistoryPrescriptions().length + ' prescription(s)'
+                + (patientHistoryHasCustomFilters() ? ' · filtered' : ' · last 1 month')
+          }}
+          <span *ngIf="!patientHistoryLoading"> · {{ patientHistoryDateFrom }} to {{ patientHistoryDateTo }}</span>
+        </p>
+      </div>
+      <button type="button" class="btn-light" [disabled]="patientHistoryLoading" (click)="loadPatientContextPrescriptions()">
+        Refresh
+      </button>
+    </div>
+
+    <div class="prescription-history-filters">
+      <input class="history-search-input" type="search" [(ngModel)]="patientHistorySearch"
+        placeholder="Search diagnosis, complaint, appointment no."
+        [ngModelOptions]="{ standalone: true }"
+        (keyup.enter)="applyPatientHistoryFilters()" />
+      <input class="history-date-input" type="date" [(ngModel)]="patientHistoryDateFrom"
+        [ngModelOptions]="{ standalone: true }" />
+      <input class="history-date-input" type="date" [(ngModel)]="patientHistoryDateTo"
+        [ngModelOptions]="{ standalone: true }" />
+      <button type="button" class="btn-primary history-filter-btn" (click)="applyPatientHistoryFilters()">Search</button>
+      <button type="button" class="btn-light history-filter-btn" (click)="clearPatientHistoryFilters()">Clear</button>
+    </div>
+
+    <div class="prescription-history-empty" *ngIf="!patientHistoryLoading && visiblePatientHistoryPrescriptions().length === 0">
+      {{
+        patientHistoryHasCustomFilters()
+          ? 'No prescriptions match your filters for this patient.'
+          : 'No prescriptions found for this patient in the last month.'
+      }}
+    </div>
+
+    <div class="prescription-history-list" *ngIf="patientHistoryGroups.length > 0">
+      <div class="history-date-group" *ngFor="let group of patientHistoryGroups; trackBy: trackPatientHistoryGroup">
+        <div class="history-date-heading">{{ group.dateLabel }}</div>
+        <article class="prescription-history-row" *ngFor="let prescription of group.items">
+          <div class="history-avatar">{{ initials(prescriptionPatientName(prescription)) }}</div>
+          <div class="history-main">
+            <strong>{{ prescriptionPatientName(prescription) }}</strong>
+            <span>
+              {{ prescriptionDoctorName(prescription) }}
+              <ng-container *ngIf="prescriptionAppointmentNo(prescription) as apptNo"> · {{ apptNo }}</ng-container>
+              · {{ prescriptionDate(prescription) }}
+            </span>
+          </div>
+          <div class="history-meta">
+            <span>{{ prescriptionMedicineCount(prescription) }} medicine(s) · {{ prescriptionIvFluidCount(prescription) }} drip(s)</span>
+            <small *ngIf="prescriptionIvFluidSummary(prescription) as drips">Drips: {{ drips }}</small>
+            <small>{{ prescription.diagnosis || prescription.chiefComplaint || 'No diagnosis added' }}</small>
+          </div>
+          <div class="history-actions">
+            <button type="button" class="btn-light" *ngIf="canUpdatePrescriptions" (click)="openPatientHistoryEdit(prescription)">Edit</button>
+            <button type="button" class="btn-primary" (click)="openPatientHistoryView(prescription)">
+              <i class="fa fa-eye"></i>
+              View
+            </button>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <div class="prescription-history-pagination" *ngIf="!patientHistoryLoading && patientHistoryTotalPages > 1">
+      <button type="button" class="btn-light" (click)="changePatientHistoryPage(patientHistoryPage - 1)" [disabled]="patientHistoryPage <= 1">Previous</button>
+      <span>Page {{ patientHistoryPage }} of {{ patientHistoryTotalPages }} · {{ patientHistoryPageSize }} per page</span>
+      <button type="button" class="btn-light" (click)="changePatientHistoryPage(patientHistoryPage + 1)" [disabled]="patientHistoryPage >= patientHistoryTotalPages">Next</button>
+    </div>
+  </section>
+
   <div class="medicine-library-backdrop" *ngIf="medicineLibraryOpen">
     <form class="medicine-library-dialog" [formGroup]="doctorMedicineForm" (ngSubmit)="saveDoctorMedicine(true)">
       <div class="medicine-library-header">

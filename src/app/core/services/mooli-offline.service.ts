@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
 
 import { ApiResponse } from '../../shared/models/api-response.model';
 import {
@@ -75,6 +75,9 @@ export class MooliOfflineService {
     if (this.failedCount() > 0) return 'failed';
     return 'online';
   });
+
+  private readonly syncCompletedSubject = new Subject<MooliSyncResult>();
+  readonly syncCompleted$ = this.syncCompletedSubject.asObservable();
 
   constructor(private backend: BackendService) {
     this.dbPromise = this.openDatabase();
@@ -155,6 +158,14 @@ export class MooliOfflineService {
     await this.refreshCounts();
   }
 
+  async getSyncedRemoteId(localId: string): Promise<string | null> {
+    if (!localId.startsWith('local-')) {
+      return localId;
+    }
+
+    return this.readCachedValue<string | null>(this.idMapKey(localId), null);
+  }
+
   async syncQueuedWork(): Promise<MooliSyncResult> {
     if (!this.online() || this.syncing()) {
       return { syncedCount: 0, failedCount: 0 };
@@ -163,6 +174,7 @@ export class MooliOfflineService {
     const entries = this.sortForSync(await this.getQueuedWork());
     if (!entries.length) {
       await this.refreshCounts();
+      this.syncCompletedSubject.next({ syncedCount: 0, failedCount: 0 });
       return { syncedCount: 0, failedCount: 0 };
     }
 
@@ -193,7 +205,9 @@ export class MooliOfflineService {
 
     this.syncingSignal.set(false);
     await this.refreshCounts();
-    return { syncedCount, failedCount };
+    const result = { syncedCount, failedCount };
+    this.syncCompletedSubject.next(result);
+    return result;
   }
 
   private readonly handleOnline = (): void => {
