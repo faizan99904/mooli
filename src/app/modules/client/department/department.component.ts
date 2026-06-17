@@ -84,12 +84,10 @@ export class DepartmentComponent implements OnInit {
 
   submitDepartment(): void {
     if (!this.editingId && !this.can('departments.create')) {
-      this.toastr.error('You do not have permission to create departments.');
       return;
     }
 
     if (this.editingId && !this.can('departments.update')) {
-      this.toastr.error('You do not have permission to update departments.');
       return;
     }
 

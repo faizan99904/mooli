@@ -534,7 +534,6 @@ export class PharmacyComponent implements OnInit {
 
   openPharmacyPos(prescription?: Prescription): void {
     if (!this.canOpenPharmacyPos) {
-      this.toastr.error(`Missing POS permissions: ${this.missingPosPermissions.join(', ')}`);
       return;
     }
 

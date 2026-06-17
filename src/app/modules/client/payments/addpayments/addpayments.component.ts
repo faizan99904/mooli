@@ -101,7 +101,6 @@ export class AddpaymentsComponent implements OnInit {
 
   submitBill(): void {
     if (!this.backend.hasPermission('bills.create')) {
-      this.toastr.error('You do not have permission to create bills.');
       return;
     }
 

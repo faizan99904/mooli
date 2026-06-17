@@ -207,12 +207,10 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
 
   submitDoctor(): void {
     if (!this.editingDoctor && !this.can('doctors.create')) {
-      this.toastr.error('You do not have permission to create doctors.');
       return;
     }
 
     if (this.editingDoctor && !this.can('doctors.update')) {
-      this.toastr.error('You do not have permission to update doctors.');
       return;
     }
 

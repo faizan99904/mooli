@@ -77,7 +77,6 @@ export class AllDoctorsComponent implements OnInit {
 
   async deleteDoctor(id: string): Promise<void> {
     if (!this.can('doctors.delete')) {
-      this.toastr.error('You do not have permission to delete doctors.');
       return;
     }
 

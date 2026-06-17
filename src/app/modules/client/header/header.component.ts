@@ -146,7 +146,6 @@ export class HeaderComponent implements OnInit {
 
   openPos(): void {
     if (!this.canOpenPos) {
-      this.toaster.error('This user does not have permission to open POS.');
       return;
     }
 

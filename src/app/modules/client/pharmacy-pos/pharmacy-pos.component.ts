@@ -862,7 +862,6 @@ export class PharmacyPosComponent implements OnInit {
 
   openRegister(): void {
     if (!this.canOpenRegister) {
-      this.toastr.error('Missing POS permission: register_sessions.open');
       return;
     }
 
@@ -902,10 +901,6 @@ export class PharmacyPosComponent implements OnInit {
           this.registerOpened = false;
           this.registerClosed = false;
           if (err?.status === 403) {
-            this.showPosMessage(
-              'This backend user is still blocked from opening the cash register. Please update the assigned role permissions.',
-              'danger',
-            );
             return;
           }
           this.toastr.error(err?.error?.message || 'Unable to open register.');
@@ -938,7 +933,6 @@ export class PharmacyPosComponent implements OnInit {
 
   async confirmCloseRegister(): Promise<void> {
     if (!this.canCloseRegister) {
-      this.toastr.error('Missing POS permission: register_sessions.close');
       return;
     }
 
@@ -994,10 +988,6 @@ export class PharmacyPosComponent implements OnInit {
         },
         error: (err) => {
           if (err?.status === 403) {
-            this.showPosMessage(
-              'This backend user is still blocked from closing the cash register. Please update the assigned role permissions.',
-              'danger',
-            );
             return;
           }
           this.toastr.error(err?.error?.message || 'Unable to close register.');
@@ -1603,7 +1593,6 @@ export class PharmacyPosComponent implements OnInit {
 
   confirmBilling(): void {
     if (!this.canCreateSale) {
-      this.toastr.error('Missing POS permission: sales.create');
       return;
     }
 
@@ -1688,10 +1677,6 @@ export class PharmacyPosComponent implements OnInit {
           }
 
           if (err?.status === 403) {
-            this.showPosMessage(
-              'This backend user is still blocked from creating POS sales. Please update the assigned role permissions.',
-              'danger',
-            );
             return;
           }
 
@@ -1711,7 +1696,6 @@ export class PharmacyPosComponent implements OnInit {
 
   saveHeldSale(): void {
     if (!this.canCreateSale) {
-      this.toastr.error('Missing POS permission: sales.create');
       return;
     }
 

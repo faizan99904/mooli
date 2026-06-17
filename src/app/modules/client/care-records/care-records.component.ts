@@ -226,12 +226,10 @@ export class CareRecordsComponent implements OnInit {
 
   submitRecord(): void {
     if (!this.canCreate && !this.editingId) {
-      this.toastr.error('You do not have permission to create records.');
       return;
     }
 
     if (!this.canUpdate && this.editingId) {
-      this.toastr.error('You do not have permission to update records.');
       return;
     }
 

@@ -82,12 +82,10 @@ export class AddPatientComponent implements OnInit {
 
   submitPatient(): void {
     if (!this.editingPatient && !this.can('patients.create')) {
-      this.toastr.error('You do not have permission to create patients.');
       return;
     }
 
     if (this.editingPatient && !this.can('patients.update')) {
-      this.toastr.error('You do not have permission to update patients.');
       return;
     }
 

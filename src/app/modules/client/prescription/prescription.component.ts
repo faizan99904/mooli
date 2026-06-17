@@ -2529,12 +2529,10 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   submitPrescription(printAfterSave = false): void {
     if (!this.editingId && !this.canCreatePrescriptions) {
-      this.toastr.error('You do not have permission to create prescriptions.');
       return;
     }
 
     if (this.editingId && !this.canUpdatePrescriptions) {
-      this.toastr.error('You do not have permission to update prescriptions.');
       return;
     }
 
@@ -3108,7 +3106,6 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     }
 
     if (!this.backend.hasPermission('doctors.update')) {
-      this.toastr.error('You do not have permission to update the doctor profile.');
       return;
     }
 

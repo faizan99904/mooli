@@ -85,12 +85,10 @@ export class RoomAllotmentComponent implements OnInit {
 
   submitRoom(): void {
     if (!this.editingId && !this.can('rooms.create')) {
-      this.toastr.error('You do not have permission to create rooms.');
       return;
     }
 
     if (this.editingId && !this.can('rooms.update')) {
-      this.toastr.error('You do not have permission to update rooms.');
       return;
     }
 

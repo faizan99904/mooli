@@ -94,12 +94,10 @@ export class CreateUserComponent implements OnInit, OnDestroy {
 
   submitForm() {
     if (!this.editingUser && !this.backend.hasPermission('users.create')) {
-      this.toast.error('You do not have permission to create users.');
       return;
     }
 
     if (this.editingUser && !this.backend.hasPermission('users.update')) {
-      this.toast.error('You do not have permission to update users.');
       return;
     }
 

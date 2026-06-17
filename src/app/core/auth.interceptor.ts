@@ -1,12 +1,10 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
 import { catchError, throwError } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
-  const toastr = inject(ToastrService);
   const token = localStorage.getItem('token');
   const authReq = token
     ? req.clone({
@@ -25,16 +23,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         localStorage.removeItem('roleId');
         localStorage.removeItem('permissions');
         router.navigate(['/login']);
-      }
-
-      if (error.status === 403) {
-        const currentUrl = router.url || '';
-        const suppressPosToast =
-          currentUrl.startsWith('/pos-reports') || currentUrl.startsWith('/pharmacy/pos');
-
-        if (!suppressPosToast) {
-          toastr.error(error?.error?.message || 'You do not have permission for this action');
-        }
       }
 
       return throwError(() => error);

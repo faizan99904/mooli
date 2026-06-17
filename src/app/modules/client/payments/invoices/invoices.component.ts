@@ -61,7 +61,6 @@ export class InvoicesComponent implements OnInit {
 
   updatePayment(bill: Bill): void {
     if (!this.can('bills.update_payment')) {
-      this.toastr.error('You do not have permission to update bill payments.');
       return;
     }
 

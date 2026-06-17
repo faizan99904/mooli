@@ -62,7 +62,6 @@ export class AddAllotmentComponent implements OnInit {
 
   submitAllotment(): void {
     if (!this.can('room_allotments.create')) {
-      this.toastr.error('You do not have permission to create room allotments.');
       return;
     }
 

@@ -453,12 +453,10 @@ export class AppointmentComponent implements OnInit {
 
   submitAppointment(): void {
     if (!this.editingId && !this.canCreateAppointment) {
-      this.toastr.error('You do not have permission to create appointments.');
       return;
     }
 
     if (this.editingId && !this.canUpdateAppointment) {
-      this.toastr.error('You do not have permission to update appointments.');
       return;
     }
 
@@ -1018,7 +1016,6 @@ export class AppointmentComponent implements OnInit {
 
   openAddPatientModal(): void {
     if (!this.canCreatePatients) {
-      this.toastr.error('You do not have permission to create patients.');
       return;
     }
 
@@ -1050,7 +1047,6 @@ export class AppointmentComponent implements OnInit {
 
   submitPatientFromModal(): void {
     if (!this.canCreatePatients) {
-      this.toastr.error('You do not have permission to create patients.');
       return;
     }
 
@@ -2146,7 +2142,6 @@ export class AppointmentComponent implements OnInit {
     event?.stopPropagation();
 
     if (!this.canOpenPrescriptions()) {
-      this.toastr.error('You do not have permission to open prescriptions.');
       return;
     }
 

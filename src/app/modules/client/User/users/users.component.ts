@@ -78,7 +78,6 @@ export class UsersComponent implements OnInit {
 
   async deleteUser(id: string): Promise<void> {
     if (!this.canDeleteUser()) {
-      this.toast.error('You do not have permission to delete users.');
       return;
     }
 
