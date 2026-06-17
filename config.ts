@@ -48,5 +48,6 @@ export const CONFIG = {
   },
   users: API_BASE_URL + '/users',
   roles: API_BASE_URL + '/roles',
+  auditLogs: API_BASE_URL + '/audit-logs',
   stores: API_BASE_URL + '/stores',
 };

@@ -158,6 +158,7 @@ export class RolesComponent implements OnInit {
         { key: 'users.read', label: 'View Users' },
         { key: 'users.update', label: 'Update Users' },
         { key: 'users.delete', label: 'Delete Users' },
+        { key: 'audit_logs.read', label: 'View Audit Logs' },
       ],
     },
   ];

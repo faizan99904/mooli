@@ -87,6 +87,10 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     return this.canViewAllRoutes || this.hasPermission('roles.read');
   }
 
+  get canViewAuditLogs(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('audit_logs.read');
+  }
+
   get canViewDashboard(): boolean {
     return this.isDoctor || this.canViewAllRoutes || this.hasPermission('hospital_dashboard.read');
   }
@@ -217,7 +221,13 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewHospitalAdministration(): boolean {
-    return this.canViewHospitals || this.canViewUsers || this.canViewRoles || this.canViewSettings;
+    return (
+      this.canViewHospitals ||
+      this.canViewUsers ||
+      this.canViewRoles ||
+      this.canViewAuditLogs ||
+      this.canViewSettings
+    );
   }
 
   get hasWildcardPermission(): boolean {

@@ -42,6 +42,7 @@ import {
   HeldSale,
   LedgerItem,
   LedgerPayment,
+  AuditLog,
   OpenRegisterPayload,
   RegisterSession,
   RegisterSessionSummary,
@@ -893,6 +894,16 @@ export class BackendService {
     return normalizedPermissions.has('*') || normalizedPermissions.has(normalizedPermission);
   }
 
+  getAuditLogs(params?: Record<string, unknown>): Observable<ListResult<AuditLog>> {
+    return this.get<PaginatedResponse<AuditLog>>(CONFIG.auditLogs, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
 
+  getAuditLogById(id: string): Observable<AuditLog> {
+    return this.get<AuditLog>(`${CONFIG.auditLogs}/${id}`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
 
 }

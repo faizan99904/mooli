@@ -788,3 +788,21 @@ export interface ListResult<T> {
   items: T[];
   pagination: Pagination;
 }
+
+export interface AuditLog {
+  _id: string;
+  companyId?: string;
+  hospitalId?: string | null;
+  hospital?: { _id: string; name: string } | null;
+  userId?: string;
+  user?: { _id: string; name: string; email?: string | null } | null;
+  action: string;
+  module: string;
+  summary?: string;
+  recordId?: string | null;
+  oldData?: unknown;
+  newData?: unknown;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt?: string;
+}

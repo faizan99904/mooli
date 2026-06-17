@@ -170,6 +170,10 @@
                     <a [routerLink]="['/roles']"><i class="fa fa-shield"></i><span>Roles</span></a>
                 </li>
 
+                <li *ngIf="canViewAuditLogs" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
+                    <a [routerLink]="['/audit-logs']"><i class="fa fa-history"></i><span>Audit Logs</span></a>
+                </li>
+
                 <li *ngIf="canViewSettings" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
                     <a [routerLink]="['/settings']"><i class="fa fa-gear"></i><span>Settings</span></a>
                 </li>

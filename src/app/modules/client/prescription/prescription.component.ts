@@ -502,7 +502,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.refreshIvFluidRows();
     this.refreshAdmissionOrderRows();
     this.refreshPatientDocumentRows();
-    window.setTimeout(() => this.maybeOpenThemeModal(), 0);
+    window.setTimeout(() => this.initializePrescriptionTheme(), 0);
   }
 
   ngOnDestroy(): void {
@@ -2164,7 +2164,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       next: (result) => {
         this.doctors = result.items;
         void this.offline.cacheValue(this.doctorsCacheKey(), this.doctors);
-        this.maybeOpenThemeModal();
+        this.initializePrescriptionTheme();
         this.refreshOpenPreviewData();
       },
       error: () => {
@@ -3203,11 +3203,6 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   closePrescriptionThemeModal(): void {
-    if (!this.prescriptionThemeConfirmed) {
-      this.confirmPrescriptionTheme();
-      return;
-    }
-
     this.themeModalOpen = false;
   }
 
@@ -4256,8 +4251,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     }
   }
 
-  private maybeOpenThemeModal(): void {
-    if (!this.canCreatePrescriptions || this.editingId || this.themeModalOpen || this.prescriptionThemeConfirmed) {
+  private initializePrescriptionTheme(): void {
+    if (!this.canCreatePrescriptions || this.editingId || this.themeModalInitialized) {
       return;
     }
 
@@ -4267,16 +4262,15 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.themeModalInitialized) {
-      if (!this.prescriptionThemeTouched) {
-        const storedTheme = this.readStoredDraftPrescriptionTheme();
-        this.selectedPrescriptionTemplate = storedTheme || this.resolveDefaultPrescriptionTemplate();
-        this.draftPrescriptionTemplate = this.selectedPrescriptionTemplate;
-      }
-      this.themeModalInitialized = true;
+    if (!this.prescriptionThemeTouched) {
+      const storedTheme = this.readStoredDraftPrescriptionTheme();
+      this.selectedPrescriptionTemplate = storedTheme || this.resolveDefaultPrescriptionTemplate();
+      this.draftPrescriptionTemplate = this.selectedPrescriptionTemplate;
+      this.persistDraftPrescriptionTheme();
     }
 
-    this.themeModalOpen = true;
+    this.prescriptionThemeConfirmed = true;
+    this.themeModalInitialized = true;
   }
 
   private getActivePrescriptionTheme(): PrescriptionTemplate {

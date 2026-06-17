@@ -1,0 +1,222 @@
+<div id="main-content">
+  <div class="container-fluid audit-logs-page">
+    <div class="block-header">
+      <div class="row clearfix align-items-center">
+        <div class="col-lg-7 col-md-12 col-sm-12">
+          <h1>Audit Logs</h1>
+          <span>Sensitive hospital actions ka record — bills, lab, prescriptions, appointments, discharge, payments.</span>
+        </div>
+        <div class="col-lg-5 col-md-12 col-sm-12 text-lg-right">
+          <button type="button" class="btn btn-primary" (click)="loadLogs(page)" [disabled]="loading">
+            <i class="fa" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i>
+            Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="audit-filter-card">
+      <div class="audit-filter-head">
+        <div>
+          <h2>Filters</h2>
+          <p>Module, action, user, aur date range se audit trail search karein.</p>
+        </div>
+        <span class="permission-pill" *ngIf="canFilterByHospital">All hospitals</span>
+        <span class="permission-pill" *ngIf="!canFilterByHospital">Hospital scoped</span>
+      </div>
+
+      <div class="audit-filter-grid">
+        <label *ngIf="canFilterByHospital">
+          <span>Hospital</span>
+          <select class="form-control" [(ngModel)]="hospitalIdFilter">
+            <option value="">All hospitals</option>
+            <option *ngFor="let hospital of hospitals" [value]="hospital._id">{{ hospital.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Module</span>
+          <select class="form-control" [(ngModel)]="moduleFilter">
+            <option *ngFor="let option of moduleOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Action</span>
+          <select class="form-control" [(ngModel)]="actionFilter">
+            <option *ngFor="let option of actionOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>User</span>
+          <select class="form-control" [(ngModel)]="userIdFilter">
+            <option value="">All users</option>
+            <option *ngFor="let user of users" [value]="user._id">{{ user.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>From Date</span>
+          <input type="date" class="form-control" [(ngModel)]="fromDate" />
+        </label>
+
+        <label>
+          <span>To Date</span>
+          <input type="date" class="form-control" [(ngModel)]="toDate" />
+        </label>
+
+        <div class="filter-actions">
+          <button type="button" class="btn btn-dark" (click)="applyFilters()" [disabled]="loading">Apply</button>
+          <button type="button" class="btn btn-default" (click)="resetFilters()" [disabled]="loading">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card audit-table-card">
+      <div class="header">
+        <h2>Activity Trail</h2>
+        <span class="record-count">{{ logs.length }} records on this page</span>
+      </div>
+      <div class="body">
+        <div class="table-responsive">
+          <table class="table table-hover table-custom spacing5">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th *ngIf="canFilterByHospital">Hospital</th>
+                <th>User</th>
+                <th>Module</th>
+                <th>Action</th>
+                <th>Summary</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody *ngIf="!loading && logs.length > 0">
+              <tr *ngFor="let log of logs">
+                <td>
+                  <strong>{{ log.createdAt | date: 'mediumDate' }}</strong>
+                  <div class="text-muted small">{{ log.createdAt | date: 'shortTime' }}</div>
+                </td>
+                <td *ngIf="canFilterByHospital">{{ hospitalName(log) }}</td>
+                <td>
+                  <strong>{{ userName(log) }}</strong>
+                  <div class="text-muted small" *ngIf="log.user?.email">{{ log.user?.email }}</div>
+                </td>
+                <td>
+                  <span class="badge badge-info module-badge">{{ moduleLabel(log.module) }}</span>
+                </td>
+                <td>
+                  <span class="badge action-badge" [ngClass]="actionBadgeClass(log.action)">
+                    {{ actionLabel(log.action) }}
+                  </span>
+                </td>
+                <td class="summary-cell">{{ log.summary || '—' }}</td>
+                <td style="text-align: center;">
+                  <i class="fa fa-eye action-icon" title="View detail" (click)="openDetail(log)"></i>
+                </td>
+              </tr>
+            </tbody>
+
+            <tbody *ngIf="loading">
+              <tr>
+                <td [attr.colspan]="canFilterByHospital ? 7 : 6" class="text-center py-4">
+                  <i class="fa fa-spinner fa-spin"></i> Loading audit logs...
+                </td>
+              </tr>
+            </tbody>
+
+            <tbody *ngIf="!loading && logs.length === 0">
+              <tr>
+                <td [attr.colspan]="canFilterByHospital ? 7 : 6" class="text-center py-4 text-muted">
+                  No audit logs found.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="audit-pagination" *ngIf="totalPages > 1 || page > 1">
+          <button type="button" class="btn btn-default btn-sm" [disabled]="page <= 1" (click)="goToPage(page - 1)">
+            Previous
+          </button>
+          <span>Page {{ page }} of {{ totalPages }}</span>
+          <button type="button" class="btn btn-default btn-sm" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="audit-modal-backdrop" *ngIf="detailOpen" (click)="closeDetail()">
+  <div class="audit-modal-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <div class="audit-modal-header">
+      <div>
+        <h3>Audit Log Detail</h3>
+        <p *ngIf="selectedLog">{{ actionLabel(selectedLog.action) }} · {{ selectedLog.createdAt | date: 'medium' }}</p>
+      </div>
+      <button type="button" class="modal-close-btn" aria-label="Close" (click)="closeDetail()">&times;</button>
+    </div>
+
+    <div class="audit-modal-body" *ngIf="detailLoading">
+      <div class="text-center text-muted py-4">
+        <i class="fa fa-spinner fa-spin"></i> Loading detail...
+      </div>
+    </div>
+
+    <div class="audit-modal-body" *ngIf="!detailLoading && selectedLog">
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span>User</span>
+          <strong>{{ userName(selectedLog) }}</strong>
+        </div>
+        <div class="detail-item" *ngIf="canFilterByHospital">
+          <span>Hospital</span>
+          <strong>{{ hospitalName(selectedLog) }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Module</span>
+          <strong>{{ moduleLabel(selectedLog.module) }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Action</span>
+          <strong>{{ actionLabel(selectedLog.action) }}</strong>
+        </div>
+        <div class="detail-item detail-item--wide">
+          <span>Summary</span>
+          <strong>{{ selectedLog.summary || '—' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>Record ID</span>
+          <strong>{{ selectedLog.recordId || '—' }}</strong>
+        </div>
+        <div class="detail-item">
+          <span>IP Address</span>
+          <strong>{{ selectedLog.ipAddress || '—' }}</strong>
+        </div>
+      </div>
+
+      <div class="detail-block">
+        <h4>Old Data</h4>
+        <pre class="audit-json">{{ selectedLog.oldData | json }}</pre>
+      </div>
+
+      <div class="detail-block">
+        <h4>New Data</h4>
+        <pre class="audit-json">{{ selectedLog.newData | json }}</pre>
+      </div>
+
+      <div class="detail-block">
+        <h4>User Agent</h4>
+        <pre class="audit-json audit-json--light">{{ selectedLog.userAgent || '—' }}</pre>
+      </div>
+    </div>
+
+    <div class="audit-modal-footer">
+      <button type="button" class="btn btn-default" (click)="closeDetail()">Close</button>
+    </div>
+  </div>
+</div>

@@ -56,6 +56,7 @@ import { PharmacyComponent } from './pharmacy/pharmacy.component';
 import { PharmacyProductsComponent } from './pharmacy-products/pharmacy-products.component';
 import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
 import { PosReportsComponent } from './pos-reports/pos-reports.component';
+import { AuditLogsComponent } from './audit-logs/audit-logs.component';
 
 const WILDCARD_ACCESS = ['*'];
 const HOSPITAL_DASHBOARD_ACCESS = ['hospital_dashboard.read'];
@@ -77,6 +78,7 @@ const USER_MANAGE_ACCESS = ['users.create', 'users.update'];
 const HOSPITAL_READ_ACCESS = ['hospitals.read'];
 const HOSPITAL_MANAGE_ACCESS = ['hospitals.create', 'hospitals.update'];
 const ROLE_READ_ACCESS = ['roles.read'];
+const AUDIT_LOGS_ACCESS = ['audit_logs.read'];
 const HISTORY_ACCESS = ['patients_history.read', 'patients_history.create'];
 const PRESCRIPTION_ACCESS = ['prescriptions.read', 'prescriptions.create'];
 const PHARMACY_ACCESS = ['products.read'];
@@ -474,6 +476,12 @@ export const clientRoutes: Routes = [
         component: RolesComponent,
         data: { title: 'Mooli | Hospital Roles' },
         canActivate: [roleGuard(ROLE_READ_ACCESS)],
+      },
+      {
+        path: 'audit-logs',
+        component: AuditLogsComponent,
+        data: { title: 'Mooli | Audit Logs' },
+        canActivate: [roleGuard(AUDIT_LOGS_ACCESS)],
       },
     ],
   },
