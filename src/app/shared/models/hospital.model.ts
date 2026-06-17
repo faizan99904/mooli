@@ -765,15 +765,35 @@ export interface CloseRegisterPayload {
   closeNote?: string;
 }
 
+export interface DashboardStatusBreakdown {
+  pending: number;
+  confirmed: number;
+  completed: number;
+  cancelled: number;
+  noShow: number;
+}
+
 export interface DashboardSummary {
   totalPatients: number;
   totalDoctors: number;
   todayAppointments: number;
+  todayPendingAppointments?: number;
+  todayConfirmedAppointments?: number;
+  todayCompletedAppointments?: number;
+  todayCancelledAppointments?: number;
   pendingAppointments: number;
   completedAppointments: number;
   totalRevenue: number;
+  todayRevenue?: number;
+  todayFeesCollected?: number;
+  todayLabOrders?: number;
+  todayPrescriptions?: number;
+  totalPrescriptions?: number;
+  appointmentBreakdown?: DashboardStatusBreakdown;
+  todayAppointmentBreakdown?: DashboardStatusBreakdown;
   recentPatients: Patient[];
   upcomingAppointments: Appointment[];
+  todayAppointmentsList?: Appointment[];
 }
 
 export interface DataTablesResponse<T> {

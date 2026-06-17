@@ -203,6 +203,12 @@ export class BackendService {
     );
   }
 
+  getDoctorDashboardSummary(): Observable<DashboardSummary> {
+    return this.get<DashboardSummary>(CONFIG.hospitalDashboard.doctorSummary).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
   getHospitals(params?: Record<string, unknown>): Observable<ListResult<Hospital>> {
     return this.get<PaginatedResponse<Hospital>>(CONFIG.hospitals, params).pipe(
       map((response) => this.unwrapData(response))

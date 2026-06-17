@@ -1,90 +1,270 @@
-.navbar-nav {
+.modern-dashboard {
+  color: #172033;
+}
+
+.dashboard-hero {
+  align-items: center;
+  background: linear-gradient(135deg, #019c9d 0%, #003e86 100%);
+  border-radius: 18px;
+  color: #fff;
   display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 24px;
 }
 
-.dashboard-header-metric {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  padding: 14px 18px;
-  border-radius: 16px;
-  background: rgba(1, 156, 157, 0.08);
+.dashboard-hero__copy h1 {
+  font-size: 30px;
+  font-weight: 800;
+  margin: 8px 0;
 }
 
-.dashboard-header-metric span {
-  color: #6b7280;
-  font-size: 13px;
-  text-transform: uppercase;
+.dashboard-hero__copy p {
+  margin: 0;
+  opacity: 0.92;
+}
+
+.dashboard-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.dashboard-header-metric strong {
-  font-size: 26px;
+.dashboard-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.stat-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  display: flex;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.stat-card__icon {
+  align-items: center;
+  border-radius: 14px;
+  color: #fff;
+  display: inline-flex;
+  flex: 0 0 46px;
+  font-size: 18px;
+  height: 46px;
+  justify-content: center;
+  width: 46px;
+}
+
+.stat-card__body span,
+.stat-card__body small {
+  display: block;
+}
+
+.stat-card__body span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stat-card__body strong {
+  color: #111827;
+  display: block;
+  font-size: 24px;
+  font-weight: 900;
+  margin: 6px 0;
+}
+
+.stat-card__body small {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.tone-blue .stat-card__icon { background: #2563eb; }
+.tone-teal .stat-card__icon { background: #019c9d; }
+.tone-green .stat-card__icon { background: #16a34a; }
+.tone-amber .stat-card__icon { background: #f59e0b; }
+.tone-purple .stat-card__icon { background: #7c3aed; }
+.tone-navy .stat-card__icon { background: #003e86; }
+
+.dashboard-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1.4fr 1fr;
+  margin-bottom: 14px;
+}
+
+.dashboard-grid--secondary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.dashboard-panel--wide {
+  min-width: 0;
+}
+
+.dashboard-panel__head {
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 16px 18px;
+}
+
+.dashboard-panel__head h2 {
+  font-size: 17px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.dashboard-panel__head p {
+  color: #64748b;
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.panel-pill,
+.status-pill,
+.payment-pill {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 10px;
+  text-transform: capitalize;
+}
+
+.panel-pill {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.status-pill,
+.payment-pill {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.status-pending { background: #fef3c7; color: #b45309; }
+.status-confirmed { background: #dbeafe; color: #1d4ed8; }
+.status-completed { background: #dcfce7; color: #15803d; }
+.status-cancelled,
+.status-no-show { background: #fee2e2; color: #b91c1c; }
+.status-active { background: #dcfce7; color: #15803d; }
+
+.payment-pill.is-paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.quick-link-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 16px 18px 0;
+}
+
+.quick-link-card {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  color: #111827;
+  display: flex;
+  font-weight: 700;
+  gap: 10px;
+  min-height: 54px;
+  padding: 12px 14px;
+  text-decoration: none;
+}
+
+.quick-link-card:hover {
+  border-color: #019c9d;
   color: #003e86;
 }
 
-.dashboard-hero .body {
-  background: linear-gradient(45deg, #019c9d, #003e86) !important;
-  // border-radius: 14px;
-}
-
-.dashboard-stat-card {
-  border: 0;
-  background: #fff;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
-}
-
-.dashboard-stat-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 14px;
-  background: rgba(1, 156, 157, 0.12);
-  color: #fff;
-  font-size: 20px;
-}
-
-.dashboard-stat-label {
-  color: #fff;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.dashboard-stat-value {
-  margin-top: 8px;
-  font-size: 34px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.quick-actions {
+.mini-metrics {
   display: grid;
   gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 16px 18px 18px;
 }
 
-.snapshot-item {
-  margin-bottom: 22px;
+.mini-metrics div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
 }
 
-.progress-bar {
-  background-color: #2c83b6;
+.mini-metrics span {
+  color: #64748b;
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
-.success-bar {
-  background-color: #019c9d;
+.mini-metrics strong {
+  color: #111827;
+  font-size: 22px;
+  font-weight: 900;
 }
 
-.warning-bar {
-  background-color: #f39c12;
+.dashboard-panel .table-responsive,
+.dashboard-panel apx-chart {
+  padding: 12px 18px 18px;
+}
+
+@media (max-width: 1400px) {
+  .stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-grid--secondary {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 991px) {
-  .dashboard-header-metric {
+  .dashboard-hero {
     align-items: flex-start;
-    margin-top: 16px;
+    flex-direction: column;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -1,5 +1,44 @@
-.navbar-nav {
-  display: flex;
+@import '../doctor-dashboard/doctor-dashboard.component.scss';
+
+.summary-strip {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 18px;
 }
 
+.summary-strip div {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  padding: 14px 16px;
+}
 
+.summary-strip span {
+  color: #64748b;
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.summary-strip strong {
+  color: #111827;
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  margin-top: 6px;
+}
+
+@media (max-width: 1200px) {
+  .summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575px) {
+  .summary-strip {
+    grid-template-columns: 1fr;
+  }
+}

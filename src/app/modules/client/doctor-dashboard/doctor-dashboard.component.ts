@@ -1,51 +1,69 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { finalize, forkJoin, map, of } from 'rxjs';
+import { NgApexchartsModule } from 'ng-apexcharts';
+import { ApexChart, ApexDataLabels, ApexLegend, ApexNonAxisChartSeries, ApexPlotOptions, ApexStroke, ApexXAxis } from 'ng-apexcharts';
+import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
-import { PieChartComponent } from '../charts/pie-chart/pie-chart.component';
 import { BackendService } from '../../../core/services/backend.service';
 import {
   Appointment,
+  DashboardStatusBreakdown,
   DashboardSummary,
-  ListResult,
   Patient,
-  Prescription,
 } from '../../../shared/models/hospital.model';
 import { isDoctorRole } from '../../auth/access-control';
+
+type DonutChartOptions = {
+  series: ApexNonAxisChartSeries;
+  chart: ApexChart;
+  labels: string[];
+  colors: string[];
+  legend: ApexLegend;
+  dataLabels: ApexDataLabels;
+  stroke: ApexStroke;
+  plotOptions: ApexPlotOptions;
+};
+
+type BarChartOptions = {
+  series: Array<{ name: string; data: number[] }>;
+  chart: ApexChart;
+  xaxis: ApexXAxis;
+  colors: string[];
+  plotOptions: ApexPlotOptions;
+  dataLabels: ApexDataLabels;
+  stroke: ApexStroke;
+};
 
 @Component({
   selector: 'app-doctor-dashboard',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    PieChartComponent,
-  ],
+  imports: [CommonModule, RouterLink, NgApexchartsModule, DatePipe, CurrencyPipe],
   templateUrl: './doctor-dashboard.component.html',
   styleUrl: './doctor-dashboard.component.scss',
 })
 export class DoctorDashboardComponent implements OnInit {
   loading = false;
-  readonly today = new Date();
+  readonly todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   canOpenClinicalRecords = false;
   canOpenPrescriptions = false;
   canOpenPatients = false;
-  summary: DashboardSummary = {
-    totalPatients: 0,
-    totalDoctors: 1,
-    todayAppointments: 0,
-    pendingAppointments: 0,
-    completedAppointments: 0,
-    totalRevenue: 0,
-    recentPatients: [],
-    upcomingAppointments: [],
-  };
-  currentUserId = '';
+  canOpenAppointments = false;
+
+  summary: DashboardSummary = this.emptySummary();
   currentUserName = 'Doctor';
-  doctorPrescriptionCount = 0;
-  cards: Array<{ label: string; value: number; icon: string }> = [];
-  quickLinks: Array<{ label: string; route: string; visible: boolean }> = [];
+
+  statCards: Array<{ label: string; value: string | number; hint: string; icon: string; tone: string }> = [];
+  quickLinks: Array<{ label: string; route: string; icon: string; visible: boolean }> = [];
+
+  appointmentDonut: DonutChartOptions = this.buildDonutChart(this.emptyBreakdown());
+  workloadBar: BarChartOptions = this.buildWorkloadBar(this.emptyBreakdown());
 
   constructor(
     private backend: BackendService,
@@ -62,34 +80,11 @@ export class DoctorDashboardComponent implements OnInit {
     return isDoctorRole(localStorage.getItem('role') || '');
   }
 
-  get dashboardTitle(): string {
-    return `Welcome back, Dr. ${this.currentUserName}`;
-  }
-
-  get dashboardSubtitle(): string {
-    return 'Here is your personal dashboard with only your appointments, patients, and follow-ups.';
-  }
-
-  get scheduleHeading(): string {
-    return "Today's Schedule";
-  }
-
-  get patientSectionHeading(): string {
-    return 'My Recent Patients';
-  }
-
-  get emptyPatientsMessage(): string {
-    return 'No patients are assigned to you yet.';
-  }
-
-  get emptyAppointmentsMessage(): string {
-    return 'No appointments are scheduled for you right now.';
-  }
-
   loadSummary(): void {
     this.loading = true;
 
-    this.loadDoctorDashboard()
+    this.backend
+      .getDoctorDashboardSummary()
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (summary) => {
@@ -99,7 +94,7 @@ export class DoctorDashboardComponent implements OnInit {
         error: (err) => {
           this.summary = this.emptySummary();
           this.syncDashboardState();
-          this.toastr.error(err?.error?.message || 'Something went wrong');
+          this.toastr.error(err?.error?.message || 'Dashboard load nahi ho saka');
         },
       });
   }
@@ -116,20 +111,19 @@ export class DoctorDashboardComponent implements OnInit {
     return this.patientName(appointment.patient);
   }
 
-  formatDate(value?: string | null): string {
-    return value ? new Date(value).toLocaleDateString() : '-';
+  statusClass(status?: string): string {
+    return `status-${String(status || 'pending').replace(/_/g, '-')}`;
   }
 
-  dashboardMenu(): void {
-    document.getElementById('navbarNavDropdown')?.classList.toggle('show');
+  statusLabel(status?: string): string {
+    return String(status || 'pending').replace(/_/g, ' ');
   }
 
   private hydrateSession(): void {
     const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as
-      | { _id?: string; name?: string | null }
+      | { name?: string | null }
       | null;
 
-    this.currentUserId = currentUser?._id || '';
     this.currentUserName =
       (currentUser?.name || 'Doctor').replace(/^dr\.?\s*/i, '').trim() || 'Doctor';
   }
@@ -140,104 +134,117 @@ export class DoctorDashboardComponent implements OnInit {
       this.backend.hasPermission('prescriptions.read') ||
       this.backend.hasPermission('prescriptions.create');
     this.canOpenPatients = this.backend.hasPermission('patients.read');
+    this.canOpenAppointments = this.backend.hasPermission('appointments.read');
 
     this.quickLinks = [
-      { label: 'Clinical Records', route: '/clinical-records', visible: this.canOpenClinicalRecords },
-      { label: 'Prescriptions', route: '/prescriptions', visible: this.canOpenPrescriptions },
-      { label: 'Patients', route: '/patients/all-patients', visible: this.canOpenPatients },
-      { label: 'Settings', route: '/settings', visible: true },
+      { label: 'Appointments', route: '/appointments', icon: 'fa-calendar', visible: this.canOpenAppointments },
+      { label: 'Prescriptions', route: '/prescriptions', icon: 'fa-file-text-o', visible: this.canOpenPrescriptions },
+      { label: 'Clinical Records', route: '/clinical-records', icon: 'fa-stethoscope', visible: this.canOpenClinicalRecords },
+      { label: 'My Patients', route: '/patients/all-patients', icon: 'fa-users', visible: this.canOpenPatients },
     ];
   }
 
   private syncDashboardState(): void {
-    this.cards = [
-      { label: 'My Patients', value: this.summary.totalPatients, icon: 'fa-user-circle-o' },
-      { label: "Today's Appointments", value: this.summary.todayAppointments, icon: 'fa-calendar' },
-      { label: 'Pending Follow-ups', value: this.summary.pendingAppointments, icon: 'fa-clock-o' },
-      { label: 'Completed Visits', value: this.summary.completedAppointments, icon: 'fa-check-circle' },
+    const breakdown = this.summary.todayAppointmentBreakdown || this.emptyBreakdown();
+
+    this.statCards = [
+      {
+        label: 'My Patients',
+        value: this.summary.totalPatients,
+        hint: 'Assigned to you',
+        icon: 'fa-user-md',
+        tone: 'tone-blue',
+      },
+      {
+        label: "Today's Appointments",
+        value: this.summary.todayAppointments,
+        hint: 'Scheduled today',
+        icon: 'fa-calendar-check-o',
+        tone: 'tone-teal',
+      },
+      {
+        label: 'Confirmed Today',
+        value: breakdown.confirmed,
+        hint: 'Ready to see',
+        icon: 'fa-check-circle',
+        tone: 'tone-green',
+      },
+      {
+        label: 'Pending Today',
+        value: breakdown.pending,
+        hint: 'Awaiting action',
+        icon: 'fa-clock-o',
+        tone: 'tone-amber',
+      },
+      {
+        label: 'Completed Today',
+        value: breakdown.completed,
+        hint: 'Visits done',
+        icon: 'fa-heartbeat',
+        tone: 'tone-purple',
+      },
+      {
+        label: "Today's Fee Collected",
+        value: this.summary.todayFeesCollected || 0,
+        hint: 'Paid consultations',
+        icon: 'fa-money',
+        tone: 'tone-navy',
+      },
     ];
+
+    this.appointmentDonut = this.buildDonutChart(breakdown);
+    this.workloadBar = this.buildWorkloadBar(breakdown);
   }
 
-  private loadDoctorDashboard() {
-    if (!this.currentUserId) {
-      return of(this.emptySummary());
-    }
+  private buildDonutChart(breakdown: DashboardStatusBreakdown): DonutChartOptions {
+    const series = [
+      breakdown.pending,
+      breakdown.confirmed,
+      breakdown.completed,
+      breakdown.cancelled,
+      breakdown.noShow,
+    ];
 
-    return forkJoin({
-      patients: this.backend.getPatients({
-        assignedDoctorId: this.currentUserId,
-        limit: 6,
-      }),
-      appointments: this.backend.getAppointments({
-        doctorId: this.currentUserId,
-        limit: 100,
-      }),
-      todayAppointments: this.backend.getAppointments({
-        doctorId: this.currentUserId,
-        dateFrom: this.dateValue(this.today),
-        dateTo: this.dateValue(this.today),
-        limit: 1,
-      }),
-      pendingAppointments: this.backend.getAppointments({
-        doctorId: this.currentUserId,
-        status: 'pending',
-        limit: 1,
-      }),
-      completedAppointments: this.backend.getAppointments({
-        doctorId: this.currentUserId,
-        status: 'completed',
-        limit: 1,
-      }),
-      prescriptions: this.canOpenPrescriptions
-        ? this.backend.getPrescriptions({
-            doctorId: this.currentUserId,
-            limit: 1,
-          })
-        : of(this.emptyListResult<Prescription>()),
-    }).pipe(
-      map(
-        ({
-          patients,
-          appointments,
-          todayAppointments,
-          pendingAppointments,
-          completedAppointments,
-          prescriptions,
-        }) => {
-          this.doctorPrescriptionCount = prescriptions.pagination.total;
+    return {
+      series,
+      chart: { type: 'donut', height: 320, fontFamily: 'inherit' },
+      labels: ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'No Show'],
+      colors: ['#f59e0b', '#019c9d', '#16a34a', '#ef4444', '#94a3b8'],
+      legend: { position: 'bottom', fontSize: '12px' },
+      dataLabels: { enabled: true },
+      stroke: { width: 1 },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '68%',
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: 'Today',
+                formatter: () => String(series.reduce((sum, value) => sum + value, 0)),
+              },
+            },
+          },
+        },
+      },
+    };
+  }
 
-          const appointmentItems = [...appointments.items].sort(
-            (a, b) => this.appointmentTimestamp(a) - this.appointmentTimestamp(b)
-          );
+  private buildWorkloadBar(breakdown: DashboardStatusBreakdown): BarChartOptions {
+    return {
+      series: [{ name: 'Appointments', data: [breakdown.pending, breakdown.confirmed, breakdown.completed] }],
+      chart: { type: 'bar', height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
+      xaxis: { categories: ['Pending', 'Confirmed', 'Completed'] },
+      colors: ['#003e86'],
+      plotOptions: { bar: { borderRadius: 8, columnWidth: '48%' } },
+      dataLabels: { enabled: false },
+      stroke: { show: true, width: 2, colors: ['transparent'] },
+    };
+  }
 
-          const upcomingAppointments = appointmentItems
-            .filter(
-              (appointment) =>
-                ['pending', 'confirmed'].includes(appointment.status) &&
-                this.appointmentTimestamp(appointment) >= this.startOfDay(this.today).getTime()
-            )
-            .slice(0, 6);
-
-          const recentPatients = [...patients.items]
-            .sort((a, b) => this.recordTimestamp(b.createdAt) - this.recordTimestamp(a.createdAt))
-            .slice(0, 6);
-
-          return {
-            totalPatients: patients.pagination.total,
-            totalDoctors: 1,
-            todayAppointments: todayAppointments.pagination.total,
-            pendingAppointments: pendingAppointments.pagination.total,
-            completedAppointments: completedAppointments.pagination.total,
-            totalRevenue: appointmentItems.reduce(
-              (sum, appointment) => sum + Number(appointment.consultationFee || 0),
-              0
-            ),
-            recentPatients,
-            upcomingAppointments,
-          } as DashboardSummary;
-        }
-      )
-    );
+  private emptyBreakdown(): DashboardStatusBreakdown {
+    return { pending: 0, confirmed: 0, completed: 0, cancelled: 0, noShow: 0 };
   }
 
   private emptySummary(): DashboardSummary {
@@ -245,42 +252,22 @@ export class DoctorDashboardComponent implements OnInit {
       totalPatients: 0,
       totalDoctors: 1,
       todayAppointments: 0,
+      todayPendingAppointments: 0,
+      todayConfirmedAppointments: 0,
+      todayCompletedAppointments: 0,
+      todayCancelledAppointments: 0,
       pendingAppointments: 0,
       completedAppointments: 0,
       totalRevenue: 0,
+      todayRevenue: 0,
+      todayFeesCollected: 0,
+      todayPrescriptions: 0,
+      totalPrescriptions: 0,
+      appointmentBreakdown: this.emptyBreakdown(),
+      todayAppointmentBreakdown: this.emptyBreakdown(),
       recentPatients: [],
       upcomingAppointments: [],
+      todayAppointmentsList: [],
     };
-  }
-
-  private emptyListResult<T>(): ListResult<T> {
-    return {
-      items: [],
-      pagination: {
-        page: 1,
-        limit: 0,
-        total: 0,
-        totalPages: 0,
-      },
-    };
-  }
-
-  private dateValue(date: Date): string {
-    return date.toISOString().slice(0, 10);
-  }
-
-  private appointmentTimestamp(appointment: Appointment): number {
-    const time = appointment.startTime || '00:00';
-    return new Date(`${appointment.appointmentDate}T${time}`).getTime();
-  }
-
-  private recordTimestamp(value?: string | null): number {
-    return value ? new Date(value).getTime() : 0;
-  }
-
-  private startOfDay(date: Date): Date {
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    return start;
   }
 }

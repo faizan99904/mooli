@@ -1,194 +1,167 @@
-<div id="main-content" class="doctor-aware-dashboard">
+<div id="main-content" class="modern-dashboard doctor-dashboard">
   <div class="container-fluid">
-    <div class="block-header">
-      <div class="row clearfix">
-        <div class="col-lg-4 col-md-12 col-sm-12">
-          <h1>Hi, Welcomeback!</h1>
-          <span>JustDo Dashboard,</span>
-        </div>
-        <div class="col-lg-8 col-md-12 col-sm-12 text-lg-right">
-          <div class="d-flex align-items-center justify-content-lg-end mt-4 mt-lg-0 flex-wrap vivify pullUp delay-550">
-            <div class="border-right pr-4 mr-4 mb-2 mb-xl-0 hidden-xs">
-              <p class="text-muted mb-1">Operation <span id="mini-bar-chart3" class="mini-bar-chart"></span></p>
-              <h5 class="mb-0">{{ summary.completedAppointments }}</h5>
-            </div>
-            <div class="border-right pr-4 mr-4 mb-2 mb-xl-0">
-              <p class="text-muted mb-1">Earning <span id="mini-bar-chart2" class="mini-bar-chart"></span></p>
-              <h5 class="mb-0">{{ summary.totalRevenue | currency:'USD':'symbol':'1.0-0' }}</h5>
-            </div>
-            <div class="mb-3 mb-xl-0">
-              <p class="text-muted mb-1">Revenue <span id="mini-bar-chart1" class="mini-bar-chart"></span></p>
-              <h5 class="mb-0">{{ doctorPrescriptionCount }}</h5>
-            </div>
-          </div>
-        </div>
+    <div class="dashboard-hero">
+      <div class="dashboard-hero__copy">
+        <span class="dashboard-eyebrow">Doctor Dashboard</span>
+        <h1>Welcome back, Dr. {{ currentUserName }}</h1>
+        <p>{{ todayLabel }} · Aaj ke appointments, patients aur fee collection ek jagah.</p>
+      </div>
+      <div class="dashboard-hero__actions">
+        <button type="button" class="btn btn-primary" (click)="loadSummary()" [disabled]="loading">
+          <i class="fa" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i>
+          Refresh
+        </button>
+        <a class="btn btn-default" routerLink="/appointments" *ngIf="canOpenAppointments">View Appointments</a>
       </div>
     </div>
 
-    <div class="row clearfix">
-      <div class="col-12">
-        <nav class="navbar navbar-expand-lg page_menu">
-          <a class="navbar-brand" href="javascript:void(0)">M.</a>
-          <button class="navbar-toggler" (click)="dashboardMenu()" type="button" aria-label="Toggle navigation">
-            <i class="fa fa-bars text-muted"></i>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarNavDropdown">
-            <ul class="navbar-nav mr-auto">
-              <li class="nav-item active">
-                <a class="nav-link" [routerLink]="['/doctor-dashboard']" href="javascript:void(0)">Dashboard</a>
-              </li>
-              <li class="nav-item" *ngIf="canOpenClinicalRecords">
-                <a class="nav-link" [routerLink]="['/clinical-records']" href="javascript:void(0)">Clinical Records</a>
-              </li>
-              <li class="nav-item" *ngIf="canOpenPrescriptions">
-                <a class="nav-link" [routerLink]="['/prescriptions']" href="javascript:void(0)">Prescriptions</a>
-              </li>
-            </ul>
-            <div class="ml-auto">
-              <a [routerLink]="['/settings']" href="javascript:void(0)" class="btn btn-default">Settings</a>
-            </div>
-          </div>
-        </nav>
-      </div>
-
-      <div class="col-12">
-        <div class="card theme-bg gradient dashboard-hero">
-          <div class="body">
-            <div class="row">
-              <div class="col-lg-3 col-md-6" *ngFor="let card of cards">
-                <div class="card dashboard-stat-card">
-                  <div class="body">
-                    <div class="dashboard-stat-icon">
-                      <i class="fa" [ngClass]="card.icon"></i>
-                    </div>
-                    <div class="dashboard-stat-label">{{ card.label }}</div>
-                    <div class="dashboard-stat-value">{{ loading ? '...' : card.value }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div class="stat-grid">
+      <article class="stat-card" *ngFor="let card of statCards" [ngClass]="card.tone">
+        <div class="stat-card__icon"><i class="fa" [ngClass]="card.icon"></i></div>
+        <div class="stat-card__body">
+          <span>{{ card.label }}</span>
+          <strong *ngIf="card.label !== 'Today\'s Fee Collected'">{{ loading ? '...' : card.value }}</strong>
+          <strong *ngIf="card.label === 'Today\'s Fee Collected'">{{ loading ? '...' : (card.value | currency:'PKR':'symbol-narrow':'1.0-0') }}</strong>
+          <small>{{ card.hint }}</small>
         </div>
-      </div>
+      </article>
     </div>
 
-    <div class="row clearfix row-deck">
-      <div class="col-lg-8 col-md-12">
-        <div class="card">
-          <div class="header">
-            <h2>{{ scheduleHeading }}</h2>
-            <small class="text-muted">Appointments assigned to you only.</small>
+    <div class="dashboard-grid">
+      <section class="dashboard-panel dashboard-panel--wide">
+        <div class="dashboard-panel__head">
+          <div>
+            <h2>Today's Schedule</h2>
+            <p>All appointments assigned to you for today.</p>
           </div>
-          <div class="body table-responsive">
-            <table class="table table-hover align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>Patient</th>
-                  <th>Department</th>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let appointment of summary.upcomingAppointments">
-                  <td>{{ appointmentPatientName(appointment) }}</td>
-                  <td>{{ appointment.department?.name || '-' }}</td>
-                  <td>{{ formatDate(appointment.appointmentDate) }}</td>
-                  <td>{{ appointment.startTime || '-' }}</td>
-                  <td><span class="badge badge-info text-uppercase">{{ appointment.status }}</span></td>
-                </tr>
-                <tr *ngIf="!loading && summary.upcomingAppointments.length === 0">
-                  <td colspan="5" class="text-center text-muted">{{ emptyAppointmentsMessage }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <span class="panel-pill">{{ summary.todayAppointmentsList?.length || 0 }} listed</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover table-custom spacing5 mb-0">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Payment</th>
+                <th>Fee</th>
+              </tr>
+            </thead>
+            <tbody *ngIf="!loading && (summary.todayAppointmentsList?.length || 0) > 0">
+              <tr *ngFor="let appointment of summary.todayAppointmentsList">
+                <td>
+                  <strong>{{ appointmentPatientName(appointment) }}</strong>
+                  <div class="text-muted small">{{ appointment.appointmentNo }}</div>
+                </td>
+                <td>{{ appointment.startTime || '-' }}</td>
+                <td><span class="status-pill" [ngClass]="statusClass(appointment.status)">{{ statusLabel(appointment.status) }}</span></td>
+                <td><span class="payment-pill" [class.is-paid]="appointment.paymentStatus === 'paid'">{{ appointment.paymentStatus || 'unpaid' }}</span></td>
+                <td>{{ appointment.consultationFee || 0 | currency:'PKR':'symbol-narrow':'1.0-0' }}</td>
+              </tr>
+            </tbody>
+            <tbody *ngIf="loading">
+              <tr><td colspan="5" class="text-center py-4"><i class="fa fa-spinner fa-spin"></i> Loading schedule...</td></tr>
+            </tbody>
+            <tbody *ngIf="!loading && !(summary.todayAppointmentsList?.length || 0)">
+              <tr><td colspan="5" class="text-center py-4 text-muted">Aaj koi appointment schedule nahi hai.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="dashboard-panel">
+        <div class="dashboard-panel__head">
+          <div>
+            <h2>Today's Mix</h2>
+            <p>Pending, confirmed, completed breakdown.</p>
           </div>
         </div>
-      </div>
+        <apx-chart
+          [series]="appointmentDonut.series"
+          [chart]="appointmentDonut.chart"
+          [labels]="appointmentDonut.labels"
+          [colors]="appointmentDonut.colors"
+          [legend]="appointmentDonut.legend"
+          [dataLabels]="appointmentDonut.dataLabels"
+          [stroke]="appointmentDonut.stroke"
+          [plotOptions]="appointmentDonut.plotOptions"
+        ></apx-chart>
+      </section>
+    </div>
 
-      <div class="col-lg-4 col-md-12">
-        <div class="card">
-          <div class="header">
+    <div class="dashboard-grid dashboard-grid--secondary">
+      <section class="dashboard-panel">
+        <div class="dashboard-panel__head">
+          <div>
+            <h2>Workload Snapshot</h2>
+            <p>Today's active appointment buckets.</p>
+          </div>
+        </div>
+        <apx-chart
+          [series]="workloadBar.series"
+          [chart]="workloadBar.chart"
+          [xaxis]="workloadBar.xaxis"
+          [colors]="workloadBar.colors"
+          [plotOptions]="workloadBar.plotOptions"
+          [dataLabels]="workloadBar.dataLabels"
+          [stroke]="workloadBar.stroke"
+        ></apx-chart>
+      </section>
+
+      <section class="dashboard-panel">
+        <div class="dashboard-panel__head">
+          <div>
             <h2>Quick Actions</h2>
-            <small class="text-muted">Open the tools you use most often.</small>
-          </div>
-          <div class="body quick-actions">
-            <a *ngFor="let link of quickLinks" [routerLink]="[link.route]" class="btn btn-default btn-block"
-              [class.d-none]="!link.visible">
-              {{ link.label }}
-            </a>
+            <p>Most used doctor tools.</p>
           </div>
         </div>
-      </div>
-    </div>
+        <div class="quick-link-grid">
+          <a *ngFor="let link of quickLinks" [routerLink]="link.route" class="quick-link-card" [class.d-none]="!link.visible">
+            <i class="fa" [ngClass]="link.icon"></i>
+            <span>{{ link.label }}</span>
+          </a>
+        </div>
+        <div class="mini-metrics">
+          <div>
+            <span>Total Prescriptions</span>
+            <strong>{{ loading ? '...' : (summary.totalPrescriptions || 0) }}</strong>
+          </div>
+          <div>
+            <span>Prescriptions Today</span>
+            <strong>{{ loading ? '...' : (summary.todayPrescriptions || 0) }}</strong>
+          </div>
+        </div>
+      </section>
 
-    <div class="row clearfix row-deck">
-      <div class="col-lg-7 col-md-12">
-        <div class="card">
-          <div class="header">
-            <h2>{{ patientSectionHeading }}</h2>
-            <small class="text-muted">Patients connected to your care.</small>
-          </div>
-          <div class="body table-responsive">
-            <table class="table table-hover mb-0">
-              <thead>
-                <tr>
-                  <th>Patient</th>
-                  <th>Phone</th>
-                  <th>Gender</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let patient of summary.recentPatients">
-                  <td>{{ patientName(patient) }}</td>
-                  <td>{{ patient.phone || '-' }}</td>
-                  <td>{{ patient.gender || '-' }}</td>
-                  <td><span class="badge badge-light text-uppercase">{{ patient.status }}</span></td>
-                </tr>
-                <tr *ngIf="!loading && summary.recentPatients.length === 0">
-                  <td colspan="4" class="text-center text-muted">{{ emptyPatientsMessage }}</td>
-                </tr>
-              </tbody>
-            </table>
+      <section class="dashboard-panel">
+        <div class="dashboard-panel__head">
+          <div>
+            <h2>My Recent Patients</h2>
+            <p>Recently connected patients under your care.</p>
           </div>
         </div>
-      </div>
-
-      <div class="col-lg-5 col-md-12">
-        <div class="card">
-          <div class="header">
-            <h2>Activity Snapshot</h2>
-            <small class="text-muted">Your current care workload at a glance.</small>
-          </div>
-          <div class="body">
-            <div class="snapshot-item">
-              <label class="d-block">Pending <span class="float-right">{{ summary.pendingAppointments }}</span></label>
-              <div class="progress progress-xs">
-                <div class="progress-bar" role="progressbar" [style.width.%]="summary.pendingAppointments ? 100 : 8">
-                </div>
-              </div>
-            </div>
-            <div class="snapshot-item">
-              <label class="d-block">Completed <span class="float-right">{{ summary.completedAppointments
-                  }}</span></label>
-              <div class="progress progress-xs">
-                <div class="progress-bar success-bar" role="progressbar"
-                  [style.width.%]="summary.completedAppointments ? 100 : 8"></div>
-              </div>
-            </div>
-            <div class="snapshot-item mb-0">
-              <label class="d-block">Prescriptions <span class="float-right">{{ doctorPrescriptionCount
-                  }}</span></label>
-              <div class="progress progress-xs">
-                <div class="progress-bar warning-bar" role="progressbar"
-                  [style.width.%]="doctorPrescriptionCount ? 100 : 8"></div>
-              </div>
-            </div>
-          </div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Phone</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody *ngIf="!loading && summary.recentPatients.length > 0">
+              <tr *ngFor="let patient of summary.recentPatients">
+                <td>{{ patientName(patient) }}</td>
+                <td>{{ patient.phone || '-' }}</td>
+                <td><span class="status-pill status-active">{{ patient.status || 'active' }}</span></td>
+              </tr>
+            </tbody>
+            <tbody *ngIf="!loading && summary.recentPatients.length === 0">
+              <tr><td colspan="3" class="text-center py-4 text-muted">Abhi koi patient assign nahi.</td></tr>
+            </tbody>
+          </table>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 </div>

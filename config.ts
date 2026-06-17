@@ -13,6 +13,7 @@ export const CONFIG = {
 
   hospitalDashboard: {
     summary: API_BASE_URL + '/hospital-dashboard/summary',
+    doctorSummary: API_BASE_URL + '/hospital-dashboard/doctor-summary',
   },
 
   hospitals: API_BASE_URL + '/hospitals',
