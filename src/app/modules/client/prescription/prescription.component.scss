@@ -1853,6 +1853,30 @@ dd {
   box-shadow: 0 0 0 3px rgba(17, 104, 200, 0.12);
 }
 
+.smart-medicine-preview {
+  background: #fff;
+  border: 1px dashed var(--rx-line);
+  border-radius: 6px;
+  color: var(--rx-ink);
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.smart-medicine-preview strong {
+  color: var(--rx-blue);
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.smart-medicine-preview pre {
+  font-family: inherit;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 .smart-suggestions {
   background: #fff;
   border: 1px solid var(--rx-line);

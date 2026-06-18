@@ -106,6 +106,14 @@ import {
   stripDoctorPrefix,
   toPrescriptionUrduText,
 } from './prescription-print-urdu';
+import {
+  buildMedicineInstructions,
+  containsFrequencyPattern,
+  detectFrequencyKey,
+  getFrequencySchedule,
+  mapFrequencyToTimings as resolveFrequencyTimings,
+  stripFrequencyPatterns,
+} from './medicine-instruction-formatter';
 
 interface PrintPreviewData {
   template: PrescriptionTemplate;
@@ -268,6 +276,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     },
   ];
   smartMedicineInput = '';
+  smartMedicinePreview: string | null = null;
   smartMedicineSuggestions: MedicineSuggestionOption[] = [];
   activeMedicineSuggestionIndex = -1;
   medicineLibraryOpen = false;
@@ -1195,6 +1204,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   onSmartMedicineInputChange(): void {
     this.cancelSmartMedicineBlurClose();
+    this.refreshSmartMedicinePreview();
     const query = this.extractMedicineQuery(this.smartMedicineInput);
     if (this.smartMedicineSearchTimer) {
       clearTimeout(this.smartMedicineSearchTimer);
@@ -1317,41 +1327,61 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   parseMedicineCommand(input: string): ParsedMedicineCommand {
     const tokens = input.trim().split(/\s+/).filter(Boolean);
+    const frequencyKey =
+      detectFrequencyKey(input) || tokens.map((token) => detectFrequencyKey(token)).find(Boolean) || null;
     const frequencyToken = tokens.find((token) => this.mapFrequencyToTimings(token).label);
     const mealToken = tokens.find((token) => ['pc', 'ac'].includes(token.toLowerCase()));
     const durationToken =
       tokens.find((token) => this.formatDuration(token)) ||
       tokens.find((token) => token.toLowerCase() === 'continue');
     const strengthToken = tokens.find((token) => /^\d+(\.\d+)?\s*(mg|ml|g|iu)?$/i.test(token));
-
-    // Keep medicine name parsing forgiving: remove known shortcut tokens, then use the
-    // remaining words to search the doctor's saved backend medicines; custom medicines are still allowed.
-    const medicineQuery = tokens
-      .filter((token) => {
-        const lower = token.toLowerCase();
-        return (
-          lower !== frequencyToken?.toLowerCase() &&
-          lower !== mealToken?.toLowerCase() &&
-          lower !== durationToken?.toLowerCase() &&
-          lower !== strengthToken?.toLowerCase()
-        );
-      })
-      .join(' ');
+    const medicineQuery = stripFrequencyPatterns(
+      tokens
+        .filter((token) => {
+          const lower = token.toLowerCase();
+          return (
+            !detectFrequencyKey(token) &&
+            lower !== mealToken?.toLowerCase() &&
+            lower !== durationToken?.toLowerCase() &&
+            lower !== strengthToken?.toLowerCase()
+          );
+        })
+        .join(' ')
+    );
     const savedMedicineMatch =
       this.findDoctorMedicineMatch(medicineQuery) || this.findDoctorMedicineMatch(tokens[0] || '');
-    const timings = this.mapFrequencyToTimings(frequencyToken || '');
+    const schedule = frequencyKey ? getFrequencySchedule(frequencyKey) : null;
+    const timings = schedule
+      ? {
+          label: schedule.label,
+          instruction: schedule.instructionNote,
+          morning: schedule.slots.morning,
+          noon: schedule.slots.noon,
+          evening: schedule.slots.evening,
+          night: schedule.slots.night,
+        }
+      : this.mapFrequencyToTimings(frequencyToken || '');
     const duration = this.formatDuration(durationToken || '') || '1 Month';
     const afterMeal = mealToken?.toLowerCase() === 'pc';
     const beforeMeal = mealToken?.toLowerCase() === 'ac';
-    const fallbackName = this.toTitleCase(medicineQuery || input);
+    const fallbackName = this.toTitleCase(medicineQuery || stripFrequencyPatterns(input));
     const strength = this.formatStrength(strengthToken || '');
     const dose = this.resolveMedicineDose(savedMedicineMatch, strengthToken || '');
     const defaultSlotDose = this.defaultSlotDose(savedMedicineMatch);
-    const instructions = [
-      beforeMeal ? 'Before meal' : '',
-      afterMeal ? 'After meal' : '',
-      timings.instruction,
-    ].filter(Boolean);
+    const formattedInstructions = buildMedicineInstructions({
+      dosage: dose || defaultSlotDose || '1 tablet',
+      frequency: schedule?.label || timings.label || frequencyKey || '',
+      morning: timings.morning,
+      noon: timings.noon,
+      evening: timings.evening,
+      night: timings.night,
+      morningDose: timings.morning ? defaultSlotDose || '1' : '',
+      noonDose: timings.noon ? defaultSlotDose || '1' : '',
+      eveningDose: timings.evening ? defaultSlotDose || '1' : '',
+      nightDose: timings.night ? defaultSlotDose || '1' : '',
+      beforeMeal,
+      afterMeal,
+    });
 
     return {
       medicineName: savedMedicineMatch ? this.doctorMedicineDisplayName(savedMedicineMatch) : fallbackName,
@@ -1369,7 +1399,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       eveningDose: timings.evening ? defaultSlotDose : '',
       night: timings.night,
       nightDose: timings.night ? defaultSlotDose : '',
-      instruction: instructions.join('. ') || (strength ? strength : ''),
+      instruction: formattedInstructions?.combined || strength || '',
     };
   }
 
@@ -1381,21 +1411,19 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     evening: boolean;
     night: boolean;
   } {
-    const frequency = shortcut.toLowerCase();
-    const empty = { label: '', instruction: '', morning: false, noon: false, evening: false, night: false };
-    const map: Record<string, typeof empty> = {
-      od: { label: 'Once daily (OD)', instruction: '', morning: true, noon: false, evening: false, night: false },
-      bd: { label: 'Twice daily (BD)', instruction: '', morning: true, noon: false, evening: true, night: false },
-      tds: { label: 'Three times daily (TDS)', instruction: '', morning: true, noon: true, evening: true, night: false },
-      qid: { label: 'Four times daily (QID)', instruction: '', morning: true, noon: true, evening: true, night: true },
-      hs: { label: 'At night (HS)', instruction: 'Take at night', morning: false, noon: false, evening: false, night: true },
-      am: { label: 'Morning (AM)', instruction: '', morning: true, noon: false, evening: false, night: false },
-      noon: { label: 'Noon', instruction: '', morning: false, noon: true, evening: false, night: false },
-      pm: { label: 'Evening (PM)', instruction: '', morning: false, noon: false, evening: true, night: false },
-      sos: { label: 'When needed (SOS)', instruction: 'Use when needed', morning: false, noon: false, evening: false, night: false },
-    };
+    return resolveFrequencyTimings(shortcut);
+  }
 
-    return map[frequency] || empty;
+  onMedicineFrequencyInput(index: number): void {
+    this.applyMedicineInstructionAssistant(index);
+  }
+
+  onMedicineDosageInput(index: number): void {
+    this.applyMedicineInstructionAssistant(index);
+  }
+
+  onMedicineMealTimingChange(index: number): void {
+    this.applyMedicineInstructionAssistant(index);
   }
 
   formatDuration(token = ''): string {
@@ -1555,6 +1583,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     if (dose && !group.get(slot)?.value) {
       group.get(slot)?.setValue(true, { emitEvent: false });
     }
+
+    this.applyMedicineInstructionAssistant(index);
   }
 
   handleSlotDoseKeydown(event: KeyboardEvent, rowIndex: number, slot: DoseSlot): void {
@@ -1667,6 +1697,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     if (!group.get(slot)?.value) {
       group.get(`${slot}Dose`)?.setValue('');
     }
+
+    this.applyMedicineInstructionAssistant(index);
   }
 
   addCustomLabTest(): void {
@@ -3943,19 +3975,104 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   private extractMedicineQuery(value: string): string {
-    return value
-      .trim()
-      .split(/\s+/)
-      .filter((token) => {
-        const lower = token.toLowerCase();
-        return (
-          !this.mapFrequencyToTimings(lower).label &&
-          !['pc', 'ac', 'continue'].includes(lower) &&
-          !this.formatDuration(lower) &&
-          !/^\d+(\.\d+)?\s*(mg|ml|g|iu)?$/i.test(token)
-        );
-      })
-      .join(' ');
+    return stripFrequencyPatterns(
+      value
+        .trim()
+        .split(/\s+/)
+        .filter((token) => {
+          const lower = token.toLowerCase();
+          return (
+            !detectFrequencyKey(token) &&
+            !this.mapFrequencyToTimings(lower).label &&
+            !['pc', 'ac', 'continue'].includes(lower) &&
+            !this.formatDuration(lower) &&
+            !/^\d+(\.\d+)?\s*(mg|ml|g|iu)?$/i.test(token)
+          );
+        })
+        .join(' ')
+    );
+  }
+
+  private applyMedicineInstructionAssistant(index: number): void {
+    const group = this.medicines.at(index);
+    if (!group) {
+      return;
+    }
+
+    const raw = group.getRawValue() as Record<string, unknown>;
+    const frequencyKey = detectFrequencyKey(String(raw['frequency'] || ''));
+    const schedule = frequencyKey ? getFrequencySchedule(frequencyKey) : null;
+    const patch: Record<string, unknown> = {};
+
+    if (schedule) {
+      patch['frequency'] = schedule.label;
+      patch['morning'] = schedule.slots.morning;
+      patch['noon'] = schedule.slots.noon;
+      patch['evening'] = schedule.slots.evening;
+      patch['night'] = schedule.slots.night;
+
+      const defaultDose = String(raw['dosage'] || '').trim() || '1';
+      (['morning', 'noon', 'evening', 'night'] as DoseSlot[]).forEach((slot) => {
+        if (schedule.slots[slot] && !String(raw[`${slot}Dose`] || '').trim()) {
+          patch[`${slot}Dose`] = defaultDose;
+        }
+      });
+    }
+
+    const nextValue = { ...raw, ...patch };
+    const formatted = buildMedicineInstructions({
+      dosage: String(nextValue['dosage'] || '').trim(),
+      frequency: String(nextValue['frequency'] || '').trim(),
+      morning: Boolean(nextValue['morning']),
+      noon: Boolean(nextValue['noon']),
+      evening: Boolean(nextValue['evening']),
+      night: Boolean(nextValue['night']),
+      morningDose: String(nextValue['morningDose'] || '').trim(),
+      noonDose: String(nextValue['noonDose'] || '').trim(),
+      eveningDose: String(nextValue['eveningDose'] || '').trim(),
+      nightDose: String(nextValue['nightDose'] || '').trim(),
+      beforeMeal: Boolean(nextValue['beforeMeal']),
+      afterMeal: Boolean(nextValue['afterMeal']),
+    });
+
+    if (formatted) {
+      patch['instructions'] = formatted.combined;
+    }
+
+    if (Object.keys(patch).length) {
+      group.patchValue(patch, { emitEvent: false });
+    }
+  }
+
+  private refreshSmartMedicinePreview(): void {
+    const command = this.smartMedicineInput.trim();
+    if (!command || !containsFrequencyPattern(command)) {
+      this.smartMedicinePreview = null;
+      return;
+    }
+
+    const parsed = this.parseMedicineCommand(command);
+    const formatted = buildMedicineInstructions({
+      dosage: parsed.dose || parsed.morningDose || '1 tablet',
+      frequency: parsed.frequency,
+      morning: parsed.morning,
+      noon: parsed.noon,
+      evening: parsed.evening,
+      night: parsed.night,
+      morningDose: parsed.morningDose,
+      noonDose: parsed.noonDose,
+      eveningDose: parsed.eveningDose,
+      nightDose: parsed.nightDose,
+      beforeMeal: parsed.beforeMeal,
+      afterMeal: parsed.afterMeal,
+    });
+
+    if (!formatted) {
+      this.smartMedicinePreview = null;
+      return;
+    }
+
+    this.smartMedicinePreview = `${parsed.medicineName}\n${formatted.combined}`;
   }
 
   private findDoctorMedicineMatch(query: string): DoctorMedicine | undefined {
@@ -4066,6 +4183,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   private resetSmartMedicineInput(): void {
     this.smartMedicineInput = '';
+    this.smartMedicinePreview = null;
     this.clearSmartMedicineSuggestions();
     this.focusSmartMedicineInput();
   }
@@ -4090,6 +4208,10 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   private hasSmartMedicineCommand(value: string): boolean {
+    if (containsFrequencyPattern(value)) {
+      return true;
+    }
+
     return value
       .trim()
       .split(/\s+/)
