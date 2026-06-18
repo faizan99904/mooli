@@ -1,0 +1,102 @@
+<div class="ward-modal-backdrop" *ngIf="open" (click)="close()">
+  <div class="ward-modal" (click)="$event.stopPropagation()">
+    <div class="ward-modal__head">
+      <div>
+        <h3>{{ title }}</h3>
+        <p *ngIf="loading">Loading options...</p>
+      </div>
+      <button type="button" class="ward-modal__close" (click)="close()"><i class="fa fa-times"></i></button>
+    </div>
+
+    <div class="ward-modal__body" [ngSwitch]="moduleKey">
+      <ng-container *ngSwitchCase="'admissions'">
+        <label><span>Patient</span><select [(ngModel)]="form['patientId']"><option value="">Select patient</option><option *ngFor="let patient of patients" [value]="patient._id">{{ patientLabel(patient) }}</option></select></label>
+        <label><span>Room</span><select [(ngModel)]="form['roomId']"><option value="">Select room</option><option *ngFor="let room of rooms" [value]="room._id">{{ roomLabel(room) }}</option></select></label>
+        <label><span>Consultant Doctor</span><select [(ngModel)]="form['consultantDoctorId']"><option value="">Select doctor</option><option *ngFor="let doctor of doctors" [value]="doctor._id">{{ doctorLabel(doctor) }}</option></select></label>
+        <label><span>Bed Label</span><input [(ngModel)]="form['bedLabel']" placeholder="A-1" /></label>
+        <label><span>Admission Reason</span><textarea [(ngModel)]="form['admissionReason']" rows="2"></textarea></label>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'nursing-care'">
+        <label><span>Patient</span><select [(ngModel)]="form['patientId']"><option value="">Select patient</option><option *ngFor="let patient of patients" [value]="patient._id">{{ patientLabel(patient) }}</option></select></label>
+        <label><span>Task</span><input [(ngModel)]="form['title']" placeholder="Wound dressing" /></label>
+        <label><span>Priority</span><select [(ngModel)]="form['priority']"><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+        <label><span>Shift</span><select [(ngModel)]="form['shift']"><option *ngFor="let shift of shiftOptions" [value]="shift.value">{{ shift.label }}</option></select></label>
+        <label><span>Notes</span><textarea [(ngModel)]="form['description']" rows="3"></textarea></label>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'mar'">
+        <label><span>Patient</span><select [(ngModel)]="form['patientId']"><option value="">Select patient</option><option *ngFor="let patient of patients" [value]="patient._id">{{ patientLabel(patient) }}</option></select></label>
+        <label><span>Medicine</span><input [(ngModel)]="form['medicineName']" /></label>
+        <label><span>Dose</span><input [(ngModel)]="form['dose']" /></label>
+        <label><span>Route</span><input [(ngModel)]="form['route']" /></label>
+        <label><span>Notes</span><textarea [(ngModel)]="form['notes']" rows="2"></textarea></label>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'drips-iv'">
+        <label><span>Prescription</span><select [(ngModel)]="form['prescriptionId']"><option value="">Select prescription</option><option *ngFor="let rx of prescriptions" [value]="rx._id">Rx {{ rx._id.slice(-6) }} · {{ rx.patient?.firstName }} {{ rx.patient?.lastName }}</option></select></label>
+        <label><span>Fluid Name</span><input [(ngModel)]="form['fluidName']" placeholder="Normal Saline" /></label>
+        <label><span>Notes</span><textarea [(ngModel)]="form['notes']" rows="2"></textarea></label>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'vitals'">
+        <label><span>Patient</span><select [(ngModel)]="form['patientId']"><option value="">Select patient</option><option *ngFor="let patient of patients" [value]="patient._id">{{ patientLabel(patient) }}</option></select></label>
+        <div class="ward-modal__grid">
+          <label><span>BP</span><input [(ngModel)]="form['bloodPressure']" placeholder="120/80" /></label>
+          <label><span>Temp</span><input [(ngModel)]="form['temperature']" placeholder="98.6" /></label>
+          <label><span>Pulse</span><input [(ngModel)]="form['pulse']" placeholder="78" /></label>
+          <label><span>Weight</span><input [(ngModel)]="form['weight']" placeholder="12 kg" /></label>
+        </div>
+        <label><span>Notes</span><textarea [(ngModel)]="form['notes']" rows="2"></textarea></label>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'io-chart'">
+        <label><span>Patient</span><select [(ngModel)]="form['patientId']"><option value="">Select patient</option><option *ngFor="let patient of patients" [value]="patient._id">{{ patientLabel(patient) }}</option></select></label>
+        <div class="ward-modal__grid">
+          <label><span>Intake (ml)</span><input type="number" [(ngModel)]="form['intake']" /></label>
+          <label><span>Output (ml)</span><input type="number" [(ngModel)]="form['output']" /></label>
+          <label><span>Balance</span><input [(ngModel)]="form['balance']" /></label>
+          <label><span>Shift</span><select [(ngModel)]="form['shift']"><option *ngFor="let shift of shiftOptions" [value]="shift.value">{{ shift.label }}</option></select></label>
+        </div>
+        <label><span>Notes</span><textarea [(ngModel)]="form['notes']" rows="2"></textarea></label>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'orders-services'">
+        <label><span>Patient</span><select [(ngModel)]="form['patientId']"><option value="">Select patient</option><option *ngFor="let patient of patients" [value]="patient._id">{{ patientLabel(patient) }}</option></select></label>
+        <label><span>Order Type</span><select [(ngModel)]="form['orderType']"><option value="lab">Lab</option><option value="service">Service</option></select></label>
+        <label><span>Order Name</span><input [(ngModel)]="form['orderName']" /></label>
+        <label><span>Priority</span><select [(ngModel)]="form['priority']"><option value="normal">Normal</option><option value="urgent">Urgent</option></select></label>
+        <label><span>Notes</span><textarea [(ngModel)]="form['notes']" rows="2"></textarea></label>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'shift-handover'">
+        <label><span>Shift</span><select [(ngModel)]="form['shift']"><option *ngFor="let shift of shiftOptions" [value]="shift.value">{{ shift.label }}</option></select></label>
+        <label><span>Nurse Name</span><input [(ngModel)]="form['nurseName']" /></label>
+        <div class="ward-modal__grid">
+          <label><span>Patients</span><input type="number" [(ngModel)]="form['patientsCount']" /></label>
+          <label><span>Pending Items</span><input type="number" [(ngModel)]="form['pendingCount']" /></label>
+        </div>
+        <label><span>Handover Notes</span><textarea [(ngModel)]="form['description']" rows="4"></textarea></label>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'inventory'">
+        <label><span>Item Name</span><input [(ngModel)]="form['title']" /></label>
+        <label><span>Category</span><input [(ngModel)]="form['category']" /></label>
+        <div class="ward-modal__grid">
+          <label><span>Quantity</span><input type="number" [(ngModel)]="form['quantity']" /></label>
+          <label><span>Reorder Level</span><input type="number" [(ngModel)]="form['reorderLevel']" /></label>
+        </div>
+        <label><span>Location</span><input [(ngModel)]="form['location']" /></label>
+        <label><span>Notes</span><textarea [(ngModel)]="form['description']" rows="2"></textarea></label>
+      </ng-container>
+    </div>
+
+    <div class="ward-modal__foot">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="close()">Cancel</button>
+      <button type="button" class="btn btn-sm btn-primary" [disabled]="saving || loading" (click)="submit()">
+        <i class="fa" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+        {{ saving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+</div>

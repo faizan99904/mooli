@@ -57,6 +57,11 @@ import { PharmacyProductsComponent } from './pharmacy-products/pharmacy-products
 import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
 import { PosReportsComponent } from './pos-reports/pos-reports.component';
 import { AuditLogsComponent } from './audit-logs/audit-logs.component';
+import { WardDashboardComponent } from './ward/ward-dashboard.component';
+import { WardBedManagementComponent } from './ward/ward-bed-management.component';
+import { WardPatientListComponent } from './ward/ward-patient-list.component';
+import { WardModulePageComponent } from './ward/ward-module-page.component';
+import { WardPatientDetailComponent } from './ward/ward-patient-detail.component';
 
 const WILDCARD_ACCESS = ['*'];
 const HOSPITAL_DASHBOARD_ACCESS = ['hospital_dashboard.read'];
@@ -98,6 +103,13 @@ const PHARMACY_POS_ACCESS = {
 const LAB_ACCESS = ['lab_orders.read', 'lab_tests.read', 'patients_history.read'];
 const LAB_MANAGE_ACCESS = ['lab_orders.create', 'lab_orders.update', 'lab_tests.create', 'patients_history.create'];
 const WARD_ADMIN_ACCESS = ['patients_history.read'];
+
+const wardModuleRoute = (path: string, title: string, wardModuleKey: string) => ({
+  path,
+  component: WardModulePageComponent,
+  data: { title: `Mooli | ${title}`, wardModuleKey },
+  canActivate: [roleGuard(WARD_ADMIN_ACCESS)],
+});
 
 export const clientRoutes: Routes = [
   {
@@ -358,11 +370,56 @@ export const clientRoutes: Routes = [
         canActivate: [roleGuard(HISTORY_ACCESS)],
       },
       {
+        path: 'ward',
+        redirectTo: 'ward/dashboard',
+        pathMatch: 'full',
+      },
+      {
+        path: 'ward/dashboard',
+        component: WardDashboardComponent,
+        data: { title: 'Mooli | Ward Admin Dashboard' },
+        canActivate: [roleGuard(WARD_ADMIN_ACCESS)],
+      },
+      {
+        path: 'ward/patient-detail/:admissionId',
+        component: WardPatientDetailComponent,
+        data: { title: 'Mooli | Patient Detail' },
+        canActivate: [roleGuard(WARD_ADMIN_ACCESS)],
+      },
+      {
+        path: 'ward/bed-management',
+        component: WardBedManagementComponent,
+        data: { title: 'Mooli | Bed Management' },
+        canActivate: [roleGuard(WARD_ADMIN_ACCESS)],
+      },
+      {
+        path: 'ward/patient-list',
+        component: WardPatientListComponent,
+        data: { title: 'Mooli | Patient List' },
+        canActivate: [roleGuard(WARD_ADMIN_ACCESS)],
+      },
+      wardModuleRoute('ward/admissions', 'Admissions', 'admissions'),
+      wardModuleRoute('ward/nursing-care', 'Nursing Care', 'nursing-care'),
+      wardModuleRoute('ward/mar', 'MAR / Medications', 'mar'),
+      wardModuleRoute('ward/drips-iv', 'Drips / IV Fluids', 'drips-iv'),
+      wardModuleRoute('ward/vitals', 'Vitals & Observations', 'vitals'),
+      wardModuleRoute('ward/io-chart', 'I/O Chart', 'io-chart'),
+      wardModuleRoute('ward/orders-services', 'Orders & Services', 'orders-services'),
+      wardModuleRoute('ward/shift-handover', 'Shift Handover', 'shift-handover'),
+      {
+        path: 'ward/nurses-staff',
+        component: OurStaffComponent,
+        data: { title: 'Mooli | Nurses & Staff' },
+        canActivate: [roleGuard(WARD_ADMIN_ACCESS)],
+      },
+      wardModuleRoute('ward/inventory', 'Ward Inventory', 'inventory'),
+      wardModuleRoute('ward/reports', 'Ward Reports', 'reports'),
+      {
         path: 'ward-admin',
         component: CareRecordsComponent,
         data: {
-          title: 'Mooli | Ward Admin',
-          pageTitle: 'Ward Admin',
+          title: 'Mooli | Ward Admin Notes',
+          pageTitle: 'Ward Admin Notes',
           pageSubtitle: 'Admitted patients, drip notes, and ward treatment updates',
           recordType: 'ward',
         },

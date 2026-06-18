@@ -81,7 +81,7 @@ export class LoginComponent {
 
         this.toaster.success(response?.message || 'Login Successfully');
 
-        this.router.navigateByUrl(resolveDefaultRoute(permissions));
+        this.router.navigateByUrl(resolveDefaultRoute(permissions, role || ''));
       },
 
       error: (err) => {

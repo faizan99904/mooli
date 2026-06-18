@@ -46,6 +46,7 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   PharmacyCollapsed = true;
   PrescriptionCollapsed = true;
   LaboratoryCollapsed = true;
+  WardCollapsed = true;
   changePasswordModalOpen = false;
   changePasswordLoading = false;
   showCurrentPassword = false;
@@ -260,6 +261,8 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     this.RoomCollapsed = !url.includes('room-allotment');
     this.PatientCollapsed = !url.includes('patients');
     this.PharmacyCollapsed = !(url.includes('pharmacy') || url.includes('pos-reports'));
+    this.LaboratoryCollapsed = !url.includes('laboratory');
+    this.WardCollapsed = !(url.includes('/ward') || url.includes('ward-admin'));
   }
 
   private normalizeRole(role: string): string {

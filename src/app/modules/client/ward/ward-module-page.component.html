@@ -1,0 +1,160 @@
+<div id="main-content" class="modern-dashboard ward-page-shell ward-module-page">
+  <div class="container-fluid ward-page-container" *ngIf="config">
+    <div class="ward-page-header ward-page-header--compact">
+      <div class="ward-page-header__copy">
+        <h1>{{ config.title }}</h1>
+        <p>{{ config.subtitle }}</p>
+      </div>
+      <div class="ward-page-header__actions">
+        <label class="ward-header-filter">
+          <span>Ward</span>
+          <select [(ngModel)]="ward" (ngModelChange)="onFilterChange()">
+            <option *ngFor="let option of wardOptions" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+        <label class="ward-header-filter">
+          <span>Date</span>
+          <input type="date" [(ngModel)]="date" />
+        </label>
+        <label class="ward-header-filter">
+          <span>Shift</span>
+          <select [(ngModel)]="shift">
+            <option *ngFor="let option of shiftOptions" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="exportData()" *ngIf="config.layout === 'table'">
+          <i class="fa fa-download"></i> Export
+        </button>
+        <button type="button" class="btn btn-sm btn-primary ward-refresh-btn" (click)="refresh()">
+          <i class="fa fa-refresh"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-primary" *ngIf="config.primaryActionLabel" (click)="primaryAction()">
+          <i class="fa fa-plus"></i> {{ config.primaryActionLabel }}
+        </button>
+      </div>
+    </div>
+
+    <section class="ward-kpi-grid">
+      <article class="ward-kpi-card" *ngFor="let kpi of config.kpis" [ngClass]="'ward-kpi-card--' + kpi.tone">
+        <span class="ward-kpi-card__icon"><i class="fa" [ngClass]="kpi.icon"></i></span>
+        <span class="ward-kpi-card__copy">
+          <strong>{{ kpi.value }}</strong>
+          <small>{{ kpi.label }}</small>
+        </span>
+      </article>
+    </section>
+
+    <section class="ward-panel">
+      <div class="ward-panel__head ward-panel__head--stack">
+        <div>
+          <h2>{{ config.title }} in {{ ward }}</h2>
+          <p>{{ config.layout === 'reports' ? reportCards.length : rows.length }} records shown</p>
+        </div>
+        <div class="ward-status-tabs" *ngIf="config.tabs.length">
+          <button
+            type="button"
+            class="ward-status-tab"
+            *ngFor="let tab of config.tabs"
+            [class.ward-status-tab--active]="activeTab === tab.key"
+            (click)="setTab(tab.key)"
+          >
+            {{ tab.label }} ({{ tabCount(tab.key) }})
+          </button>
+        </div>
+      </div>
+
+      <div class="ward-filter-toolbar ward-filter-toolbar--in-panel">
+        <label class="ward-filter ward-filter--compact ward-filter--grow">
+          <span>Search</span>
+          <input type="search" [(ngModel)]="search" (ngModelChange)="onFilterChange()" [placeholder]="config.searchPlaceholder" />
+        </label>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="exportData()" *ngIf="config.layout === 'table'">
+          <i class="fa fa-download"></i> Export
+        </button>
+      </div>
+
+      <div class="ward-report-grid" *ngIf="config.layout === 'reports' && reportCards.length; else tableBlock">
+        <button type="button" class="ward-report-card" *ngFor="let card of reportCards" (click)="openReport(card)">
+          <strong>{{ card.title }}</strong>
+          <span>{{ card.description }}</span>
+          <small>{{ card.actionLabel }}</small>
+        </button>
+      </div>
+
+      <ng-template #tableBlock>
+        <div class="ward-hierarchy-tree" *ngIf="config.layout === 'hierarchy'; else dataTable">
+          <div class="ward-hierarchy-node" *ngFor="let node of hierarchyNodes" [ngClass]="'ward-hierarchy-node--level-' + node.level">
+            <i class="fa" [ngClass]="node.icon"></i>
+            <span>{{ node.label }}</span>
+          </div>
+        </div>
+
+        <ng-template #dataTable>
+          <div class="ward-data-table-wrap" *ngIf="rows.length; else emptyState">
+            <table class="table table-hover table-custom spacing5 mb-0 ward-data-table">
+              <thead>
+                <tr>
+                  <th *ngFor="let column of config.columns">{{ column.label }}</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of paginatedRows; trackBy: trackById">
+                  <td *ngFor="let column of config.columns">
+                    <button
+                      type="button"
+                      class="ward-link-btn-inline"
+                      *ngIf="column.type === 'link'; else cellValue"
+                      (click)="openRow(row)"
+                    >
+                      {{ row.cells[column.key] }}
+                    </button>
+                    <ng-template #cellValue>
+                      <span *ngIf="column.type === 'badge'; else plainValue" [ngClass]="badgeClass(column.key, row)">
+                        {{ row.cells[column.key] }}
+                      </span>
+                      <ng-template #plainValue>{{ row.cells[column.key] }}</ng-template>
+                    </ng-template>
+                  </td>
+                  <td>
+                    <div class="table-actions">
+                      <button type="button" title="View" (click)="openRow(row)" *ngIf="row.linkRoute"><i class="fa fa-eye"></i></button>
+                      <button type="button" title="More"><i class="fa fa-ellipsis-v"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-template>
+      </ng-template>
+
+      <ng-template #emptyState>
+        <div class="ward-empty-state">
+          <div class="ward-empty-state__icon"><i class="fa fa-search"></i></div>
+          <h3>No records found</h3>
+          <p>Try changing filters or search with another keyword.</p>
+          <button type="button" class="btn btn-sm btn-primary" (click)="search = ''; activeTab = 'all'; onFilterChange()">Reset Filters</button>
+        </div>
+      </ng-template>
+
+      <div class="ward-table-footer" *ngIf="config.layout === 'table' && rows.length">
+        <span>Showing {{ paginationStart }} to {{ paginationEnd }} of {{ rows.length }} records</span>
+        <div class="ward-pagination">
+          <button type="button" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)"><i class="fa fa-chevron-left"></i></button>
+          <button type="button" *ngFor="let page of pageNumbers" [class.is-active]="currentPage === page" (click)="goToPage(page)">{{ page }}</button>
+          <button type="button" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)"><i class="fa fa-chevron-right"></i></button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<app-ward-action-modal
+  *ngIf="config"
+  [open]="actionModalOpen"
+  [moduleKey]="config.key"
+  [title]="config.primaryActionLabel || config.title"
+  (closed)="closeActionModal()"
+  (saved)="onActionSaved()"
+></app-ward-action-modal>

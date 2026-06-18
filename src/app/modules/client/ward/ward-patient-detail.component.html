@@ -1,0 +1,137 @@
+<div id="main-content" class="modern-dashboard ward-page-shell ward-patient-detail-page">
+  <div class="container-fluid ward-page-container">
+    <div class="ward-page-header ward-page-header--compact">
+      <div class="ward-page-header__copy">
+        <a routerLink="/ward/patient-list" class="ward-back-link"><i class="fa fa-arrow-left"></i> Back to Patient List</a>
+        <h1>{{ patient?.patientName || 'Patient Detail' }}</h1>
+        <p *ngIf="patient">{{ patient.mrn }} · Bed {{ patient.bedNo }} · {{ patient.wardName }}</p>
+      </div>
+      <div class="ward-page-header__actions">
+        <label class="ward-header-filter">
+          <span>Ward</span>
+          <select [(ngModel)]="ward">
+            <option *ngFor="let option of wardOptions" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+        <label class="ward-header-filter">
+          <span>Date</span>
+          <input type="date" [(ngModel)]="date" />
+        </label>
+        <label class="ward-header-filter">
+          <span>Shift</span>
+          <select [(ngModel)]="shift">
+            <option *ngFor="let option of shiftOptions" [value]="option">{{ option }}</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <section class="ward-patient-hero ward-panel" *ngIf="patient as p">
+      <div class="ward-patient-hero__main">
+        <div>
+          <span [ngClass]="statusClass(p.status)">{{ statusLabel(p.status) }}</span>
+          <h2>{{ p.patientName }}</h2>
+          <p>{{ p.age }} Y / {{ p.sex }} · {{ p.diagnosis }}</p>
+        </div>
+        <dl class="ward-patient-hero__meta">
+          <div><dt>Bed</dt><dd>{{ p.bedNo }}</dd></div>
+          <div><dt>Room</dt><dd>{{ p.roomName }}</dd></div>
+          <div><dt>Doctor</dt><dd>{{ p.doctorName }}</dd></div>
+          <div><dt>Nurse</dt><dd>{{ p.nurseName || '—' }}</dd></div>
+          <div><dt>Admitted</dt><dd>{{ p.admittedOn }}</dd></div>
+          <div><dt>Gallery</dt><dd>{{ p.galleryName }}</dd></div>
+        </dl>
+      </div>
+      <div class="ward-patient-hero__actions">
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="navigate('/ward/mar')">View MAR</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="navigate('/ward/vitals')">Record Vitals</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="navigate('/ward/drips-iv')">View Drips</button>
+        <button type="button" class="btn btn-sm btn-primary" (click)="navigate('/ward/nursing-care')">Nursing Notes</button>
+      </div>
+    </section>
+
+    <div class="ward-detail-layout" *ngIf="patient as p">
+      <section class="ward-panel ward-detail-main">
+        <div class="ward-status-tabs ward-detail-tabs">
+          <button
+            type="button"
+            class="ward-status-tab"
+            *ngFor="let tab of tabs"
+            [class.ward-status-tab--active]="activeTab === tab.key"
+            (click)="setTab(tab.key)"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+
+        <div class="ward-detail-content" [ngSwitch]="activeTab">
+          <div *ngSwitchCase="'overview'">
+            <h3>Today's Summary</h3>
+            <div class="ward-summary-grid">
+              <div><span>Medications Due</span><strong>{{ p.medicationsDue }}</strong></div>
+              <div><span>Vitals Due</span><strong>{{ p.vitalsDue }}</strong></div>
+              <div><span>Drips Running</span><strong>{{ p.dripsRunning }}</strong></div>
+              <div><span>Nursing Tasks</span><strong>{{ p.nursingTasksDue }}</strong></div>
+              <div><span>Critical Alerts</span><strong>{{ p.criticalAlerts }}</strong></div>
+            </div>
+          </div>
+          <div *ngSwitchCase="'vitals'">
+            <p class="ward-detail-note">Latest vitals and observation schedule for this admission.</p>
+            <ul class="ward-detail-list">
+              <li><span>BP</span><strong>118/76 mmHg</strong></li>
+              <li><span>Temperature</span><strong>37.4 C</strong></li>
+              <li><span>SpO2</span><strong>96%</strong></li>
+              <li><span>Next Due</span><strong>14:00</strong></li>
+            </ul>
+          </div>
+          <div *ngSwitchCase="'mar'">
+            <p class="ward-detail-note">Medication administration overview for current shift.</p>
+            <ul class="ward-detail-list">
+              <li><span>Amoxicillin 250 mg</span><strong>Due 10:00</strong></li>
+              <li><span>Paracetamol 500 mg</span><strong>Given 08:00</strong></li>
+            </ul>
+          </div>
+          <div *ngSwitchCase="'drips'">
+            <p class="ward-detail-note">Running IV fluids and drip status.</p>
+            <ul class="ward-detail-list">
+              <li><span>Normal Saline</span><strong>80 ml/hr</strong></li>
+            </ul>
+          </div>
+          <div *ngSwitchCase="'nursing'">
+            <p class="ward-detail-note">Recent nursing notes and pending care tasks.</p>
+            <ul class="ward-detail-list">
+              <li><span>Wound dressing</span><strong>Due 11:30</strong></li>
+              <li><span>Position change</span><strong>Completed</strong></li>
+            </ul>
+          </div>
+          <div *ngSwitchCase="'orders'">
+            <p class="ward-detail-note">Doctor orders and ward services for this patient.</p>
+            <ul class="ward-detail-list">
+              <li><span>CBC</span><strong>In Progress</strong></li>
+              <li><span>Chest X-Ray</span><strong>Pending</strong></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <aside class="ward-panel ward-detail-side">
+        <div class="ward-panel__head"><h2>Quick Links</h2></div>
+        <div class="ward-side-links">
+          <button type="button" (click)="navigate('/ward/mar')">MAR / Medications</button>
+          <button type="button" (click)="navigate('/ward/vitals')">Vitals & Observations</button>
+          <button type="button" (click)="navigate('/ward/drips-iv')">Drips / IV Fluids</button>
+          <button type="button" (click)="navigate('/ward/io-chart')">I/O Chart</button>
+          <button type="button" (click)="navigate('/ward/orders-services')">Orders & Services</button>
+          <button type="button" (click)="navigate('/ward/admissions')">Discharge Clearance</button>
+        </div>
+      </aside>
+    </div>
+
+    <section class="ward-empty-state ward-panel" *ngIf="!patient">
+      <div class="ward-empty-state__icon"><i class="fa fa-user-md"></i></div>
+      <h3>Patient not found</h3>
+      <p>This admission is not available in mock data yet.</p>
+      <a routerLink="/ward/patient-list" class="btn btn-sm btn-primary">Back to Patient List</a>
+    </section>
+  </div>
+</div>

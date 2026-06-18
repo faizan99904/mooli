@@ -95,8 +95,28 @@
                     </ul>
                 </li>
 
-                <li *ngIf="canViewWardAdmin" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">
-                    <a [routerLink]="['/ward-admin']"><i class="fa fa-heartbeat"></i><span>Ward Admin</span></a>
+                <li *ngIf="canViewWardAdmin">
+                    <a (click)="WardCollapsed = !WardCollapsed" [attr.aria-expanded]="!WardCollapsed" class="has-arrow">
+                        <i class="fa fa-heartbeat"></i><span>Ward & Nursing</span>
+                    </a>
+                    <ul class="nav-dropdown" *ngIf="!WardCollapsed" [@collapseExpand]>
+                        <li><a [routerLink]="['/ward/dashboard']" routerLinkActive="active">Dashboard</a></li>
+                        <li><a [routerLink]="['/ward/bed-management']" routerLinkActive="active">Bed Management</a></li>
+                        <li><a [routerLink]="['/ward/patient-list']" routerLinkActive="active">Patient List</a></li>
+                        <li><a [routerLink]="['/ward/admissions']" routerLinkActive="active">Admissions</a></li>
+                        <li><a [routerLink]="['/ward/nursing-care']" routerLinkActive="active">Nursing Care</a></li>
+                        <li><a [routerLink]="['/ward/mar']" routerLinkActive="active">MAR / Medications</a></li>
+                        <li><a [routerLink]="['/ward/drips-iv']" routerLinkActive="active">Drips / IV Fluids</a></li>
+                        <li><a [routerLink]="['/ward/vitals']" routerLinkActive="active">Vitals & Observations</a></li>
+                        <li><a [routerLink]="['/ward/io-chart']" routerLinkActive="active">I/O Chart</a></li>
+                        <li><a [routerLink]="['/ward/orders-services']" routerLinkActive="active">Orders & Services</a></li>
+                        <li><a [routerLink]="['/ward/shift-handover']" routerLinkActive="active">Shift Handover</a></li>
+                        <li><a [routerLink]="['/ward/nurses-staff']" routerLinkActive="active">Nurses & Staff</a></li>
+                        <li><a [routerLink]="['/ward/inventory']" routerLinkActive="active">Ward Inventory</a></li>
+                        <li><a [routerLink]="['/ward/reports']" routerLinkActive="active">Reports</a></li>
+                        <li><a [routerLink]="['/settings']" routerLinkActive="active">Settings</a></li>
+                        <li><a [routerLink]="['/ward-admin']" routerLinkActive="active">Ward Notes</a></li>
+                    </ul>
                 </li>
 
                 <li *ngIf="canViewAllRoutes" [routerLinkActive]="['active']" [routerLinkActiveOptions]="{ exact: true }">

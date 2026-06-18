@@ -1,0 +1,457 @@
+.ward-page-shell {
+  --ward-border: #e2e8f0;
+  --ward-muted: #64748b;
+  --ward-text: #0f172a;
+  --ward-blue: #2563eb;
+  --ward-blue-soft: #eff6ff;
+  background: #f8fafc;
+  color: var(--ward-text);
+}
+
+.ward-page-container {
+  padding: 12px 14px 16px;
+}
+
+.ward-page-header--compact {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.ward-page-header--compact h1 {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.ward-page-header--compact p {
+  color: var(--ward-muted);
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+
+.ward-page-header__actions {
+  align-items: end;
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.ward-header-filter,
+.ward-filter--compact {
+  display: grid;
+  gap: 2px;
+  min-width: 118px;
+}
+
+.ward-header-filter span,
+.ward-filter--compact span {
+  color: var(--ward-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ward-header-filter input,
+.ward-header-filter select,
+.ward-filter--compact input,
+.ward-filter--compact select {
+  background: #f8fafc;
+  border: 1px solid var(--ward-border);
+  border-radius: 8px;
+  font-size: 12px;
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+.ward-header-filter input,
+.ward-header-filter select {
+  background: #fff;
+}
+
+.ward-filter--grow {
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.ward-refresh-btn {
+  height: 32px;
+  min-width: 36px;
+  padding: 0 10px;
+}
+
+.ward-filter-toolbar {
+  align-items: end;
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+}
+
+.ward-filter-toolbar--in-panel {
+  border: 0;
+  border-bottom: 1px solid var(--ward-border);
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
+}
+
+.ward-kpi-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin-bottom: 10px;
+}
+
+.ward-kpi-card {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.ward-kpi-card__icon {
+  align-items: center;
+  border-radius: 10px;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 13px;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.ward-kpi-card__copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ward-kpi-card__copy strong {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ward-kpi-card__copy small {
+  color: var(--ward-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ward-kpi-card--blue .ward-kpi-card__icon { background: #dbeafe; color: #1d4ed8; }
+.ward-kpi-card--green .ward-kpi-card__icon { background: #dcfce7; color: #15803d; }
+.ward-kpi-card--orange .ward-kpi-card__icon { background: #ffedd5; color: #c2410c; }
+.ward-kpi-card--red .ward-kpi-card__icon { background: #fee2e2; color: #b91c1c; }
+.ward-kpi-card--purple .ward-kpi-card__icon { background: #ede9fe; color: #6d28d9; }
+.ward-kpi-card--amber .ward-kpi-card__icon { background: #fef3c7; color: #b45309; }
+.ward-kpi-card--teal .ward-kpi-card__icon { background: #ccfbf1; color: #0f766e; }
+
+.ward-panel {
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  overflow: visible;
+}
+
+.ward-panel__head {
+  align-items: center;
+  background: #fafbfd;
+  border-bottom: 1px solid var(--ward-border);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
+.ward-panel__head--stack {
+  align-items: start;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ward-panel__head h2 {
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.ward-panel__head p,
+.ward-panel__head span {
+  color: var(--ward-muted);
+  font-size: 11px;
+  margin: 0;
+}
+
+.ward-status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.ward-status-tab {
+  background: #f8fafc;
+  border: 1px solid var(--ward-border);
+  border-radius: 999px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+}
+
+.ward-status-tab--active {
+  background: var(--ward-blue-soft);
+  border-color: #93c5fd;
+  color: var(--ward-blue);
+}
+
+.ward-data-table-wrap {
+  overflow-x: auto;
+  padding: 0 4px 4px;
+}
+
+.ward-data-table {
+  font-size: 12px;
+  width: 100%;
+}
+
+.ward-data-table thead th {
+  background: #fafbfd;
+  border-bottom: 1px solid var(--ward-border);
+  color: var(--ward-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 8px 10px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ward-data-table tbody td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 7px 10px;
+  vertical-align: middle;
+}
+
+.ward-data-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.ward-badge {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.ward-badge--stable,
+.ward-badge--completed,
+.ward-badge--available,
+.ward-badge--done { background: #dcfce7; color: #15803d; }
+
+.ward-badge--watch,
+.ward-badge--pending,
+.ward-badge--on_hold,
+.ward-badge--medium { background: #ffedd5; color: #c2410c; }
+
+.ward-badge--critical,
+.ward-badge--overdue,
+.ward-badge--blocked,
+.ward-badge--low { background: #fee2e2; color: #b91c1c; }
+
+.ward-badge--dischargePlanned,
+.ward-badge--scheduled,
+.ward-badge--cleaning { background: #ede9fe; color: #6d28d9; }
+
+.ward-badge--running,
+.ward-badge--active,
+.ward-badge--occupied { background: #dbeafe; color: #1d4ed8; }
+
+.ward-badge--draft,
+.ward-badge--amber { background: #fef3c7; color: #b45309; }
+
+.table-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.table-actions button {
+  align-items: center;
+  background: #f1f5f9;
+  border: 0;
+  border-radius: 6px;
+  color: #475569;
+  display: inline-flex;
+  font-size: 11px;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.table-actions button:hover {
+  background: var(--ward-blue-soft);
+  color: var(--ward-blue);
+}
+
+.ward-table-footer {
+  align-items: center;
+  border-top: 1px solid var(--ward-border);
+  color: var(--ward-muted);
+  display: flex;
+  font-size: 11px;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.ward-pagination {
+  display: flex;
+  gap: 4px;
+}
+
+.ward-pagination button {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--ward-border);
+  border-radius: 6px;
+  color: #475569;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  height: 28px;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0 8px;
+}
+
+.ward-pagination button.is-active {
+  background: var(--ward-blue-soft);
+  border-color: #93c5fd;
+  color: var(--ward-blue);
+}
+
+.ward-pagination button:disabled {
+  opacity: 0.45;
+}
+
+.ward-empty-state {
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.ward-empty-state__icon {
+  align-items: center;
+  background: var(--ward-blue-soft);
+  border-radius: 999px;
+  color: var(--ward-blue);
+  display: inline-flex;
+  font-size: 18px;
+  height: 48px;
+  justify-content: center;
+  margin-bottom: 10px;
+  width: 48px;
+}
+
+.ward-empty-state h3 {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.ward-empty-state p {
+  color: var(--ward-muted);
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+
+.ward-report-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  padding: 12px;
+}
+
+.ward-report-card {
+  background: #f8fafc;
+  border: 1px solid var(--ward-border);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: left;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  width: 100%;
+}
+
+.ward-report-card:hover {
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.ward-report-card strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.ward-report-card span {
+  color: var(--ward-muted);
+  display: block;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.ward-report-card small {
+  color: var(--ward-blue);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ward-hierarchy-tree {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.ward-hierarchy-node {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  display: flex;
+  font-size: 12px;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.ward-hierarchy-node--level-1 { margin-left: 0; }
+.ward-hierarchy-node--level-2 { margin-left: 14px; }
+.ward-hierarchy-node--level-3 { margin-left: 28px; }
+.ward-hierarchy-node--level-4 { margin-left: 42px; }
+.ward-hierarchy-node--level-5 { margin-left: 56px; }
+
+.ward-hierarchy-node i {
+  color: var(--ward-blue);
+  width: 14px;
+}

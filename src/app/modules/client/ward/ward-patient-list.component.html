@@ -1,0 +1,275 @@
+<div id="main-content" class="modern-dashboard ward-page-shell ward-patient-page" [class.ward-patient-page--drawer-open]="previewPatient">
+  <div class="container-fluid ward-page-container">
+    <div class="ward-page-header ward-page-header--compact">
+      <div class="ward-page-header__copy">
+        <h1>Patient List — Ward Wise</h1>
+        <p>Admitted patients currently assigned to selected ward</p>
+      </div>
+      <div class="ward-page-header__actions ward-page-header__actions--toolbar">
+        <label class="ward-header-filter">
+          <span>Ward</span>
+          <select [(ngModel)]="filters.ward" (ngModelChange)="onFilterChange()">
+            <option *ngFor="let ward of wardOptions" [value]="ward">{{ ward }}</option>
+          </select>
+        </label>
+        <label class="ward-header-filter">
+          <span>Date</span>
+          <input type="date" [(ngModel)]="filters.date" />
+        </label>
+        <label class="ward-header-filter">
+          <span>Shift</span>
+          <select [(ngModel)]="filters.shift">
+            <option *ngFor="let shift of shiftOptions" [value]="shift">{{ shift }}</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="exportCsv()">
+          <i class="fa fa-download"></i> Export
+        </button>
+        <button type="button" class="btn btn-sm btn-primary ward-refresh-btn" (click)="refresh()">
+          <i class="fa fa-refresh"></i>
+        </button>
+      </div>
+    </div>
+
+    <section class="ward-kpi-grid">
+      <button
+        type="button"
+        class="ward-kpi-card"
+        *ngFor="let card of kpiCardsList"
+        [ngClass]="'ward-kpi-card--' + card.tone"
+        (click)="applyKpiFilter(card)"
+      >
+        <span class="ward-kpi-card__icon"><i class="fa" [ngClass]="card.icon"></i></span>
+        <span class="ward-kpi-card__copy">
+          <strong>{{ card.count }}</strong>
+          <small>{{ card.label }}</small>
+        </span>
+      </button>
+    </section>
+
+    <section class="ward-panel ward-patient-panel">
+      <div class="ward-panel__head ward-panel__head--stack">
+        <div>
+          <h2>Patients in {{ filters.ward }}</h2>
+          <p>{{ filteredPatientsList.length }} patients shown</p>
+        </div>
+        <div class="ward-status-tabs">
+          <button
+            type="button"
+            class="ward-status-tab"
+            *ngFor="let tab of statusTabs"
+            [class.ward-status-tab--active]="filters.statusTab === tab.key"
+            (click)="setStatusTab(tab.key)"
+          >
+            {{ tab.label }} ({{ statusTabCount(tab.key) }})
+          </button>
+        </div>
+      </div>
+
+      <div class="ward-filter-toolbar ward-filter-toolbar--in-panel">
+        <label class="ward-filter ward-filter--compact ward-filter--grow">
+          <span>Search</span>
+          <input
+            type="search"
+            [(ngModel)]="filters.search"
+            (ngModelChange)="onFilterChange()"
+            placeholder="Search patient, bed, MRN, diagnosis..."
+          />
+        </label>
+        <label class="ward-filter ward-filter--compact">
+          <span>Doctor</span>
+          <select [(ngModel)]="filters.doctor" (ngModelChange)="onFilterChange()">
+            <option value="">All Doctors</option>
+            <option *ngFor="let doctor of doctorOptionsList" [value]="doctor">{{ doctor }}</option>
+          </select>
+        </label>
+        <label class="ward-filter ward-filter--compact">
+          <span>Nurse</span>
+          <select [(ngModel)]="filters.nurse" (ngModelChange)="onFilterChange()">
+            <option value="">All Nurses</option>
+            <option *ngFor="let nurse of nurseOptionsList" [value]="nurse">{{ nurse }}</option>
+          </select>
+        </label>
+        <label class="ward-filter ward-filter--compact">
+          <span>Room</span>
+          <select [(ngModel)]="filters.room" (ngModelChange)="onFilterChange()">
+            <option value="">All Rooms</option>
+            <option *ngFor="let room of roomOptionsList" [value]="room">{{ room }}</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="exportCsv()">
+          <i class="fa fa-download"></i> Export
+        </button>
+      </div>
+
+      <div class="table-responsive ward-patient-table-wrap" *ngIf="!isMobileView && filteredPatientsList.length; else mobileOrEmpty">
+        <table class="table table-hover table-custom spacing5 mb-0 ward-patients-table">
+          <thead>
+            <tr>
+              <th>Bed</th>
+              <th>Patient</th>
+              <th>MRN</th>
+              <th>Age / Sex</th>
+              <th>Diagnosis</th>
+              <th>Doctor</th>
+              <th>Nurse</th>
+              <th>Admitted On</th>
+              <th>Status</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let patient of paginatedPatientsList; trackBy: trackByAdmissionId">
+              <td><strong class="cell-bed">{{ patient.bedNo }}</strong></td>
+              <td>
+                <button type="button" class="cell-patient-btn" (click)="openPreview(patient, $event)">
+                  <strong>{{ patient.patientName }}</strong>
+                </button>
+              </td>
+              <td class="cell-muted">{{ patient.mrn }}</td>
+              <td>{{ ageSex(patient) }}</td>
+              <td class="cell-diagnosis">{{ patient.diagnosis }}</td>
+              <td>{{ patient.doctorName }}</td>
+              <td>{{ displayValue(patient.nurseName) }}</td>
+              <td>{{ formatDate(patient.admittedOn) }}</td>
+              <td>
+                <span class="patient-badge" [ngClass]="statusClass(patient.status)">
+                  {{ statusLabel(patient.status) }}
+                </span>
+              </td>
+              <td>
+                <div class="table-actions table-actions--wide">
+                  <button type="button" title="View" (click)="viewPatient(patient)">
+                    <i class="fa fa-eye"></i>
+                  </button>
+                  <button type="button" title="Assign Nurse" (click)="assignNurse(patient)">
+                    <i class="fa fa-user-md"></i>
+                  </button>
+                  <button type="button" title="Transfer Bed" (click)="transferBed(patient)">
+                    <i class="fa fa-random"></i>
+                  </button>
+                  <div class="table-actions__menu">
+                    <button type="button" title="More" (click)="toggleMoreMenu(patient.admissionId, $event)">
+                      <i class="fa fa-ellipsis-v"></i>
+                    </button>
+                    <div class="table-actions__dropdown" *ngIf="isMenuOpen(patient.admissionId)">
+                      <button type="button" (click)="navigateWithAdmission('/ward/mar', patient)">View MAR</button>
+                      <button type="button" (click)="navigateWithAdmission('/ward/vitals', patient)">View Vitals</button>
+                      <button type="button" (click)="navigateWithAdmission('/ward/drips-iv', patient)">View Drips / IV</button>
+                      <button type="button" (click)="navigateWithAdmission('/ward/nursing-care', patient)">Nursing Notes</button>
+                      <button type="button" (click)="navigateWithAdmission('/ward/admissions', patient)">Discharge Clearance</button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #mobileOrEmpty>
+        <div class="ward-patient-cards" *ngIf="isMobileView && filteredPatientsList.length; else emptyState">
+          <article class="ward-patient-card" *ngFor="let patient of paginatedPatientsList; trackBy: trackByAdmissionId">
+            <div class="ward-patient-card__head">
+              <div>
+                <strong>{{ patient.bedNo }}</strong>
+                <button type="button" (click)="openPreview(patient)">{{ patient.patientName }}</button>
+              </div>
+              <span class="patient-badge" [ngClass]="statusClass(patient.status)">{{ statusLabel(patient.status) }}</span>
+            </div>
+            <dl>
+              <div><dt>MRN</dt><dd>{{ patient.mrn }}</dd></div>
+              <div><dt>Age/Sex</dt><dd>{{ ageSex(patient) }}</dd></div>
+              <div><dt>Diagnosis</dt><dd>{{ patient.diagnosis }}</dd></div>
+              <div><dt>Doctor</dt><dd>{{ patient.doctorName }}</dd></div>
+              <div><dt>Nurse</dt><dd>{{ displayValue(patient.nurseName) }}</dd></div>
+              <div><dt>Admitted</dt><dd>{{ formatDate(patient.admittedOn) }}</dd></div>
+            </dl>
+            <div class="table-actions table-actions--wide">
+              <button type="button" title="View" (click)="viewPatient(patient)"><i class="fa fa-eye"></i></button>
+              <button type="button" title="Assign Nurse" (click)="assignNurse(patient)"><i class="fa fa-user-md"></i></button>
+              <button type="button" title="Transfer" (click)="transferBed(patient)"><i class="fa fa-random"></i></button>
+              <button type="button" title="Preview" (click)="openPreview(patient)"><i class="fa fa-info-circle"></i></button>
+            </div>
+          </article>
+        </div>
+      </ng-template>
+
+      <ng-template #emptyState>
+        <div class="ward-empty-state">
+          <div class="ward-empty-state__icon"><i class="fa fa-user-md"></i></div>
+          <h3>No patients found</h3>
+          <p>Try changing filters or searching with another patient, bed, or MRN.</p>
+          <button type="button" class="btn btn-sm btn-primary" (click)="resetFilters()">Reset Filters</button>
+        </div>
+      </ng-template>
+
+      <div class="ward-table-footer" *ngIf="filteredPatientsList.length">
+        <span>Showing {{ paginationStart }} to {{ paginationEnd }} of {{ filteredPatientsList.length }} patients</span>
+        <div class="ward-pagination">
+          <button type="button" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+            <i class="fa fa-chevron-left"></i>
+          </button>
+          <button
+            type="button"
+            *ngFor="let page of pageNumbersList"
+            [class.is-active]="currentPage === page"
+            (click)="goToPage(page)"
+          >
+            {{ page }}
+          </button>
+          <button type="button" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+            <i class="fa fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div class="ward-drawer-backdrop" *ngIf="previewPatient" (click)="closePreview()"></div>
+    <aside class="ward-drawer" *ngIf="previewPatient as patient" (click)="$event.stopPropagation()">
+      <div class="ward-drawer__head">
+        <div>
+          <span class="ward-drawer__eyebrow">Quick Preview</span>
+          <h3>{{ patient.patientName }}</h3>
+          <p>{{ patient.mrn }} · {{ ageSex(patient) }}</p>
+        </div>
+        <button type="button" class="ward-drawer__close" (click)="closePreview()" aria-label="Close">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+
+      <div class="ward-drawer__body">
+        <dl class="room-details-grid room-details-grid--drawer">
+          <div><dt>Bed</dt><dd>{{ patient.bedNo }}</dd></div>
+          <div><dt>Status</dt><dd><span class="patient-badge" [ngClass]="statusClass(patient.status)">{{ statusLabel(patient.status) }}</span></dd></div>
+          <div><dt>Ward</dt><dd>{{ patient.wardName }}</dd></div>
+          <div><dt>Room</dt><dd>{{ patient.roomName }}</dd></div>
+          <div><dt>Gallery</dt><dd>{{ patient.galleryName }}</dd></div>
+          <div><dt>Doctor</dt><dd>{{ patient.doctorName }}</dd></div>
+          <div><dt>Nurse</dt><dd>{{ displayValue(patient.nurseName) }}</dd></div>
+          <div><dt>Diagnosis</dt><dd>{{ patient.diagnosis }}</dd></div>
+          <div class="ward-modal__full"><dt>Admitted</dt><dd>{{ formatDateTime(patient.admittedOn) }}</dd></div>
+        </dl>
+
+        <section class="ward-drawer__pending">
+          <h4>Today's Pending Items</h4>
+          <ul>
+            <li><span>Medications Due</span><strong>{{ patient.medicationsDue }}</strong></li>
+            <li><span>Vitals Due</span><strong>{{ patient.vitalsDue }}</strong></li>
+            <li><span>Drips Running</span><strong>{{ patient.dripsRunning }}</strong></li>
+            <li><span>Nursing Tasks Due</span><strong>{{ patient.nursingTasksDue }}</strong></li>
+            <li><span>Critical Alerts</span><strong [class.is-alert]="patient.criticalAlerts">{{ patient.criticalAlerts }}</strong></li>
+          </ul>
+        </section>
+      </div>
+
+      <div class="ward-drawer__footer">
+        <button type="button" class="btn btn-sm btn-default" (click)="viewPatient(patient)">Open Full Profile</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="navigateWithAdmission('/ward/mar', patient)">View MAR</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="navigateWithAdmission('/ward/vitals', patient)">Record Vitals</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="navigateWithAdmission('/ward/drips-iv', patient)">View Drips</button>
+        <button type="button" class="btn btn-sm btn-primary" (click)="assignNurse(patient)">Assign Nurse</button>
+      </div>
+    </aside>
+  </div>
+</div>

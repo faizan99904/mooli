@@ -1,0 +1,159 @@
+@import './ward-shared.scss';
+
+.ward-back-link {
+  color: var(--ward-blue);
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ward-patient-hero {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 12px;
+}
+
+.ward-patient-hero__main h2 {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 6px 0 4px;
+}
+
+.ward-patient-hero__main p {
+  color: var(--ward-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.ward-patient-hero__meta {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 12px 0 0;
+}
+
+.ward-patient-hero__meta div {
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.ward-patient-hero__meta dt {
+  color: var(--ward-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ward-patient-hero__meta dd {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.ward-patient-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ward-detail-layout {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 260px;
+}
+
+.ward-detail-tabs {
+  border-bottom: 1px solid var(--ward-border);
+  padding: 8px 12px 0;
+}
+
+.ward-detail-content {
+  padding: 12px;
+}
+
+.ward-detail-content h3 {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.ward-summary-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.ward-summary-grid div {
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.ward-summary-grid span {
+  color: var(--ward-muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ward-summary-grid strong {
+  font-size: 18px;
+}
+
+.ward-detail-note {
+  color: var(--ward-muted);
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+
+.ward-detail-list {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ward-detail-list li {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  padding: 8px 10px;
+}
+
+.ward-side-links {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px 12px;
+}
+
+.ward-side-links button {
+  background: #f8fafc;
+  border: 1px solid var(--ward-border);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.ward-side-links button:hover {
+  background: var(--ward-blue-soft);
+  border-color: #93c5fd;
+  color: var(--ward-blue);
+}
+
+@media (max-width: 992px) {
+  .ward-detail-layout,
+  .ward-patient-hero__meta {
+    grid-template-columns: 1fr;
+  }
+}

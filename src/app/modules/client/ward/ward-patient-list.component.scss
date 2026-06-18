@@ -1,0 +1,386 @@
+@import './ward-shared.scss';
+
+:host {
+  display: block;
+}
+
+.ward-kpi-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.ward-kpi-card {
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.ward-kpi-card:hover {
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.ward-patient-panel {
+  position: relative;
+  z-index: 1;
+}
+
+.ward-patient-table-wrap {
+  overflow-x: auto;
+  padding: 0 4px 4px;
+}
+
+.ward-patients-table {
+  font-size: 12px;
+  width: 100%;
+}
+
+.ward-patients-table thead th {
+  background: #fafbfd;
+  border-bottom: 1px solid var(--ward-border);
+  color: var(--ward-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 8px 10px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ward-patients-table tbody td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 7px 10px;
+  vertical-align: middle;
+}
+
+.ward-patients-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.cell-bed {
+  color: var(--ward-blue);
+}
+
+.cell-patient-btn {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.cell-patient-btn strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cell-patient-btn:hover strong {
+  color: var(--ward-blue);
+  text-decoration: underline;
+}
+
+.cell-muted {
+  color: var(--ward-muted);
+  font-size: 11px;
+}
+
+.cell-diagnosis {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patient-badge {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.patient-badge--stable { background: #dcfce7; color: #15803d; }
+.patient-badge--watch { background: #ffedd5; color: #c2410c; }
+.patient-badge--critical { background: #fee2e2; color: #b91c1c; }
+.patient-badge--dischargePlanned { background: #ede9fe; color: #6d28d9; }
+.patient-badge--pendingAssignment { background: #fef3c7; color: #b45309; }
+
+.table-actions--wide {
+  position: relative;
+}
+
+.table-actions__menu {
+  position: relative;
+}
+
+.table-actions__dropdown {
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 2px;
+  min-width: 170px;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+}
+
+.table-actions__dropdown button {
+  background: transparent;
+  border-radius: 6px;
+  height: auto;
+  justify-content: flex-start;
+  padding: 7px 10px;
+  width: 100%;
+}
+
+.table-actions__dropdown button:hover {
+  background: #f8fafc;
+}
+
+.ward-patient-cards {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+  padding: 8px 12px 12px;
+}
+
+.ward-patient-card {
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.ward-patient-card__head {
+  align-items: start;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ward-patient-card__head button {
+  background: transparent;
+  border: 0;
+  color: var(--ward-blue);
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0;
+  text-align: left;
+}
+
+.ward-patient-card dl {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 0 10px;
+}
+
+.ward-patient-card dt {
+  color: var(--ward-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ward-patient-card dd {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.room-details-grid {
+  display: grid;
+  gap: 6px 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+}
+
+.room-details-grid div {
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.room-details-grid dt {
+  color: var(--ward-muted);
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.room-details-grid dd {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.ward-modal__full {
+  grid-column: 1 / -1;
+}
+
+.ward-drawer-backdrop {
+  animation: wardModalFade 0.2s ease;
+  background: rgba(15, 23, 42, 0.35);
+  inset: 0;
+  position: fixed;
+  z-index: 1045;
+}
+
+.ward-drawer {
+  animation: wardDrawerSlide 0.24s ease;
+  background: #fff;
+  border-left: 1px solid var(--ward-border);
+  box-shadow: -12px 0 40px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 420px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: calc(100% - 24px);
+  z-index: 1050;
+}
+
+@keyframes wardModalFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes wardDrawerSlide {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.ward-drawer__head {
+  align-items: start;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #3b82f6 100%);
+  color: #fff;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.ward-drawer__eyebrow {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  text-transform: uppercase;
+}
+
+.ward-drawer__head h3 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.ward-drawer__head p {
+  font-size: 12px;
+  margin: 0;
+  opacity: 0.92;
+}
+
+.ward-drawer__close {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.ward-drawer__body {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px;
+}
+
+.ward-drawer__pending h4 {
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.ward-drawer__pending ul {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ward-drawer__pending li {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  padding: 8px 10px;
+}
+
+.ward-drawer__pending strong.is-alert {
+  color: #dc2626;
+}
+
+.ward-drawer__footer {
+  border-top: 1px solid var(--ward-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 16px;
+}
+
+@media (max-width: 1400px) {
+  .ward-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .ward-page-header--compact {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .ward-page-header__actions--toolbar {
+    width: 100%;
+  }
+
+  .ward-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .ward-filter-toolbar--in-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ward-filter--grow {
+    grid-column: 1 / -1;
+  }
+
+  .ward-status-tabs {
+    flex-wrap: nowrap;
+    overflow: auto;
+    padding-bottom: 2px;
+  }
+}

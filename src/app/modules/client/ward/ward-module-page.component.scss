@@ -1,0 +1,18 @@
+@import './ward-shared.scss';
+
+.ward-module-page {
+  min-height: 100%;
+}
+
+.ward-link-btn-inline {
+  background: transparent;
+  border: 0;
+  color: var(--ward-blue);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0;
+}
+
+.ward-link-btn-inline:hover {
+  text-decoration: underline;
+}

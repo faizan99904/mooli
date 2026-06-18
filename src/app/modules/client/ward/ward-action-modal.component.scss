@@ -1,0 +1,85 @@
+@import './ward-shared.scss';
+
+.ward-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1rem;
+}
+
+.ward-modal {
+  width: min(560px, 100%);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.ward-modal__head,
+.ward-modal__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ward-modal__foot {
+  border-bottom: 0;
+  border-top: 1px solid #e5e7eb;
+  justify-content: flex-end;
+}
+
+.ward-modal__head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ward-modal__head p {
+  margin: 0.15rem 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.ward-modal__close {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 1rem;
+}
+
+.ward-modal__body {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  max-height: 65vh;
+  overflow: auto;
+}
+
+.ward-modal__body label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.ward-modal__body input,
+.ward-modal__body select,
+.ward-modal__body textarea {
+  width: 100%;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.84rem;
+}
+
+.ward-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}

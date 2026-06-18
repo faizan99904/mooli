@@ -71,6 +71,14 @@ const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
     access: ['patients_history.read'],
   },
   {
+    path: '/ward/bed-management',
+    access: ['patients_history.read'],
+  },
+  {
+    path: '/ward/dashboard',
+    access: ['patients_history.read'],
+  },
+  {
     path: '/ward-admin',
     access: ['patients_history.read'],
   },
@@ -92,6 +100,9 @@ export const readStoredRole = (): string => {
 
 export const isDoctorRole = (role: string): boolean =>
   normalizeAccessKey(role) === 'doctor';
+
+export const isWardAdminRole = (role: string): boolean =>
+  normalizeAccessKey(role) === 'wardadmin';
 
 export const sanitizePermissions = (permissions: unknown): string[] => {
   if (!Array.isArray(permissions)) {
@@ -144,6 +155,10 @@ export const resolveDefaultRoute = (
 ): string => {
   if (isDoctorRole(role)) {
     return '/doctor-dashboard';
+  }
+
+  if (isWardAdminRole(role)) {
+    return '/ward/dashboard';
   }
 
   return (

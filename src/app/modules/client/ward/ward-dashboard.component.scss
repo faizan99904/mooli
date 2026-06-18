@@ -1,0 +1,204 @@
+@import './ward-shared.scss';
+
+.ward-dashboard-kpis {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.ward-overview-layout {
+  align-items: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  margin-bottom: 10px;
+}
+
+.ward-bed-panel {
+  padding: 10px 12px 12px;
+}
+
+.ward-section + .ward-section {
+  margin-top: 12px;
+}
+
+.ward-section__head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ward-section__head h3 {
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.ward-section__head span {
+  color: var(--ward-muted);
+  font-size: 11px;
+}
+
+.ward-bed-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.ward-bed-card {
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 10px;
+  text-align: left;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  width: 100%;
+}
+
+.ward-bed-card:hover {
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.ward-bed-card__top {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.ward-bed-card h4 {
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0 0 2px;
+}
+
+.ward-bed-card p,
+.ward-bed-card__nurse {
+  color: var(--ward-muted);
+  font-size: 11px;
+}
+
+.ward-bed-card__nurse {
+  margin-top: 6px;
+}
+
+.ward-bed-card__badge {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  margin-top: 8px;
+  padding: 3px 6px;
+  text-transform: uppercase;
+}
+
+.ward-bed-card__alert { color: #d97706; }
+.ward-bed-card__alert--critical { color: #dc2626; }
+
+.ward-bed--occupied { background: #f0fdf4; border-color: #bbf7d0; }
+.ward-bed--available { background: #eff6ff; border-color: #bfdbfe; }
+.ward-bed--on_hold { background: #fff7ed; border-color: #fed7aa; }
+.ward-bed--cleaning { background: #f5f3ff; border-color: #ddd6fe; }
+.ward-bed--maintenance,
+.ward-bed--critical { background: #fef2f2; border-color: #fecaca; }
+
+.ward-summary-column {
+  display: grid;
+  gap: 10px;
+}
+
+.ward-summary-card {
+  overflow: hidden;
+}
+
+.ward-summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px;
+}
+
+.ward-summary-list li + li {
+  border-top: 1px solid var(--ward-border);
+}
+
+.ward-summary-list button,
+.ward-summary-list li > span {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  padding: 8px 0;
+  width: 100%;
+}
+
+.ward-summary-list button.is-link {
+  cursor: pointer;
+}
+
+.ward-summary-list button.is-link:hover strong {
+  color: var(--ward-blue);
+}
+
+.ward-summary-list--nursing li {
+  align-items: center;
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.nursing-dot {
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  margin-right: 8px;
+  width: 8px;
+}
+
+.nursing-dot--green { background: #16a34a; }
+.nursing-dot--amber { background: #d97706; }
+.nursing-dot--gray { background: #94a3b8; }
+
+.ward-link-btn {
+  background: var(--ward-blue-soft);
+  border: 0;
+  border-radius: 8px;
+  color: var(--ward-blue);
+  font-size: 11px;
+  font-weight: 700;
+  margin: 0 12px 12px;
+  padding: 8px 10px;
+  width: calc(100% - 24px);
+}
+
+.ward-hierarchy-tree--compact {
+  padding-top: 0;
+}
+
+.ward-monitor-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media (max-width: 1400px) {
+  .ward-dashboard-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ward-monitor-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1100px) {
+  .ward-overview-layout { grid-template-columns: 1fr; }
+  .ward-dashboard-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .ward-bed-grid,
+  .ward-monitor-grid,
+  .ward-dashboard-kpis {
+    grid-template-columns: 1fr;
+  }
+}
