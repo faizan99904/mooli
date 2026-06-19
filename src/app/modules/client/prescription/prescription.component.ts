@@ -30,6 +30,7 @@ import {
   Patient,
   PatientDocumentItem,
   PatientHistory,
+  LabOrder,
   PrescriptionTemplate,
   PrescriptionPrintSettings,
   ProductCatalogItem,
@@ -321,6 +322,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   private smartMedicineSearchTimer: ReturnType<typeof setTimeout> | null = null;
   private smartMedicineBlurTimer: ReturnType<typeof setTimeout> | null = null;
   private printPreviewRequestId = 0;
+  private patientLabHistoryRequestId = 0;
   readonly durationOptions = [
     '1 Day',
     '3 Days',
@@ -348,8 +350,10 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   readonly labCatalogItems = LAB_TEST_CATALOG;
   labTestFilter: LabTestFilter = 'all';
   labTestRows: LabTestDisplayRow[] = [];
+  patientLabOrders: LabOrder[] = [];
   selectedLabTestId: string | null = 'demo-CBC';
   labTestModalOpen = false;
+  labTestDetailModalOpen = false;
   labTestCustomInput = '';
   readonly labTestFilters: Array<{ key: LabTestFilter; label: string }> = [
     { key: 'all', label: 'All' },
@@ -705,6 +709,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       this.vitalsModalOpen ||
       this.vitalsTrendModalOpen ||
       this.labTestModalOpen ||
+      this.labTestDetailModalOpen ||
       this.ivFluidModalOpen ||
       this.admissionOrderModalOpen ||
       this.documentModalOpen,
@@ -1720,6 +1725,15 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.labTestModalOpen = false;
   }
 
+  openLabTestDetail(row: LabTestDisplayRow): void {
+    this.selectLabTestRow(row);
+    this.labTestDetailModalOpen = true;
+  }
+
+  closeLabTestDetail(): void {
+    this.labTestDetailModalOpen = false;
+  }
+
   orderLabTest(name: string, category = 'Other'): void {
     const normalizedName = name.trim();
     if (!normalizedName) {
@@ -1779,7 +1793,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   refreshLabTestRows(): void {
     const orderedTests = this.labTests.getRawValue() as Array<{ name?: string; category?: string; selected?: boolean }>;
     this.labTestRows = this.hasAssignedPatient()
-      ? buildLabTestDisplayRows(this.patientSavedLabTests(), orderedTests)
+      ? buildLabTestDisplayRows(this.patientSavedLabTests(), orderedTests, this.patientLabOrders)
       : [];
 
     if (!this.selectedLabTestId || !this.labTestRows.some((row) => row.id === this.selectedLabTestId)) {
@@ -2463,10 +2477,12 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   loadPatientContextPrescriptions(): void {
     const patientId = this.prescriptionForm.getRawValue().patientId || this.selectedPatientId;
     if (!patientId) {
+      this.loadPatientLabHistory('');
       void this.applyPatientContextPrescriptions([], 0);
       return;
     }
 
+    this.loadPatientLabHistory(patientId);
     const requestId = ++this.patientContextRequestId;
     this.patientHistoryLoading = true;
     const params: Record<string, unknown> = {
@@ -2506,6 +2522,36 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
           void this.loadCachedPatientContextPrescriptions(patientId, err);
         },
       });
+  }
+
+  private loadPatientLabHistory(patientId: string): void {
+    const resolvedPatientId = String(patientId || '').trim();
+    const requestId = ++this.patientLabHistoryRequestId;
+
+    if (!resolvedPatientId || !this.offline.online()) {
+      this.patientLabOrders = [];
+      this.refreshLabTestRows();
+      return;
+    }
+
+    this.backend.getPatientLabHistory(resolvedPatientId).subscribe({
+      next: (orders) => {
+        if (requestId !== this.patientLabHistoryRequestId) {
+          return;
+        }
+
+        this.patientLabOrders = orders || [];
+        this.refreshLabTestRows();
+      },
+      error: () => {
+        if (requestId !== this.patientLabHistoryRequestId) {
+          return;
+        }
+
+        this.patientLabOrders = [];
+        this.refreshLabTestRows();
+      },
+    });
   }
 
   applyPatientHistoryFilters(): void {
@@ -2965,6 +3011,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.syncEditModeVitals(prescription);
     this.loadDoctorMedicines();
     this.loadPatientHistoryRecords();
+    this.loadPatientLabHistory(prescription.patientId);
     this.refreshVitalAnalytics();
     this.refreshLabTestRows();
     this.refreshIvFluidRows();
@@ -2991,6 +3038,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.selectInitialAppointment();
     this.loadDoctorMedicines();
     this.loadPatientHistoryRecords();
+    this.loadPatientLabHistory(this.prescriptionForm.getRawValue().patientId || this.selectedPatientId);
     this.refreshVitalAnalytics();
     this.refreshLabTestRows();
     this.refreshIvFluidRows();

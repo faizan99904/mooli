@@ -77,6 +77,7 @@
               <thead>
                 <tr>
                   <th class="col-parameter">Parameter</th>
+                  <th class="col-subcategory">Sub Category</th>
                   <th class="col-result">Result</th>
                   <th class="col-unit">Unit</th>
                   <th class="col-range">Reference Range</th>
@@ -88,6 +89,7 @@
               <tbody>
                 <tr *ngFor="let parameter of item.parameters" [class.row-critical]="parameter.status === 'critical'">
                   <td class="col-parameter"><strong>{{ parameter.parameterName }}</strong></td>
+                  <td class="col-subcategory">{{ parameter.subCategory || '—' }}</td>
                   <td class="col-result">
                     <input type="text" [(ngModel)]="parameter.resultValue" placeholder="Enter value" />
                   </td>

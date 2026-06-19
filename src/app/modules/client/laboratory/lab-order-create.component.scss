@@ -5,12 +5,14 @@
 }
 
 .lab-form-grid {
+  align-items: start;
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .lab-card {
+  align-content: start;
   background: var(--lab-panel);
   border: 1px solid var(--lab-line);
   border-radius: 8px;
@@ -29,6 +31,7 @@
 }
 
 .lab-card label {
+  align-content: start;
   display: grid;
   font-size: 11px;
   font-weight: 700;
@@ -50,17 +53,117 @@
   padding: 8px 10px;
 }
 
+.phone-search {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.phone-search input {
+  flex: 1;
+  height: 40px;
+  min-width: 0;
+}
+
+.phone-search button {
+  background: var(--lab-blue);
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  height: 40px;
+  min-height: 40px;
+  min-width: 132px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.phone-search button:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.patient-lookup-panel {
+  border: 1px solid var(--lab-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.lookup-header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.lookup-header div,
+.lookup-empty,
+.selected-patient {
+  display: grid;
+  gap: 2px;
+}
+
+.lookup-header strong,
+.lookup-empty strong,
+.selected-patient strong {
+  font-size: 13px;
+}
+
+.lookup-header span,
+.lookup-empty span,
+.selected-patient span,
+.selected-patient small {
+  color: var(--lab-muted);
+  font-size: 11px;
+}
+
+.lookup-header > span {
+  align-items: center;
+  background: var(--lab-blue-soft);
+  border-radius: 999px;
+  color: var(--lab-blue);
+  display: inline-flex;
+  font-weight: 800;
+  height: 26px;
+  justify-content: center;
+  min-width: 26px;
+  padding: 0 8px;
+}
+
+.lookup-empty {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.selected-patient {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
 .patient-picks,
 .catalog-grid {
   display: grid;
   gap: 8px;
 }
 
+.patient-picks {
+  max-height: 190px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
 .catalog-grid {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
-.patient-picks button,
 .catalog-grid button {
   background: #fff;
   border: 1px solid var(--lab-line);
@@ -72,10 +175,76 @@
   text-align: left;
 }
 
-.patient-picks button.active,
 .catalog-grid button.active {
   background: var(--lab-blue-soft);
   border-color: var(--lab-blue);
+}
+
+.patient-result-card {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--lab-line);
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 56px;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.patient-result-card:hover {
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+
+.patient-result-card.active {
+  background: var(--lab-blue-soft);
+  border-color: var(--lab-blue);
+}
+
+.patient-result-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.patient-result-main strong,
+.patient-result-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.patient-result-main strong {
+  color: var(--lab-ink);
+  font-size: 13px;
+}
+
+.patient-result-main small {
+  color: var(--lab-muted);
+  font-size: 11px;
+}
+
+.patient-select-badge {
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 999px;
+  color: #475569;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  height: 24px;
+  justify-content: center;
+  min-width: 62px;
+  padding: 0 10px;
+}
+
+.patient-result-card.active .patient-select-badge {
+  background: var(--lab-blue);
+  color: #fff;
 }
 
 .selected-test {
@@ -112,5 +281,9 @@
 @media (max-width: 900px) {
   .lab-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .phone-search {
+    flex-direction: column;
   }
 }

@@ -284,6 +284,7 @@ export type LabParameterStatus = 'low' | 'normal' | 'high' | 'critical';
 export type LabParameterTrend = 'improved' | 'worsened' | 'stable' | 'unknown';
 
 export interface LabTestParameterTemplate {
+  subCategory?: string;
   parameterName: string;
   unit?: string;
   referenceMin?: number | null;
@@ -312,6 +313,7 @@ export interface LabTestCatalog {
 
 export interface LabResultParameter {
   _id?: string;
+  subCategory?: string;
   parameterName: string;
   resultValue?: string;
   unit?: string;
@@ -394,6 +396,7 @@ export interface LabDashboardStats {
 
 export interface LabComparisonRow {
   testName: string;
+  subCategory?: string;
   parameterName: string;
   unit?: string;
   referenceText?: string;

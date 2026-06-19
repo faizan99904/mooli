@@ -19,7 +19,10 @@ export class LabOrderCreateComponent implements OnInit {
   selectedTests: LabTestCatalog[] = [];
   loading = false;
   saving = false;
-  patientSearch = '';
+  patientPhone = '';
+  phoneLookupLoading = false;
+  phoneLookupPerformed = false;
+  phoneMatchedTotal = 0;
   selectedPatientId = '';
   selectedPatient: Patient | null = null;
   currentHospitalId: string | null = null;
@@ -46,19 +49,7 @@ export class LabOrderCreateComponent implements OnInit {
         this.currentHospitalId = user.hospitalId || this.currentHospitalId;
       },
     });
-    this.loadPatients();
     this.loadCatalog();
-  }
-
-  loadPatients(): void {
-    this.backend.getPatients({ limit: 100, status: 'active' }).subscribe({
-      next: (result) => {
-        this.patients = result.items;
-      },
-      error: () => {
-        this.patients = [];
-      },
-    });
   }
 
   loadCatalog(): void {
@@ -81,19 +72,46 @@ export class LabOrderCreateComponent implements OnInit {
       });
   }
 
-  filteredPatients(): Patient[] {
-    const query = this.patientSearch.trim().toLowerCase();
-    if (!query) {
-      return this.patients.slice(0, 8);
+  canSearchPatientPhone(): boolean {
+    return this.normalizePhone(this.patientPhone).length >= 4 && !this.phoneLookupLoading;
+  }
+
+  lookupPatientsByPhone(): void {
+    const phone = this.patientPhone.trim();
+    const normalizedPhone = this.normalizePhone(phone);
+
+    if (normalizedPhone.length < 4) {
+      this.toastr.error('Enter at least 4 digits of phone number.');
+      return;
     }
 
-    return this.patients
-      .filter((patient) =>
-        `${patient.firstName} ${patient.lastName} ${patient.patientNo} ${patient.phone || ''}`
-          .toLowerCase()
-          .includes(query)
-      )
-      .slice(0, 8);
+    this.phoneLookupLoading = true;
+    this.phoneLookupPerformed = false;
+    this.phoneMatchedTotal = 0;
+    this.patients = [];
+    this.selectedPatientId = '';
+    this.selectedPatient = null;
+
+    this.backend
+      .getPatients({ limit: 100, status: 'active', search: phone })
+      .pipe(finalize(() => (this.phoneLookupLoading = false)))
+      .subscribe({
+        next: (result) => {
+          this.patients = (result.items || []).filter((patient) =>
+            this.normalizePhone(patient.phone || '').includes(normalizedPhone)
+          );
+          this.phoneMatchedTotal = this.patients.length;
+          this.phoneLookupPerformed = true;
+
+          if (this.phoneMatchedTotal === 0) {
+            this.toastr.info('No patient found against this phone number.');
+          }
+        },
+        error: (err) => {
+          this.phoneLookupPerformed = true;
+          this.toastr.error(err?.error?.message || 'Unable to search patients.');
+        },
+      });
   }
 
   filteredCatalog(): LabTestCatalog[] {
@@ -114,7 +132,7 @@ export class LabOrderCreateComponent implements OnInit {
   selectPatient(patient: Patient): void {
     this.selectedPatientId = patient._id;
     this.selectedPatient = patient;
-    this.patientSearch = this.patientName(patient);
+    this.patientPhone = patient.phone || this.patientPhone;
   }
 
   resolveHospitalId(): string | null {
@@ -180,5 +198,9 @@ export class LabOrderCreateComponent implements OnInit {
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Unable to create lab order.'),
       });
+  }
+
+  private normalizePhone(value: string): string {
+    return value.replace(/\D/g, '');
   }
 }

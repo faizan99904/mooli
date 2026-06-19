@@ -28,7 +28,58 @@
         <label>Tube Type<input [(ngModel)]="form.tubeType" /></label>
         <label>Price<input type="number" [(ngModel)]="form.price" /></label>
         <label>TAT (hours)<input type="number" [(ngModel)]="form.turnaroundHours" /></label>
+        <label>Report Type
+          <select [(ngModel)]="form.reportType">
+            <option value="structured">Structured Result</option>
+            <option value="uploaded_report">Upload Report Only</option>
+            <option value="both">Structured + Upload</option>
+          </select>
+        </label>
+        <label class="check-field">
+          <input type="checkbox" [(ngModel)]="form.requiresFasting" />
+          Requires Fasting
+        </label>
       </div>
+
+      <div class="parameter-builder">
+        <div class="parameter-head">
+          <div>
+            <h3>Test Parameters / Sub Categories</h3>
+            <p>Add dynamic rows like Serum Sodium, Serum Potassium, Chloride with range and unit.</p>
+          </div>
+          <div class="parameter-actions">
+            <button type="button" class="btn-light" (click)="applyElectrolytesPreset()">Electrolytes Preset</button>
+            <button type="button" class="btn-light" (click)="addParameter()">+ Add Parameter</button>
+          </div>
+        </div>
+
+        <div class="parameter-row parameter-row-head">
+          <span>Sub Category</span>
+          <span>Parameter</span>
+          <span>Unit</span>
+          <span>Normal Min</span>
+          <span>Normal Max</span>
+          <span>Critical Min</span>
+          <span>Critical Max</span>
+          <span>Reference Text</span>
+          <span></span>
+        </div>
+
+        <div class="parameter-row" *ngFor="let parameter of form.parameters; let i = index">
+          <input [(ngModel)]="parameter.subCategory" placeholder="Electrolytes" />
+          <input [(ngModel)]="parameter.parameterName" placeholder="Serum Sodium" />
+          <input [(ngModel)]="parameter.unit" placeholder="mmol/L" />
+          <input type="number" [(ngModel)]="parameter.referenceMin" placeholder="135" />
+          <input type="number" [(ngModel)]="parameter.referenceMax" placeholder="145" />
+          <input type="number" [(ngModel)]="parameter.criticalMin" placeholder="120" />
+          <input type="number" [(ngModel)]="parameter.criticalMax" placeholder="160" />
+          <input [(ngModel)]="parameter.referenceText" placeholder="Optional text" />
+          <button type="button" class="parameter-remove" (click)="removeParameter(i)" [disabled]="form.parameters.length === 1">
+            ×
+          </button>
+        </div>
+      </div>
+
       <button type="button" class="btn-primary" [disabled]="saving" (click)="saveTest()">Save Test</button>
     </section>
 
@@ -43,6 +94,7 @@
             <th>Tube</th>
             <th>Price</th>
             <th>TAT</th>
+            <th>Parameters</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -55,10 +107,11 @@
             <td>{{ test.tubeType || '—' }}</td>
             <td>Rs. {{ test.price }}</td>
             <td>{{ test.turnaroundHours }}h</td>
+            <td>{{ parameterSummary(test) }}</td>
             <td>{{ test.isActive ? 'Active' : 'Inactive' }}</td>
           </tr>
           <tr *ngIf="!loading && tests.length === 0">
-            <td colspan="8" class="lab-empty">No tests in catalog.</td>
+            <td colspan="9" class="lab-empty">No tests in catalog.</td>
           </tr>
         </tbody>
       </table>

@@ -795,7 +795,8 @@ dd {
 }
 
 .lab-param-high,
-.lab-param-abnormal {
+.lab-param-abnormal,
+.lab-param-critical {
   background: #fef2f2;
   color: #dc2626;
 }
@@ -887,7 +888,8 @@ dd {
   padding: 10px 0;
 }
 
-.lab-test-modal-dialog {
+.lab-test-modal-dialog,
+.lab-test-detail-modal-dialog {
   background: #fff;
   border: 1px solid var(--rx-line);
   border-radius: 10px;
@@ -897,6 +899,76 @@ dd {
   overflow: auto;
   padding: 16px;
   width: 100%;
+}
+
+.lab-test-detail-modal-dialog {
+  max-width: 860px;
+}
+
+.lab-test-detail-meta-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 14px 0;
+}
+
+.lab-test-detail-meta-grid div {
+  background: #f8fafc;
+  border: 1px solid var(--rx-soft-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  min-height: 64px;
+  padding: 10px;
+}
+
+.lab-test-detail-meta-grid span {
+  color: var(--rx-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.lab-test-detail-meta-grid strong {
+  color: var(--rx-ink);
+  font-size: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lab-test-detail-note,
+.lab-test-report-files {
+  border: 1px solid var(--rx-soft-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.lab-test-detail-note span,
+.lab-test-report-files strong {
+  color: var(--rx-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.lab-test-detail-note p {
+  color: var(--rx-ink);
+  font-size: 12px;
+  margin: 0;
+}
+
+.lab-test-report-files a {
+  align-items: center;
+  color: var(--rx-blue);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  text-decoration: none;
+  width: fit-content;
 }
 
 .lab-test-picker-grid {
@@ -1318,7 +1390,8 @@ dd {
 
 @media (max-width: 768px) {
   .lab-test-picker-grid,
-  .lab-test-custom-add {
+  .lab-test-custom-add,
+  .lab-test-detail-meta-grid {
     grid-template-columns: 1fr;
   }
 

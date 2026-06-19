@@ -3,7 +3,10 @@
     <div class="lab-heading">
       <div>
         <h1>Lab Dashboard</h1>
-        <p>{{ loading ? 'Loading lab queue...' : orders.length + ' orders shown' }}</p>
+        <p>
+          {{ loading ? 'Loading lab queue...' : orders.length + ' of ' + totalOrders + ' orders shown' }}
+          <span class="lab-context">· {{ currentHospitalLabel() }}</span>
+        </p>
       </div>
       <div class="lab-heading-actions">
         <a class="btn-light" routerLink="/laboratory/catalog">Test Catalog</a>
@@ -31,7 +34,7 @@
         (click)="setTab(tab.key)">{{ tab.label }}</button>
     </div>
 
-    <div class="lab-empty" *ngIf="!loading && orders.length === 0">No lab orders found.</div>
+    <div class="lab-empty" *ngIf="!loading && orders.length === 0">{{ emptyStateMessage() }}</div>
 
     <div class="lab-table-wrap" *ngIf="orders.length > 0">
       <table class="lab-table">
@@ -48,7 +51,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let order of orders" (click)="openOrder(order)">
+          <tr *ngFor="let order of orders; trackBy: trackByOrderId" (click)="openOrder(order)">
             <td><strong>{{ order.orderNo }}</strong></td>
             <td>{{ patientName(order) }}</td>
             <td>{{ testsSummary(order) }}</td>
@@ -57,7 +60,7 @@
             <td><span class="status-pill" [ngClass]="statusClass(order.status)">{{ statusLabel(order.status) }}</span></td>
             <td>{{ order.createdAt | date:'medium' }}</td>
             <td class="lab-actions" (click)="$event.stopPropagation()">
-              <button type="button" class="btn-light" (click)="openOrder(order)">View</button>
+              <button type="button" class="btn-light" (click)="openOrder(order, $event)">View</button>
               <button type="button" class="btn-light" *ngIf="order.status === 'ordered'"
                 (click)="collectSample(order, $event)">Collect Sample</button>
             </td>

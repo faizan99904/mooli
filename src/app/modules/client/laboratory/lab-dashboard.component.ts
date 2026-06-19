@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
-import { LabDashboardStats, LabOrder, LabOrderStatus } from '../../../shared/models/hospital.model';
+import { LabDashboardStats, LabOrder, LabOrderStatus, User } from '../../../shared/models/hospital.model';
 
 type LabTab = 'all' | LabOrderStatus;
 
@@ -30,6 +30,8 @@ export class LabDashboardComponent implements OnInit {
   page = 1;
   limit = 10;
   totalPages = 0;
+  totalOrders = 0;
+  lastLoadError = '';
 
   readonly tabs: Array<{ key: LabTab; label: string }> = [
     { key: 'all', label: 'All' },
@@ -72,6 +74,7 @@ export class LabDashboardComponent implements OnInit {
 
   loadOrders(): void {
     this.loading = true;
+    this.lastLoadError = '';
     const params: Record<string, unknown> = {
       page: this.page,
       limit: this.limit,
@@ -84,12 +87,15 @@ export class LabDashboardComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (result) => {
-          this.orders = result.items;
-          this.totalPages = result.pagination.totalPages;
+          this.orders = Array.isArray(result?.items) ? result.items : [];
+          this.totalPages = result?.pagination?.totalPages || 0;
+          this.totalOrders = result?.pagination?.total || this.orders.length;
         },
         error: (err) => {
           this.orders = [];
           this.totalPages = 0;
+          this.totalOrders = 0;
+          this.lastLoadError = err?.error?.message || 'Unable to load lab orders.';
           this.toastr.error(err?.error?.message || 'Unable to load lab orders.');
         },
       });
@@ -136,18 +142,68 @@ export class LabDashboardComponent implements OnInit {
     return `status-${status.replace(/_/g, '-')}`;
   }
 
-  openOrder(order: LabOrder): void {
-    void this.router.navigate(['/laboratory/orders', order._id]);
+  trackByOrderId(index: number, order: LabOrder): string {
+    const orderId = String(order?._id || '').trim();
+    return orderId || `${order?.orderNo || 'lab-order'}-${index}`;
+  }
+
+  openOrder(order: LabOrder, event?: Event): void {
+    event?.stopPropagation();
+    const orderId = this.orderId(order);
+    if (!orderId) {
+      this.toastr.error('Unable to open lab order because its ID is missing. Refresh and try again.');
+      return;
+    }
+
+    void this.router.navigate(['/laboratory/orders', orderId]);
   }
 
   collectSample(order: LabOrder, event: Event): void {
     event.stopPropagation();
-    this.backend.collectLabSample(order._id, {}).subscribe({
+    const orderId = this.orderId(order);
+    if (!orderId) {
+      this.toastr.error('Unable to collect sample because the lab order ID is missing.');
+      return;
+    }
+
+    this.backend.collectLabSample(orderId, {}).subscribe({
       next: () => {
         this.toastr.success('Sample marked as collected.');
         this.loadDashboard();
       },
       error: (err) => this.toastr.error(err?.error?.message || 'Unable to collect sample.'),
     });
+  }
+
+  private orderId(order: LabOrder): string {
+    return String(order?._id || '').trim();
+  }
+
+  currentHospitalLabel(): string {
+    const user = this.currentUser();
+    return user?.hospital?.name || user?.hospitalId || 'No hospital selected';
+  }
+
+  emptyStateMessage(): string {
+    if (this.lastLoadError) {
+      return this.lastLoadError;
+    }
+
+    const filters = [
+      this.activeTab !== 'all' ? `status "${this.statusLabel(this.activeTab)}"` : '',
+      this.search.trim() ? `search "${this.search.trim()}"` : '',
+    ].filter(Boolean);
+
+    return filters.length
+      ? `No lab orders found for ${filters.join(' and ')}.`
+      : `No lab orders found for ${this.currentHospitalLabel()}.`;
+  }
+
+  private currentUser(): User | null {
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null') as User | null;
+    } catch {
+      return null;
+    }
   }
 }

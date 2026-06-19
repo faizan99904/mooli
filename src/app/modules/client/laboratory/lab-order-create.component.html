@@ -11,13 +11,48 @@
     <div class="lab-form-grid">
       <section class="lab-card">
         <h2>Patient</h2>
-        <input type="search" [(ngModel)]="patientSearch" placeholder="Search patient by name, MRN, phone" />
-        <div class="patient-picks">
-          <button type="button" *ngFor="let patient of filteredPatients()" [class.active]="selectedPatientId === patient._id"
-            (click)="selectPatient(patient)">
-            <strong>{{ patientName(patient) }}</strong>
-            <span>{{ patient.patientNo }} · {{ patient.phone || 'No phone' }}</span>
-          </button>
+        <label>Mobile Number
+          <div class="phone-search">
+            <input type="tel" [(ngModel)]="patientPhone" placeholder="03004444444"
+              (keydown.enter)="$event.preventDefault(); lookupPatientsByPhone()" />
+            <button type="button" [disabled]="!canSearchPatientPhone()" (click)="lookupPatientsByPhone()">
+              {{ phoneLookupLoading ? 'Finding...' : 'Find Patient' }}
+            </button>
+          </div>
+        </label>
+
+        <div class="patient-lookup-panel" *ngIf="phoneLookupPerformed">
+          <div class="lookup-header" *ngIf="phoneMatchedTotal > 0">
+            <div>
+              <strong>{{ phoneMatchedTotal }} patient{{ phoneMatchedTotal === 1 ? '' : 's' }} found</strong>
+              <span>Registered on {{ patientPhone || 'this number' }}</span>
+            </div>
+            <span>{{ phoneMatchedTotal }}</span>
+          </div>
+
+          <div class="lookup-empty" *ngIf="phoneMatchedTotal === 0">
+            <strong>No patient found</strong>
+            <span>No record exists for {{ patientPhone || 'this number' }}.</span>
+          </div>
+
+          <div class="patient-picks" *ngIf="phoneMatchedTotal > 0">
+            <button type="button" class="patient-result-card" *ngFor="let patient of patients"
+              [class.active]="selectedPatientId === patient._id" (click)="selectPatient(patient)">
+              <span class="patient-result-main">
+                <strong>{{ patientName(patient) }}</strong>
+                <small>{{ patient.patientNo }} · {{ patient.phone || 'No phone' }}</small>
+              </span>
+              <span class="patient-select-badge">
+                {{ selectedPatientId === patient._id ? 'Selected' : 'Select' }}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div class="selected-patient" *ngIf="selectedPatient">
+          <span>Selected Patient</span>
+          <strong>{{ patientName(selectedPatient) }}</strong>
+          <small>{{ selectedPatient.patientNo }} · {{ selectedPatient.phone || '-' }}</small>
         </div>
       </section>
 

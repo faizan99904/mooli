@@ -387,17 +387,17 @@
                     </span>
                   </td>
                   <td>
-                    <button type="button" class="lab-report-btn" *ngIf="row.hasReport" (click)="selectLabTestRow(row); $event.stopPropagation()">
+                    <button type="button" class="lab-report-btn" *ngIf="row.hasReport" (click)="openLabTestDetail(row); $event.stopPropagation()">
                       <i class="fa fa-file-text-o"></i>
                     </button>
                     <span *ngIf="!row.hasReport">—</span>
                   </td>
                   <td>
                     <div class="lab-actions">
-                      <button type="button" class="lab-action-btn" (click)="selectLabTestRow(row); $event.stopPropagation()">
+                      <button type="button" class="lab-action-btn" (click)="openLabTestDetail(row); $event.stopPropagation()">
                         <i class="fa fa-eye"></i>
                       </button>
-                      <button type="button" class="lab-action-btn delete" *ngIf="row.source !== 'saved'"
+                      <button type="button" class="lab-action-btn delete" *ngIf="row.source !== 'saved' && row.source !== 'lab-order'"
                         (click)="removeLabTestRow(row); $event.stopPropagation()">
                         <i class="fa fa-trash"></i>
                       </button>
@@ -420,7 +420,7 @@
                 <p *ngIf="selectedLab.completedOn">Completed on {{ selectedLab.completedOn }}</p>
                 <p *ngIf="!selectedLab.completedOn">Ordered on {{ selectedLab.orderedOn }}</p>
               </div>
-              <button type="button" class="btn-light" *ngIf="selectedLab.hasReport">View Full Report</button>
+              <button type="button" class="btn-light" *ngIf="selectedLab.hasReport" (click)="openLabTestDetail(selectedLab)">View Full Report</button>
             </div>
 
             <div class="lab-detail-empty" *ngIf="selectedLab.parameters.length === 0">
@@ -432,6 +432,7 @@
                 <thead>
                   <tr>
                     <th>Parameter</th>
+                    <th>Sub Category</th>
                     <th>Result</th>
                     <th>Unit</th>
                     <th>Reference Range</th>
@@ -441,6 +442,7 @@
                 <tbody>
                   <tr *ngFor="let parameter of selectedLab.parameters">
                     <td>{{ parameter.name }}</td>
+                    <td>{{ parameter.subCategory || '-' }}</td>
                     <td><strong>{{ parameter.result }}</strong></td>
                     <td>{{ parameter.unit }}</td>
                     <td>{{ parameter.referenceRange }}</td>
@@ -2154,6 +2156,124 @@
       <div class="lab-test-custom-add">
         <input [(ngModel)]="labTestCustomInput" [ngModelOptions]="{ standalone: true }" placeholder="Other test name" />
         <button type="button" class="btn-primary" (click)="addCustomLabTest()">Add Custom Test</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="medicine-library-backdrop" *ngIf="labTestDetailModalOpen">
+    <div class="lab-test-detail-modal-dialog" *ngIf="selectedLabTestRow() as selectedLab">
+      <div class="medicine-library-header">
+        <div>
+          <h3>{{ selectedLab.name }}</h3>
+          <p>{{ selectedLab.fullName }}</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeLabTestDetail()">&times;</button>
+      </div>
+
+      <div class="lab-test-detail-meta-grid">
+        <div>
+          <span>Category</span>
+          <strong>{{ selectedLab.category }}</strong>
+        </div>
+        <div>
+          <span>Status</span>
+          <strong>
+            <span class="lab-status-badge" [ngClass]="labStatusClass(selectedLab.status)">
+              {{ labStatusLabel(selectedLab.status) }}
+            </span>
+          </strong>
+        </div>
+        <div>
+          <span>Ordered On</span>
+          <strong>{{ selectedLab.orderedOn }}</strong>
+        </div>
+        <div>
+          <span>Completed On</span>
+          <strong>{{ selectedLab.completedOn || '-' }}</strong>
+        </div>
+        <div>
+          <span>Lab Order</span>
+          <strong>{{ selectedLab.labOrderNo || '-' }}</strong>
+        </div>
+        <div>
+          <span>Short Code</span>
+          <strong>{{ selectedLab.shortCode || '-' }}</strong>
+        </div>
+        <div>
+          <span>Sample Type</span>
+          <strong>{{ selectedLab.sampleType || '-' }}</strong>
+        </div>
+        <div>
+          <span>Tube Type</span>
+          <strong>{{ selectedLab.tubeType || '-' }}</strong>
+        </div>
+        <div>
+          <span>Result Mode</span>
+          <strong>{{ selectedLab.resultMode || '-' }}</strong>
+        </div>
+        <div>
+          <span>Collected At</span>
+          <strong>{{ selectedLab.collectedAt || '-' }}</strong>
+        </div>
+        <div>
+          <span>Result Entered</span>
+          <strong>{{ selectedLab.resultEnteredAt || '-' }}</strong>
+        </div>
+        <div>
+          <span>Verified At</span>
+          <strong>{{ selectedLab.verifiedAt || '-' }}</strong>
+        </div>
+        <div>
+          <span>Result</span>
+          <strong class="lab-result-text" [ngClass]="selectedLab.resultClass">{{ selectedLab.resultSummary }}</strong>
+        </div>
+      </div>
+
+      <div class="lab-test-detail-note" *ngIf="selectedLab.remarks">
+        <span>Remarks</span>
+        <p>{{ selectedLab.remarks }}</p>
+      </div>
+
+      <div class="lab-test-report-files" *ngIf="selectedLab.reportFiles?.length">
+        <strong>Report Files</strong>
+        <a *ngFor="let report of selectedLab.reportFiles" [href]="report.fileUrl" target="_blank" rel="noopener">
+          <i class="fa fa-file-text-o"></i>
+          {{ report.reportType || report.fileType || 'Report' }}
+          <span *ngIf="report.reportDate">· {{ report.reportDate | date: 'medium' }}</span>
+        </a>
+      </div>
+
+      <div class="lab-detail-empty" *ngIf="selectedLab.parameters.length === 0">
+        Detailed parameters will appear once this test is completed.
+      </div>
+
+      <div class="lab-parameters-table-wrap" *ngIf="selectedLab.parameters.length > 0">
+        <table class="lab-parameters-table">
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Sub Category</th>
+              <th>Result</th>
+              <th>Unit</th>
+              <th>Reference Range</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let parameter of selectedLab.parameters">
+              <td>{{ parameter.name }}</td>
+              <td>{{ parameter.subCategory || '-' }}</td>
+              <td><strong>{{ parameter.result }}</strong></td>
+              <td>{{ parameter.unit }}</td>
+              <td>{{ parameter.referenceRange }}</td>
+              <td>
+                <span class="lab-param-badge" [ngClass]="labParameterStatusClass(parameter.status)">
+                  {{ labParameterStatusLabel(parameter.status) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
