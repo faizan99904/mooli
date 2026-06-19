@@ -1,6 +1,8 @@
-export const API_BASE_URL = 'https://posbackend-faizan99904.fly.dev/api/v1';
+export const API_BASE_URL = 'https://hmsbackend-faizan99904.fly.dev/api/v1';
 
-// export const API_BASE_URL = 'http://localhost:3000/api/v1';
+// Previous combined backend:
+// export const API_BASE_URL = 'https://posbackend-faizan99904.fly.dev/api/v1';
+// export const API_BASE_URL = 'http://localhost:3001/api/v1';
 
 export const CONFIG = {
   auth: {
