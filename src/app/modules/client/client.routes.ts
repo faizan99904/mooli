@@ -360,6 +360,12 @@ export const clientRoutes: Routes = [
         canActivate: [roleGuard(LAB_MANAGE_ACCESS)],
       },
       {
+        path: 'laboratory/orders/:id/edit',
+        component: LabOrderCreateComponent,
+        data: { title: 'Mooli | Edit Lab Order' },
+        canActivate: [roleGuard(LAB_MANAGE_ACCESS)],
+      },
+      {
         path: 'laboratory/orders/:id',
         component: LabOrderDetailComponent,
         data: { title: 'Mooli | Lab Order' },

@@ -16,6 +16,7 @@ import {
 } from '../../../shared/models/hospital.model';
 import { buildLabOrderReportHtml } from './lab-order-report.builder';
 import { isLabOrderReportReady } from './lab-print-details';
+import { canEditLabOrder } from './lab-order.utils';
 
 @Component({
   selector: 'app-lab-order-detail',
@@ -35,6 +36,11 @@ export class LabOrderDetailComponent implements OnInit {
   uploadUrl = '';
   addonSearch = '';
   selectedAddonIds: string[] = [];
+  parameterGroups: Array<{
+    subCategory: string;
+    parameters: LabResultParameter[];
+    showHeader: boolean;
+  }> = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -63,12 +69,29 @@ export class LabOrderDetailComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (order) => {
+          if (!order) {
+            this.order = null;
+            this.parameterGroups = [];
+            return;
+          }
+
+          const previousItemId = this.activeItemId;
           this.order = order;
-          this.activeItemId = order.items[0]?._id || '';
+          this.activeItemId =
+            order.items?.find((item) => item._id === previousItemId)?._id ||
+            order.items?.[0]?._id ||
+            '';
+          const activeItem = this.activeItem();
+          this.remarks = activeItem?.remarks || '';
+          this.refreshParameterGroups();
           this.loadHospital(order.hospitalId);
           this.loadComparison(order.patientId);
         },
-        error: (err) => this.toastr.error(err?.error?.message || 'Unable to load lab order.'),
+        error: (err) => {
+          this.order = null;
+          this.parameterGroups = [];
+          this.toastr.error(err?.error?.message || 'Unable to load lab order.');
+        },
       });
   }
 
@@ -131,9 +154,48 @@ export class LabOrderDetailComponent implements OnInit {
     return patient ? `${patient.firstName} ${patient.lastName}`.trim() : '-';
   }
 
+  canEditOrder(): boolean {
+    return canEditLabOrder(this.order);
+  }
+
   selectItem(item: LabOrderItem): void {
     this.activeItemId = item._id;
     this.remarks = item.remarks || '';
+    this.refreshParameterGroups();
+  }
+
+  refreshParameterGroups(): void {
+    const item = this.activeItem();
+    if (!item) {
+      this.parameterGroups = [];
+      return;
+    }
+
+    const grouped = new Map<string, LabResultParameter[]>();
+
+    (item.parameters || []).forEach((parameter) => {
+      const key = (parameter.subCategory || '').trim() || '__default__';
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)?.push(parameter);
+    });
+
+    this.parameterGroups = Array.from(grouped.entries()).map(([key, parameters]) => ({
+      subCategory: key === '__default__' ? '' : key,
+      parameters,
+      showHeader: key !== '__default__',
+    }));
+  }
+
+  reloadOrderParameters(): void {
+    const orderId = this.order?._id;
+    if (!orderId) {
+      return;
+    }
+
+    this.loadOrder(orderId);
+    this.toastr.info('Reloading parameters from test catalog...');
   }
 
   collectSample(): void {
@@ -144,6 +206,7 @@ export class LabOrderDetailComponent implements OnInit {
     this.backend.collectLabSample(this.order._id, {}).subscribe({
       next: (response) => {
         this.order = response.data || this.order;
+        this.refreshParameterGroups();
         this.toastr.success('Sample collected.');
       },
       error: (err) => this.toastr.error(err?.error?.message || 'Unable to collect sample.'),
@@ -168,6 +231,7 @@ export class LabOrderDetailComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.order = response.data || order;
+          this.refreshParameterGroups();
           this.toastr.success(submitForVerification ? 'Sent for verification.' : 'Results saved.');
           this.loadComparison(order.patientId);
         },
@@ -196,6 +260,7 @@ export class LabOrderDetailComponent implements OnInit {
         next: (response) => {
           this.order = response.data || order;
           this.uploadUrl = '';
+          this.refreshParameterGroups();
           this.toastr.success('Report uploaded.');
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Unable to upload report.'),
@@ -212,6 +277,7 @@ export class LabOrderDetailComponent implements OnInit {
     this.backend.verifyLabOrderItem(order._id, item._id, { remarks: this.remarks }).subscribe({
       next: (response) => {
         this.order = response.data || order;
+        this.refreshParameterGroups();
         this.toastr.success('Result verified.');
       },
       error: (err) => this.toastr.error(err?.error?.message || 'Unable to verify result.'),
@@ -247,7 +313,9 @@ export class LabOrderDetailComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.order = response.data || this.order;
+          this.activeItemId = this.order?.items?.[0]?._id || this.activeItemId;
           this.selectedAddonIds = [];
+          this.refreshParameterGroups();
           this.toastr.success('Extra tests added to order.');
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Unable to add tests.'),

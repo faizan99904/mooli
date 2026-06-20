@@ -2,15 +2,24 @@
   <div class="lab-shell lab-form-shell">
     <div class="lab-heading">
       <div>
-        <h1>Create Lab Order</h1>
-        <p>Walk-in, admission, emergency, or manual lab order</p>
+        <h1>{{ isEditMode ? 'Edit Lab Order' : 'Create Lab Order' }}</h1>
+        <p *ngIf="!isEditMode">Walk-in, admission, emergency, or manual lab order</p>
+        <p *ngIf="isEditMode">
+          <span class="detail-order-badge" *ngIf="editingOrderNo">{{ editingOrderNo }}</span>
+          Update order details and tests before results are entered
+        </p>
       </div>
-      <a class="btn-light" routerLink="/laboratory">Back to Dashboard</a>
+      <a class="btn-light" [routerLink]="isEditMode && editingOrderId ? ['/laboratory/orders', editingOrderId] : '/laboratory'">
+        {{ isEditMode ? 'Back to Order' : 'Back to Dashboard' }}
+      </a>
     </div>
 
-    <div class="lab-form-grid">
+    <div class="lab-loading" *ngIf="orderLoading">Loading lab order...</div>
+
+    <div class="lab-form-grid" *ngIf="!orderLoading">
       <section class="lab-card">
         <h2>Patient</h2>
+        <ng-container *ngIf="!isEditMode">
         <label>Mobile Number
           <div class="phone-search">
             <input type="tel" [(ngModel)]="patientPhone" placeholder="03004444444"
@@ -51,6 +60,13 @@
 
         <div class="selected-patient" *ngIf="selectedPatient">
           <span>Selected Patient</span>
+          <strong>{{ patientName(selectedPatient) }}</strong>
+          <small>{{ selectedPatient.patientNo }} · {{ selectedPatient.phone || '-' }}</small>
+        </div>
+        </ng-container>
+
+        <div class="selected-patient readonly-patient" *ngIf="isEditMode && selectedPatient">
+          <span>Patient (cannot change)</span>
           <strong>{{ patientName(selectedPatient) }}</strong>
           <small>{{ selectedPatient.patientNo }} · {{ selectedPatient.phone || '-' }}</small>
         </div>
@@ -108,8 +124,12 @@
           <div class="balance"><span>Balance</span><strong>Rs. {{ balanceAmount() }}</strong></div>
         </div>
         <div class="summary-actions">
-          <button type="button" class="btn-light" [disabled]="saving" (click)="saveOrder(false)">Save Order</button>
-          <button type="button" class="btn-primary" [disabled]="saving" (click)="saveOrder(true)">Save & Print Receipt</button>
+          <button type="button" class="btn-light" [disabled]="saving" (click)="saveOrder(false)">
+            {{ isEditMode ? 'Update Order' : 'Save Order' }}
+          </button>
+          <button type="button" class="btn-primary" [disabled]="saving" (click)="saveOrder(true)">
+            {{ isEditMode ? 'Update & Print Receipt' : 'Save & Print Receipt' }}
+          </button>
         </div>
       </aside>
     </div>

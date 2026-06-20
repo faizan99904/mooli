@@ -5,8 +5,8 @@
         <span class="settings-badge"><i class="fa fa-print"></i> Print Setup</span>
         <h1>Laboratory Print Details</h1>
         <p>
-          Set separate lab name, phone, and address for verified reports.
-          <span class="settings-note">Order receipts always use hospital details.</span>
+          Set separate lab name, phone, and address for receipts and verified reports.
+          <span class="settings-note">If disabled, hospital details are used on all prints.</span>
         </p>
       </div>
       <div class="settings-hero-actions">
@@ -17,7 +17,7 @@
     <div class="settings-info-cards" *ngIf="!loading">
       <article class="info-card">
         <span class="info-label">Order Receipt</span>
-        <strong>Hospital branding</strong>
+        <strong>{{ reportUsesLabDetails() ? 'Laboratory branding' : 'Hospital branding' }}</strong>
         <small>Used when a new lab order is created and receipt is printed.</small>
       </article>
       <article class="info-card">
@@ -46,7 +46,7 @@
             <i class="fa fa-toggle-on"></i>
             <div>
               <h2>Custom Laboratory Details</h2>
-              <p>Enable this when your lab prints under its own branding after all tests are verified.</p>
+              <p>Enable this to print receipts and verified reports with your laboratory branding.</p>
             </div>
           </div>
 
@@ -112,7 +112,8 @@
               <span class="behaviour-icon receipt"><i class="fa fa-file-text-o"></i></span>
               <div>
                 <strong>Order receipt</strong>
-                <span>Always prints with hospital details.</span>
+                <span *ngIf="reportUsesLabDetails()">Prints with laboratory details when custom details are enabled.</span>
+                <span *ngIf="!reportUsesLabDetails()">Prints with hospital details until custom lab details are enabled.</span>
               </div>
             </li>
             <li>

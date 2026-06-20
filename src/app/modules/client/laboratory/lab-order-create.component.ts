@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
 import { Hospital, LabOrder, LabTestCatalog, Patient } from '../../../shared/models/hospital.model';
 import { resolveLabPrintDetails } from './lab-print-details';
+import { canEditLabOrder } from './lab-order.utils';
 
 type LabOrderReceiptItem = {
   code: string;
@@ -42,11 +43,17 @@ export class LabOrderCreateComponent implements OnInit {
   paidAmount = 0;
   notes = '';
   testSearch = '';
+  isEditMode = false;
+  editingOrderId = '';
+  editingOrderNo = '';
+  orderLoading = false;
+  private pendingEditOrder: LabOrder | null = null;
 
   constructor(
     private backend: BackendService,
     private toastr: ToastrService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -61,6 +68,15 @@ export class LabOrderCreateComponent implements OnInit {
       },
     });
     this.loadCatalog();
+
+    this.route.paramMap.subscribe((params) => {
+      const id = params.get('id') || '';
+      if (id) {
+        this.isEditMode = true;
+        this.editingOrderId = id;
+        this.loadOrderForEdit(id);
+      }
+    });
   }
 
   loadCatalog(): void {
@@ -75,6 +91,12 @@ export class LabOrderCreateComponent implements OnInit {
             this.backend.seedDefaultLabTests().subscribe({
               next: () => this.loadCatalog(),
             });
+            return;
+          }
+
+          if (this.pendingEditOrder) {
+            this.applyOrderToForm(this.pendingEditOrder);
+            this.pendingEditOrder = null;
           }
         },
         error: () => {
@@ -154,7 +176,17 @@ export class LabOrderCreateComponent implements OnInit {
 
     this.backend.getHospital(hospitalId).subscribe({
       next: (hospital) => {
-        this.hospital = hospital;
+        this.backend.getLabSettings().subscribe({
+          next: (settings) => {
+            this.hospital = {
+              ...hospital,
+              laboratorySettings: settings.laboratorySettings,
+            };
+          },
+          error: () => {
+            this.hospital = hospital;
+          },
+        });
       },
     });
   }
@@ -182,6 +214,57 @@ export class LabOrderCreateComponent implements OnInit {
     return Math.max(this.totalAmount() - Number(this.paidAmount || 0), 0);
   }
 
+  loadOrderForEdit(id: string): void {
+    this.orderLoading = true;
+    this.backend
+      .getLabOrder(id)
+      .pipe(finalize(() => (this.orderLoading = false)))
+      .subscribe({
+        next: (order) => {
+          if (!canEditLabOrder(order)) {
+            this.toastr.error('This lab order can no longer be edited.');
+            void this.router.navigate(['/laboratory/orders', id]);
+            return;
+          }
+
+          if (this.catalog.length) {
+            this.applyOrderToForm(order);
+          } else {
+            this.pendingEditOrder = order;
+          }
+        },
+        error: (err) => {
+          this.toastr.error(err?.error?.message || 'Unable to load lab order for editing.');
+          void this.router.navigate(['/laboratory']);
+        },
+      });
+  }
+
+  private applyOrderToForm(order: LabOrder): void {
+    this.editingOrderNo = order.orderNo;
+    this.selectedPatientId = order.patientId;
+    this.selectedPatient = order.patient || null;
+    this.patientPhone = order.patient?.phone || '';
+    this.phoneLookupPerformed = Boolean(order.patient);
+    this.source = order.source;
+    this.referredBy = order.referredBy || '';
+    this.priority = order.priority;
+    this.paidAmount = order.paidAmount;
+    this.notes = order.notes || '';
+
+    const testIds = new Set(
+      (order.items || []).map((item) => String(item.testId || '')).filter(Boolean)
+    );
+    this.selectedTests = this.catalog.filter((test) => testIds.has(test._id));
+
+    if (order.patient) {
+      this.patients = [order.patient];
+      this.phoneMatchedTotal = 1;
+    }
+
+    this.loadHospital(order.hospitalId || this.currentHospitalId);
+  }
+
   saveOrder(printReceipt = false): void {
     if (!this.selectedPatientId) {
       this.toastr.error('Select a patient first.');
@@ -190,6 +273,20 @@ export class LabOrderCreateComponent implements OnInit {
 
     if (this.selectedTests.length === 0) {
       this.toastr.error('Select at least one test.');
+      return;
+    }
+
+    const payload = {
+      source: this.source,
+      referredBy: this.referredBy,
+      priority: this.priority,
+      paidAmount: this.paidAmount,
+      notes: this.notes,
+      tests: this.selectedTests.map((test) => ({ testId: test._id })),
+    };
+
+    if (this.isEditMode && this.editingOrderId) {
+      this.updateOrder(printReceipt, payload);
       return;
     }
 
@@ -204,12 +301,7 @@ export class LabOrderCreateComponent implements OnInit {
       .createLabOrder({
         hospitalId,
         patientId: this.selectedPatientId,
-        source: this.source,
-        referredBy: this.referredBy,
-        priority: this.priority,
-        paidAmount: this.paidAmount,
-        notes: this.notes,
-        tests: this.selectedTests.map((test) => ({ testId: test._id })),
+        ...payload,
       })
       .pipe(finalize(() => (this.saving = false)))
       .subscribe({
@@ -228,6 +320,38 @@ export class LabOrderCreateComponent implements OnInit {
           }
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Unable to create lab order.'),
+      });
+  }
+
+  private updateOrder(
+    printReceipt: boolean,
+    payload: {
+      source: 'doctor' | 'walk-in' | 'admission' | 'emergency';
+      referredBy: string;
+      priority: 'normal' | 'urgent';
+      paidAmount: number;
+      notes: string;
+      tests: Array<{ testId: string }>;
+    }
+  ): void {
+    this.saving = true;
+    this.backend
+      .updateLabOrder(this.editingOrderId, payload)
+      .pipe(finalize(() => (this.saving = false)))
+      .subscribe({
+        next: (response) => {
+          const order = response.data;
+          const orderId = order?._id || this.editingOrderId;
+          this.toastr.success('Lab order updated.');
+
+          if (printReceipt && order) {
+            this.printLabOrderReceipt(order, orderId);
+            return;
+          }
+
+          void this.router.navigate(['/laboratory/orders', orderId]);
+        },
+        error: (err) => this.toastr.error(err?.error?.message || 'Unable to update lab order.'),
       });
   }
 

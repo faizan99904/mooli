@@ -1,3 +1,9 @@
+<div class="lab-page lab-detail-page" *ngIf="loading && !order">
+  <div class="lab-shell">
+    <div class="lab-loading"><i class="fa fa-spinner fa-spin"></i> Loading lab order...</div>
+  </div>
+</div>
+
 <div id="main-content" class="lab-page lab-detail-page" *ngIf="order as current">
   <div class="lab-shell">
     <header class="detail-hero">
@@ -13,6 +19,9 @@
       </div>
       <div class="detail-hero-actions">
         <a class="btn-light" routerLink="/laboratory"><i class="fa fa-arrow-left"></i> Dashboard</a>
+        <a class="btn-light" *ngIf="canEditOrder()" [routerLink]="['/laboratory/orders', current._id, 'edit']">
+          <i class="fa fa-pencil"></i> Edit Order
+        </a>
         <button type="button" class="btn-light" (click)="collectSample()" *ngIf="current.status === 'ordered'">
           <i class="fa fa-flask"></i> Collect Sample
         </button>
@@ -72,6 +81,11 @@
             <span class="mode-badge">{{ resultModeLabel(item.resultMode) }}</span>
           </div>
 
+          <div class="result-entry-help" *ngIf="item.parameters.length > 0">
+            Enter patient result values in the <strong>Result</strong> column for each parameter row below.
+            Sub categories are labels from the test catalog; ranges and units are pre-filled.
+          </div>
+
           <div class="result-table-wrap" *ngIf="item.parameters.length > 0; else noParameters">
             <table class="result-table">
               <thead>
@@ -87,33 +101,49 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let parameter of item.parameters" [class.row-critical]="parameter.status === 'critical'">
-                  <td class="col-parameter"><strong>{{ parameter.parameterName }}</strong></td>
-                  <td class="col-subcategory">{{ parameter.subCategory || '—' }}</td>
-                  <td class="col-result">
-                    <input type="text" [(ngModel)]="parameter.resultValue" placeholder="Enter value" />
-                  </td>
-                  <td class="col-unit">{{ parameter.unit || '—' }}</td>
-                  <td class="col-range">{{ parameter.referenceText || formatRange(parameter) }}</td>
-                  <td class="col-status">
-                    <span class="param-status" [ngClass]="paramStatusClass(parameter.status)">
-                      {{ parameter.status || '—' }}
-                    </span>
-                  </td>
-                  <td class="col-prev">{{ parameter.previousValue ?? '—' }}</td>
-                  <td class="col-trend">
-                    <span class="trend-pill" [ngClass]="trendClass(parameter.trend)" *ngIf="parameter.trend; else noTrend">
-                      {{ trendLabel(parameter.trend) }}
-                    </span>
-                    <ng-template #noTrend>—</ng-template>
-                  </td>
-                </tr>
+                <ng-container *ngFor="let group of parameterGroups">
+                  <tr class="subcategory-row" *ngIf="group.showHeader">
+                    <td colspan="8">
+                      <span class="subcategory-label">{{ group.subCategory }}</span>
+                    </td>
+                  </tr>
+                  <tr *ngFor="let parameter of group.parameters" [class.row-critical]="parameter.status === 'critical'">
+                    <td class="col-parameter"><strong>{{ parameter.parameterName }}</strong></td>
+                    <td class="col-subcategory">{{ parameter.subCategory || '—' }}</td>
+                    <td class="col-result">
+                      <input type="text" [(ngModel)]="parameter.resultValue" placeholder="Enter value" />
+                    </td>
+                    <td class="col-unit">{{ parameter.unit || '—' }}</td>
+                    <td class="col-range">{{ parameter.referenceText || formatRange(parameter) }}</td>
+                    <td class="col-status">
+                      <span class="param-status" [ngClass]="paramStatusClass(parameter.status)">
+                        {{ parameter.status || '—' }}
+                      </span>
+                    </td>
+                    <td class="col-prev">{{ parameter.previousValue ?? '—' }}</td>
+                    <td class="col-trend">
+                      <span class="trend-pill" [ngClass]="trendClass(parameter.trend)" *ngIf="parameter.trend; else noTrend">
+                        {{ trendLabel(parameter.trend) }}
+                      </span>
+                      <ng-template #noTrend>—</ng-template>
+                    </td>
+                  </tr>
+                </ng-container>
               </tbody>
             </table>
           </div>
 
           <ng-template #noParameters>
-            <div class="panel-empty">No structured parameters for this test. Use upload report instead.</div>
+            <div class="panel-empty">
+              <p>No structured parameters are loaded for this test yet.</p>
+              <p class="panel-empty-note" *ngIf="item.testId">
+                If you added parameters in Test Catalog after creating this order, click below to load them here.
+              </p>
+              <button type="button" class="btn-light" *ngIf="item.testId" (click)="reloadOrderParameters()">
+                <i class="fa fa-refresh"></i> Load Parameters From Catalog
+              </button>
+              <p class="panel-empty-note" *ngIf="!item.testId">Use upload report instead for unstructured tests.</p>
+            </div>
           </ng-template>
 
           <div class="remarks-block">
@@ -237,12 +267,6 @@
         <small>{{ alert.testName }} · {{ alert.resultValue }}</small>
       </div>
     </section>
-  </div>
-</div>
-
-<div class="lab-page lab-detail-page" *ngIf="loading">
-  <div class="lab-shell">
-    <div class="lab-loading">Loading lab order...</div>
   </div>
 </div>
 

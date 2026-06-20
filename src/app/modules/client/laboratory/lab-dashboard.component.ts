@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
 import { LabDashboardStats, LabOrder, LabOrderStatus, User } from '../../../shared/models/hospital.model';
+import { canEditLabOrder } from './lab-order.utils';
 
 type LabTab = 'all' | LabOrderStatus;
 
@@ -156,6 +157,21 @@ export class LabDashboardComponent implements OnInit {
     }
 
     void this.router.navigate(['/laboratory/orders', orderId]);
+  }
+
+  canEditOrder(order: LabOrder): boolean {
+    return canEditLabOrder(order);
+  }
+
+  editOrder(order: LabOrder, event: Event): void {
+    event.stopPropagation();
+    const orderId = this.orderId(order);
+    if (!orderId) {
+      this.toastr.error('Unable to edit lab order because its ID is missing.');
+      return;
+    }
+
+    void this.router.navigate(['/laboratory/orders', orderId, 'edit']);
   }
 
   collectSample(order: LabOrder, event: Event): void {

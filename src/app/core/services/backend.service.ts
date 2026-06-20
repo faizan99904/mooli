@@ -490,6 +490,10 @@ export class BackendService {
     return this.post<LabOrder>(`${CONFIG.laboratory}/orders`, payload);
   }
 
+  updateLabOrder(id: string, payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
+    return this.patch<LabOrder>(`${CONFIG.laboratory}/orders/${id}`, payload);
+  }
+
   addTestsToLabOrder(id: string, payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
     return this.post<LabOrder>(`${CONFIG.laboratory}/orders/${id}/tests`, payload);
   }

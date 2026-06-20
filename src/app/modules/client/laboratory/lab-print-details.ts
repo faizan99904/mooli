@@ -48,18 +48,26 @@ function laboratoryPrintDetails(
   };
 }
 
+export function hasCustomLabPrintDetails(hospital: Hospital | null): boolean {
+  return hospital?.laboratorySettings?.useCustomDetails === true;
+}
+
 export function resolveLabPrintDetails(
   hospital: Hospital | null,
   options: { mode: 'receipt' | 'report'; order?: LabOrder | null }
 ): LabPrintDetails {
-  if (options.mode === 'receipt') {
+  const labSettings = hospital?.laboratorySettings;
+
+  if (!hasCustomLabPrintDetails(hospital)) {
     return hospitalPrintDetails(hospital);
   }
 
-  const labSettings = hospital?.laboratorySettings;
-  const orderReady = options.order ? isLabOrderReportReady(options.order) : false;
+  if (options.mode === 'receipt') {
+    return laboratoryPrintDetails(hospital, labSettings);
+  }
 
-  if (labSettings?.useCustomDetails === true && orderReady) {
+  const orderReady = options.order ? isLabOrderReportReady(options.order) : false;
+  if (orderReady) {
     return laboratoryPrintDetails(hospital, labSettings);
   }
 

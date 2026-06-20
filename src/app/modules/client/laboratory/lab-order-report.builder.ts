@@ -9,6 +9,7 @@ import { resolveLabPrintDetails } from './lab-print-details';
 
 export interface LabReportRow {
   testName: string;
+  subCategory: string;
   parameterName: string;
   resultValue: string;
   unit: string;
@@ -185,6 +186,7 @@ function collectReportRows(order: LabOrder): LabReportRow[] {
     for (const parameter of item.parameters || []) {
       rows.push({
         testName: displayValue(item.testName),
+        subCategory: displayValue(parameter.subCategory),
         parameterName: displayValue(parameter.parameterName),
         resultValue: displayValue(parameter.resultValue),
         unit: displayValue(parameter.unit),
@@ -200,8 +202,13 @@ function collectReportRows(order: LabOrder): LabReportRow[] {
 
 function resultRowHtml(row: LabReportRow): string {
   const abnormalRow = ['low', 'high', 'critical'].includes(row.statusKey) ? ' row-abnormal' : '';
+  const parameterLabel =
+    row.subCategory !== NA && row.subCategory !== row.parameterName
+      ? `${row.subCategory} · ${row.parameterName}`
+      : row.parameterName;
+
   return `<tr class="${abnormalRow}">
-    <td><strong>${escapeHtml(row.testName)}</strong><br /><span class="param-name">${escapeHtml(row.parameterName)}</span></td>
+    <td><strong>${escapeHtml(row.testName)}</strong><br /><span class="param-name">${escapeHtml(parameterLabel)}</span></td>
     <td class="result-value">${escapeHtml(row.resultValue)}</td>
     <td>${escapeHtml(row.unit)}</td>
     <td>${escapeHtml(row.referenceRange)}</td>

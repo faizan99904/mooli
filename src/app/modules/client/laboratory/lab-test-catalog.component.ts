@@ -174,17 +174,22 @@ export class LabTestCatalogComponent implements OnInit, OnDestroy {
 
   private buildParametersPayload(): LabTestParameterTemplate[] {
     return this.form.parameters
-      .map((parameter, index) => ({
-        subCategory: parameter.subCategory.trim(),
-        parameterName: parameter.parameterName.trim(),
-        unit: parameter.unit.trim(),
-        referenceMin: this.normalizeNumber(parameter.referenceMin),
-        referenceMax: this.normalizeNumber(parameter.referenceMax),
-        referenceText: parameter.referenceText.trim(),
-        criticalMin: this.normalizeNumber(parameter.criticalMin),
-        criticalMax: this.normalizeNumber(parameter.criticalMax),
-        sortOrder: this.normalizeNumber(parameter.sortOrder) ?? index + 1,
-      }))
+      .map((parameter, index) => {
+        const subCategory = parameter.subCategory.trim();
+        const parameterName = parameter.parameterName.trim() || subCategory;
+
+        return {
+          subCategory,
+          parameterName,
+          unit: parameter.unit.trim(),
+          referenceMin: this.normalizeNumber(parameter.referenceMin),
+          referenceMax: this.normalizeNumber(parameter.referenceMax),
+          referenceText: parameter.referenceText.trim(),
+          criticalMin: this.normalizeNumber(parameter.criticalMin),
+          criticalMax: this.normalizeNumber(parameter.criticalMax),
+          sortOrder: this.normalizeNumber(parameter.sortOrder) ?? index + 1,
+        };
+      })
       .filter((parameter) => parameter.parameterName);
   }
 

@@ -101,11 +101,7 @@ export class LabSettingsComponent implements OnInit {
       laboratorySettings: this.form,
     };
 
-    return resolveLabPrintDetails(hospital, { mode: 'report', order: { _id: '', hospitalId: '', orderNo: '', patientId: '', source: 'walk-in', status: 'verified', priority: 'normal', totalAmount: 0, paidAmount: 0, balanceAmount: 0, items: [{ _id: '1', testName: 'CBC', status: 'verified', resultMode: 'structured', parameters: [], reportFiles: [], price: 0 }] } }).name;
-  }
-
-  receiptUsesHospitalDetails(): boolean {
-    return true;
+    return resolveLabPrintDetails(hospital, { mode: 'receipt' }).name;
   }
 
   reportUsesLabDetails(): boolean {

@@ -62,6 +62,8 @@
             <td>{{ order.createdAt | date:'medium' }}</td>
             <td class="lab-actions" (click)="$event.stopPropagation()">
               <button type="button" class="btn-light" (click)="openOrder(order, $event)">View</button>
+              <button type="button" class="btn-light" *ngIf="canEditOrder(order)"
+                (click)="editOrder(order, $event)">Edit</button>
               <button type="button" class="btn-light" *ngIf="order.status === 'ordered'"
                 (click)="collectSample(order, $event)">Collect Sample</button>
             </td>

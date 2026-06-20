@@ -284,6 +284,42 @@
   background: #fbfdff;
 }
 
+.result-entry-help {
+  background: var(--lab-blue-soft);
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1e3a8a;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+
+.subcategory-row td {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 10px;
+}
+
+.subcategory-label {
+  color: var(--lab-blue);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.panel-empty-note {
+  color: var(--lab-muted);
+  font-size: 12px;
+  margin: 8px 0;
+}
+
+.panel-empty .btn-light {
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .result-table .col-parameter { min-width: 140px; }
 .result-table .col-subcategory { min-width: 120px; }
 .result-table .col-result { min-width: 110px; }
