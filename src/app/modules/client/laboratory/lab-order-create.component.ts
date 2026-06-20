@@ -41,6 +41,7 @@ export class LabOrderCreateComponent implements OnInit {
   referredBy = '';
   priority: 'normal' | 'urgent' = 'normal';
   paidAmount = 0;
+  paymentMethod = 'cash';
   notes = '';
   testSearch = '';
   isEditMode = false;
@@ -250,6 +251,7 @@ export class LabOrderCreateComponent implements OnInit {
     this.referredBy = order.referredBy || '';
     this.priority = order.priority;
     this.paidAmount = order.paidAmount;
+    this.paymentMethod = order.paymentMethod || 'cash';
     this.notes = order.notes || '';
 
     const testIds = new Set(
@@ -276,11 +278,17 @@ export class LabOrderCreateComponent implements OnInit {
       return;
     }
 
+    if (Number(this.paidAmount || 0) > this.totalAmount()) {
+      this.toastr.error('Paid amount cannot exceed total amount.');
+      return;
+    }
+
     const payload = {
       source: this.source,
       referredBy: this.referredBy,
       priority: this.priority,
       paidAmount: this.paidAmount,
+      paymentMethod: this.paymentMethod,
       notes: this.notes,
       tests: this.selectedTests.map((test) => ({ testId: test._id })),
     };
@@ -330,6 +338,7 @@ export class LabOrderCreateComponent implements OnInit {
       referredBy: string;
       priority: 'normal' | 'urgent';
       paidAmount: number;
+      paymentMethod: string;
       notes: string;
       tests: Array<{ testId: string }>;
     }

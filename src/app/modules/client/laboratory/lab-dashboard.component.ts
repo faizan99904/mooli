@@ -24,6 +24,9 @@ export class LabDashboardComponent implements OnInit {
     resultPending: 0,
     readyToVerify: 0,
     completedToday: 0,
+    todayCollected: 0,
+    totalCollected: 0,
+    outstandingAmount: 0,
   };
   loading = false;
   search = '';
@@ -67,6 +70,9 @@ export class LabDashboardComponent implements OnInit {
           resultPending: 0,
           readyToVerify: 0,
           completedToday: 0,
+          todayCollected: 0,
+          totalCollected: 0,
+          outstandingAmount: 0,
         };
       },
     });

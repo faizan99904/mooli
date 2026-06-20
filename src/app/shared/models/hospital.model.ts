@@ -404,6 +404,7 @@ export interface LabOrder {
   priority: 'normal' | 'urgent';
   totalAmount: number;
   paidAmount: number;
+  paymentMethod?: string;
   balanceAmount: number;
   sampleCollectionAt?: string;
   notes?: string;
@@ -428,6 +429,9 @@ export interface LabDashboardStats {
   resultPending: number;
   readyToVerify: number;
   completedToday: number;
+  todayCollected?: number;
+  totalCollected?: number;
+  outstandingAmount?: number;
 }
 
 export interface LabComparisonRow {
@@ -489,6 +493,9 @@ export interface Bill {
   patient?: Patient | null;
   appointmentId?: string | null;
   appointment?: Appointment | null;
+  sourceType?: string;
+  sourceId?: string;
+  sourceNo?: string;
   billNo: string;
   items: BillItem[];
   subtotal: number;
@@ -563,6 +570,8 @@ export interface LedgerPayment {
   amount: number;
   method: string;
   type: 'advance' | 'partial' | 'final' | 'refund';
+  sourceType?: string;
+  sourceId?: string;
   note?: string;
   referenceNo?: string;
   createdAt?: string;

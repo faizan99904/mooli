@@ -387,10 +387,16 @@
                     </span>
                   </td>
                   <td>
-                    <button type="button" class="lab-report-btn" *ngIf="row.hasReport" (click)="openLabTestDetail(row); $event.stopPropagation()">
+                    <button type="button" class="lab-report-pdf-btn" *ngIf="canViewLabReportPdf(row)"
+                      (click)="openLabReportPdf(row); $event.stopPropagation()">
+                      <i class="fa fa-file-pdf-o"></i>
+                      <span>View PDF</span>
+                    </button>
+                    <button type="button" class="lab-report-btn" *ngIf="!canViewLabReportPdf(row) && row.hasReport"
+                      (click)="openLabTestDetail(row); $event.stopPropagation()">
                       <i class="fa fa-file-text-o"></i>
                     </button>
-                    <span *ngIf="!row.hasReport">—</span>
+                    <span *ngIf="!canViewLabReportPdf(row) && !row.hasReport">—</span>
                   </td>
                   <td>
                     <div class="lab-actions">
@@ -420,7 +426,10 @@
                 <p *ngIf="selectedLab.completedOn">Completed on {{ selectedLab.completedOn }}</p>
                 <p *ngIf="!selectedLab.completedOn">Ordered on {{ selectedLab.orderedOn }}</p>
               </div>
-              <button type="button" class="btn-light" *ngIf="selectedLab.hasReport" (click)="openLabTestDetail(selectedLab)">View Full Report</button>
+              <div class="lab-test-detail-actions" *ngIf="canViewLabReportPdf(selectedLab) || selectedLab.hasReport">
+                <button type="button" class="btn-light" *ngIf="canViewLabReportPdf(selectedLab)" (click)="openLabReportPdf(selectedLab)">View PDF</button>
+                <button type="button" class="btn-light" *ngIf="selectedLab.hasReport" (click)="openLabTestDetail(selectedLab)">View Full Report</button>
+              </div>
             </div>
 
             <div class="lab-detail-empty" *ngIf="selectedLab.parameters.length === 0">
@@ -2229,6 +2238,14 @@
       <div class="lab-test-detail-note" *ngIf="selectedLab.remarks">
         <span>Remarks</span>
         <p>{{ selectedLab.remarks }}</p>
+      </div>
+
+      <div class="lab-test-report-files" *ngIf="canViewLabReportPdf(selectedLab)">
+        <strong>Lab Report PDF</strong>
+        <button type="button" class="lab-report-pdf-btn" (click)="openLabReportPdf(selectedLab)">
+          <i class="fa fa-file-pdf-o"></i>
+          <span>View PDF</span>
+        </button>
       </div>
 
       <div class="lab-test-report-files" *ngIf="selectedLab.reportFiles?.length">

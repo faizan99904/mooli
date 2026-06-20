@@ -35,6 +35,7 @@ import {
   PrescriptionPrintSettings,
   ProductCatalogItem,
   Prescription,
+  User,
 } from '../../../shared/models/hospital.model';
 import {
   buildSidebarVitalItems,
@@ -65,6 +66,7 @@ import {
   labStatusLabel,
   PatientLabTestRecord,
 } from './lab-test-data';
+import { buildLabOrderReportHtml } from '../laboratory/lab-order-report.builder';
 import {
   buildIvFluidDisplayRows,
   countActiveIvFluids,
@@ -1724,6 +1726,76 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   closeLabTestDetail(): void {
     this.labTestDetailModalOpen = false;
+  }
+
+  canViewLabReportPdf(row: LabTestDisplayRow | null | undefined): boolean {
+    return row?.source === 'lab-order' && Boolean(row.labOrderId);
+  }
+
+  openLabReportPdf(row: LabTestDisplayRow): void {
+    const order = this.patientLabOrders.find((item) => String(item._id) === String(row.labOrderId || ''));
+    if (!order) {
+      this.toastr.error('Lab report is not available for this test.');
+      return;
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('title', 'Lab report PDF');
+    iframe.setAttribute('aria-hidden', 'true');
+    Object.assign(iframe.style, {
+      border: '0',
+      height: '0',
+      left: '-10000px',
+      opacity: '0',
+      pointerEvents: 'none',
+      position: 'fixed',
+      top: '0',
+      width: '100vw',
+    });
+
+    document.body.appendChild(iframe);
+
+    const printWindow = iframe.contentWindow;
+    const printDocument = iframe.contentDocument || printWindow?.document;
+    if (!printWindow || !printDocument) {
+      iframe.remove();
+      this.toastr.error('Unable to open lab report PDF.');
+      return;
+    }
+
+    printDocument.open();
+    printDocument.write(
+      buildLabOrderReportHtml({
+        order,
+        hospital: this.currentHospital,
+        comparison: [],
+        reportGeneratedBy: this.currentUserForLabReport(),
+      })
+    );
+    printDocument.close();
+
+    let handled = false;
+    const finish = () => {
+      if (handled) {
+        return;
+      }
+
+      handled = true;
+      iframe.remove();
+    };
+
+    printWindow.onafterprint = finish;
+
+    window.setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch {
+        finish();
+      }
+    }, 250);
+
+    window.setTimeout(finish, 30000);
   }
 
   orderLabTest(name: string, category = 'Other'): void {
@@ -4938,6 +5010,14 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       },
       error: () => undefined,
     });
+  }
+
+  private currentUserForLabReport(): User | null {
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null') as User | null;
+    } catch {
+      return null;
+    }
   }
 
   private updateStoredHospital(hospital: Hospital): void {

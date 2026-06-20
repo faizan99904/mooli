@@ -21,6 +21,9 @@
       <article><strong>{{ stats.resultPending }}</strong><span>Result Pending</span></article>
       <article><strong>{{ stats.readyToVerify }}</strong><span>Ready to Verify</span></article>
       <article><strong>{{ stats.completedToday }}</strong><span>Completed Today</span></article>
+      <article><strong>Rs. {{ (stats.todayCollected || 0) | number:'1.0-0' }}</strong><span>Collected Today</span></article>
+      <article><strong>Rs. {{ (stats.totalCollected || 0) | number:'1.0-0' }}</strong><span>Total Lab Collection</span></article>
+      <article><strong>Rs. {{ (stats.outstandingAmount || 0) | number:'1.0-0' }}</strong><span>Outstanding</span></article>
     </div>
 
     <div class="lab-toolbar">

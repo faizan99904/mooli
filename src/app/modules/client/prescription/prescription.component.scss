@@ -840,6 +840,24 @@ dd {
   width: 28px;
 }
 
+.lab-report-pdf-btn {
+  align-items: center;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  color: var(--rx-blue);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 8px;
+}
+
+.lab-report-pdf-btn i {
+  font-size: 13px;
+}
+
 .lab-action-btn.delete {
   color: #dc2626;
 }
@@ -880,6 +898,13 @@ dd {
   color: var(--rx-muted);
   font-size: 12px;
   margin: 4px 0 0;
+}
+
+.lab-test-detail-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .lab-detail-empty {

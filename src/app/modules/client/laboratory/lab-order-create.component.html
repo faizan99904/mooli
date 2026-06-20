@@ -119,7 +119,18 @@
         <div class="payment-box">
           <div><span>Total</span><strong>Rs. {{ totalAmount() }}</strong></div>
           <label>Paid
-            <input type="number" min="0" [(ngModel)]="paidAmount" />
+            <input type="number" min="0" [max]="totalAmount()" [(ngModel)]="paidAmount" />
+          </label>
+          <label>Method
+            <select [(ngModel)]="paymentMethod">
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="bank">Bank</option>
+              <option value="online">Online</option>
+              <option value="wallet">Wallet</option>
+              <option value="jazzcash">JazzCash</option>
+              <option value="easypaisa">Easypaisa</option>
+            </select>
           </label>
           <div class="balance"><span>Balance</span><strong>Rs. {{ balanceAmount() }}</strong></div>
         </div>
