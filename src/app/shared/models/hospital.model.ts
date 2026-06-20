@@ -355,6 +355,10 @@ export interface LabReportFile {
   fileType: 'pdf' | 'image';
   reportType?: string;
   reportDate?: string;
+  uploadedById?: string | null;
+  uploadedBy?: User | null;
+  verifiedById?: string | null;
+  verifiedBy?: User | null;
   status?: 'pending' | 'verified';
 }
 
@@ -373,8 +377,14 @@ export interface LabOrderItem {
   reportFiles: LabReportFile[];
   remarks?: string;
   collectedAt?: string;
+  collectedById?: string | null;
+  collectedBy?: User | null;
   resultEnteredAt?: string;
+  resultEnteredById?: string | null;
+  resultEnteredBy?: User | null;
   verifiedAt?: string;
+  verifiedById?: string | null;
+  verifiedBy?: User | null;
   addedLater?: boolean;
 }
 
@@ -404,6 +414,10 @@ export interface LabOrder {
     resultValue: string;
     message: string;
   }>;
+  createdById?: string | null;
+  createdBy?: User | null;
+  updatedById?: string | null;
+  updatedBy?: User | null;
   createdAt?: string;
   updatedAt?: string;
 }

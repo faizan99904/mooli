@@ -20,7 +20,8 @@
       <div class="detail-hero-actions">
         <a class="btn-light" routerLink="/laboratory"><i class="fa fa-arrow-left"></i> Dashboard</a>
         <a class="btn-light" *ngIf="canEditOrder()" [routerLink]="['/laboratory/orders', current._id, 'edit']">
-          <i class="fa fa-pencil"></i> Edit Order
+          <i class="fa fa-pencil"></i>
+          <span>Edit Order</span>
         </a>
         <button type="button" class="btn-light" (click)="collectSample()" *ngIf="current.status === 'ordered'">
           <i class="fa fa-flask"></i> Collect Sample

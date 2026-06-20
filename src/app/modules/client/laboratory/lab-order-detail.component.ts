@@ -13,6 +13,7 @@ import {
   LabOrderStatus,
   LabResultParameter,
   LabTestCatalog,
+  User,
 } from '../../../shared/models/hospital.model';
 import { buildLabOrderReportHtml } from './lab-order-report.builder';
 import { isLabOrderReportReady } from './lab-print-details';
@@ -482,6 +483,7 @@ export class LabOrderDetailComponent implements OnInit {
         order: this.order,
         hospital: this.hospital,
         comparison: this.comparison,
+        reportGeneratedBy: this.currentUser(),
       })
     );
     printDocument.close();
@@ -508,5 +510,13 @@ export class LabOrderDetailComponent implements OnInit {
     }, 250);
 
     window.setTimeout(finish, 30000);
+  }
+
+  private currentUser(): User | null {
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null') as User | null;
+    } catch {
+      return null;
+    }
   }
 }

@@ -36,6 +36,8 @@ export class LabTestCatalogComponent implements OnInit, OnDestroy {
   search = '';
   showForm = false;
   saving = false;
+  isEditMode = false;
+  editingTestId = '';
   currentHospitalId: string | null = null;
   form = this.emptyForm();
 
@@ -104,10 +106,23 @@ export class LabTestCatalogComponent implements OnInit, OnDestroy {
   }
 
   openFormModal(): void {
+    this.isEditMode = false;
+    this.editingTestId = '';
     this.form = this.emptyForm();
     this.showForm = true;
     document.body.classList.add('catalog-modal-open');
     document.body.style.overflow = 'hidden';
+    this.cdr.markForCheck();
+  }
+
+  openEditModal(test: LabTestCatalogRow): void {
+    this.isEditMode = true;
+    this.editingTestId = test._id;
+    this.form = this.testToForm(test);
+    this.showForm = true;
+    document.body.classList.add('catalog-modal-open');
+    document.body.style.overflow = 'hidden';
+    this.cdr.markForCheck();
   }
 
   closeFormModal(): void {
@@ -120,10 +135,42 @@ export class LabTestCatalogComponent implements OnInit, OnDestroy {
 
   private dismissModal(): void {
     this.showForm = false;
+    this.isEditMode = false;
+    this.editingTestId = '';
     this.form = this.emptyForm();
     document.body.classList.remove('catalog-modal-open');
     document.body.style.overflow = '';
     this.cdr.markForCheck();
+  }
+
+  private testToForm(test: LabTestCatalog) {
+    const parameters = (test.parameters?.length ? test.parameters : [this.emptyParameter()]).map(
+      (parameter, index) => ({
+        subCategory: parameter.subCategory || '',
+        parameterName: parameter.parameterName || '',
+        unit: parameter.unit || '',
+        referenceMin: parameter.referenceMin ?? null,
+        referenceMax: parameter.referenceMax ?? null,
+        referenceText: parameter.referenceText || '',
+        criticalMin: parameter.criticalMin ?? null,
+        criticalMax: parameter.criticalMax ?? null,
+        sortOrder: parameter.sortOrder ?? index + 1,
+      })
+    );
+
+    return {
+      name: test.name,
+      shortCode: test.shortCode,
+      department: test.department,
+      sampleType: test.sampleType,
+      tubeType: test.tubeType || '',
+      price: test.price,
+      reportType: (test.reportType || 'structured') as LabTestReportType,
+      turnaroundHours: test.turnaroundHours ?? 2,
+      requiresFasting: Boolean(test.requiresFasting),
+      isActive: test.isActive !== false,
+      parameters,
+    };
   }
 
   trackTest(_index: number, test: LabTestCatalogRow): string {
@@ -237,7 +284,7 @@ export class LabTestCatalogComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.currentHospitalId) {
+    if (!this.isEditMode && !this.currentHospitalId) {
       this.toastr.error('Hospital is required to create a lab test.');
       return;
     }
@@ -248,22 +295,43 @@ export class LabTestCatalogComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const payload = {
+      name: this.form.name.trim(),
+      shortCode: this.form.shortCode.trim(),
+      department: this.form.department.trim(),
+      sampleType: this.form.sampleType.trim(),
+      tubeType: this.form.tubeType.trim(),
+      price: Number(this.form.price || 0),
+      reportType: this.form.reportType,
+      turnaroundHours: Number(this.form.turnaroundHours || 0),
+      requiresFasting: this.form.requiresFasting,
+      isActive: this.form.isActive,
+      parameters,
+    };
+
     this.saving = true;
     this.cdr.markForCheck();
-    this.backend
-      .createLabTest({ ...this.form, parameters, hospitalId: this.currentHospitalId })
+
+    const request$ =
+      this.isEditMode && this.editingTestId
+        ? this.backend.updateLabTest(this.editingTestId, payload)
+        : this.backend.createLabTest({ ...payload, hospitalId: this.currentHospitalId });
+
+    request$
       .pipe(finalize(() => {
         this.saving = false;
         this.cdr.markForCheck();
       }))
       .subscribe({
         next: () => {
-          this.toastr.success('Lab test saved.');
+          this.toastr.success(this.isEditMode ? 'Lab test updated.' : 'Lab test saved.');
           this.dismissModal();
           this.loadTests();
         },
         error: (err) => {
-          this.toastr.error(err?.error?.message || 'Unable to save test.');
+          this.toastr.error(
+            err?.error?.message || (this.isEditMode ? 'Unable to update test.' : 'Unable to save test.')
+          );
           this.cdr.markForCheck();
         },
       });
