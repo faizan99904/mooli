@@ -52,6 +52,7 @@ import { LabDashboardComponent } from './laboratory/lab-dashboard.component';
 import { LabOrderCreateComponent } from './laboratory/lab-order-create.component';
 import { LabTestCatalogComponent } from './laboratory/lab-test-catalog.component';
 import { LabOrderDetailComponent } from './laboratory/lab-order-detail.component';
+import { LabSettingsComponent } from './laboratory/lab-settings.component';
 import { PharmacyComponent } from './pharmacy/pharmacy.component';
 import { PharmacyProductsComponent } from './pharmacy-products/pharmacy-products.component';
 import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
@@ -351,6 +352,12 @@ export const clientRoutes: Routes = [
         component: LabTestCatalogComponent,
         data: { title: 'Mooli | Test Catalog' },
         canActivate: [roleGuard(LAB_ACCESS)],
+      },
+      {
+        path: 'laboratory/settings',
+        component: LabSettingsComponent,
+        data: { title: 'Mooli | Laboratory Settings' },
+        canActivate: [roleGuard(LAB_MANAGE_ACCESS)],
       },
       {
         path: 'laboratory/orders/:id',

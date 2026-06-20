@@ -1,0 +1,153 @@
+<div id="main-content" class="lab-page settings-page">
+  <div class="lab-shell">
+    <header class="settings-hero">
+      <div class="settings-hero-main">
+        <span class="settings-badge"><i class="fa fa-print"></i> Print Setup</span>
+        <h1>Laboratory Print Details</h1>
+        <p>
+          Set separate lab name, phone, and address for verified reports.
+          <span class="settings-note">Order receipts always use hospital details.</span>
+        </p>
+      </div>
+      <div class="settings-hero-actions">
+        <a class="btn-light" routerLink="/laboratory"><i class="fa fa-arrow-left"></i> Dashboard</a>
+      </div>
+    </header>
+
+    <div class="settings-info-cards" *ngIf="!loading">
+      <article class="info-card">
+        <span class="info-label">Order Receipt</span>
+        <strong>Hospital branding</strong>
+        <small>Used when a new lab order is created and receipt is printed.</small>
+      </article>
+      <article class="info-card">
+        <span class="info-label">Verified Report</span>
+        <strong>{{ reportUsesLabDetails() ? 'Laboratory branding' : 'Hospital branding' }}</strong>
+        <small>
+          <ng-container *ngIf="reportUsesLabDetails()">Applied after all tests are verified.</ng-container>
+          <ng-container *ngIf="!reportUsesLabDetails()">Enable custom details below to use lab branding.</ng-container>
+        </small>
+      </article>
+      <article class="info-card">
+        <span class="info-label">Hospital Fallback</span>
+        <strong>{{ settingsResponse?.hospital?.name || 'Hospital' }}</strong>
+        <small>{{ hospitalPreviewLine() }}</small>
+      </article>
+    </div>
+
+    <div class="lab-loading settings-loading" *ngIf="loading">
+      <i class="fa fa-spinner fa-spin"></i> Loading settings...
+    </div>
+
+    <div class="settings-layout" *ngIf="!loading">
+      <section class="settings-main">
+        <div class="settings-section">
+          <div class="settings-section-head">
+            <i class="fa fa-toggle-on"></i>
+            <div>
+              <h2>Custom Laboratory Details</h2>
+              <p>Enable this when your lab prints under its own branding after all tests are verified.</p>
+            </div>
+          </div>
+
+          <div class="check-field-box settings-toggle">
+            <input id="useCustomDetails" type="checkbox" [(ngModel)]="form.useCustomDetails" />
+            <label for="useCustomDetails">Use custom laboratory details on verified reports</label>
+          </div>
+        </div>
+
+        <div class="settings-section" [class.is-disabled]="!form.useCustomDetails">
+          <div class="settings-section-head">
+            <i class="fa fa-hospital-o"></i>
+            <div>
+              <h2>Lab Contact Information</h2>
+              <p>These details appear on the final verified lab report header.</p>
+            </div>
+          </div>
+
+          <div class="form-grid form-grid-basic">
+            <label class="form-field">
+              <span>Laboratory Name</span>
+              <input type="text" [(ngModel)]="form.name" [disabled]="!form.useCustomDetails" placeholder="e.g. City Diagnostic Lab" />
+            </label>
+            <label class="form-field">
+              <span>Phone Number</span>
+              <input type="text" [(ngModel)]="form.phone" [disabled]="!form.useCustomDetails" placeholder="0300 1234567" />
+            </label>
+            <label class="form-field">
+              <span>Email</span>
+              <input type="email" [(ngModel)]="form.email" [disabled]="!form.useCustomDetails" placeholder="lab@example.com" />
+            </label>
+            <label class="form-field">
+              <span>Address</span>
+              <input type="text" [(ngModel)]="form.address" [disabled]="!form.useCustomDetails" placeholder="Street / building" />
+            </label>
+            <label class="form-field">
+              <span>City</span>
+              <input type="text" [(ngModel)]="form.city" [disabled]="!form.useCustomDetails" placeholder="City" />
+            </label>
+            <label class="form-field">
+              <span>Report Tagline</span>
+              <input type="text" [(ngModel)]="form.tagline" [disabled]="!form.useCustomDetails" placeholder="Pathology & Diagnostic Laboratory" />
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-actions">
+          <button type="button" class="btn-primary" [disabled]="saving" (click)="saveSettings()">
+            <i class="fa" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+            {{ saving ? 'Saving...' : 'Save Settings' }}
+          </button>
+        </div>
+      </section>
+
+      <aside class="settings-side">
+        <section class="side-panel">
+          <div class="side-panel-head">
+            <h2>Print Behaviour</h2>
+            <p>How headers are chosen for each print type.</p>
+          </div>
+          <ul class="behaviour-list">
+            <li>
+              <span class="behaviour-icon receipt"><i class="fa fa-file-text-o"></i></span>
+              <div>
+                <strong>Order receipt</strong>
+                <span>Always prints with hospital details.</span>
+              </div>
+            </li>
+            <li>
+              <span class="behaviour-icon report"><i class="fa fa-file-pdf-o"></i></span>
+              <div>
+                <strong>Verified report</strong>
+                <span *ngIf="reportUsesLabDetails()">Prints with laboratory details when all tests are verified.</span>
+                <span *ngIf="!reportUsesLabDetails()">Prints with hospital details until custom lab details are enabled.</span>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <section class="side-panel">
+          <div class="side-panel-head">
+            <h2>Report Header Preview</h2>
+            <p>Sample of verified report print header.</p>
+          </div>
+          <div class="print-preview">
+            <div class="print-preview-header">
+              <strong>{{ reportPreviewName() }}</strong>
+              <small>{{ form.tagline || 'Pathology & Diagnostic Laboratory' }}</small>
+            </div>
+            <div class="print-preview-body">
+              <p *ngIf="form.address || form.city">
+                <i class="fa fa-map-marker"></i>
+                {{ form.address }}<span *ngIf="form.address && form.city">, </span>{{ form.city }}
+              </p>
+              <p *ngIf="form.phone"><i class="fa fa-phone"></i> {{ form.phone }}</p>
+              <p *ngIf="form.email"><i class="fa fa-envelope-o"></i> {{ form.email }}</p>
+              <p class="preview-empty" *ngIf="!form.useCustomDetails">Enable custom details to preview lab branding.</p>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</div>

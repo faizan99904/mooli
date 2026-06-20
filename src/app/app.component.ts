@@ -33,9 +33,8 @@ export class AppComponent implements OnInit, AfterViewInit {
   private titleService = inject(Title);
 
   ngOnInit(): void {
-
-  
-
+    document.body.classList.remove('catalog-modal-open');
+    document.body.style.overflow = '';
 
     sessionStorage.setItem('Sidebar', 'light_active');
     sessionStorage.setItem('GradientColor', 'gradient');
@@ -55,9 +54,7 @@ export class AppComponent implements OnInit, AfterViewInit {
         });
       });
 
-    setTimeout(() => {
-      document.querySelector('.page-loader-wrapper')?.classList.add('HideDiv');
-    }, 1000);
+    document.querySelector('.page-loader-wrapper')?.classList.add('HideDiv');
   }
 
   ngAfterViewInit(): void {

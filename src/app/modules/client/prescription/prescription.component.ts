@@ -1573,14 +1573,6 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     return 'medicine-density-normal';
   }
 
-  clinicalRxEmptyRowCount(medicineCount: number): number[] {
-    if (medicineCount === 0 || medicineCount >= 4) {
-      return [];
-    }
-
-    return Array.from({ length: 4 - medicineCount }, (_, index) => index);
-  }
-
   onSlotDoseInput(index: number, slot: DoseSlot): void {
     const group = this.medicines.at(index);
     const dose = String(group.get(`${slot}Dose`)?.value || '').trim();

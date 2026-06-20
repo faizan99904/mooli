@@ -1847,7 +1847,7 @@
 .clinical-rx-content {
   display: grid;
   gap: 3mm;
-  grid-template-rows: minmax(0, 1fr) 25mm;
+  grid-template-rows: auto 25mm;
   min-width: 0;
 }
 
@@ -1855,7 +1855,7 @@
   border: 1px solid #aebdcb;
   border-radius: 1.8mm;
   display: grid;
-  grid-template-rows: 7mm minmax(0, 1fr);
+  grid-template-rows: 7mm auto;
   min-height: 0;
   overflow: hidden;
 }
@@ -2192,7 +2192,7 @@
 }
 
 .clinical-rx-page.medicine-density-dense .clinical-rx-content {
-  grid-template-rows: minmax(0, 1fr) 18mm;
+  grid-template-rows: auto 18mm;
 }
 
 .clinical-rx-page.medicine-density-dense .clinical-rx-instructions ul,
@@ -2253,7 +2253,7 @@
 }
 
 .clinical-rx-page.medicine-density-ultra .clinical-rx-content {
-  grid-template-rows: minmax(0, 1fr) 14mm;
+  grid-template-rows: auto 14mm;
 }
 
 .clinical-rx-page.medicine-density-ultra .clinical-rx-instructions h3 .print-urdu-block {
@@ -2603,7 +2603,7 @@
   border: 1px solid var(--theme-line, #c8e6c9);
   border-radius: 1.8mm;
   display: grid;
-  grid-template-rows: 8mm minmax(0, 1fr);
+  grid-template-rows: 8mm auto;
   margin-top: 3mm;
   min-height: 0;
   overflow: hidden;

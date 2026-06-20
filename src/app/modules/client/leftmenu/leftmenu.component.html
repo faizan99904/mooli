@@ -91,6 +91,7 @@
                         <li><a [routerLink]="['/laboratory']">Lab Dashboard</a></li>
                         <li *ngIf="canManageLaboratory"><a [routerLink]="['/laboratory/create-order']">Create Lab Order</a></li>
                         <li><a [routerLink]="['/laboratory/catalog']">Test Catalog</a></li>
+                        <li *ngIf="canManageLaboratory"><a [routerLink]="['/laboratory/settings']">Lab Print Details</a></li>
                         <li><a [routerLink]="['/laboratory/records']">Legacy Notes</a></li>
                     </ul>
                 </li>

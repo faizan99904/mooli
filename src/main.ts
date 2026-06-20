@@ -1,17 +1,25 @@
 import { bootstrapApplication } from '@angular/platform-browser';
+import { isDevMode } from '@angular/core';
 import { appConfig } from './app/app.config';
 import { AppComponent } from './app/app.component';
 
 bootstrapApplication(AppComponent, appConfig)
   .catch((err) => console.error(err));
 
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+if (!isDevMode() && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     void warmMooliCaches();
     navigator.serviceWorker.register('/service-worker.js').catch((error) => {
       console.error('Mooli service worker registration failed', error);
     });
   });
+} else if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  void navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((registration) => {
+      void registration.unregister();
+    });
+  });
+  void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
 }
 
 async function warmMooliCaches(): Promise<void> {
@@ -19,7 +27,7 @@ async function warmMooliCaches(): Promise<void> {
     return;
   }
 
-  const cache = await caches.open('mooli-offline-shell-v2');
+  const cache = await caches.open('mooli-offline-shell-v3');
   const assetUrls = new Set<string>([
     `${window.location.origin}/`,
     `${window.location.origin}/index.html`,

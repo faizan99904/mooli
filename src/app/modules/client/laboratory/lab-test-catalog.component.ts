@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -21,14 +21,17 @@ type LabTestParameterForm = {
   sortOrder: number;
 };
 
+type LabTestCatalogRow = LabTestCatalog & { summaryText: string };
+
 @Component({
   selector: 'app-lab-test-catalog',
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './lab-test-catalog.component.html',
   styleUrl: './lab-test-catalog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LabTestCatalogComponent implements OnInit {
-  tests: LabTestCatalog[] = [];
+export class LabTestCatalogComponent implements OnInit, OnDestroy {
+  tests: LabTestCatalogRow[] = [];
   loading = false;
   search = '';
   showForm = false;
@@ -38,7 +41,8 @@ export class LabTestCatalogComponent implements OnInit {
 
   constructor(
     private backend: BackendService,
-    private toastr: ToastrService
+    private toastr: ToastrService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -54,6 +58,11 @@ export class LabTestCatalogComponent implements OnInit {
     this.loadTests();
   }
 
+  ngOnDestroy(): void {
+    document.body.classList.remove('catalog-modal-open');
+    document.body.style.overflow = '';
+  }
+
   emptyForm() {
     return {
       name: '',
@@ -66,11 +75,11 @@ export class LabTestCatalogComponent implements OnInit {
       turnaroundHours: 2,
       requiresFasting: false,
       isActive: true,
-      parameters: [this.emptyParameter()],
+      parameters: [this.emptyParameter(1)],
     };
   }
 
-  emptyParameter(sortOrder = this.form?.parameters?.length ? this.form.parameters.length + 1 : 1): LabTestParameterForm {
+  emptyParameter(sortOrder = 1): LabTestParameterForm {
     return {
       subCategory: '',
       parameterName: '',
@@ -94,6 +103,37 @@ export class LabTestCatalogComponent implements OnInit {
       .map((parameter, parameterIndex) => ({ ...parameter, sortOrder: parameterIndex + 1 }));
   }
 
+  openFormModal(): void {
+    this.form = this.emptyForm();
+    this.showForm = true;
+    document.body.classList.add('catalog-modal-open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeFormModal(): void {
+    if (this.saving) {
+      return;
+    }
+
+    this.dismissModal();
+  }
+
+  private dismissModal(): void {
+    this.showForm = false;
+    this.form = this.emptyForm();
+    document.body.classList.remove('catalog-modal-open');
+    document.body.style.overflow = '';
+    this.cdr.markForCheck();
+  }
+
+  trackTest(_index: number, test: LabTestCatalogRow): string {
+    return test._id;
+  }
+
+  trackParameter(index: number): number {
+    return index;
+  }
+
   applyElectrolytesPreset(): void {
     this.form.name = this.form.name || 'Serum Electrolytes';
     this.form.shortCode = this.form.shortCode || 'SE';
@@ -108,7 +148,7 @@ export class LabTestCatalogComponent implements OnInit {
     ];
   }
 
-  parameterSummary(test: LabTestCatalog): string {
+  private buildParameterSummary(test: LabTestCatalog): string {
     const count = test.parameters?.length || 0;
     if (!count) {
       return 'No structured parameters';
@@ -148,18 +188,30 @@ export class LabTestCatalogComponent implements OnInit {
       .filter((parameter) => parameter.parameterName);
   }
 
+  private mapTestRows(items: LabTestCatalog[]): LabTestCatalogRow[] {
+    return items.map((test) => ({
+      ...test,
+      summaryText: this.buildParameterSummary(test),
+    }));
+  }
+
   loadTests(): void {
     this.loading = true;
     this.backend
       .getLabTests({ limit: 100, search: this.search.trim() || undefined })
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => {
+        this.loading = false;
+        this.cdr.markForCheck();
+      }))
       .subscribe({
         next: (result) => {
-          this.tests = result.items;
+          this.tests = this.mapTestRows(result.items);
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.tests = [];
           this.toastr.error(err?.error?.message || 'Unable to load test catalog.');
+          this.cdr.markForCheck();
         },
       });
   }
@@ -192,17 +244,23 @@ export class LabTestCatalogComponent implements OnInit {
     }
 
     this.saving = true;
+    this.cdr.markForCheck();
     this.backend
       .createLabTest({ ...this.form, parameters, hospitalId: this.currentHospitalId })
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(finalize(() => {
+        this.saving = false;
+        this.cdr.markForCheck();
+      }))
       .subscribe({
         next: () => {
           this.toastr.success('Lab test saved.');
-          this.showForm = false;
-          this.form = this.emptyForm();
+          this.dismissModal();
           this.loadTests();
         },
-        error: (err) => this.toastr.error(err?.error?.message || 'Unable to save test.'),
+        error: (err) => {
+          this.toastr.error(err?.error?.message || 'Unable to save test.');
+          this.cdr.markForCheck();
+        },
       });
   }
 }

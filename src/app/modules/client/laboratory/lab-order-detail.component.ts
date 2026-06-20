@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
 import {
+  Hospital,
   LabComparisonRow,
   LabOrder,
   LabOrderItem,
@@ -13,6 +14,8 @@ import {
   LabResultParameter,
   LabTestCatalog,
 } from '../../../shared/models/hospital.model';
+import { buildLabOrderReportHtml } from './lab-order-report.builder';
+import { isLabOrderReportReady } from './lab-print-details';
 
 @Component({
   selector: 'app-lab-order-detail',
@@ -22,6 +25,7 @@ import {
 })
 export class LabOrderDetailComponent implements OnInit {
   order: LabOrder | null = null;
+  hospital: Hospital | null = null;
   comparison: LabComparisonRow[] = [];
   catalog: LabTestCatalog[] = [];
   loading = false;
@@ -61,10 +65,50 @@ export class LabOrderDetailComponent implements OnInit {
         next: (order) => {
           this.order = order;
           this.activeItemId = order.items[0]?._id || '';
+          this.loadHospital(order.hospitalId);
           this.loadComparison(order.patientId);
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Unable to load lab order.'),
       });
+  }
+
+  loadHospital(hospitalId: string): void {
+    if (!hospitalId) {
+      return;
+    }
+
+    this.backend.getHospital(hospitalId).subscribe({
+      next: (hospital) => {
+        this.hospital = hospital;
+      },
+      error: () => {
+        this.hospital = null;
+      },
+    });
+
+    this.backend.getLabSettings().subscribe({
+      next: (settings) => {
+        if (!this.hospital) {
+          this.hospital = {
+            _id: hospitalId,
+            name: settings.hospital.name,
+            code: '',
+            status: 'active',
+            phone: settings.hospital.phone,
+            email: settings.hospital.email,
+            address: settings.hospital.address,
+            city: settings.hospital.city,
+            laboratorySettings: settings.laboratorySettings,
+          };
+          return;
+        }
+
+        this.hospital = {
+          ...this.hospital,
+          laboratorySettings: settings.laboratorySettings,
+        };
+      },
+    });
   }
 
   loadComparison(patientId: string): void {
@@ -332,6 +376,69 @@ export class LabOrderDetailComponent implements OnInit {
   }
 
   printReport(): void {
-    window.print();
+    if (!this.order) {
+      return;
+    }
+
+    if (!isLabOrderReportReady(this.order)) {
+      this.toastr.info('Report will print with hospital details until all tests are verified.');
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('title', 'Lab report print');
+    iframe.setAttribute('aria-hidden', 'true');
+    Object.assign(iframe.style, {
+      border: '0',
+      height: '0',
+      left: '-10000px',
+      opacity: '0',
+      pointerEvents: 'none',
+      position: 'fixed',
+      top: '0',
+      width: '100vw',
+    });
+
+    document.body.appendChild(iframe);
+
+    const printWindow = iframe.contentWindow;
+    const printDocument = iframe.contentDocument || printWindow?.document;
+    if (!printWindow || !printDocument) {
+      iframe.remove();
+      this.toastr.error('Unable to open print preview.');
+      return;
+    }
+
+    printDocument.open();
+    printDocument.write(
+      buildLabOrderReportHtml({
+        order: this.order,
+        hospital: this.hospital,
+        comparison: this.comparison,
+      })
+    );
+    printDocument.close();
+
+    let handled = false;
+    const finish = () => {
+      if (handled) {
+        return;
+      }
+
+      handled = true;
+      iframe.remove();
+    };
+
+    printWindow.onafterprint = finish;
+
+    window.setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch {
+        finish();
+      }
+    }, 250);
+
+    window.setTimeout(finish, 30000);
   }
 }

@@ -254,9 +254,6 @@
                         <tr *ngIf="preview.medicines.length === 0" class="clinical-rx-no-medicine-row">
                           <td colspan="10">No medicine prescribed</td>
                         </tr>
-                        <tr *ngFor="let _ of clinicalRxEmptyRowCount(preview.medicines.length)" class="clinical-rx-empty-row">
-                          <td colspan="10"></td>
-                        </tr>
                       </tbody>
                     </table>
                     </div>

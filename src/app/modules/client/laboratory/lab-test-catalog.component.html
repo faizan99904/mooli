@@ -1,90 +1,34 @@
-<div id="main-content" class="lab-page">
+<div id="main-content" class="lab-page catalog-page">
   <div class="lab-shell">
-    <div class="lab-heading">
+    <div class="lab-heading catalog-heading">
       <div>
         <h1>Test Catalog</h1>
         <p>Master record for CBC, RFT, LFT, electrolytes, radiology, etc.</p>
       </div>
-      <div class="lab-heading-actions">
-        <a class="btn-light" routerLink="/laboratory">Dashboard</a>
+      <div class="lab-heading-actions catalog-heading-actions">
+        <a class="btn-light" routerLink="/laboratory"><i class="fa fa-arrow-left"></i> Dashboard</a>
         <button type="button" class="btn-light" (click)="seedDefaults()">Seed Defaults</button>
-        <button type="button" class="btn-primary" (click)="showForm = !showForm">Add New Test</button>
+        <button type="button" class="btn-primary" (click)="openFormModal()">
+          <i class="fa fa-plus"></i> Add New Test
+        </button>
       </div>
     </div>
 
-    <div class="lab-toolbar">
-      <input type="search" [(ngModel)]="search" placeholder="Search test name or code"
-        (keyup.enter)="loadTests()" />
+    <div class="lab-toolbar catalog-toolbar">
+      <div class="catalog-search-wrap">
+        <i class="fa fa-search"></i>
+        <input type="search" [(ngModel)]="search" placeholder="Search test name or code"
+          (keyup.enter)="loadTests()" />
+      </div>
       <button type="button" class="btn-primary" (click)="loadTests()">Search</button>
     </div>
 
-    <section class="lab-card catalog-form" *ngIf="showForm">
-      <h2>New Test</h2>
-      <div class="form-grid">
-        <label>Test Name<input [(ngModel)]="form.name" /></label>
-        <label>Short Code<input [(ngModel)]="form.shortCode" /></label>
-        <label>Department<input [(ngModel)]="form.department" /></label>
-        <label>Sample Type<input [(ngModel)]="form.sampleType" /></label>
-        <label>Tube Type<input [(ngModel)]="form.tubeType" /></label>
-        <label>Price<input type="number" [(ngModel)]="form.price" /></label>
-        <label>TAT (hours)<input type="number" [(ngModel)]="form.turnaroundHours" /></label>
-        <label>Report Type
-          <select [(ngModel)]="form.reportType">
-            <option value="structured">Structured Result</option>
-            <option value="uploaded_report">Upload Report Only</option>
-            <option value="both">Structured + Upload</option>
-          </select>
-        </label>
-        <label class="check-field">
-          <input type="checkbox" [(ngModel)]="form.requiresFasting" />
-          Requires Fasting
-        </label>
-      </div>
+    <div class="catalog-count" *ngIf="!loading">
+      <span>{{ tests.length }} test{{ tests.length === 1 ? '' : 's' }} in catalog</span>
+    </div>
 
-      <div class="parameter-builder">
-        <div class="parameter-head">
-          <div>
-            <h3>Test Parameters / Sub Categories</h3>
-            <p>Add dynamic rows like Serum Sodium, Serum Potassium, Chloride with range and unit.</p>
-          </div>
-          <div class="parameter-actions">
-            <button type="button" class="btn-light" (click)="applyElectrolytesPreset()">Electrolytes Preset</button>
-            <button type="button" class="btn-light" (click)="addParameter()">+ Add Parameter</button>
-          </div>
-        </div>
-
-        <div class="parameter-row parameter-row-head">
-          <span>Sub Category</span>
-          <span>Parameter</span>
-          <span>Unit</span>
-          <span>Normal Min</span>
-          <span>Normal Max</span>
-          <span>Critical Min</span>
-          <span>Critical Max</span>
-          <span>Reference Text</span>
-          <span></span>
-        </div>
-
-        <div class="parameter-row" *ngFor="let parameter of form.parameters; let i = index">
-          <input [(ngModel)]="parameter.subCategory" placeholder="Electrolytes" />
-          <input [(ngModel)]="parameter.parameterName" placeholder="Serum Sodium" />
-          <input [(ngModel)]="parameter.unit" placeholder="mmol/L" />
-          <input type="number" [(ngModel)]="parameter.referenceMin" placeholder="135" />
-          <input type="number" [(ngModel)]="parameter.referenceMax" placeholder="145" />
-          <input type="number" [(ngModel)]="parameter.criticalMin" placeholder="120" />
-          <input type="number" [(ngModel)]="parameter.criticalMax" placeholder="160" />
-          <input [(ngModel)]="parameter.referenceText" placeholder="Optional text" />
-          <button type="button" class="parameter-remove" (click)="removeParameter(i)" [disabled]="form.parameters.length === 1">
-            ×
-          </button>
-        </div>
-      </div>
-
-      <button type="button" class="btn-primary" [disabled]="saving" (click)="saveTest()">Save Test</button>
-    </section>
-
-    <div class="lab-table-wrap">
-      <table class="lab-table">
+    <div class="lab-table-wrap catalog-table-wrap" *ngIf="!showForm">
+      <table class="lab-table catalog-table">
         <thead>
           <tr>
             <th>Code</th>
@@ -99,22 +43,212 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let test of tests">
-            <td><strong>{{ test.shortCode }}</strong></td>
-            <td>{{ test.name }}</td>
-            <td>{{ test.department }}</td>
-            <td>{{ test.sampleType }}</td>
-            <td>{{ test.tubeType || '—' }}</td>
-            <td>Rs. {{ test.price }}</td>
-            <td>{{ test.turnaroundHours }}h</td>
-            <td>{{ parameterSummary(test) }}</td>
-            <td>{{ test.isActive ? 'Active' : 'Inactive' }}</td>
+          <tr *ngFor="let test of tests; trackBy: trackTest">
+            <td data-label="Code"><strong class="catalog-code">{{ test.shortCode }}</strong></td>
+            <td data-label="Test Name">{{ test.name }}</td>
+            <td data-label="Department">{{ test.department }}</td>
+            <td data-label="Sample">{{ test.sampleType }}</td>
+            <td data-label="Tube">{{ test.tubeType || '—' }}</td>
+            <td data-label="Price">Rs. {{ test.price }}</td>
+            <td data-label="TAT">{{ test.turnaroundHours }}h</td>
+            <td data-label="Parameters" class="catalog-params-cell">{{ test.summaryText }}</td>
+            <td data-label="Status">
+              <span class="catalog-status" [class.is-active]="test.isActive" [class.is-inactive]="!test.isActive">
+                {{ test.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="loading">
+            <td colspan="9" class="lab-empty"><i class="fa fa-spinner fa-spin"></i> Loading catalog...</td>
           </tr>
           <tr *ngIf="!loading && tests.length === 0">
             <td colspan="9" class="lab-empty">No tests in catalog.</td>
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<div class="catalog-modal-backdrop" *ngIf="showForm" (click)="closeFormModal()">
+  <div class="catalog-modal-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <div class="catalog-modal-header">
+      <div class="catalog-modal-title">
+        <span class="catalog-modal-icon"><i class="fa fa-flask"></i></span>
+        <div>
+          <h2>New Test</h2>
+          <p>Add a lab test with parameters, sample type, and pricing.</p>
+        </div>
+      </div>
+      <button type="button" class="modal-close-btn" aria-label="Close" (click)="closeFormModal()" [disabled]="saving">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+
+    <div class="catalog-modal-body">
+      <section class="catalog-form-section">
+        <header class="catalog-form-section-head">
+          <i class="fa fa-info-circle"></i>
+          <div>
+            <h3>Basic Details</h3>
+            <p>Test name, code, and department.</p>
+          </div>
+        </header>
+        <div class="form-grid form-grid-basic">
+          <label class="form-field">
+            <span>Test Name <em>*</em></span>
+            <input [(ngModel)]="form.name" placeholder="e.g. Complete Blood Count" />
+          </label>
+          <label class="form-field">
+            <span>Short Code <em>*</em></span>
+            <input [(ngModel)]="form.shortCode" placeholder="e.g. CBC" />
+          </label>
+          <label class="form-field">
+            <span>Department</span>
+            <input [(ngModel)]="form.department" placeholder="e.g. Hematology" />
+          </label>
+        </div>
+      </section>
+
+      <section class="catalog-form-section">
+        <header class="catalog-form-section-head">
+          <i class="fa fa-tint"></i>
+          <div>
+            <h3>Sample &amp; Report</h3>
+            <p>Collection details and result format.</p>
+          </div>
+        </header>
+        <div class="form-grid form-grid-sample">
+          <label class="form-field">
+            <span>Sample Type</span>
+            <input [(ngModel)]="form.sampleType" placeholder="e.g. Blood" />
+          </label>
+          <label class="form-field">
+            <span>Tube Type</span>
+            <input [(ngModel)]="form.tubeType" placeholder="e.g. EDTA" />
+          </label>
+          <label class="form-field">
+            <span>Report Type</span>
+            <select [(ngModel)]="form.reportType">
+              <option value="structured">Structured Result</option>
+              <option value="uploaded_report">Upload Report Only</option>
+              <option value="both">Structured + Upload</option>
+            </select>
+          </label>
+          <label class="form-field check-field">
+            <span>Options</span>
+            <div class="check-field-box">
+              <input type="checkbox" id="requiresFasting" [(ngModel)]="form.requiresFasting" />
+              <span class="check-field-text">Requires Fasting</span>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <section class="catalog-form-section">
+        <header class="catalog-form-section-head">
+          <i class="fa fa-money"></i>
+          <div>
+            <h3>Pricing &amp; Turnaround</h3>
+            <p>Cost and expected delivery time.</p>
+          </div>
+        </header>
+        <div class="form-grid form-grid-pricing">
+          <label class="form-field">
+            <span>Price (Rs.)</span>
+            <input type="number" min="0" [(ngModel)]="form.price" placeholder="0" />
+          </label>
+          <label class="form-field">
+            <span>TAT (hours)</span>
+            <input type="number" min="1" [(ngModel)]="form.turnaroundHours" placeholder="2" />
+          </label>
+        </div>
+      </section>
+
+      <section class="catalog-form-section parameter-builder">
+        <header class="parameter-head">
+          <div class="catalog-form-section-head">
+            <i class="fa fa-list-ul"></i>
+            <div>
+              <h3>Test Parameters</h3>
+              <p>Add rows like Serum Sodium, Potassium, Chloride with range and unit.</p>
+            </div>
+          </div>
+          <div class="parameter-actions">
+            <button type="button" class="btn-light btn-sm" (click)="applyElectrolytesPreset()">
+              <i class="fa fa-magic"></i> Electrolytes Preset
+            </button>
+            <button type="button" class="btn-primary btn-sm" (click)="addParameter()">
+              <i class="fa fa-plus"></i> Add Parameter
+            </button>
+          </div>
+        </header>
+
+        <div class="parameter-table-scroll">
+          <div class="parameter-table">
+            <div class="parameter-row parameter-row-head">
+              <span>#</span>
+              <span>Sub Category</span>
+              <span>Parameter</span>
+              <span>Unit</span>
+              <span>Normal Min</span>
+              <span>Normal Max</span>
+              <span>Critical Min</span>
+              <span>Critical Max</span>
+              <span>Reference Text</span>
+              <span></span>
+            </div>
+
+            <div class="parameter-row parameter-row-body" *ngFor="let parameter of form.parameters; let i = index; trackBy: trackParameter">
+              <span class="parameter-index">{{ i + 1 }}</span>
+              <label class="parameter-field">
+                <span class="parameter-field-label">Sub Category</span>
+                <input [(ngModel)]="parameter.subCategory" placeholder="Electrolytes" />
+              </label>
+              <label class="parameter-field">
+                <span class="parameter-field-label">Parameter</span>
+                <input [(ngModel)]="parameter.parameterName" placeholder="Serum Sodium" />
+              </label>
+              <label class="parameter-field">
+                <span class="parameter-field-label">Unit</span>
+                <input [(ngModel)]="parameter.unit" placeholder="mmol/L" />
+              </label>
+              <label class="parameter-field">
+                <span class="parameter-field-label">Normal Min</span>
+                <input type="number" [(ngModel)]="parameter.referenceMin" placeholder="135" />
+              </label>
+              <label class="parameter-field">
+                <span class="parameter-field-label">Normal Max</span>
+                <input type="number" [(ngModel)]="parameter.referenceMax" placeholder="145" />
+              </label>
+              <label class="parameter-field">
+                <span class="parameter-field-label">Critical Min</span>
+                <input type="number" [(ngModel)]="parameter.criticalMin" placeholder="120" />
+              </label>
+              <label class="parameter-field">
+                <span class="parameter-field-label">Critical Max</span>
+                <input type="number" [(ngModel)]="parameter.criticalMax" placeholder="160" />
+              </label>
+              <label class="parameter-field">
+                <span class="parameter-field-label">Reference Text</span>
+                <input [(ngModel)]="parameter.referenceText" placeholder="Optional text" />
+              </label>
+              <button type="button" class="parameter-remove" title="Remove parameter"
+                (click)="removeParameter(i)" [disabled]="form.parameters.length === 1">
+                <i class="fa fa-trash-o"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="catalog-modal-footer">
+      <button type="button" class="btn-light" (click)="closeFormModal()" [disabled]="saving">Cancel</button>
+      <button type="button" class="btn-primary" [disabled]="saving" (click)="saveTest()">
+        <i class="fa" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+        {{ saving ? 'Saving...' : 'Save Test' }}
+      </button>
     </div>
   </div>
 </div>

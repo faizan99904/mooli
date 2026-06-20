@@ -43,9 +43,4 @@ export class PrescriptionPrintSheetComponent {
     return 'print-medicine-density-normal';
   }
 
-  clinicalRxEmptyRowCount(medicineCount: number): number[] {
-    const targetRows = medicineCount <= 6 ? 7 : medicineCount <= 10 ? 4 : 0;
-    const count = Math.max(targetRows - medicineCount, 0);
-    return Array.from({ length: count });
-  }
 }

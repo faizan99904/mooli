@@ -42,6 +42,27 @@ export interface PrescriptionPrintSettings {
   footerLines: string[];
 }
 
+export interface LaboratoryPrintSettings {
+  useCustomDetails?: boolean;
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  tagline?: string | null;
+}
+
+export interface LabSettingsResponse {
+  hospital: {
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+    city: string;
+  };
+  laboratorySettings: LaboratoryPrintSettings;
+}
+
 export interface Store {
   _id: string;
   companyId: string;
@@ -79,6 +100,7 @@ export interface Hospital {
   status: Status;
   subscriptionPlan?: string | null;
   prescriptionSettings?: PrescriptionPrintSettings | null;
+  laboratorySettings?: LaboratoryPrintSettings | null;
 }
 
 export interface Department {

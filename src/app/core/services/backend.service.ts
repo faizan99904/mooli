@@ -39,6 +39,7 @@ import {
   LabTestCatalog,
   LabDashboardStats,
   LabComparisonRow,
+  LabSettingsResponse,
   HeldSale,
   LedgerItem,
   LedgerPayment,
@@ -461,6 +462,16 @@ export class BackendService {
     return this.get<LabDashboardStats>(`${CONFIG.laboratory}/dashboard/stats`).pipe(
       map((response) => this.unwrapData(response))
     );
+  }
+
+  getLabSettings(): Observable<LabSettingsResponse> {
+    return this.get<LabSettingsResponse>(`${CONFIG.laboratory}/settings`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  updateLabSettings(payload: Record<string, unknown>): Observable<ApiResponse<LabSettingsResponse>> {
+    return this.patch<LabSettingsResponse>(`${CONFIG.laboratory}/settings`, payload);
   }
 
   getLabOrders(params?: Record<string, unknown>): Observable<ListResult<LabOrder>> {

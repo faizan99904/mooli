@@ -67,6 +67,10 @@ const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
     access: ['lab_tests.read', 'patients_history.read'],
   },
   {
+    path: '/laboratory/settings',
+    access: ['lab_tests.update', 'lab_orders.update'],
+  },
+  {
     path: '/laboratory/records',
     access: ['patients_history.read'],
   },
