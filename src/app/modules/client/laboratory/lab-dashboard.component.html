@@ -67,7 +67,7 @@
               <button type="button" class="btn-light" (click)="openOrder(order, $event)">View</button>
               <button type="button" class="btn-light" *ngIf="canEditOrder(order)"
                 (click)="editOrder(order, $event)">Edit</button>
-              <button type="button" class="btn-light" *ngIf="order.status === 'ordered'"
+              <button type="button" class="btn-light" *ngIf="canCollectSample(order)"
                 (click)="collectSample(order, $event)">Collect Sample</button>
             </td>
           </tr>

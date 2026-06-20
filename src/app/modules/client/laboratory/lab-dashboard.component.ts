@@ -6,7 +6,8 @@ import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
 import { LabDashboardStats, LabOrder, LabOrderStatus, User } from '../../../shared/models/hospital.model';
-import { canEditLabOrder } from './lab-order.utils';
+import { printLabSampleLabels } from './lab-sample-label.builder';
+import { canEditLabOrder, hasPendingSampleCollection } from './lab-order.utils';
 
 type LabTab = 'all' | LabOrderStatus;
 
@@ -169,6 +170,10 @@ export class LabDashboardComponent implements OnInit {
     return canEditLabOrder(order);
   }
 
+  canCollectSample(order: LabOrder): boolean {
+    return hasPendingSampleCollection(order);
+  }
+
   editOrder(order: LabOrder, event: Event): void {
     event.stopPropagation();
     const orderId = this.orderId(order);
@@ -189,8 +194,15 @@ export class LabDashboardComponent implements OnInit {
     }
 
     this.backend.collectLabSample(orderId, {}).subscribe({
-      next: () => {
-        this.toastr.success('Sample marked as collected.');
+      next: (response) => {
+        const updated = response.data;
+        if (updated) {
+          const labels = (updated.samples || []).filter((sample) => sample.status === 'collected');
+          if (labels.length) {
+            printLabSampleLabels(updated, labels);
+          }
+        }
+        this.toastr.success('Sample collected and labels sent to print.');
         this.loadDashboard();
       },
       error: (err) => this.toastr.error(err?.error?.message || 'Unable to collect sample.'),

@@ -12,12 +12,19 @@ import {
   LabOrderItem,
   LabOrderStatus,
   LabResultParameter,
+  LabSample,
   LabTestCatalog,
   User,
 } from '../../../shared/models/hospital.model';
 import { buildLabOrderReportHtml } from './lab-order-report.builder';
 import { isLabOrderReportReady } from './lab-print-details';
-import { canEditLabOrder } from './lab-order.utils';
+import { printLabSampleLabels } from './lab-sample-label.builder';
+import {
+  activeLabSamples,
+  canEditLabOrder,
+  hasPendingSampleCollection,
+  sampleStatusLabel,
+} from './lab-order.utils';
 
 @Component({
   selector: 'app-lab-order-detail',
@@ -159,6 +166,44 @@ export class LabOrderDetailComponent implements OnInit {
     return canEditLabOrder(this.order);
   }
 
+  hasPendingSampleCollection(): boolean {
+    return hasPendingSampleCollection(this.order);
+  }
+
+  activeSamples(): LabSample[] {
+    return activeLabSamples(this.order);
+  }
+
+  sampleStatusLabel(status?: string): string {
+    return sampleStatusLabel(status);
+  }
+
+  testsForSample(sample: LabSample): string {
+    if (sample.testsSummary) {
+      return sample.testsSummary;
+    }
+
+    const linked = (this.order?.items || []).filter((item) => item.sampleId === sample._id);
+    return linked.map((item) => item.shortCode || item.testName).join(', ') || '-';
+  }
+
+  sampleForItem(item: LabOrderItem | null | undefined): LabSample | null {
+    if (!item?.sampleId) {
+      return null;
+    }
+
+    return (this.order?.samples || []).find((sample) => sample._id === item.sampleId) || null;
+  }
+
+  canRejectSample(sample: LabSample): boolean {
+    if (sample.status === 'rejected') {
+      return false;
+    }
+
+    const linked = (this.order?.items || []).filter((item) => item.sampleId === sample._id);
+    return linked.every((item) => ['sample_collected', 'ordered'].includes(item.status));
+  }
+
   selectItem(item: LabOrderItem): void {
     this.activeItemId = item._id;
     this.remarks = item.remarks || '';
@@ -208,9 +253,55 @@ export class LabOrderDetailComponent implements OnInit {
       next: (response) => {
         this.order = response.data || this.order;
         this.refreshParameterGroups();
-        this.toastr.success('Sample collected.');
+        const labels = (this.order?.samples || []).filter((sample) => sample.status === 'collected');
+        if (this.order && labels.length) {
+          printLabSampleLabels(this.order, labels);
+        }
+        this.toastr.success(`${labels.length || 1} sample label(s) ready.`);
       },
       error: (err) => this.toastr.error(err?.error?.message || 'Unable to collect sample.'),
+    });
+  }
+
+  printSampleLabels(): void {
+    if (!this.order) {
+      return;
+    }
+
+    const labels = this.activeSamples();
+    if (!labels.length) {
+      this.toastr.info('No collected samples available for printing.');
+      return;
+    }
+
+    printLabSampleLabels(this.order, labels);
+  }
+
+  printSingleSampleLabel(sample: LabSample): void {
+    if (!this.order || sample.status === 'rejected') {
+      return;
+    }
+
+    printLabSampleLabels(this.order, [sample]);
+  }
+
+  rejectSample(sample: LabSample): void {
+    if (!this.order) {
+      return;
+    }
+
+    const reason = window.prompt('Enter rejection reason (clotted, insufficient quantity, wrong container, etc.)');
+    if (!reason?.trim()) {
+      return;
+    }
+
+    this.backend.rejectLabSample(this.order._id, sample._id, { rejectionReason: reason.trim() }).subscribe({
+      next: (response) => {
+        this.order = response.data || this.order;
+        this.refreshParameterGroups();
+        this.toastr.success('Sample rejected. Collect again to generate a new sample ID.');
+      },
+      error: (err) => this.toastr.error(err?.error?.message || 'Unable to reject sample.'),
     });
   }
 

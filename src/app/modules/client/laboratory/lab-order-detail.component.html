@@ -23,8 +23,13 @@
           <i class="fa fa-pencil"></i>
           <span>Edit Order</span>
         </a>
-        <button type="button" class="btn-light" (click)="collectSample()" *ngIf="current.status === 'ordered'">
-          <i class="fa fa-flask"></i> Collect Sample
+        <button type="button" class="btn-light" (click)="collectSample()" *ngIf="hasPendingSampleCollection()">
+          <i class="fa fa-flask"></i>
+          <span>Collect Samples</span>
+        </button>
+        <button type="button" class="btn-light" (click)="printSampleLabels()" *ngIf="activeSamples().length">
+          <i class="fa fa-barcode"></i>
+          <span>Print Sample Labels</span>
         </button>
         <button type="button" class="btn-primary" (click)="printReport()">
           <i class="fa fa-file-pdf-o"></i> Print / PDF Report
@@ -55,6 +60,45 @@
       </article>
     </div>
 
+    <section class="samples-panel" *ngIf="current.samples?.length">
+      <div class="panel-head">
+        <div>
+          <h2>Collected Samples</h2>
+          <p>Each physical sample gets a unique Sample ID for tube labeling and result tracking.</p>
+        </div>
+        <span>{{ activeSamples().length }} active · {{ current.samples?.length || 0 }} total</span>
+      </div>
+      <div class="samples-grid">
+        <article class="sample-card" *ngFor="let sample of current.samples" [class.is-rejected]="sample.status === 'rejected'">
+          <div class="sample-card-head">
+            <strong>{{ sample.sampleNo }}</strong>
+            <span class="status-pill" [ngClass]="orderStatusClass(sample.status)">{{ sampleStatusLabel(sample.status) }}</span>
+          </div>
+          <div class="sample-card-body">
+            <div><span>Sample Type</span><strong>{{ sample.sampleType || '—' }}</strong></div>
+            <div><span>Container</span><strong>{{ sample.containerType || '—' }}</strong></div>
+            <div class="sample-card-wide"><span>Tests</span><strong>{{ testsForSample(sample) }}</strong></div>
+            <div class="sample-card-wide" *ngIf="sample.collectedAt">
+              <span>Collected</span><strong>{{ sample.collectedAt | date:'medium' }}</strong>
+            </div>
+            <div class="sample-card-wide" *ngIf="sample.rejectionReason">
+              <span>Rejection Reason</span><strong>{{ sample.rejectionReason }}</strong>
+            </div>
+          </div>
+          <div class="sample-card-actions">
+            <button type="button" class="btn-light btn-sm" (click)="printSingleSampleLabel(sample)" *ngIf="sample.status !== 'rejected'">
+              <i class="fa fa-print"></i>
+              <span>Print Label</span>
+            </button>
+            <button type="button" class="btn-light btn-sm" (click)="rejectSample(sample)" *ngIf="canRejectSample(sample)">
+              <i class="fa fa-times-circle"></i>
+              <span>Reject</span>
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section class="test-tabs-panel">
       <div class="panel-head">
         <h2>Ordered Tests</h2>
@@ -77,7 +121,10 @@
           <div class="panel-head">
             <div>
               <h2>Result Entry</h2>
-              <p>{{ item.testName }} · {{ item.sampleType || 'Sample' }}<span *ngIf="item.tubeType"> / {{ item.tubeType }}</span></p>
+              <p>
+                {{ item.testName }} · {{ item.sampleType || 'Sample' }}<span *ngIf="item.tubeType"> / {{ item.tubeType }}</span>
+                <span *ngIf="sampleForItem(item) as sample"> · Sample ID: {{ sample.sampleNo }}</span>
+              </p>
             </div>
             <span class="mode-badge">{{ resultModeLabel(item.resultMode) }}</span>
           </div>

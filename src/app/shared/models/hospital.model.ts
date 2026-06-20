@@ -362,6 +362,32 @@ export interface LabReportFile {
   status?: 'pending' | 'verified';
 }
 
+export type LabSampleStatus =
+  | 'collected'
+  | 'received'
+  | 'in_process'
+  | 'result_entered'
+  | 'verified'
+  | 'delivered'
+  | 'rejected';
+
+export interface LabSample {
+  _id: string;
+  sampleNo: string;
+  sampleType?: string;
+  containerType?: string;
+  testsSummary?: string;
+  status: LabSampleStatus;
+  rejectionReason?: string;
+  collectedAt?: string;
+  collectedById?: string | null;
+  collectedBy?: User | null;
+  rejectedAt?: string;
+  rejectedById?: string | null;
+  rejectedBy?: User | null;
+  receivedAt?: string;
+}
+
 export interface LabOrderItem {
   _id: string;
   testId?: string | null;
@@ -372,6 +398,7 @@ export interface LabOrderItem {
   tubeType?: string;
   price: number;
   status: LabOrderStatus;
+  sampleId?: string | null;
   resultMode: 'structured' | 'uploaded_report' | 'both';
   parameters: LabResultParameter[];
   reportFiles: LabReportFile[];
@@ -408,6 +435,7 @@ export interface LabOrder {
   balanceAmount: number;
   sampleCollectionAt?: string;
   notes?: string;
+  samples?: LabSample[];
   items: LabOrderItem[];
   criticalAlerts?: Array<{
     testName: string;

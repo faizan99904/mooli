@@ -606,6 +606,76 @@
   }
 }
 
+.samples-panel {
+  background: var(--lab-panel);
+  border: 1px solid var(--lab-line);
+  border-radius: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+}
+
+.samples-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.sample-card {
+  background: #fff;
+  border: 1px solid var(--lab-line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.sample-card.is-rejected {
+  background: #fff5f5;
+  border-color: #fecaca;
+}
+
+.sample-card-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sample-card-head strong {
+  color: var(--lab-blue);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.sample-card-body {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.sample-card-body span {
+  color: var(--lab-muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sample-card-body strong {
+  display: block;
+  font-size: 12px;
+}
+
+.sample-card-wide {
+  grid-column: 1 / -1;
+}
+
+.sample-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 @media print {
   .detail-hero-actions,
   .workspace-side,

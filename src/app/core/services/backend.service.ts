@@ -502,6 +502,10 @@ export class BackendService {
     return this.post<LabOrder>(`${CONFIG.laboratory}/orders/${id}/collect-sample`, payload);
   }
 
+  rejectLabSample(orderId: string, sampleId: string, payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
+    return this.post<LabOrder>(`${CONFIG.laboratory}/orders/${orderId}/samples/${sampleId}/reject`, payload);
+  }
+
   saveLabItemResults(orderId: string, itemId: string, payload: Record<string, unknown>): Observable<ApiResponse<LabOrder>> {
     return this.post<LabOrder>(`${CONFIG.laboratory}/orders/${orderId}/items/${itemId}/results`, payload);
   }

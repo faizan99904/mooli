@@ -1,4 +1,4 @@
-import { LabOrder } from '../../../shared/models/hospital.model';
+import { LabOrder, LabSample } from '../../../shared/models/hospital.model';
 
 export function canEditLabOrder(order: LabOrder | null | undefined): boolean {
   if (!order) {
@@ -15,4 +15,16 @@ export function canEditLabOrder(order: LabOrder | null | undefined): boolean {
       item.status === 'ordered' ||
       item.status === 'sample_collected'
   );
+}
+
+export function hasPendingSampleCollection(order: LabOrder | null | undefined): boolean {
+  return (order?.items || []).some((item) => item.status === 'ordered');
+}
+
+export function activeLabSamples(order: LabOrder | null | undefined): LabSample[] {
+  return (order?.samples || []).filter((sample) => sample.status !== 'rejected');
+}
+
+export function sampleStatusLabel(status?: string): string {
+  return String(status || 'collected').replace(/_/g, ' ');
 }
