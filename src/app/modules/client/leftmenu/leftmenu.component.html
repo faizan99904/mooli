@@ -89,6 +89,7 @@
                     </a>
                     <ul class="nav-dropdown" *ngIf="!LaboratoryCollapsed" [@collapseExpand]>
                         <li><a [routerLink]="['/laboratory']">Lab Dashboard</a></li>
+                        <li><a [routerLink]="['/laboratory/created-reports']">Created Lab Reports</a></li>
                         <li *ngIf="canManageLaboratory"><a [routerLink]="['/laboratory/create-order']">Create Lab Order</a></li>
                         <li><a [routerLink]="['/laboratory/catalog']">Test Catalog</a></li>
                         <li *ngIf="canManageLaboratory"><a [routerLink]="['/laboratory/settings']">Lab Print Details</a></li>

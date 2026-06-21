@@ -48,6 +48,7 @@ import { RolesComponent } from './roles/roles.component';
 import { CareRecordsComponent } from './care-records/care-records.component';
 import { PrescriptionComponent } from './prescription/prescription.component';
 import { CreatedPrescriptionsComponent } from './prescription/created-prescriptions.component';
+import { CreatedLabReportsComponent } from './laboratory/created-lab-reports.component';
 import { LabDashboardComponent } from './laboratory/lab-dashboard.component';
 import { LabOrderCreateComponent } from './laboratory/lab-order-create.component';
 import { LabTestCatalogComponent } from './laboratory/lab-test-catalog.component';
@@ -369,6 +370,12 @@ export const clientRoutes: Routes = [
         path: 'laboratory/orders/:id',
         component: LabOrderDetailComponent,
         data: { title: 'Mooli | Lab Order' },
+        canActivate: [roleGuard(LAB_ACCESS)],
+      },
+      {
+        path: 'laboratory/created-reports',
+        component: CreatedLabReportsComponent,
+        data: { title: 'Mooli | Created Lab Reports' },
         canActivate: [roleGuard(LAB_ACCESS)],
       },
       {
