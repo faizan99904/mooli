@@ -1,0 +1,102 @@
+<div id="main-content">
+  <div class="container-fluid pharmacy-admin-page">
+    <div class="block-header">
+      <div class="row clearfix align-items-center">
+        <div class="col-lg-8 col-md-12 col-sm-12">
+          <h1>Pharmacy Register Sessions</h1>
+          <span>Open and closed pharmacy cashier sessions with business-date summaries and closeout controls.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-filter-card">
+      <div class="pharmacy-filter-head">
+        <div>
+          <h2>Session Filters</h2>
+          <p>Review cashier sessions by store, operational state, and date range.</p>
+        </div>
+      </div>
+
+      <div class="pharmacy-filter-grid">
+        <label>
+          <span>Store</span>
+          <select class="form-select" [(ngModel)]="storeId">
+            <option value="">Assigned / default store</option>
+            <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Status</span>
+          <select class="form-select" [(ngModel)]="status">
+            <option value="">All</option>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+          </select>
+        </label>
+
+        <label>
+          <span>From Date</span>
+          <input class="form-control" type="date" [(ngModel)]="fromDate" />
+        </label>
+
+        <label>
+          <span>To Date</span>
+          <input class="form-control" type="date" [(ngModel)]="toDate" />
+        </label>
+
+        <div class="pharmacy-filter-actions">
+          <button class="btn btn-outline-primary" type="button" (click)="loadSessions()">Apply</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="reset()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-table-card">
+      <div class="pharmacy-table-head">
+        <div>
+          <h2>Session Register</h2>
+          <p>{{ sessions.length }} cashier sessions are available in the current result set.</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div *ngIf="loading" class="pharmacy-empty-state">Loading register sessions...</div>
+        <div *ngIf="!loading && !sessions.length" class="pharmacy-empty-state">No register sessions found.</div>
+        <div class="table-responsive" *ngIf="!loading && sessions.length">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Business Date</th>
+                <th>Store</th>
+                <th>Cashier</th>
+                <th>Status</th>
+                <th>Opening</th>
+                <th>Expected Cash</th>
+                <th>Closed At</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let session of sessions">
+                <td>{{ date(session.businessDate) }}</td>
+                <td>{{ session.store?.name || session.storeId }}</td>
+                <td>{{ session.cashier?.name || session.cashierId }}</td>
+                <td>{{ session.status }}</td>
+                <td>{{ currency(session.openingAmount) }}</td>
+                <td>{{ currency(session.expectedCashAmount || session.summary?.expectedCashInDrawer) }}</td>
+                <td>{{ dateTime(session.closedAt) }}</td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <a class="btn btn-outline-primary" [routerLink]="['/pharmacy/register-sessions', session._id]">View</a>
+                    <button class="btn btn-outline-danger" type="button" *ngIf="canClose(session)" (click)="close(session)">Close</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

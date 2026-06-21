@@ -94,10 +94,21 @@
 
         <div class="storepos-invoice-panel">
             <div class="storepos-invoice-grid">
-                <label class="storepos-field">
+                <label class="storepos-field" *ngIf="prescription; else posCustomerSelect">
                     <span>Customer / Patient</span>
-                    <input type="text" [value]="patientName() === '-' ? 'Walk-in Customer' : patientName()" readonly />
+                    <input type="text" [value]="resolvedCustomerName()" readonly />
                 </label>
+                <ng-template #posCustomerSelect>
+                    <label class="storepos-field">
+                        <span>Customer</span>
+                        <select [(ngModel)]="selectedCustomerId">
+                            <option value="">Walk-in Customer</option>
+                            <option *ngFor="let customer of customers" [value]="customer._id">
+                                {{ customer.name }}{{ customer.phone ? ' · ' + customer.phone : '' }}
+                            </option>
+                        </select>
+                    </label>
+                </ng-template>
                 <div class="storepos-quick-discount">
                     <span>Bill Discount %</span>
                     <div class="quick-discount-control">
@@ -670,7 +681,7 @@
                     <div><span>Invoice</span><strong>{{ receipt.reference }}</strong></div>
                     <div><span>Date</span><strong>{{ receipt.saleDate | date:'short' }}</strong></div>
                     <div><span>Cashier</span><strong>{{ receipt.cashierName }}</strong></div>
-                    <div><span>Patient</span><strong>{{ receipt.customerName }}</strong></div>
+                    <div><span>Customer</span><strong>{{ receipt.customerName }}</strong></div>
                 </div>
 
                 <table class="receipt-preview-table">

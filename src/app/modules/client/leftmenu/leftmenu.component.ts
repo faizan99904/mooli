@@ -93,7 +93,11 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canViewDashboard(): boolean {
-    return this.isDoctor || this.canViewAllRoutes || this.hasPermission('hospital_dashboard.read');
+    return (
+      this.isDoctor ||
+      this.canViewAllRoutes ||
+      this.hasPermission('hospital_dashboard.read')
+    );
   }
 
   get dashboardRoute(): string {
@@ -105,7 +109,11 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canManageDoctors(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('doctors.create') || this.hasPermission('doctors.update');
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('doctors.create') ||
+      this.hasPermission('doctors.update')
+    );
   }
 
   get canViewAppointments(): boolean {
@@ -117,7 +125,11 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canManageClinicalRecords(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('patients_history.create') || this.hasPermission('patients_history.update');
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('patients_history.create') ||
+      this.hasPermission('patients_history.update')
+    );
   }
 
   get canViewPrescriptions(): boolean {
@@ -125,7 +137,11 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canManagePrescriptions(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('prescriptions.create') || this.hasPermission('prescriptions.update');
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('prescriptions.create') ||
+      this.hasPermission('prescriptions.update')
+    );
   }
 
   get canViewPharmacy(): boolean {
@@ -152,6 +168,50 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
       this.hasPermission('products.read') ||
       this.hasPermission('register_sessions.read')
     );
+  }
+
+  get canViewPharmacyCustomers(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('customers.read');
+  }
+
+  get canViewPharmacySuppliers(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('suppliers.read');
+  }
+
+  get canViewPharmacyInventory(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('inventory.read');
+  }
+
+  get canViewPharmacyStockMovements(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('stock_movements.read');
+  }
+
+  get canViewPharmacySales(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('sales.read');
+  }
+
+  get canViewPharmacyTransfers(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('transfers.read');
+  }
+
+  get canViewPharmacyReturns(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('returns.read');
+  }
+
+  get canViewPharmacyPayments(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('payments.read');
+  }
+
+  get canViewPharmacyRegisterSessions(): boolean {
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('register_sessions.read') ||
+      this.hasPermission('register_sessions.admin_read')
+    );
+  }
+
+  get canViewPharmacyExpenses(): boolean {
+    return this.canViewAllRoutes || this.hasPermission('expenses.read');
   }
 
   get canViewLaboratory(): boolean {
@@ -181,7 +241,11 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canManagePatients(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('patients.create') || this.hasPermission('patients.update');
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('patients.create') ||
+      this.hasPermission('patients.update')
+    );
   }
 
   get canViewRooms(): boolean {
@@ -189,7 +253,11 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canManageRooms(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('rooms.create') || this.hasPermission('rooms.update');
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('rooms.create') ||
+      this.hasPermission('rooms.update')
+    );
   }
 
   get canViewRoomAllotments(): boolean {
@@ -218,7 +286,11 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
   }
 
   get canManageBilling(): boolean {
-    return this.canViewAllRoutes || this.hasPermission('bills.create') || this.hasPermission('bills.update_payment');
+    return (
+      this.canViewAllRoutes ||
+      this.hasPermission('bills.create') ||
+      this.hasPermission('bills.update_payment')
+    );
   }
 
   get canViewHospitalAdministration(): boolean {
@@ -260,13 +332,18 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     this.PaymentCollapsed = !url.includes('payments');
     this.RoomCollapsed = !url.includes('room-allotment');
     this.PatientCollapsed = !url.includes('patients');
-    this.PharmacyCollapsed = !(url.includes('pharmacy') || url.includes('pos-reports'));
+    this.PharmacyCollapsed = !(
+      url.includes('pharmacy') || url.includes('pos-reports')
+    );
     this.LaboratoryCollapsed = !url.includes('laboratory');
     this.WardCollapsed = !(url.includes('/ward') || url.includes('ward-admin'));
   }
 
   private normalizeRole(role: string): string {
-    return role.trim().replace(/[\s_-]/g, '').toLowerCase();
+    return role
+      .trim()
+      .replace(/[\s_-]/g, '')
+      .toLowerCase();
   }
 
   private hasPermission(permission: string): boolean {
@@ -357,7 +434,9 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
     }
 
     if (this.currentPassword === this.newPassword) {
-      this.toaster.error('New password must be different from current password.');
+      this.toaster.error(
+        'New password must be different from current password.',
+      );
       return;
     }
 
@@ -370,12 +449,16 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
       .pipe(finalize(() => (this.changePasswordLoading = false)))
       .subscribe({
         next: (response) => {
-          this.toaster.success(response.message || 'Password changed successfully.');
+          this.toaster.success(
+            response.message || 'Password changed successfully.',
+          );
           this.changePasswordModalOpen = false;
           this.resetChangePasswordForm();
         },
         error: (error) => {
-          this.toaster.error(error?.error?.message || 'Unable to change password.');
+          this.toaster.error(
+            error?.error?.message || 'Unable to change password.',
+          );
         },
       });
   }

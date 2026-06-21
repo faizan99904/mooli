@@ -77,7 +77,16 @@
                     <ul class="nav-dropdown" *ngIf="!PharmacyCollapsed" [@collapseExpand]>
                         <li *ngIf="canViewPharmacy"><a [routerLink]="['/pharmacy']">Pharmacy Dashboard</a></li>
                         <li *ngIf="canViewPharmacy"><a [routerLink]="['/pharmacy/products']">Medicine Catalog</a></li>
+                        <li *ngIf="canViewPharmacyCustomers"><a [routerLink]="['/pharmacy/customers']">Customers</a></li>
+                        <li *ngIf="canViewPharmacySuppliers"><a [routerLink]="['/pharmacy/suppliers']">Suppliers</a></li>
+                        <li *ngIf="canViewPharmacyInventory"><a [routerLink]="['/pharmacy/inventory']">Inventory</a></li>
+                        <li *ngIf="canViewPharmacyStockMovements"><a [routerLink]="['/pharmacy/stock-movements']">Stock Movements</a></li>
+                        <li *ngIf="canViewPharmacySales"><a [routerLink]="['/pharmacy/sales']">Sales</a></li>
                         <li *ngIf="canOpenPharmacyPos"><a [routerLink]="['/pharmacy/pos']">Pharmacy POS</a></li>
+                        <li *ngIf="canViewPharmacyReturns"><a [routerLink]="['/pharmacy/returns/sales']">Sales Returns</a></li>
+                        <li *ngIf="canViewPharmacyPayments"><a [routerLink]="['/pharmacy/payments']">Payments</a></li>
+                        <li *ngIf="canViewPharmacyRegisterSessions"><a [routerLink]="['/pharmacy/register-sessions']">Register Sessions</a></li>
+                        <li *ngIf="canViewPharmacyExpenses"><a [routerLink]="['/pharmacy/expenses']">Expenses</a></li>
                         <li *ngIf="canViewPosReports"><a [routerLink]="['/pos-reports']">POS Reports</a></li>
                     </ul>
                 </li>

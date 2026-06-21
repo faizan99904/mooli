@@ -1,0 +1,172 @@
+<div id="main-content">
+  <div class="container-fluid pharmacy-admin-page">
+    <div class="block-header">
+      <div class="row clearfix align-items-center">
+        <div class="col-lg-7 col-md-12 col-sm-12">
+          <h1>Pharmacy Payments</h1>
+          <span>Track POS-linked payment records and create payment entries against sales, returns, and expenses.</span>
+        </div>
+        <div class="col-lg-5 col-md-12 col-sm-12">
+          <div class="pharmacy-page-actions">
+            <button class="btn btn-primary" type="button" (click)="openCreate()" [disabled]="!canCreate">
+              Add Payment
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-filter-card">
+      <div class="pharmacy-filter-head">
+        <div>
+          <h2>Payment Filters</h2>
+          <p>Filter payment activity by store, method, and date range.</p>
+        </div>
+      </div>
+
+      <div class="pharmacy-filter-grid">
+        <label>
+          <span>Store</span>
+          <select class="form-select" [(ngModel)]="storeId">
+            <option value="">Assigned / default store</option>
+            <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Method</span>
+          <select class="form-select" [(ngModel)]="method">
+            <option value="">All</option>
+            <option *ngFor="let item of methods" [value]="item">{{ item }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>From Date</span>
+          <input class="form-control" type="date" [(ngModel)]="fromDate" />
+        </label>
+
+        <label>
+          <span>To Date</span>
+          <input class="form-control" type="date" [(ngModel)]="toDate" />
+        </label>
+
+        <div class="pharmacy-filter-actions">
+          <button class="btn btn-outline-primary" type="button" (click)="loadPayments()">Apply</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="reset()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-table-card">
+      <div class="pharmacy-table-head">
+        <div>
+          <h2>Payment Register</h2>
+          <p>{{ payments.length }} payment records are currently visible.</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div *ngIf="loading" class="pharmacy-empty-state">Loading payments...</div>
+        <div *ngIf="!loading && !payments.length" class="pharmacy-empty-state">No payments found.</div>
+        <div class="table-responsive" *ngIf="!loading && payments.length">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Reference</th>
+                <th>Store</th>
+                <th>Method</th>
+                <th>Reference No.</th>
+                <th>Amount</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let payment of payments">
+                <td>{{ date(payment.paymentDate) }}</td>
+                <td>
+                  <div class="fw-semibold">{{ payment.referenceType }}</div>
+                  <small class="text-muted">{{ payment.referenceId }}</small>
+                </td>
+                <td>{{ storeName(payment.storeId) }}</td>
+                <td>{{ payment.method }}</td>
+                <td>{{ payment.referenceNo || '-' }}</td>
+                <td>{{ currency(payment.amount) }}</td>
+                <td>{{ payment.note || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop fade show" *ngIf="modalOpen"></div>
+    <div class="modal fade show d-block" *ngIf="modalOpen">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Add Payment</h5>
+            <button type="button" class="btn-close" (click)="closeModal()"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Reference Type</label>
+                <select class="form-select" [(ngModel)]="form.referenceType" (ngModelChange)="onReferenceTypeChange()">
+                  <option value="sale">Sale</option>
+                  <option value="sales_return">Sales Return</option>
+                  <option value="expense">Expense</option>
+                </select>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Reference</label>
+                <select class="form-select" [(ngModel)]="form.referenceId">
+                  <option value="">Select reference</option>
+                  <option *ngFor="let item of currentReferenceOptions()" [value]="item._id">
+                    {{ referenceLabel(item) }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Amount</label>
+                <input class="form-control" type="number" min="0" [(ngModel)]="form.amount" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Method</label>
+                <select class="form-select" [(ngModel)]="form.method">
+                  <option *ngFor="let item of methods" [value]="item">{{ item }}</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Payment Date</label>
+                <input class="form-control" type="date" [(ngModel)]="form.paymentDate" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Store</label>
+                <select class="form-select" [(ngModel)]="form.storeId">
+                  <option value="">No store</option>
+                  <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Reference No.</label>
+                <input class="form-control" [(ngModel)]="form.referenceNo" />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Note</label>
+                <textarea class="form-control" rows="2" [(ngModel)]="form.note"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-light" type="button" (click)="closeModal()">Cancel</button>
+            <button class="btn btn-primary" type="button" (click)="save()" [disabled]="saving">
+              {{ saving ? 'Saving...' : 'Create Payment' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

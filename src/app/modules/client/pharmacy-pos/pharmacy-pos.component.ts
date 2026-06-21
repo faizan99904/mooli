@@ -14,6 +14,7 @@ import {
   ReceiptLetterheadSettings,
 } from '../../../shared/models/company.model';
 import {
+  Customer,
   CreateHeldSalePayload,
   CreateSalesReturnPayload,
   CreateSalePayload,
@@ -125,11 +126,13 @@ interface PharmacyReturnLine {
 export class PharmacyPosComponent implements OnInit {
   companyProfile: CompanyProfile | null = null;
   stores: Store[] = [];
+  customers: Customer[] = [];
   products: ProductCatalogItem[] = [];
   billLines: PharmacyBillLine[] = [];
   unavailableMedicines: UnavailableMedicine[] = [];
   prescription: Prescription | null = null;
   selectedStoreId = '';
+  selectedCustomerId = '';
   prescriptionId = '';
   productSearch = '';
   paymentMethod: PharmacyPosPaymentMethod = 'cash';
@@ -263,6 +266,7 @@ export class PharmacyPosComponent implements OnInit {
   ngOnInit(): void {
     this.loadCompanyProfile();
     this.loadShortcutBindings();
+    this.loadCustomers();
     this.route.queryParamMap.subscribe((params) => {
       this.prescriptionId = params.get('prescriptionId') || '';
       this.selectedStoreId =
@@ -1041,6 +1045,7 @@ export class PharmacyPosComponent implements OnInit {
     this.billLines = [];
     this.unavailableMedicines = [];
     this.prescription = null;
+    this.selectedCustomerId = '';
     this.prescriptionId = '';
     this.saleInvoiceNo = '';
     this.productSearch = '';
@@ -1632,6 +1637,7 @@ export class PharmacyPosComponent implements OnInit {
 
     const payload: CreateSalePayload = {
       storeId,
+      customerId: this.selectedCustomerId || undefined,
       saleDate: new Date().toISOString(),
       status: 'completed',
       registerSessionId: this.registerSession._id,
@@ -1711,9 +1717,10 @@ export class PharmacyPosComponent implements OnInit {
       return;
     }
 
-    const payload: CreateHeldSalePayload = {
-      storeId,
-      items,
+      const payload: CreateHeldSalePayload = {
+        storeId,
+        customerId: this.selectedCustomerId || undefined,
+        items,
       note: this.prescription
         ? `Held pharmacy bill for prescription ${this.prescription._id}`
         : 'Held Mooli pharmacy POS bill',
@@ -1850,6 +1857,17 @@ export class PharmacyPosComponent implements OnInit {
     );
   }
 
+  resolvedCustomerName(): string {
+    if (this.prescription) {
+      return this.patientName() === '-' ? 'Walk-in Customer' : this.patientName();
+    }
+
+    const customer = this.customers.find(
+      (item) => item._id === this.selectedCustomerId,
+    );
+    return customer?.name || 'Walk-in Customer';
+  }
+
   updateReturnLineQty(line: PharmacyReturnLine, value: string | number): void {
     const qty = Math.max(0, Math.min(Number(value || 0), line.maxQty));
     line.qty = Number.isFinite(qty) ? qty : 0;
@@ -1949,8 +1967,7 @@ export class PharmacyPosComponent implements OnInit {
       storeAddress: this.currentStoreAddress(),
       storePhone: store?.phone || '',
       cashierName: this.cashierName,
-      customerName:
-        this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
+      customerName: this.resolvedCustomerName(),
       paymentMethod: this.receiptPaymentMethodLabel(
         this.paymentMethod,
         this.paymentStatusPreview,
@@ -2012,8 +2029,7 @@ export class PharmacyPosComponent implements OnInit {
       storeAddress: [store?.address, store?.city].filter(Boolean).join(', '),
       storePhone: store?.phone || '',
       cashierName: this.cashierName,
-      customerName:
-        this.patientName() === '-' ? 'Walk-in Customer' : this.patientName(),
+      customerName: this.resolveSaleCustomerName(sale),
       paymentMethod: this.resolveSalePaymentLabel(sale),
       paymentStatus: sale.paymentStatus,
       items: (sale.items || []).map((item) => ({
@@ -2044,6 +2060,7 @@ export class PharmacyPosComponent implements OnInit {
     const productMap = new Map(this.products.map((product) => [product._id, product]));
 
     this.clearSale();
+    this.selectedCustomerId = payload.customerId || '';
     payload.items.forEach((item) => {
       const product = productMap.get(item.productId);
       if (!product) {
@@ -2190,7 +2207,7 @@ export class PharmacyPosComponent implements OnInit {
               <div><span>Invoice</span><strong>${this.escapeHtml(receipt.reference)}</strong></div>
               <div><span>Date</span><strong>${new Date(receipt.saleDate).toLocaleString()}</strong></div>
               <div><span>Cashier</span><strong>${this.escapeHtml(receipt.cashierName)}</strong></div>
-              <div><span>Patient</span><strong>${this.escapeHtml(receipt.customerName)}</strong></div>
+              <div><span>Customer</span><strong>${this.escapeHtml(receipt.customerName)}</strong></div>
             </div>
             <table>
               <thead>
@@ -2433,6 +2450,7 @@ export class PharmacyPosComponent implements OnInit {
     return {
       _id: localId,
       storeId: payload.storeId,
+      customerId: payload.customerId || null,
       registerSessionId: payload.registerSessionId || null,
       invoiceNo,
       saleDate: payload.saleDate,
@@ -2485,10 +2503,11 @@ export class PharmacyPosComponent implements OnInit {
     }, 0);
     const paidAmount = Number(payload.paidAmount || 0) || 0;
 
-    return {
-      _id: localId,
-      storeId: payload.storeId,
-      registerSessionId: payload.registerSessionId || null,
+      return {
+        _id: localId,
+        storeId: payload.storeId,
+        customerId: payload.customerId || null,
+        registerSessionId: payload.registerSessionId || null,
       invoiceNo,
       saleDate: payload.saleDate,
       items: payload.items,
@@ -2503,7 +2522,28 @@ export class PharmacyPosComponent implements OnInit {
       note: payload.note || 'Offline Mooli pharmacy POS bill',
       createdAt: entry.createdAt,
       updatedAt: entry.createdAt,
-    };
+      };
+  }
+
+  private loadCustomers(): void {
+    if (!this.backend.hasPermission('customers.read')) {
+      this.customers = [];
+      return;
+    }
+
+    this.backend.getCustomers({ limit: 100, isActive: true }).subscribe({
+      next: (result) => {
+        this.customers = result.items;
+      },
+      error: () => {
+        this.customers = [];
+      },
+    });
+  }
+
+  private resolveSaleCustomerName(sale: Sale): string {
+    const customer = this.customers.find((item) => item._id === sale.customerId);
+    return customer?.name || 'Walk-in Customer';
   }
 
   private mergeSales(items: Sale[]): Sale[] {
