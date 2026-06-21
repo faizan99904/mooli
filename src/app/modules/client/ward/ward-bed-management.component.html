@@ -6,10 +6,16 @@
         <p>Manage ward rooms, beds, occupancy and availability</p>
       </div>
       <div class="ward-page-header__actions">
-        <button type="button" class="btn btn-sm btn-outline-primary" (click)="openAddRoom()">
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openAddWard()">
+          <i class="fa fa-hospital-o"></i> Add Ward
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openAddFloor()" [disabled]="!hospitalWards.length">
+          <i class="fa fa-building-o"></i> Add Floor
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="openAddRoom()" [disabled]="!hospitalWards.length || !galleryOptions.length">
           <i class="fa fa-plus"></i> Add Room
         </button>
-        <button type="button" class="btn btn-sm btn-primary" (click)="openAddBed()">
+        <button type="button" class="btn btn-sm btn-primary" (click)="openAddBed()" [disabled]="!rooms.length">
           <i class="fa fa-plus"></i> Add Bed
         </button>
       </div>
@@ -23,7 +29,7 @@
         </select>
       </label>
       <label class="ward-filter ward-filter--compact">
-        <span>Gallery</span>
+        <span>Floor</span>
         <select [(ngModel)]="filters.gallery" (ngModelChange)="selectedRoomId = filteredRooms[0]?.id || ''">
           <option *ngFor="let gallery of galleryOptions" [value]="gallery.id">{{ gallery.label }}</option>
         </select>
@@ -53,7 +59,12 @@
       </button>
     </section>
 
-    <div class="ward-bed-layout">
+    <div class="ward-empty-setup" *ngIf="!loading && !hospitalWards.length">
+      <strong>Pehle ward setup karein.</strong>
+      <span>Add Ward par click karke apna ward banayein, phir Add Floor, phir Add Room aur Add Bed.</span>
+    </div>
+
+    <div class="ward-bed-layout" *ngIf="hospitalWards.length">
       <div class="ward-bed-left">
         <section class="ward-panel ward-panel--rooms">
           <div class="ward-panel__head">
@@ -161,6 +172,80 @@
   </div>
 </div>
 
+<!-- Ward Modal -->
+<div class="ward-simple-modal" *ngIf="activeModal === 'ward'" role="dialog" aria-modal="true">
+  <div class="ward-simple-modal__backdrop" (click)="closeModal()"></div>
+  <div class="ward-simple-modal__dialog">
+    <div class="ward-simple-modal__head">
+      <h3>Add Ward</h3>
+      <button type="button" class="ward-simple-modal__close" (click)="closeModal()" aria-label="Close">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+    <form class="ward-simple-modal__form" [formGroup]="wardForm" (ngSubmit)="saveWard()">
+      <div class="ward-simple-modal__body">
+        <div class="ward-simple-modal__grid">
+          <label class="ward-simple-field ward-simple-field--full" [class.is-invalid]="isFieldInvalid(wardForm, 'name')">
+            <span>Ward Name</span>
+            <input type="text" formControlName="name" placeholder="e.g. Peads Ward" />
+            <small>{{ fieldError(wardForm, 'name', 'Ward name') }}</small>
+          </label>
+          <label class="ward-simple-field">
+            <span>Code</span>
+            <input type="text" formControlName="code" placeholder="Optional" />
+          </label>
+          <label class="ward-simple-field ward-simple-field--full">
+            <span>Description</span>
+            <textarea rows="2" formControlName="description" placeholder="Optional"></textarea>
+          </label>
+        </div>
+      </div>
+      <div class="ward-simple-modal__foot">
+        <button type="button" class="btn btn-sm btn-default" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">Save Ward</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Floor Modal -->
+<div class="ward-simple-modal" *ngIf="activeModal === 'floor'" role="dialog" aria-modal="true">
+  <div class="ward-simple-modal__backdrop" (click)="closeModal()"></div>
+  <div class="ward-simple-modal__dialog">
+    <div class="ward-simple-modal__head">
+      <h3>Add Floor</h3>
+      <button type="button" class="ward-simple-modal__close" (click)="closeModal()" aria-label="Close">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+    <form class="ward-simple-modal__form" [formGroup]="floorForm" (ngSubmit)="saveFloor()">
+      <div class="ward-simple-modal__body">
+        <div class="ward-simple-modal__grid">
+          <label class="ward-simple-field ward-simple-field--full" [class.is-invalid]="isFieldInvalid(floorForm, 'wardId')">
+            <span>Ward</span>
+            <select formControlName="wardId">
+              <option *ngFor="let ward of hospitalWards" [value]="ward._id">{{ ward.name }}</option>
+            </select>
+          </label>
+          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(floorForm, 'name')">
+            <span>Floor Name</span>
+            <input type="text" formControlName="name" placeholder="e.g. 2nd Floor" />
+            <small>{{ fieldError(floorForm, 'name', 'Floor name') }}</small>
+          </label>
+          <label class="ward-simple-field">
+            <span>Display Label</span>
+            <input type="text" formControlName="label" placeholder="Optional" />
+          </label>
+        </div>
+      </div>
+      <div class="ward-simple-modal__foot">
+        <button type="button" class="btn btn-sm btn-default" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">Save Floor</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Room Modal -->
 <div class="ward-simple-modal" *ngIf="activeModal === 'room'" role="dialog" aria-modal="true">
   <div class="ward-simple-modal__backdrop" (click)="closeModal()"></div>
@@ -174,23 +259,19 @@
     <form class="ward-simple-modal__form" [formGroup]="roomForm" (ngSubmit)="saveRoom()">
       <div class="ward-simple-modal__body">
         <div class="ward-simple-modal__grid">
-          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(roomForm, 'ward')">
+          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(roomForm, 'wardId')">
             <span>Ward</span>
-            <select formControlName="ward">
-              <option *ngFor="let ward of wardOptions" [value]="ward">{{ ward }}</option>
+            <select formControlName="wardId" (change)="onRoomFormWardChange()">
+              <option *ngFor="let ward of hospitalWards" [value]="ward._id">{{ ward.name }}</option>
             </select>
-            <small>{{ fieldError(roomForm, 'ward', 'Ward') }}</small>
+            <small>{{ fieldError(roomForm, 'wardId', 'Ward') }}</small>
           </label>
-          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(roomForm, 'gallery')">
-            <span>Gallery</span>
-            <select formControlName="gallery">
-              <option *ngFor="let gallery of galleryOptions" [value]="gallery.id">{{ gallery.label }}</option>
-            </select>
-            <small>{{ fieldError(roomForm, 'gallery', 'Gallery') }}</small>
-          </label>
-          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(roomForm, 'floor')">
+          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(roomForm, 'floorId')">
             <span>Floor</span>
-            <input type="text" formControlName="floor" placeholder="e.g. 2" />
+            <select formControlName="floorId">
+              <option *ngFor="let floor of floorsForRoomForm()" [value]="floor._id">{{ floor.label || floor.name }}</option>
+            </select>
+            <small>{{ fieldError(roomForm, 'floorId', 'Floor') }}</small>
           </label>
           <label class="ward-simple-field ward-simple-field--full" [class.is-invalid]="isFieldInvalid(roomForm, 'roomName')">
             <span>Room Name</span>
@@ -245,16 +326,16 @@
     <form class="ward-simple-modal__form" [formGroup]="bedForm" (ngSubmit)="saveBed()">
       <div class="ward-simple-modal__body">
         <div class="ward-simple-modal__grid">
-          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(bedForm, 'ward')">
+          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(bedForm, 'wardId')">
             <span>Ward</span>
-            <select formControlName="ward" (change)="onBedFormPlacementChange()">
-              <option *ngFor="let ward of wardOptions" [value]="ward">{{ ward }}</option>
+            <select formControlName="wardId" (change)="onBedFormWardChange()">
+              <option *ngFor="let ward of hospitalWards" [value]="ward._id">{{ ward.name }}</option>
             </select>
           </label>
-          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(bedForm, 'gallery')">
-            <span>Gallery</span>
-            <select formControlName="gallery" (change)="onBedFormPlacementChange()">
-              <option *ngFor="let gallery of galleryOptions" [value]="gallery.id">{{ gallery.label }}</option>
+          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(bedForm, 'floorId')">
+            <span>Floor</span>
+            <select formControlName="floorId" (change)="onBedFormPlacementChange()">
+              <option *ngFor="let floor of floorsForBedForm()" [value]="floor._id">{{ floor.label || floor.name }}</option>
             </select>
           </label>
           <label class="ward-simple-field ward-simple-field--full" [class.is-invalid]="isFieldInvalid(bedForm, 'roomId')">

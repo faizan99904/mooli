@@ -26,11 +26,46 @@
       <article><strong>Rs. {{ (stats.outstandingAmount || 0) | number:'1.0-0' }}</strong><span>Outstanding</span></article>
     </div>
 
-    <div class="lab-toolbar">
-      <input type="search" [(ngModel)]="search" placeholder="Search patient / order ID / phone / test"
-        (keyup.enter)="applySearch()" />
-      <button type="button" class="btn-primary" (click)="applySearch()">Search</button>
-      <button type="button" class="btn-light" (click)="loadDashboard()">Refresh</button>
+    <div class="lab-filter-bar">
+      <div class="lab-filter-group lab-filter-dates">
+        <span class="lab-filter-group-label">
+          <i class="fa fa-calendar-o" aria-hidden="true"></i>
+          Date Range
+        </span>
+        <div class="lab-control-row">
+          <span class="lab-inline-label">From</span>
+          <input type="date" name="labDateFrom" class="lab-control" [(ngModel)]="dateFrom" (change)="applyDateFilter()" />
+          <span class="lab-date-sep" aria-hidden="true">–</span>
+          <span class="lab-inline-label">To</span>
+          <input type="date" name="labDateTo" class="lab-control" [(ngModel)]="dateTo" (change)="applyDateFilter()" />
+        </div>
+      </div>
+
+      <div class="lab-filter-group lab-filter-search">
+        <span class="lab-filter-group-label">
+          <i class="fa fa-search" aria-hidden="true"></i>
+          Search
+        </span>
+        <div class="lab-control-row">
+          <input type="text" name="labDashboardSearch" class="lab-control lab-control-search" [(ngModel)]="search"
+            placeholder="Patient, order ID, phone or test" autocomplete="off"
+            (input)="onSearchInput()" />
+        </div>
+      </div>
+
+      <div class="lab-filter-group lab-filter-actions">
+        <span class="lab-filter-group-label lab-filter-group-label--spacer" aria-hidden="true">&nbsp;</span>
+        <div class="lab-control-row">
+          <button type="button" class="btn-light lab-control-btn" *ngIf="!isTodayFilter()" (click)="resetDateFilter()">
+            <i class="fa fa-calendar-check-o" aria-hidden="true"></i>
+            Today
+          </button>
+          <button type="button" class="btn-light lab-control-btn" (click)="loadDashboard()">
+            <i class="fa fa-refresh" aria-hidden="true"></i>
+            Refresh
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="lab-tabs">

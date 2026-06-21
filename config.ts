@@ -31,6 +31,7 @@ export const CONFIG = {
   products: API_BASE_URL + '/products',
   inventory: API_BASE_URL + '/inventory',
   rooms: API_BASE_URL + '/rooms',
+  hospitalWards: API_BASE_URL + '/hospital-wards',
   roomAllotments: API_BASE_URL + '/room-allotments',
   ward: API_BASE_URL + '/ward',
   bills: API_BASE_URL + '/bills',
