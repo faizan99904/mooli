@@ -313,7 +313,8 @@
 }
 
 .labs-title,
-.drips-title {
+.drips-title,
+.specialty-title {
   margin-top: 8px;
 }
 
@@ -332,6 +333,16 @@
 
 .print-side-panel td {
   text-align: center;
+}
+
+.print-specialty-table th {
+  width: 18mm;
+}
+
+.print-specialty-table td {
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .follow-up-print {
@@ -1817,6 +1828,21 @@
   text-align: center;
 }
 
+.clinical-rx-specialty > div {
+  align-items: flex-start;
+  grid-template-columns: 5mm minmax(0, 1fr) 0;
+  padding-bottom: 1.2mm;
+  padding-top: 1.2mm;
+}
+
+.clinical-rx-specialty > div span {
+  grid-column: 2 / -1;
+  margin-top: 0.8mm;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .clinical-rx-observation {
   flex: 0 0 41mm;
 }
@@ -2598,6 +2624,35 @@
   font-weight: 700;
 }
 
+.stacked-rx-specialty-grid {
+  display: grid;
+  gap: 2mm;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 2.5mm 3mm;
+}
+
+.stacked-rx-specialty-grid > div {
+  border: 1px solid #e5e7eb;
+  border-radius: 1.4mm;
+  display: grid;
+  gap: 0.8mm;
+  grid-template-columns: 28mm minmax(0, 1fr);
+  min-height: 9mm;
+  padding: 1.8mm 2mm;
+}
+
+.stacked-rx-specialty-grid strong {
+  color: var(--theme-primary, #1b5e20);
+  font-size: 2.6mm;
+}
+
+.stacked-rx-specialty-grid span {
+  font-size: 2.7mm;
+  font-weight: 600;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .stacked-rx-medicines,
 .sectioned-rx-medicines {
   border: 1px solid var(--theme-line, #c8e6c9);
@@ -2644,6 +2699,31 @@
   background: #f7faf7;
 }
 
+.stacked-rx-med-name,
+.sectioned-rx-med-name {
+  line-height: 1.3;
+  text-align: left !important;
+  word-break: break-word;
+}
+
+.stacked-rx-med-name strong,
+.stacked-rx-med-name small,
+.sectioned-rx-med-name strong,
+.sectioned-rx-med-name small {
+  display: block;
+}
+
+.stacked-rx-med-name strong,
+.sectioned-rx-med-name strong {
+  font-size: 2.75mm;
+}
+
+.stacked-rx-med-name small,
+.sectioned-rx-med-name small {
+  font-size: 2.25mm;
+  margin-top: 0.7mm;
+}
+
 .stacked-rx-instructions,
 .sectioned-rx-instructions {
   border: 1px solid var(--theme-line, #c8e6c9);
@@ -2684,6 +2764,26 @@
 .stacked-rx-instructions ul + ul,
 .sectioned-rx-instructions ul + ul {
   border-left: 1px solid var(--theme-line, #c8e6c9);
+}
+
+.sectioned-rx-instructions > div > ul {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.sectioned-rx-instructions ul + ul[dir='rtl'] {
+  font-size: 2.45mm;
+  line-height: 1.5;
+  list-style-position: inside;
+  padding-block: 2mm;
+  padding-inline: 3mm;
+  text-align: right;
+}
+
+.sectioned-rx-instructions ul + ul[dir='rtl'] li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .stacked-rx-bottom-cards,
@@ -2891,6 +2991,281 @@
 .sectioned-rx-list > div span {
   color: var(--theme-primary, #4a148c);
   font-weight: 800;
+}
+
+.sectioned-rx-specialty-list > div {
+  align-items: start;
+  display: grid;
+  gap: 2mm;
+  grid-template-columns: 34mm minmax(0, 1fr);
+}
+
+.sectioned-rx-specialty-list > div span {
+  color: #1f2937;
+  font-weight: 600;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sectioned-rx-page.sectioned-rx-eye-page {
+  .sectioned-rx-header {
+    padding: 1mm 3mm 2mm;
+  }
+
+  .sectioned-rx-doctor h1 {
+    font-size: 6.2mm;
+    margin-bottom: 0.8mm;
+  }
+
+  .sectioned-rx-doctor-en strong {
+    font-size: 4.1mm;
+    margin-bottom: 0.6mm;
+  }
+
+  .sectioned-rx-doctor-en span {
+    font-size: 3.2mm;
+    margin-bottom: 0.3mm;
+  }
+
+  .sectioned-rx-doctor-ur h2 {
+    font-size: 4.8mm;
+    margin-bottom: 0.6mm;
+  }
+
+  .sectioned-rx-doctor-ur strong,
+  .sectioned-rx-doctor-ur span {
+    font-size: 3mm;
+    line-height: 1.45;
+    margin-bottom: 0.4mm;
+  }
+
+  .sectioned-rx-meta,
+  .sectioned-rx-block,
+  .sectioned-rx-split {
+    margin-top: 1.5mm;
+  }
+
+  .sectioned-rx-meta {
+    gap: 1mm;
+    padding: 0 1.5mm;
+  }
+
+  .sectioned-rx-meta > div {
+    font-size: 2.7mm;
+    gap: 1.2mm;
+  }
+
+  .sectioned-rx-meta em {
+    font-size: 2.6mm;
+    padding: 0.9mm 3.5mm;
+  }
+
+  .sectioned-rx-block h3 {
+    font-size: 2.8mm;
+    padding: 1.1mm 2.5mm;
+  }
+
+  .sectioned-rx-patient-grid {
+    gap: 1mm;
+    padding: 1.5mm 2mm;
+  }
+
+  .sectioned-rx-patient-grid > div {
+    gap: 0.35mm;
+  }
+
+  .sectioned-rx-patient-grid strong {
+    font-size: 2.35mm;
+    line-height: 1.15;
+  }
+
+  .sectioned-rx-patient-grid span {
+    font-size: 2.85mm;
+    line-height: 1.2;
+  }
+
+  .sectioned-rx-split {
+    gap: 2mm;
+  }
+
+  .sectioned-rx-list > div {
+    font-size: 2.45mm;
+    padding: 1mm 2mm;
+  }
+
+  .sectioned-rx-medicines {
+    flex: 1 1 auto;
+    margin-top: 1.5mm;
+    max-height: 46mm;
+    min-height: 18mm;
+  }
+
+  .sectioned-rx-block.sectioned-rx-specialty-eye {
+    flex-shrink: 0;
+    margin-top: 1.5mm;
+    overflow: visible;
+  }
+
+  .sectioned-rx-instructions,
+  .sectioned-rx-bottom-cards,
+  .sectioned-rx-signature,
+  .sectioned-rx-footer {
+    flex-shrink: 0;
+  }
+
+  .sectioned-rx-instructions,
+  .sectioned-rx-bottom-cards {
+    margin-top: 1.5mm;
+  }
+
+  .sectioned-rx-instructions {
+    overflow: hidden;
+  }
+
+  .sectioned-rx-instructions h3 {
+    font-size: 2.7mm;
+    padding: 1.1mm 2.5mm;
+  }
+
+  .sectioned-rx-instructions > div {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .sectioned-rx-instructions ul {
+    box-sizing: border-box;
+    font-size: 2.05mm;
+    line-height: 1.35;
+    list-style-position: outside;
+    margin: 0;
+    max-width: 100%;
+    min-width: 0;
+    padding-block: 1.4mm;
+    padding-inline: 4mm 2mm;
+  }
+
+  .sectioned-rx-instructions ul + ul[dir='rtl'] {
+    font-size: 1.95mm;
+    line-height: 1.4;
+    list-style-position: inside;
+    padding-block: 1.4mm;
+    padding-inline: 2.5mm;
+    text-align: right;
+  }
+
+  .sectioned-rx-instructions h3 .print-urdu-block {
+    font-size: 2.35mm;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .sectioned-rx-bottom-cards > div {
+    min-height: 9mm;
+    padding: 1.3mm 2mm;
+  }
+
+  .sectioned-rx-bottom-cards h4 {
+    font-size: 2.5mm;
+    margin-bottom: 0.6mm;
+  }
+
+  .sectioned-rx-bottom-cards p {
+    font-size: 2.6mm;
+    line-height: 1.25;
+  }
+
+  .sectioned-rx-signature {
+    margin-top: 1.5mm;
+  }
+
+  .sectioned-rx-footer {
+    margin-top: auto;
+  }
+
+  .sectioned-rx-footer > p {
+    font-size: 2.4mm;
+    margin: 0 0 1mm;
+  }
+
+  .sectioned-rx-footer-bar {
+    font-size: 2.4mm;
+    padding: 1.2mm 0;
+  }
+}
+
+.sectioned-rx-page.sectioned-rx-eye-page.medicine-density-dense .sectioned-rx-instructions,
+.sectioned-rx-page.sectioned-rx-eye-page.medicine-density-compact .sectioned-rx-instructions,
+.sectioned-rx-page.sectioned-rx-eye-page.medicine-density-ultra .sectioned-rx-instructions {
+  flex: 0 0 auto;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+}
+
+.sectioned-rx-page.sectioned-rx-eye-page.medicine-density-dense .sectioned-rx-instructions > div,
+.sectioned-rx-page.sectioned-rx-eye-page.medicine-density-compact .sectioned-rx-instructions > div,
+.sectioned-rx-page.sectioned-rx-eye-page.medicine-density-ultra .sectioned-rx-instructions > div {
+  min-height: 0;
+}
+
+.sectioned-rx-specialty-eye {
+  flex-shrink: 0;
+  margin-top: 1.5mm;
+  overflow: visible;
+}
+
+.sectioned-rx-specialty-eye h3 {
+  font-size: 2.7mm;
+  padding: 1mm 2.5mm;
+}
+
+.sectioned-rx-specialty-eye .sectioned-rx-specialty-list {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sectioned-rx-specialty-eye .sectioned-rx-specialty-list > div {
+  align-items: start;
+  border-top: 1px solid #ece4f2;
+  box-sizing: border-box;
+  display: grid;
+  font-size: 2mm;
+  gap: 0.8mm;
+  grid-template-columns: 22mm minmax(0, 1fr);
+  min-width: 0;
+  padding: 0.65mm 1.5mm;
+}
+
+.sectioned-rx-specialty-eye .sectioned-rx-specialty-list > div.wide {
+  grid-column: 1 / -1;
+  grid-template-columns: 28mm minmax(0, 1fr);
+  padding: 0.8mm 1.8mm;
+}
+
+.sectioned-rx-specialty-eye .sectioned-rx-specialty-list > div strong {
+  font-size: 1.95mm;
+  line-height: 1.2;
+}
+
+.sectioned-rx-specialty-eye .sectioned-rx-specialty-list > div span {
+  display: block;
+  font-size: 2mm;
+  line-height: 1.3;
+  min-width: 0;
+  overflow: visible;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prescription-template-compact-mono.prescription-eye-sheet {
+  padding: 4mm 4mm 3mm;
 }
 
 .prescription-theme-backdrop {

@@ -202,6 +202,8 @@
             (click)="activeTab = 'prescription'">Prescription</button>
           <button type="button" [class.active]="activeTab === 'vitals'" (click)="activeTab = 'vitals'">Vitals</button>
           <button type="button" [class.active]="activeTab === 'lab'" (click)="activeTab = 'lab'">Lab Tests</button>
+          <button type="button" [class.active]="activeTab === 'specialty'"
+            (click)="activeTab = 'specialty'">Specialty Notes</button>
           <button type="button" [class.active]="activeTab === 'iv'" (click)="activeTab = 'iv'">Drips / IV
             Fluids</button>
           <button type="button" [class.active]="activeTab === 'admission'" (click)="activeTab = 'admission'">Admission
@@ -209,6 +211,41 @@
           <button type="button" [class.active]="activeTab === 'documents'"
             (click)="activeTab = 'documents'">Documents</button>
         </div>
+
+        <section class="specialty-notes-panel" *ngIf="activeTab === 'specialty' && activeSpecialtyTemplate() as template">
+          <div class="specialty-notes-head">
+            <div>
+              <h3>{{ template.title }}</h3>
+              <p>{{ template.description }}</p>
+            </div>
+            <label>
+              <span>Template</span>
+              <select [ngModel]="template.key" [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="applySpecialtySection($event)">
+                <option *ngFor="let option of specialtyTemplateOptions" [value]="option.key">{{ option.title }}</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="specialty-notes-grid" formGroupName="specialtyData">
+            <label *ngFor="let field of template.fields" [class.wide]="field.wide">
+              <span>{{ field.label }}</span>
+              <select *ngIf="field.type === 'select'; else specialtyTextField"
+                [formControlName]="specialtyFieldControl(field)" (change)="loadImagingTemplate()">
+                <option value="">Select</option>
+                <option *ngFor="let option of field.options || []" [value]="option">{{ option }}</option>
+              </select>
+              <ng-template #specialtyTextField>
+                <textarea *ngIf="field.type === 'textarea'; else specialtyInputField"
+                  [formControlName]="specialtyFieldControl(field)" [placeholder]="field.placeholder || field.label"></textarea>
+                <ng-template #specialtyInputField>
+                  <input [type]="field.type === 'date' ? 'date' : 'text'"
+                    [formControlName]="specialtyFieldControl(field)" [placeholder]="field.placeholder || field.label" />
+                </ng-template>
+              </ng-template>
+            </label>
+          </div>
+        </section>
 
         <section class="vitals-dashboard-panel" *ngIf="activeTab === 'vitals'">
           <div class="vitals-dashboard-head">
@@ -1166,6 +1203,7 @@
         <div class="print-preview-loading" *ngIf="printPreviewLoading">Loading prescription preview...</div>
         <section class="prescription-print-sheet" #printContent
           [ngClass]="'prescription-template-' + printPreviewTemplate"
+          [class.prescription-eye-sheet]="preview.specialtySection === 'eye'"
           *ngIf="!printPreviewLoading && printPreviewData as preview">
           <ng-container *ngIf="printPreviewTemplate === 'clinical-blue'; else themedPrescriptionLayout">
             <div class="clinical-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
@@ -1263,6 +1301,15 @@
                       <i class="fa fa-square-o"></i>
                       <strong>Others</strong>
                       <span>-</span>
+                    </div>
+                  </div>
+
+                  <div class="clinical-rx-card clinical-rx-specialty" *ngIf="preview.specialtyRows.length > 0">
+                    <h3>{{ preview.specialtyTitle }}</h3>
+                    <div *ngFor="let row of preview.specialtyRows | slice:0:5">
+                      <i class="fa fa-file-text-o"></i>
+                      <strong>{{ row.label }}</strong>
+                      <span>{{ row.value }}</span>
                     </div>
                   </div>
 
@@ -1439,6 +1486,16 @@
                   </div>
                 </section>
 
+                <section class="stacked-rx-strip stacked-rx-specialty-strip" *ngIf="preview.specialtyRows.length > 0">
+                  <h3>{{ preview.specialtyTitle }}</h3>
+                  <div class="stacked-rx-specialty-grid">
+                    <div *ngFor="let row of preview.specialtyRows">
+                      <strong>{{ row.label }}</strong>
+                      <span>{{ row.value }}</span>
+                    </div>
+                  </div>
+                </section>
+
                 <section class="stacked-rx-medicines" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
                   <header><strong>MEDICINES</strong><span class="print-urdu-block">دوائیاں</span></header>
                   <div class="stacked-rx-medicines-body">
@@ -1460,7 +1517,9 @@
                     <tbody>
                       <tr *ngFor="let medicine of preview.medicines; let i = index">
                         <td>{{ i + 1 }}</td>
-                        <td class="stacked-rx-med-name"><strong>{{ medicine['name'] || 'Medicine' }}</strong></td>
+                        <td class="stacked-rx-med-name">
+                          <strong>{{ medicine['name'] || 'Medicine' }}</strong>
+                        </td>
                         <td>{{ medicine['dosage'] || '-' }}</td>
                         <td>{{ medicine['duration'] || '-' }}</td>
                         <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
@@ -1508,7 +1567,9 @@
 
             <ng-template #purplePrescriptionLayout>
               <ng-container *ngIf="printPreviewTemplate === 'compact-mono'; else standardPrescriptionLayout">
-                <div class="sectioned-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
+                <div class="sectioned-rx-page"
+                  [ngClass]="printMedicineDensityClass(preview.medicines.length)"
+                  [class.sectioned-rx-eye-page]="preview.specialtySection === 'eye'">
                   <header class="sectioned-rx-header">
                     <div class="sectioned-rx-doctor sectioned-rx-doctor-en">
                       <h1>{{ preview.doctorName }}</h1>
@@ -1570,6 +1631,17 @@
                     </div>
                   </section>
 
+                  <section class="sectioned-rx-block sectioned-rx-specialty" *ngIf="preview.specialtyRows.length > 0"
+                    [class.sectioned-rx-specialty-eye]="preview.specialtySection === 'eye'">
+                    <h3>{{ preview.specialtyTitle }}</h3>
+                    <div class="sectioned-rx-list sectioned-rx-specialty-list">
+                      <div *ngFor="let row of preview.specialtyRows" [class.wide]="row.wide">
+                        <strong>{{ row.label }}</strong>
+                        <span>{{ row.value }}</span>
+                      </div>
+                    </div>
+                  </section>
+
                   <section class="sectioned-rx-medicines" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
                     <header><strong>MEDICINES</strong><span class="print-urdu-block">دوائیاں</span></header>
                     <div class="sectioned-rx-medicines-body">
@@ -1591,7 +1663,9 @@
                       <tbody>
                         <tr *ngFor="let medicine of preview.medicines; let i = index">
                           <td>{{ i + 1 }}</td>
-                          <td class="sectioned-rx-med-name"><strong>{{ medicine['name'] || 'Medicine' }}</strong></td>
+                          <td class="sectioned-rx-med-name">
+                            <strong>{{ medicine['name'] || 'Medicine' }}</strong>
+                          </td>
                           <td>{{ medicine['dosage'] || '-' }}</td>
                           <td>{{ medicine['duration'] || '-' }}</td>
                           <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
@@ -1746,6 +1820,16 @@
                   <td>-</td>
                 </tr>
               </table>
+
+              <ng-container *ngIf="preview.specialtyRows.length > 0">
+                <div class="print-mini-title specialty-title">{{ preview.specialtyTitle }}</div>
+                <table class="print-specialty-table">
+                  <tr *ngFor="let row of preview.specialtyRows">
+                    <th>{{ row.label }}</th>
+                    <td>{{ row.value }}</td>
+                  </tr>
+                </table>
+              </ng-container>
 
               <div class="follow-up-print">
                 <strong>FOLLOW UP:</strong>

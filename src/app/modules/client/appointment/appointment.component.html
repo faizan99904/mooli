@@ -151,6 +151,11 @@
             <button type="button" (click)="clearSelectedPatient()">Change</button>
           </div>
 
+          <div class="last-visit-banner" *ngIf="selectedPatient">
+            <i class="fa fa-history"></i>
+            <span>{{ lastVisitSummary() }}</span>
+          </div>
+
           <div class="field-error"
             *ngIf="appointmentForm.get('patientId')?.touched && appointmentForm.get('patientId')?.invalid">
             Select a patient from phone search results.
@@ -173,6 +178,14 @@
             <div class="consultation-fee-card" *ngIf="appointmentForm.value.doctorId">
               <span>Consultation Fee</span>
               <strong>{{ formatConsultationFee(selectedDoctorConsultationFee) }}</strong>
+            </div>
+            <label>
+              <span>Discount (PKR)</span>
+              <input type="number" min="0" formControlName="discount" />
+            </label>
+            <div class="consultation-fee-card net-fee-card" *ngIf="appointmentForm.value.doctorId">
+              <span>Net Fee</span>
+              <strong>{{ formatConsultationFee(netConsultationFee) }}</strong>
             </div>
             <label>
               <span>Date *</span>
@@ -367,7 +380,7 @@
                 </td>
                 <td class="visit-type-cell">{{ visitTypeLabel(appointment.visitType) }}</td>
                 <td>{{ shortDate(appointment.appointmentDate) }}<br />{{ appointmentTimeRange(appointment) }}</td>
-                <td>{{ formatConsultationFee(appointment.consultationFee) }}</td>
+                <td>{{ formatAppointmentFee(appointment) }}</td>
                 <td class="payment-cell">
                   <select class="inline-payment-select" [ngModel]="appointment.paymentStatus || 'unpaid'"
                     (ngModelChange)="changeAppointmentPaymentStatus(appointment, $event)"

@@ -90,6 +90,16 @@ import {
   PatientAdmissionOrderRecord,
 } from './admission-order-data';
 import {
+  inferSpecialtyTemplateKey,
+  resolvePrintSpecialtyRows,
+  resolvePrintSpecialtyTemplate,
+  SPECIALTY_FIELDS,
+  SPECIALTY_TEMPLATES,
+  SpecialtyField,
+  SpecialtyTemplate,
+  SpecialtyTemplateKey,
+} from './prescription-specialty-print';
+import {
   buildPatientDocumentDisplayRows,
   countPatientDocuments,
   DOCUMENT_TYPES,
@@ -151,6 +161,9 @@ interface PrintPreviewData {
   labTests: Array<{ name: string; category: string }>;
   ivFluids: Array<{ name: string; rate: string; quantity: string; route: string }>;
   medicines: Array<Record<string, unknown>>;
+  specialtyTitle: string;
+  specialtySection: SpecialtyTemplateKey | '';
+  specialtyRows: Array<{ label: string; value: string; wide?: boolean }>;
   followUpDate: string;
   patientNote: string;
   consultation: string;
@@ -390,6 +403,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     spo2: 'SpO2',
   };
   readonly vitalTrendKeys = ['weight', 'bp', 'temperature', 'pulse', 'spo2'];
+  readonly specialtyTemplateOptions = Object.values(SPECIALTY_TEMPLATES);
 
   constructor(
     private fb: FormBuilder,
@@ -434,6 +448,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
         spo2: [''],
       }),
       customVitals: this.fb.array([]),
+      specialtySection: [''],
+      specialtyData: this.createSpecialtyDataGroup(),
       advice: [''],
       followUpDate: [''],
     });
@@ -552,6 +568,10 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     return this.prescriptionForm.get('customVitals') as FormArray;
   }
 
+  get specialtyDataGroup(): FormGroup {
+    return this.prescriptionForm.get('specialtyData') as FormGroup;
+  }
+
   get vitalsModalCustomVitals(): FormArray {
     return this.vitalsModalForm.get('customRows') as FormArray;
   }
@@ -614,6 +634,15 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       nightDose: [nightDose],
       instructions: [medicine?.['instructions'] || ''],
     });
+  }
+
+  createSpecialtyDataGroup(): FormGroup {
+    return this.fb.group(
+      SPECIALTY_FIELDS.reduce((controls, field) => {
+        controls[field.key] = [''];
+        return controls;
+      }, {} as Record<string, any>)
+    );
   }
 
   createLabTestGroup(test?: { name?: string; category?: string; selected?: boolean }): FormGroup {
@@ -1422,7 +1451,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   onMedicineFrequencyInput(index: number): void {
-    this.applyMedicineInstructionAssistant(index);
+    this.applyMedicineInstructionAssistant(index, { resetSlotsWhenNoSchedule: true });
   }
 
   onMedicineDosageInput(index: number): void {
@@ -2775,6 +2804,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
         value.vitals as Record<string, unknown>,
         value.customVitals as Array<Record<string, unknown>>
       ),
+      specialtySection: this.activeSpecialtyTemplate().key,
+      specialtyData: this.buildSpecialtyDataPayload(value.specialtyData as Record<string, unknown>),
       advice: value.advice || undefined,
       followUpDate: value.followUpDate || undefined,
       prescriptionTemplate: this.getActivePrescriptionTheme(),
@@ -3016,6 +3047,11 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       diagnosis: prescription.diagnosis || '',
       advice: prescription.advice || '',
       followUpDate: prescription.followUpDate ? String(prescription.followUpDate).slice(0, 10) : '',
+      specialtySection: prescription.specialtySection || '',
+      specialtyData: {
+        ...this.createSpecialtyDataGroup().getRawValue(),
+        ...(prescription.specialtyData || {}),
+      },
       admissionOrders: {
         ...this.defaultAdmissionOrders(),
         ...(prescription.admissionOrders || {}),
@@ -3087,6 +3123,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.editingId = null;
     this.prescriptionForm.reset({
       visitType: 'opd',
+      specialtySection: '',
+      specialtyData: this.createSpecialtyDataGroup().getRawValue(),
       admissionOrders: this.defaultAdmissionOrders(),
     });
     this.customVitals.clear();
@@ -3194,6 +3232,54 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     const doctorId = this.prescriptionForm.getRawValue().doctorId;
     const doctor = this.doctors.find((item) => item.userId === doctorId);
     return this.doctorName(doctor);
+  }
+
+  selectedDoctorProfile(): Doctor | null {
+    const doctorId = this.prescriptionForm.getRawValue().doctorId;
+    return this.resolvePrescriptionDoctor({ doctorId }) || null;
+  }
+
+  activeSpecialtyTemplate(): SpecialtyTemplate {
+    const explicitSection = String(this.prescriptionForm.getRawValue().specialtySection || '').trim() as SpecialtyTemplateKey;
+    if (explicitSection && SPECIALTY_TEMPLATES[explicitSection]) {
+      return SPECIALTY_TEMPLATES[explicitSection];
+    }
+
+    return SPECIALTY_TEMPLATES[inferSpecialtyTemplateKey(this.selectedDoctorProfile())];
+  }
+
+  specialtyFieldControl(field: SpecialtyField): string {
+    return field.key;
+  }
+
+  applySpecialtySection(section: string): void {
+    const key = String(section || '').trim() as SpecialtyTemplateKey;
+    if (!SPECIALTY_TEMPLATES[key]) {
+      return;
+    }
+
+    this.prescriptionForm.patchValue({ specialtySection: key });
+  }
+
+  loadImagingTemplate(): void {
+    const studyType = String(this.specialtyDataGroup.get('studyType')?.value || '').trim();
+    if (/usg abdomen/i.test(studyType)) {
+      this.specialtyDataGroup.patchValue({
+        findings:
+          'Liver:\nGall Bladder:\nCBD:\nPancreas:\nSpleen:\nRight Kidney:\nLeft Kidney:\nUrinary Bladder:\nProstate / Uterus:',
+        impression: '',
+      });
+      return;
+    }
+
+    if (/x-?ray|ct|mri/i.test(studyType)) {
+      this.specialtyDataGroup.patchValue({
+        technique: '',
+        findings: '',
+        impression: '',
+        recommendation: '',
+      });
+    }
   }
 
   selectedDoctorQualification(doctorId = this.prescriptionForm.getRawValue().doctorId): string {
@@ -3724,6 +3810,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       admissionOrders: (payload['admissionOrders'] as Prescription['admissionOrders']) || null,
       patientDocuments: (payload['patientDocuments'] as Prescription['patientDocuments']) || [],
       vitals: (payload['vitals'] as Record<string, string> | undefined) || {},
+      specialtySection: (payload['specialtySection'] as string | undefined) || null,
+      specialtyData: (payload['specialtyData'] as Record<string, unknown> | undefined) || {},
       advice: (payload['advice'] as string | undefined) || null,
       visitType: (payload['visitType'] as string | undefined) || 'opd',
       followUpDate: (payload['followUpDate'] as string | undefined) || null,
@@ -3979,6 +4067,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.editingId = null;
     this.prescriptionForm.reset({
       visitType: 'opd',
+      specialtySection: '',
+      specialtyData: this.createSpecialtyDataGroup().getRawValue(),
       admissionOrders: this.defaultAdmissionOrders(),
     });
     this.customVitals.clear();
@@ -4105,7 +4195,10 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     );
   }
 
-  private applyMedicineInstructionAssistant(index: number): void {
+  private applyMedicineInstructionAssistant(
+    index: number,
+    options: { resetSlotsWhenNoSchedule?: boolean } = {}
+  ): void {
     const group = this.medicines.at(index);
     if (!group) {
       return;
@@ -4129,6 +4222,16 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
           patch[`${slot}Dose`] = defaultDose;
         }
       });
+    } else if (options.resetSlotsWhenNoSchedule) {
+      patch['morning'] = false;
+      patch['noon'] = false;
+      patch['evening'] = false;
+      patch['night'] = false;
+      patch['morningDose'] = '';
+      patch['noonDose'] = '';
+      patch['eveningDose'] = '';
+      patch['nightDose'] = '';
+      patch['instructions'] = '';
     }
 
     const nextValue = { ...raw, ...patch };
@@ -4408,6 +4511,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
     control.patchValue({
       name: this.doctorMedicineDisplayName(medicine),
+      type: medicine.type || current['type'] || '',
       morningDose: current['morning'] && !current['morningDose'] ? defaultDose : current['morningDose'],
       noonDose: current['noon'] && !current['noonDose'] ? defaultDose : current['noonDose'],
       eveningDose: current['evening'] && !current['eveningDose'] ? defaultDose : current['eveningDose'],
@@ -4745,6 +4849,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       })
       .filter((fluid): fluid is { name: string; rate: string; quantity: string; route: string } => Boolean(fluid))
       .slice(0, 20);
+    const specialtyTemplate = resolvePrintSpecialtyTemplate(source, doctor);
+    const specialtyRows = resolvePrintSpecialtyRows(source, specialtyTemplate);
 
     return {
       template: this.resolvePrescriptionTemplate(source, doctor),
@@ -4780,6 +4886,9 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       labTests,
       ivFluids,
       medicines,
+      specialtyTitle: specialtyTemplate.title,
+      specialtySection: specialtyTemplate.key,
+      specialtyRows,
       followUpDate: followUpDate ? this.shortDate(followUpDate) : '-',
       patientNote: String(source['advice'] || '').trim(),
       consultation: String(source['admissionOrders']?.consultation || '').trim(),
@@ -5204,6 +5313,19 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
         return;
       }
       payload[key] = value;
+    });
+
+    return payload;
+  }
+
+  private buildSpecialtyDataPayload(data: Record<string, unknown>): Record<string, string> {
+    const payload: Record<string, string> = {};
+
+    Object.entries(data || {}).forEach(([key, value]) => {
+      const normalizedValue = String(value || '').trim();
+      if (normalizedValue) {
+        payload[key] = normalizedValue;
+      }
     });
 
     return payload;

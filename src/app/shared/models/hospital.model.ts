@@ -188,14 +188,27 @@ export interface Appointment {
   visitType?: 'Consultation' | 'Follow-up' | 'Walk-in' | 'Emergency' | string | null;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   consultationFee?: number;
+  discount?: number;
+  netFee?: number;
   paymentStatus?: 'unpaid' | 'paid';
   vitals?: Record<string, string>;
   notes?: string | null;
   createdAt?: string;
 }
 
+export interface PatientLastVisit {
+  hasPreviousVisit: boolean;
+  lastVisitDate?: string | null;
+  lastVisitType?: string | null;
+  lastDoctorName?: string | null;
+  lastAppointmentNo?: string | null;
+}
+
 export interface PrescriptionMedicine {
   name: string;
+  type?: string;
+  route?: string;
+  eye?: string;
   dosage?: string;
   frequency?: string;
   duration?: string;
@@ -286,6 +299,8 @@ export interface Prescription {
   admissionOrderItems?: AdmissionOrderItem[];
   patientDocuments?: PatientDocumentItem[];
   vitals?: Record<string, string> | null;
+  specialtySection?: string | null;
+  specialtyData?: Record<string, unknown> | null;
   advice?: string | null;
   followUpDate?: string | null;
   prescriptionTemplate?: PrescriptionTemplate;

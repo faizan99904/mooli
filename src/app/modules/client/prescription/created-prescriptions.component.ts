@@ -16,6 +16,11 @@ import {
 } from '../../../shared/models/hospital.model';
 import { legacyAdmissionOrdersToItems } from './admission-order-data';
 import {
+  resolvePrintSpecialtyRows,
+  resolvePrintSpecialtyTemplate,
+  SpecialtyTemplateKey,
+} from './prescription-specialty-print';
+import {
   formatEnglishAddress,
   formatEnglishDoctorName,
   formatEnglishDoctorTitle,
@@ -67,6 +72,9 @@ type CreatedPrescriptionPreviewData = {
   labTests: Array<{ name: string; category: string }>;
   ivFluids: Array<{ name: string; rate: string; quantity: string; route: string }>;
   medicines: Array<Record<string, unknown>>;
+  specialtyTitle: string;
+  specialtySection: SpecialtyTemplateKey | '';
+  specialtyRows: Array<{ label: string; value: string; wide?: boolean }>;
   followUpDate: string;
   patientNote: string;
   consultation: string;
@@ -603,10 +611,28 @@ export class CreatedPrescriptionsComponent implements OnInit {
           route: String(fluid.route || 'IV').trim() || 'IV',
         })),
       medicines: (prescription.medicines || []).map((medicine) => ({ ...medicine })),
+      ...this.resolveViewSpecialtyPreview(prescription, doctor),
       followUpDate: prescription.followUpDate ? this.shortDate(prescription.followUpDate) : '-',
       patientNote: String(prescription.advice || '').trim(),
       consultation: String(prescription.admissionOrders?.consultation || '').trim(),
       admissionOrderLines: this.resolvePrintAdmissionOrderLines(prescription),
+    };
+  }
+
+  private resolveViewSpecialtyPreview(
+    prescription: Prescription,
+    doctor: Doctor | null
+  ): Pick<CreatedPrescriptionPreviewData, 'specialtyTitle' | 'specialtySection' | 'specialtyRows'> {
+    const source = {
+      specialtySection: prescription.specialtySection,
+      specialtyData: prescription.specialtyData,
+    };
+    const specialtyTemplate = resolvePrintSpecialtyTemplate(source, doctor);
+
+    return {
+      specialtyTitle: specialtyTemplate.title,
+      specialtySection: specialtyTemplate.key,
+      specialtyRows: resolvePrintSpecialtyRows(source, specialtyTemplate),
     };
   }
 

@@ -32,6 +32,7 @@ import {
   ListResult,
   Patient,
   PatientHistory,
+  PatientLastVisit,
   Payment,
   ProductCatalogItem,
   Prescription,
@@ -374,6 +375,15 @@ export class BackendService {
 
   getAppointments(params?: Record<string, unknown>): Observable<ListResult<Appointment>> {
     return this.get<PaginatedResponse<Appointment>>(CONFIG.appointments, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getPatientLastVisit(
+    patientId: string,
+    params?: Record<string, unknown>
+  ): Observable<PatientLastVisit> {
+    return this.get<PatientLastVisit>(`${CONFIG.appointments}/patients/${patientId}/last-visit`, params).pipe(
       map((response) => this.unwrapData(response))
     );
   }

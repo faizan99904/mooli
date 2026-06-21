@@ -720,6 +720,33 @@
   font-weight: 800;
 }
 
+.net-fee-card {
+  background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+  border-color: #bbf7d0;
+}
+
+.net-fee-card strong {
+  color: #047857;
+}
+
+.last-visit-banner {
+  align-items: center;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1d4ed8;
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+
+.last-visit-banner i {
+  flex: 0 0 auto;
+}
+
 .status-hint {
   color: #019C9D;
   display: block;

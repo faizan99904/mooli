@@ -19,6 +19,7 @@ import {
   Doctor,
   Hospital,
   Patient,
+  PatientLastVisit,
 } from '../../../shared/models/hospital.model';
 import {
   buildVitalDisplayItems,
@@ -41,6 +42,8 @@ interface AppointmentToken {
   appointmentDate: string;
   timeRange: string;
   consultationFee: string;
+  discount: string;
+  netFee: string;
   paymentStatus: string;
   status: string;
   printedAt: string;
@@ -87,6 +90,8 @@ export class AppointmentComponent implements OnInit {
   phoneMatchedPatients: Patient[] = [];
   phoneMatchedTotal = 0;
   selectedPatient: Patient | null = null;
+  patientLastVisit: PatientLastVisit | null = null;
+  lastVisitLoading = false;
   addPatientModalOpen = false;
   bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
   visitType = 'Consultation';
@@ -121,6 +126,7 @@ export class AppointmentComponent implements OnInit {
       endTime: [''],
       reason: [''],
       consultationFee: [0],
+      discount: [0],
       paymentStatus: ['unpaid', Validators.required],
       status: ['pending', Validators.required],
       notes: [''],
@@ -363,6 +369,12 @@ export class AppointmentComponent implements OnInit {
     return Number(this.selectedDoctor?.consultationFee || 0);
   }
 
+  get netConsultationFee(): number {
+    const fee = Number(this.appointmentForm.value.consultationFee || this.selectedDoctorConsultationFee || 0);
+    const discount = Number(this.appointmentForm.value.discount || 0);
+    return Math.max(fee - discount, 0);
+  }
+
   get canCreateAppointment(): boolean {
     return this.backend.hasPermission('appointments.create');
   }
@@ -479,6 +491,14 @@ export class AppointmentComponent implements OnInit {
 
     const selectedDoctor = this.findDoctorByUserId(value.doctorId);
     const paymentStatus = value.paymentStatus || 'unpaid';
+    const consultationFee = Number(value.consultationFee || selectedDoctor?.consultationFee || 0);
+    const discount = Number(value.discount || 0);
+
+    if (discount > consultationFee) {
+      this.toastr.error('Discount cannot be greater than consultation fee');
+      return;
+    }
+
     const vitals = this.buildVitalsPayload(
       value.vitals as Record<string, unknown>,
       value.customVitals as Array<Record<string, unknown>>
@@ -491,7 +511,8 @@ export class AppointmentComponent implements OnInit {
       startTime: value.startTime,
       endTime: value.endTime,
       reason: value.reason,
-      consultationFee: Number(value.consultationFee || selectedDoctor?.consultationFee || 0),
+      consultationFee,
+      discount,
       paymentStatus,
       visitType: this.visitType || 'Consultation',
       status: paymentStatus === 'paid' ? 'confirmed' : value.status || 'pending',
@@ -571,6 +592,7 @@ export class AppointmentComponent implements OnInit {
       endTime: appointment.endTime,
       reason: appointment.reason || '',
       consultationFee: appointment.consultationFee ?? this.selectedDoctorConsultationFee,
+      discount: appointment.discount ?? 0,
       paymentStatus: appointment.paymentStatus || 'unpaid',
       status: appointment.status,
       notes: appointment.notes || '',
@@ -581,6 +603,9 @@ export class AppointmentComponent implements OnInit {
       this.customVitals.push(this.createCustomVitalGroup(entry.key, entry.value))
     );
     this.refreshVitalAnalytics();
+    if (appointment.patientId) {
+      this.loadPatientLastVisit(appointment.patientId);
+    }
   }
 
   updateStatus(appointment: Appointment, status: string): void {
@@ -703,6 +728,7 @@ export class AppointmentComponent implements OnInit {
     this.appointmentForm.reset({
       appointmentDate: this.todayValue(),
       consultationFee: 0,
+      discount: 0,
       paymentStatus: 'unpaid',
       status: 'pending',
     });
@@ -712,6 +738,7 @@ export class AppointmentComponent implements OnInit {
     this.phoneMatchedPatients = [];
     this.phoneMatchedTotal = 0;
     this.selectedPatient = null;
+    this.patientLastVisit = null;
     this.patients = [];
     this.customVitals.clear();
     this.vitalsGroup.reset({
@@ -779,6 +806,7 @@ export class AppointmentComponent implements OnInit {
     this.phoneMatchedPatients = [];
     this.phoneMatchedTotal = 0;
     this.selectedPatient = null;
+    this.patientLastVisit = null;
     this.patients = [];
     this.appointmentForm.patchValue({ patientId: '' });
 
@@ -821,6 +849,45 @@ export class AppointmentComponent implements OnInit {
     }
 
     this.refreshVitalAnalytics();
+    this.loadPatientLastVisit(patient._id);
+  }
+
+  loadPatientLastVisit(patientId: string): void {
+    if (!patientId) {
+      this.patientLastVisit = null;
+      return;
+    }
+
+    this.lastVisitLoading = true;
+    this.backend
+      .getPatientLastVisit(patientId, this.editingId ? { excludeAppointmentId: this.editingId } : undefined)
+      .pipe(finalize(() => (this.lastVisitLoading = false)))
+      .subscribe({
+        next: (lastVisit) => {
+          this.patientLastVisit = lastVisit;
+        },
+        error: () => {
+          this.patientLastVisit = null;
+        },
+      });
+  }
+
+  lastVisitSummary(): string {
+    if (this.lastVisitLoading) {
+      return 'Checking previous visits...';
+    }
+
+    if (!this.patientLastVisit?.hasPreviousVisit || !this.patientLastVisit.lastVisitDate) {
+      return 'No previous visit found. This looks like a new visit for this patient.';
+    }
+
+    const parts = [
+      `Last visit: ${this.shortDate(this.patientLastVisit.lastVisitDate)}`,
+      this.patientLastVisit.lastVisitType ? this.patientLastVisit.lastVisitType : '',
+      this.patientLastVisit.lastDoctorName ? `Dr ${this.patientLastVisit.lastDoctorName}` : '',
+    ].filter(Boolean);
+
+    return parts.join(' · ');
   }
 
   onDoctorChange(): void {
@@ -843,9 +910,21 @@ export class AppointmentComponent implements OnInit {
     }
   }
 
-  formatConsultationFee(value?: number | null): string {
+  formatConsultationFee(value?: number | null, discount?: number | null): string {
     const amount = Number(value || 0);
     return amount > 0 ? `PKR ${amount.toLocaleString('en-PK')}` : 'Not set';
+  }
+
+  formatAppointmentFee(appointment: Appointment): string {
+    const fee = Number(appointment.consultationFee || 0);
+    const discount = Number(appointment.discount || 0);
+    const net = Number(appointment.netFee ?? Math.max(fee - discount, 0));
+
+    if (discount > 0) {
+      return `PKR ${net.toLocaleString('en-PK')} (-${discount.toLocaleString('en-PK')})`;
+    }
+
+    return this.formatConsultationFee(fee);
   }
 
   paymentStatusLabel(value?: string | null): string {
@@ -1111,6 +1190,7 @@ export class AppointmentComponent implements OnInit {
 
   clearSelectedPatient(): void {
     this.selectedPatient = null;
+    this.patientLastVisit = null;
     this.appointmentForm.patchValue({ patientId: '' });
   }
 
@@ -1497,6 +1577,11 @@ export class AppointmentComponent implements OnInit {
       reason: (payload['reason'] as string | undefined) || null,
       status: (payload['status'] as Appointment['status']) || 'pending',
       consultationFee: Number(payload['consultationFee'] || doctor?.consultationFee || 0),
+      discount: Number(payload['discount'] || 0),
+      netFee: Math.max(
+        Number(payload['consultationFee'] || doctor?.consultationFee || 0) - Number(payload['discount'] || 0),
+        0
+      ),
       paymentStatus: (payload['paymentStatus'] as Appointment['paymentStatus']) || 'unpaid',
       visitType: (payload['visitType'] as string | undefined) || this.visitType || 'Consultation',
       vitals: (payload['vitals'] as Record<string, string> | undefined) || {},
@@ -1717,6 +1802,17 @@ export class AppointmentComponent implements OnInit {
       timeRange: this.appointmentTimeRange(appointment),
       consultationFee: this.formatConsultationFee(
         appointment.consultationFee ?? doctorRecord?.consultationFee
+      ),
+      discount: appointment.discount
+        ? `PKR ${Number(appointment.discount).toLocaleString('en-PK')}`
+        : 'PKR 0',
+      netFee: this.formatConsultationFee(
+        appointment.netFee ??
+          Math.max(
+            Number(appointment.consultationFee || doctorRecord?.consultationFee || 0) -
+              Number(appointment.discount || 0),
+            0
+          )
       ),
       paymentStatus: this.paymentStatusLabel(appointment.paymentStatus),
       status: this.appointmentStatusLabel(appointment.status),
@@ -2016,6 +2112,8 @@ export class AppointmentComponent implements OnInit {
               ${this.printableTokenDetailRow('Doctor', token.doctorName, 'doctor')}
               ${this.printableTokenDetailRow('Department', token.departmentName, 'department')}
               ${this.printableTokenDetailRow('Consultation Fee', token.consultationFee, 'fee')}
+              ${this.printableTokenDetailRow('Discount', token.discount, 'fee')}
+              ${this.printableTokenDetailRow('Net Fee', token.netFee, 'fee')}
               ${this.printableTokenDetailRow('Payment', token.paymentStatus, 'payment')}
               ${this.printableTokenDetailRow('Date', token.appointmentDate, 'date')}
               ${this.printableTokenDetailRow('Time', token.timeRange, 'time')}
@@ -2112,6 +2210,8 @@ export class AppointmentComponent implements OnInit {
       `Doctor: ${token.doctorName}`,
       `Department: ${token.departmentName}`,
       `Consultation Fee: ${token.consultationFee}`,
+      `Discount: ${token.discount}`,
+      `Net Fee: ${token.netFee}`,
       `Payment: ${token.paymentStatus}`,
       `Date: ${token.appointmentDate}`,
       `Time: ${token.timeRange}`,
