@@ -33,12 +33,16 @@
           <i class="fa fa-calendar-o" aria-hidden="true"></i>
           Date Range
         </span>
-        <div class="lab-control-row">
-          <span class="lab-inline-label">From</span>
-          <input type="date" name="labDateFrom" class="lab-control" [(ngModel)]="dateFrom" (change)="applyDateFilter()" />
+        <div class="lab-control-row lab-date-row">
+          <div class="lab-date-field">
+            <span class="lab-inline-label">From</span>
+            <input type="date" name="labDateFrom" class="lab-control" [(ngModel)]="dateFrom" (change)="applyDateFilter()" />
+          </div>
           <span class="lab-date-sep" aria-hidden="true">–</span>
-          <span class="lab-inline-label">To</span>
-          <input type="date" name="labDateTo" class="lab-control" [(ngModel)]="dateTo" (change)="applyDateFilter()" />
+          <div class="lab-date-field">
+            <span class="lab-inline-label">To</span>
+            <input type="date" name="labDateTo" class="lab-control" [(ngModel)]="dateTo" (change)="applyDateFilter()" />
+          </div>
         </div>
       </div>
 
