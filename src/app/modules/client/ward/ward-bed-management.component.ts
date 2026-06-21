@@ -12,9 +12,10 @@ import {
   WardRoomRecord,
   WardRoomType,
 } from './ward-bed-management.models';
+import { HospitalWard, WardFloor } from '../../../shared/models/hospital.model';
 import { WardDataService } from './services/ward-data.service';
 
-type ActiveModal = 'room' | 'bed' | 'status' | 'viewBed' | null;
+type ActiveModal = 'ward' | 'floor' | 'room' | 'bed' | 'status' | 'viewBed' | null;
 
 @Component({
   selector: 'app-ward-bed-management',
@@ -35,6 +36,8 @@ export class WardBedManagementComponent implements OnInit {
 
   wardOptions: string[] = [];
   galleryOptions: WardGalleryOption[] = [];
+  hospitalWards: HospitalWard[] = [];
+  wardFloors: WardFloor[] = [];
   readonly roomTypeOptions: Array<{ value: string; label: string }> = [
     { value: '', label: 'All Room Types' },
     { value: 'general', label: 'General Ward' },
@@ -67,6 +70,8 @@ export class WardBedManagementComponent implements OnInit {
   roomForm: FormGroup;
   bedForm: FormGroup;
   statusForm: FormGroup;
+  wardForm: FormGroup;
+  floorForm: FormGroup;
 
   constructor(
     private fb: FormBuilder,
@@ -75,25 +80,36 @@ export class WardBedManagementComponent implements OnInit {
     private wardData: WardDataService
   ) {
     this.roomForm = this.fb.group({
-      ward: ['Peads Ward', Validators.required],
-      gallery: ['gallery-a-male', Validators.required],
+      wardId: ['', Validators.required],
+      floorId: ['', Validators.required],
       roomName: ['', Validators.required],
       roomType: ['general', Validators.required],
       capacity: [1, [Validators.required, Validators.min(1)]],
       dailyCharge: [0, [Validators.required, Validators.min(0)]],
-      floor: [''],
       description: [''],
     });
 
     this.bedForm = this.fb.group({
-      ward: ['Peads Ward', Validators.required],
-      gallery: ['gallery-a-male', Validators.required],
+      wardId: ['', Validators.required],
+      floorId: ['', Validators.required],
       roomId: ['', Validators.required],
       bedNo: ['', Validators.required],
       bedType: ['standard', Validators.required],
       status: ['available', Validators.required],
       dailyCharge: [0, [Validators.required, Validators.min(0)]],
       notes: [''],
+    });
+
+    this.wardForm = this.fb.group({
+      name: ['', Validators.required],
+      code: [''],
+      description: [''],
+    });
+
+    this.floorForm = this.fb.group({
+      wardId: ['', Validators.required],
+      name: ['', Validators.required],
+      label: [''],
     });
 
     this.statusForm = this.fb.group({
@@ -119,15 +135,23 @@ export class WardBedManagementComponent implements OnInit {
     });
   }
 
-  /** Rooms filtered by Add/Edit Bed modal ward + gallery (not page toolbar filters). */
   get roomsForBedForm(): WardRoomRecord[] {
-    const ward = String(this.bedForm.get('ward')?.value || '');
-    const gallery = String(this.bedForm.get('gallery')?.value || '');
+    const wardId = String(this.bedForm.get('wardId')?.value || '');
+    const floorId = String(this.bedForm.get('floorId')?.value || '');
     return this.rooms.filter((room) => {
-      const matchesWard = !ward || room.wardName === ward;
-      const matchesGallery = !gallery || room.galleryId === gallery;
-      return matchesWard && matchesGallery;
+      const matchesWard = !wardId || room.wardId === wardId;
+      const matchesFloor = !floorId || room.galleryId === floorId;
+      return matchesWard && matchesFloor;
     });
+  }
+
+  get floorsForSelectedWard(): WardFloor[] {
+    const wardId = String(this.selectedWardId || '');
+    return this.wardFloors.filter((floor) => !wardId || floor.wardId === wardId);
+  }
+
+  get selectedWardId(): string {
+    return this.hospitalWards.find((ward) => ward.name === this.filters.ward)?._id || this.hospitalWards[0]?._id || '';
   }
 
   get selectedRoom(): WardRoomRecord | null {
@@ -165,13 +189,15 @@ export class WardBedManagementComponent implements OnInit {
     this.wardData.loadBedManagement(this.filters.ward).subscribe({
       next: (data) => {
         this.wardOptions = data.wardOptions;
+        this.hospitalWards = data.hospitalWards;
+        this.wardFloors = data.wardFloors;
         if (!this.filters.ward && this.wardOptions.length) {
           this.filters.ward = this.wardOptions[0];
         }
 
         this.rooms = data.rooms;
         this.beds = data.beds;
-        this.galleryOptions = this.buildGalleryOptions(this.rooms);
+        this.galleryOptions = data.floorOptions.length ? data.floorOptions : this.buildGalleryOptions(this.rooms);
         if (!this.filters.gallery && this.galleryOptions.length) {
           this.filters.gallery = this.galleryOptions[0].id;
         }
@@ -202,15 +228,71 @@ export class WardBedManagementComponent implements OnInit {
     this.selectedRoomId = roomId;
   }
 
+  openAddWard(): void {
+    this.wardForm.reset({ name: '', code: '', description: '' });
+    this.activeModal = 'ward';
+  }
+
+  saveWard(): void {
+    if (this.wardForm.invalid) {
+      this.wardForm.markAllAsTouched();
+      return;
+    }
+
+    const value = this.wardForm.getRawValue();
+    this.wardData.createHospitalWard({
+      name: value.name,
+      code: value.code || undefined,
+      description: value.description || undefined,
+    }).subscribe({
+      next: () => {
+        this.toastr.success('Ward created successfully.');
+        this.closeModal();
+        this.loadData();
+      },
+      error: (err) => this.toastr.error(err?.error?.message || 'Failed to create ward.'),
+    });
+  }
+
+  openAddFloor(): void {
+    this.floorForm.reset({
+      wardId: this.selectedWardId,
+      name: '',
+      label: '',
+    });
+    this.activeModal = 'floor';
+  }
+
+  saveFloor(): void {
+    if (this.floorForm.invalid) {
+      this.floorForm.markAllAsTouched();
+      return;
+    }
+
+    const value = this.floorForm.getRawValue();
+    this.wardData.createWardFloor(String(value.wardId), {
+      name: value.name,
+      label: value.label || undefined,
+    }).subscribe({
+      next: () => {
+        this.toastr.success('Floor created successfully.');
+        this.closeModal();
+        this.loadData();
+      },
+      error: (err) => this.toastr.error(err?.error?.message || 'Failed to create floor.'),
+    });
+  }
+
   openAddRoom(): void {
+    const wardId = this.selectedWardId;
+    const floorId = this.galleryOptions[0]?.id || '';
     this.roomModalMode = 'add';
     this.roomForm.reset({
-      ward: this.filters.ward,
-      gallery: this.filters.gallery,
+      wardId,
+      floorId,
       roomType: 'general',
       capacity: 1,
       dailyCharge: 2500,
-      floor: '2',
       description: '',
     });
     this.activeModal = 'room';
@@ -224,23 +306,24 @@ export class WardBedManagementComponent implements OnInit {
 
     this.roomModalMode = 'edit';
     this.roomForm.reset({
-      ward: room.wardName,
-      gallery: room.galleryId,
+      wardId: room.wardId,
+      floorId: room.galleryId,
       roomName: room.roomName,
       roomType: room.roomType,
       capacity: room.capacity,
       dailyCharge: room.dailyCharge,
-      floor: room.floor,
       description: room.description,
     });
     this.activeModal = 'room';
   }
 
   openAddBed(): void {
+    const wardId = this.selectedWardId;
+    const floorId = this.filters.gallery || this.galleryOptions[0]?.id || '';
     this.bedModalMode = 'add';
     this.bedForm.reset({
-      ward: this.filters.ward || this.wardOptions[0] || '',
-      gallery: this.filters.gallery || this.galleryOptions[0]?.id || '',
+      wardId,
+      floorId,
       roomId: this.selectedRoom?.id || '',
       bedNo: '',
       bedType: 'standard',
@@ -257,8 +340,8 @@ export class WardBedManagementComponent implements OnInit {
     this.selectedBed = bed;
     const room = this.rooms.find((item) => item.id === bed.roomId);
     this.bedForm.reset({
-      ward: room?.wardName || this.filters.ward,
-      gallery: room?.galleryId || this.filters.gallery,
+      wardId: room?.wardId || this.selectedWardId,
+      floorId: room?.galleryId || this.filters.gallery,
       roomId: bed.roomId,
       bedNo: bed.bedNo,
       bedType: bed.bedType,
@@ -272,6 +355,30 @@ export class WardBedManagementComponent implements OnInit {
 
   onBedFormPlacementChange(): void {
     this.syncBedFormRoomSelection();
+  }
+
+  onRoomFormWardChange(): void {
+    const floors = this.floorsForRoomForm();
+    this.roomForm.patchValue({ floorId: floors[0]?._id || '' });
+  }
+
+  onBedFormWardChange(): void {
+    const wardId = String(this.bedForm.get('wardId')?.value || '');
+    const floors = this.floorsForWardId(wardId);
+    this.bedForm.patchValue({ floorId: floors[0]?._id || '' });
+    this.syncBedFormRoomSelection();
+  }
+
+  floorsForWardId(wardId: string): WardFloor[] {
+    return this.wardFloors.filter((floor) => floor.wardId === wardId);
+  }
+
+  floorsForRoomForm(): WardFloor[] {
+    return this.floorsForWardId(String(this.roomForm.get('wardId')?.value || ''));
+  }
+
+  floorsForBedForm(): WardFloor[] {
+    return this.floorsForWardId(String(this.bedForm.get('wardId')?.value || ''));
   }
 
   private syncBedFormRoomSelection(): void {
@@ -318,7 +425,8 @@ export class WardBedManagementComponent implements OnInit {
     const payload = this.wardData.buildRoomPayload({
       roomName: value.roomName,
       roomType: value.roomType,
-      floor: value.floor,
+      wardId: value.wardId,
+      floorId: value.floorId,
       dailyCharge: Number(value.dailyCharge),
     });
 

@@ -336,6 +336,25 @@
   z-index: 1040;
 }
 
+.ward-empty-setup {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  color: #9a3412;
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+}
+
+.ward-empty-setup strong {
+  font-size: 14px;
+}
+
+.ward-empty-setup span {
+  font-size: 12px;
+}
+
 /* Simple Add Room / Add Bed modals */
 .ward-simple-modal {
   align-items: center;

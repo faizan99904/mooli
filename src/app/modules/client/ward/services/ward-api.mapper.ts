@@ -1,6 +1,7 @@
 import {
   Doctor,
   Encounter,
+  HospitalWard,
   LabOrder,
   Patient,
   PatientHistory,
@@ -8,8 +9,9 @@ import {
   Room,
   RoomAllotment,
   User,
+  WardFloor,
 } from '../../../../shared/models/hospital.model';
-import { WardBedRecord, WardBedStatus, WardRoomRecord, WardRoomType } from '../ward-bed-management.models';
+import { WardBedRecord, WardBedStatus, WardRoomRecord, WardRoomType, WardGalleryOption } from '../ward-bed-management.models';
 import {
   WardBed,
   WardDashboardFilters,
@@ -44,16 +46,30 @@ export const API_ROOM_TYPE_TO_UI: Record<Room['roomType'], WardRoomType> = {
 };
 
 export function wardNameFromRoom(room?: Room | null): string {
+  if (room?.ward?.name) {
+    return room.ward.name;
+  }
+
   if (!room) {
     return 'General Ward';
   }
+
   return ROOM_TYPE_WARD_LABELS[room.roomType] || 'General Ward';
 }
 
 export function galleryLabelFromRoom(room?: Room | null): string {
+  if (room?.floorRecord?.label) {
+    return room.floorRecord.label;
+  }
+
+  if (room?.floorRecord?.name) {
+    return room.floorRecord.name;
+  }
+
   if (!room?.floor) {
     return 'Main Wing';
   }
+
   return `Floor ${room.floor}`;
 }
 
@@ -195,9 +211,9 @@ export function mapRoomToWardRoom(room: Room, allotment?: RoomAllotment | null):
 
   return {
     id: room._id,
-    wardId: room.roomType,
+    wardId: room.wardId || room.ward?._id || room.roomType,
     wardName: wardNameFromRoom(room),
-    galleryId: `floor-${room.floor || 'main'}`,
+    galleryId: room.floorId || room.floorRecord?._id || `floor-${room.floor || 'main'}`,
     galleryName: galleryLabelFromRoom(room),
     roomName: room.roomNo,
     roomType: API_ROOM_TYPE_TO_UI[room.roomType] || 'general',
@@ -302,6 +318,8 @@ export function buildDashboardKpis(rooms: Room[], allotments: RoomAllotment[]): 
 export function wardRoomPayloadFromForm(value: {
   roomName: string;
   roomType: WardRoomType;
+  wardId?: string;
+  floorId?: string;
   floor?: string;
   dailyCharge: number;
   status?: Room['status'];
@@ -309,10 +327,34 @@ export function wardRoomPayloadFromForm(value: {
   return {
     roomNo: value.roomName,
     roomType: UI_ROOM_TYPE_TO_API[value.roomType] || 'general',
+    wardId: value.wardId || undefined,
+    floorId: value.floorId || undefined,
     floor: value.floor || undefined,
     chargesPerDay: Number(value.dailyCharge) || 0,
     status: value.status || 'available',
   };
+}
+
+export function getWardOptionsFromCatalog(wards: HospitalWard[]): string[] {
+  return wards.map((ward) => ward.name).sort((a, b) => a.localeCompare(b));
+}
+
+export function getWardOptionsFromRooms(rooms: Room[], wards: HospitalWard[] = []): string[] {
+  const labels = new Set<string>([
+    ...wards.map((ward) => ward.name),
+    ...rooms.map((room) => wardNameFromRoom(room)),
+  ]);
+  return Array.from(labels).filter(Boolean).sort((a, b) => a.localeCompare(b));
+}
+
+export function buildFloorOptions(floors: WardFloor[], wardId = ''): WardGalleryOption[] {
+  return floors
+    .filter((floor) => !wardId || floor.wardId === wardId)
+    .map((floor) => ({
+      id: floor._id,
+      label: floor.label || floor.name,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 export function mapAdmissionRows(allotments: RoomAllotment[], doctors: Doctor[] = []): WardModuleRow[] {
@@ -638,11 +680,6 @@ export function mapWardApiBedToRecord(
     dailyCharge: Number(bed['dailyCharge'] || 0),
     notes: String(bed['notes'] || ''),
   };
-}
-
-export function getWardOptionsFromRooms(rooms: Room[]): string[] {
-  const labels = new Set(rooms.map((room) => wardNameFromRoom(room)));
-  return Array.from(labels).sort();
 }
 
 export function matchesWardFilter(room: Room | null | undefined, wardFilter: string): boolean {

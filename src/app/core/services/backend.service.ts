@@ -43,6 +43,8 @@ import {
   LabDashboardStats,
   LabComparisonRow,
   LabSettingsResponse,
+  HospitalWard,
+  WardFloor,
   HeldSale,
   LedgerItem,
   LedgerPayment,
@@ -475,8 +477,8 @@ export class BackendService {
     return this.post<{ seeded: number }>(`${CONFIG.laboratory}/tests/seed-defaults`, {});
   }
 
-  getLabDashboardStats(): Observable<LabDashboardStats> {
-    return this.get<LabDashboardStats>(`${CONFIG.laboratory}/dashboard/stats`).pipe(
+  getLabDashboardStats(params?: Record<string, unknown>): Observable<LabDashboardStats> {
+    return this.get<LabDashboardStats>(`${CONFIG.laboratory}/dashboard/stats`, params).pipe(
       map((response) => this.unwrapData(response))
     );
   }
@@ -822,6 +824,46 @@ export class BackendService {
 
   deleteRoom(id: string): Observable<ApiResponse<Room>> {
     return this.delete<Room>(`${CONFIG.rooms}/${id}`);
+  }
+
+  getHospitalWards(params?: Record<string, unknown>): Observable<ListResult<HospitalWard>> {
+    return this.get<PaginatedResponse<HospitalWard>>(CONFIG.hospitalWards, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createHospitalWard(payload: Record<string, unknown>): Observable<ApiResponse<HospitalWard>> {
+    return this.post<HospitalWard>(CONFIG.hospitalWards, payload);
+  }
+
+  updateHospitalWard(id: string, payload: Record<string, unknown>): Observable<ApiResponse<HospitalWard>> {
+    return this.patch<HospitalWard>(`${CONFIG.hospitalWards}/${id}`, payload);
+  }
+
+  deleteHospitalWard(id: string): Observable<ApiResponse<HospitalWard>> {
+    return this.delete<HospitalWard>(`${CONFIG.hospitalWards}/${id}`);
+  }
+
+  getWardFloors(wardId: string, params?: Record<string, unknown>): Observable<ListResult<WardFloor>> {
+    return this.get<PaginatedResponse<WardFloor>>(`${CONFIG.hospitalWards}/${wardId}/floors`, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createWardFloor(wardId: string, payload: Record<string, unknown>): Observable<ApiResponse<WardFloor>> {
+    return this.post<WardFloor>(`${CONFIG.hospitalWards}/${wardId}/floors`, payload);
+  }
+
+  updateWardFloor(
+    wardId: string,
+    floorId: string,
+    payload: Record<string, unknown>
+  ): Observable<ApiResponse<WardFloor>> {
+    return this.patch<WardFloor>(`${CONFIG.hospitalWards}/${wardId}/floors/${floorId}`, payload);
+  }
+
+  deleteWardFloor(wardId: string, floorId: string): Observable<ApiResponse<WardFloor>> {
+    return this.delete<WardFloor>(`${CONFIG.hospitalWards}/${wardId}/floors/${floorId}`);
   }
 
   getRoomAllotments(params?: Record<string, unknown>): Observable<ListResult<RoomAllotment>> {

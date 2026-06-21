@@ -528,6 +528,8 @@ export interface LabDashboardStats {
   todayCollected?: number;
   totalCollected?: number;
   outstandingAmount?: number;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface LabComparisonRow {
@@ -548,9 +550,32 @@ export interface LabComparisonRow {
   }>;
 }
 
+export interface HospitalWard {
+  _id: string;
+  hospitalId: string;
+  name: string;
+  code?: string;
+  description?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface WardFloor {
+  _id: string;
+  hospitalId: string;
+  wardId: string;
+  name: string;
+  label?: string;
+  sortOrder?: number;
+  status: 'active' | 'inactive';
+}
+
 export interface Room {
   _id: string;
   hospitalId: string;
+  wardId?: string | null;
+  floorId?: string | null;
+  ward?: Pick<HospitalWard, '_id' | 'name' | 'code'> | null;
+  floorRecord?: Pick<WardFloor, '_id' | 'wardId' | 'name' | 'label'> | null;
   roomNo: string;
   roomType: 'general' | 'private' | 'icu' | 'emergency' | 'operation_theater';
   floor?: string | null;

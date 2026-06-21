@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { forkJoin, map, Observable, of } from 'rxjs';
+import { forkJoin, map, Observable, of, switchMap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { BackendService } from '../../../../core/services/backend.service';
 import {
@@ -11,8 +11,10 @@ import {
   Prescription,
   Room,
   RoomAllotment,
+  HospitalWard,
+  WardFloor,
 } from '../../../../shared/models/hospital.model';
-import { WardBedRecord, WardRoomRecord } from '../ward-bed-management.models';
+import { WardBedRecord, WardGalleryOption, WardRoomRecord } from '../ward-bed-management.models';
 import {
   MonitoringCard,
   NursingSummaryRow,
@@ -23,6 +25,7 @@ import {
 import { WardModuleKey, WardModuleReportCard, WardModuleRow } from '../ward-module.models';
 import { WardPatient } from '../ward-patient-list.models';
 import {
+  buildFloorOptions,
   buildDashboardKpis,
   buildDashboardSections,
   getWardOptionsFromRooms,
@@ -46,6 +49,9 @@ export interface WardBedManagementData {
   rooms: WardRoomRecord[];
   beds: WardBedRecord[];
   wardOptions: string[];
+  hospitalWards: HospitalWard[];
+  wardFloors: WardFloor[];
+  floorOptions: WardGalleryOption[];
 }
 
 export interface WardDashboardData {
@@ -156,12 +162,25 @@ export class WardDataService {
   }
 
   loadBedManagement(wardFilter = ''): Observable<WardBedManagementData> {
-    return forkJoin({
-      rooms: this.backend.getRooms({ limit: 100 }),
-      allotments: this.backend.getRoomAllotments({ status: 'admitted', limit: 100 }),
-      wardBeds: this.backend.getWardBeds({ limit: 100 }),
-    }).pipe(
-      map(({ rooms, allotments, wardBeds }) => {
+    return this.backend.getHospitalWards({ limit: 100, status: 'active' }).pipe(
+      switchMap((hospitalWards) => {
+        const wards = hospitalWards.items;
+        const activeWard = wards.find((ward) => ward.name === wardFilter) || wards[0];
+        const floors$ = activeWard
+          ? this.backend.getWardFloors(activeWard._id, { limit: 100, status: 'active' })
+          : of({ items: [] as WardFloor[], pagination: { page: 1, limit: 100, total: 0, totalPages: 0 } });
+
+        return forkJoin({
+          wards: of(wards),
+          floors: floors$,
+          rooms: this.backend.getRooms({ limit: 100 }),
+          allotments: this.backend.getRoomAllotments({ status: 'admitted', limit: 100 }),
+          wardBeds: this.backend.getWardBeds({ limit: 100 }),
+        });
+      }),
+      map(({ wards, floors, rooms, allotments, wardBeds }) => {
+        const wardFloors = floors.items;
+        const activeWard = wards.find((ward) => ward.name === wardFilter) || wards[0];
         const filteredRooms = rooms.items.filter((room) => matchesWardFilter(room, wardFilter));
         const wardRooms = filteredRooms.map((room) => {
           const allotment = allotments.items.find((item) => item.roomId === room._id && item.status === 'admitted');
@@ -190,7 +209,10 @@ export class WardDataService {
         return {
           rooms: wardRooms,
           beds: fallbackBeds,
-          wardOptions: getWardOptionsFromRooms(rooms.items),
+          wardOptions: getWardOptionsFromRooms(rooms.items, wards),
+          hospitalWards: wards,
+          wardFloors,
+          floorOptions: buildFloorOptions(wardFloors, activeWard?._id || ''),
         };
       }),
       catchError(() =>
@@ -198,9 +220,24 @@ export class WardDataService {
           rooms: [],
           beds: [],
           wardOptions: [],
+          hospitalWards: [],
+          wardFloors: [],
+          floorOptions: [],
         })
       )
     );
+  }
+
+  createHospitalWard(payload: Record<string, unknown>) {
+    return this.backend.createHospitalWard(payload);
+  }
+
+  createWardFloor(wardId: string, payload: Record<string, unknown>) {
+    return this.backend.createWardFloor(wardId, payload);
+  }
+
+  loadWardFloors(wardId: string) {
+    return this.backend.getWardFloors(wardId, { limit: 100, status: 'active' });
   }
 
   loadDashboard(wardFilter = ''): Observable<WardDashboardData> {
@@ -447,6 +484,8 @@ export class WardDataService {
   buildRoomPayload(value: {
     roomName: string;
     roomType: WardRoomRecord['roomType'];
+    wardId?: string;
+    floorId?: string;
     floor?: string;
     dailyCharge: number;
     status?: Room['status'];

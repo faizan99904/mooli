@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -17,7 +17,7 @@ type LabTab = 'all' | LabOrderStatus;
   templateUrl: './lab-dashboard.component.html',
   styleUrl: './lab-dashboard.component.scss',
 })
-export class LabDashboardComponent implements OnInit {
+export class LabDashboardComponent implements OnInit, OnDestroy {
   orders: LabOrder[] = [];
   stats: LabDashboardStats = {
     pendingOrders: 0,
@@ -31,12 +31,15 @@ export class LabDashboardComponent implements OnInit {
   };
   loading = false;
   search = '';
+  dateFrom = this.todayValue();
+  dateTo = this.todayValue();
   activeTab: LabTab = 'all';
   page = 1;
   limit = 10;
   totalPages = 0;
   totalOrders = 0;
   lastLoadError = '';
+  private searchDebounceId: ReturnType<typeof setTimeout> | null = null;
 
   readonly tabs: Array<{ key: LabTab; label: string }> = [
     { key: 'all', label: 'All' },
@@ -58,9 +61,16 @@ export class LabDashboardComponent implements OnInit {
     this.loadDashboard();
   }
 
+  ngOnDestroy(): void {
+    if (this.searchDebounceId) {
+      clearTimeout(this.searchDebounceId);
+    }
+  }
+
   loadDashboard(): void {
     this.loading = true;
-    this.backend.getLabDashboardStats().subscribe({
+    const dateParams = this.dateFilterParams();
+    this.backend.getLabDashboardStats(dateParams).subscribe({
       next: (stats) => {
         this.stats = stats;
       },
@@ -83,12 +93,7 @@ export class LabDashboardComponent implements OnInit {
   loadOrders(): void {
     this.loading = true;
     this.lastLoadError = '';
-    const params: Record<string, unknown> = {
-      page: this.page,
-      limit: this.limit,
-      search: this.search.trim() || undefined,
-      status: this.activeTab === 'all' ? undefined : this.activeTab,
-    };
+    const params = this.orderFilterParams();
 
     this.backend
       .getLabOrders(params)
@@ -115,9 +120,45 @@ export class LabDashboardComponent implements OnInit {
     this.loadOrders();
   }
 
+  onSearchInput(): void {
+    if (this.searchDebounceId) {
+      clearTimeout(this.searchDebounceId);
+    }
+
+    this.searchDebounceId = setTimeout(() => {
+      this.applySearch();
+    }, 300);
+  }
+
   applySearch(): void {
     this.page = 1;
+
+    if (this.search.trim()) {
+      this.activeTab = 'all';
+    }
+
     this.loadOrders();
+  }
+
+  applyDateFilter(): void {
+    if (this.dateFrom && this.dateTo && this.dateFrom > this.dateTo) {
+      this.toastr.error('Start date cannot be after end date.');
+      return;
+    }
+
+    this.page = 1;
+    this.loadDashboard();
+  }
+
+  resetDateFilter(): void {
+    this.dateFrom = this.todayValue();
+    this.dateTo = this.todayValue();
+    this.page = 1;
+    this.loadDashboard();
+  }
+
+  isTodayFilter(): boolean {
+    return this.dateFrom === this.todayValue() && this.dateTo === this.todayValue();
   }
 
   changePage(nextPage: number): void {
@@ -226,11 +267,27 @@ export class LabDashboardComponent implements OnInit {
     const filters = [
       this.activeTab !== 'all' ? `status "${this.statusLabel(this.activeTab)}"` : '',
       this.search.trim() ? `search "${this.search.trim()}"` : '',
+      !this.search.trim() && (this.dateFrom || this.dateTo) ? `dates ${this.dateFrom} to ${this.dateTo}` : '',
     ].filter(Boolean);
 
     return filters.length
       ? `No lab orders found for ${filters.join(' and ')}.`
       : `No lab orders found for ${this.currentHospitalLabel()}.`;
+  }
+
+  private orderFilterParams(): Record<string, unknown> {
+    const params: Record<string, unknown> = {
+      page: this.page,
+      limit: this.limit,
+      search: this.search.trim() || undefined,
+      status: this.activeTab === 'all' ? undefined : this.activeTab,
+    };
+
+    if (!this.search.trim()) {
+      Object.assign(params, this.dateFilterParams());
+    }
+
+    return params;
   }
 
   private currentUser(): User | null {
@@ -239,5 +296,24 @@ export class LabDashboardComponent implements OnInit {
     } catch {
       return null;
     }
+  }
+
+  private dateFilterParams(): Record<string, string> {
+    const dateFrom = String(this.dateFrom || this.todayValue()).trim() || this.todayValue();
+    const dateTo = String(this.dateTo || dateFrom).trim() || dateFrom;
+
+    return {
+      dateFrom,
+      dateTo,
+    };
+  }
+
+  private todayValue(): string {
+    const today = new Date();
+    return [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
   }
 }
