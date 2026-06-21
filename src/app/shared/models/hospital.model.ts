@@ -50,6 +50,8 @@ export interface LaboratoryPrintSettings {
   address?: string | null;
   city?: string | null;
   tagline?: string | null;
+  reportNameColor?: string | null;
+  reportBorderColor?: string | null;
 }
 
 export interface LabSettingsResponse {

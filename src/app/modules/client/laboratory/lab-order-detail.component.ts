@@ -16,8 +16,13 @@ import {
   LabTestCatalog,
   User,
 } from '../../../shared/models/hospital.model';
-import { buildLabOrderReportHtml } from './lab-order-report.builder';
+import { buildLabOrderReportHtml, openLabReportPrintWindow } from './lab-order-report.builder';
 import { isLabOrderReportReady } from './lab-print-details';
+import {
+  buildLabComparisonColumns,
+  findComparisonHistoryPoint,
+  LabComparisonColumn,
+} from './lab-comparison.utils';
 import { printLabSampleLabels } from './lab-sample-label.builder';
 import {
   activeLabSamples,
@@ -423,23 +428,16 @@ export class LabOrderDetailComponent implements OnInit {
     return this.comparison.filter((row) => row.testName.toLowerCase() === item.testName.toLowerCase());
   }
 
-  comparisonDates(): string[] {
-    const dates = new Set<string>();
-    this.comparisonForActiveTest().forEach((row) => {
-      row.history.forEach((point) => {
-        if (point.date) {
-          dates.add(point.date);
-        }
-      });
-    });
-
-    return Array.from(dates)
-      .sort((left, right) => new Date(left).getTime() - new Date(right).getTime())
-      .slice(-5);
+  comparisonColumns(): LabComparisonColumn[] {
+    return buildLabComparisonColumns(this.comparisonForActiveTest(), this.order?._id, 4);
   }
 
-  comparisonPoint(row: LabComparisonRow, date: string) {
-    return row.history.find((point) => point.date === date);
+  comparisonPoint(row: LabComparisonRow, column: LabComparisonColumn) {
+    return findComparisonHistoryPoint(row, column.orderId);
+  }
+
+  isReportReady(): boolean {
+    return isLabOrderReportReady(this.order);
   }
 
   latestTrend(row: LabComparisonRow): string | undefined {
@@ -541,35 +539,11 @@ export class LabOrderDetailComponent implements OnInit {
     }
 
     if (!isLabOrderReportReady(this.order)) {
-      this.toastr.info('Report will print with hospital details until all tests are verified.');
-    }
-
-    const iframe = document.createElement('iframe');
-    iframe.setAttribute('title', 'Lab report print');
-    iframe.setAttribute('aria-hidden', 'true');
-    Object.assign(iframe.style, {
-      border: '0',
-      height: '0',
-      left: '-10000px',
-      opacity: '0',
-      pointerEvents: 'none',
-      position: 'fixed',
-      top: '0',
-      width: '100vw',
-    });
-
-    document.body.appendChild(iframe);
-
-    const printWindow = iframe.contentWindow;
-    const printDocument = iframe.contentDocument || printWindow?.document;
-    if (!printWindow || !printDocument) {
-      iframe.remove();
-      this.toastr.error('Unable to open print preview.');
+      this.toastr.error('Complete and verify all tests before printing the PDF report.');
       return;
     }
 
-    printDocument.open();
-    printDocument.write(
+    const opened = openLabReportPrintWindow(
       buildLabOrderReportHtml({
         order: this.order,
         hospital: this.hospital,
@@ -577,30 +551,10 @@ export class LabOrderDetailComponent implements OnInit {
         reportGeneratedBy: this.currentUser(),
       })
     );
-    printDocument.close();
 
-    let handled = false;
-    const finish = () => {
-      if (handled) {
-        return;
-      }
-
-      handled = true;
-      iframe.remove();
-    };
-
-    printWindow.onafterprint = finish;
-
-    window.setTimeout(() => {
-      try {
-        printWindow.focus();
-        printWindow.print();
-      } catch {
-        finish();
-      }
-    }, 250);
-
-    window.setTimeout(finish, 30000);
+    if (!opened) {
+      this.toastr.error('Unable to open print preview.');
+    }
   }
 
   private currentUser(): User | null {

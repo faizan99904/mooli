@@ -339,6 +339,48 @@
   overflow: hidden;
 }
 
+.preview-color-fields {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.preview-color-field {
+  display: grid;
+  gap: 6px;
+}
+
+.preview-color-field span {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.preview-color-inputs {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+
+.preview-color-inputs input[type='color'] {
+  background: #fff;
+  border: 1px solid var(--lab-line);
+  border-radius: 6px;
+  cursor: pointer;
+  height: 34px;
+  padding: 2px;
+  width: 42px;
+}
+
+.preview-color-inputs input[type='text'] {
+  border: 1px solid var(--lab-line);
+  border-radius: 6px;
+  font-size: 12px;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
 .print-preview-header {
   background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
   border-bottom: 3px solid #c92a2a;
@@ -348,7 +390,6 @@
 }
 
 .print-preview-header strong {
-  color: #c92a2a;
   font-size: 15px;
   letter-spacing: 0.04em;
   text-transform: uppercase;

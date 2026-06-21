@@ -132,9 +132,27 @@
             <h2>Report Header Preview</h2>
             <p>Sample of verified report print header.</p>
           </div>
+
+          <div class="preview-color-fields">
+            <label class="preview-color-field">
+              <span>Lab Name Color</span>
+              <div class="preview-color-inputs">
+                <input type="color" [(ngModel)]="form.reportNameColor" />
+                <input type="text" [(ngModel)]="form.reportNameColor" maxlength="7" placeholder="#c92a2a" />
+              </div>
+            </label>
+            <label class="preview-color-field">
+              <span>Header Border Color</span>
+              <div class="preview-color-inputs">
+                <input type="color" [(ngModel)]="form.reportBorderColor" />
+                <input type="text" [(ngModel)]="form.reportBorderColor" maxlength="7" placeholder="#c92a2a" />
+              </div>
+            </label>
+          </div>
+
           <div class="print-preview">
-            <div class="print-preview-header">
-              <strong>{{ reportPreviewName() }}</strong>
+            <div class="print-preview-header" [style.border-bottom-color]="previewBorderColor()">
+              <strong [style.color]="previewNameColor()">{{ reportPreviewName() }}</strong>
               <small>{{ form.tagline || 'Pathology & Diagnostic Laboratory' }}</small>
             </div>
             <div class="print-preview-body">

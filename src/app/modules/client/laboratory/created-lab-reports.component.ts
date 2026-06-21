@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -7,18 +7,13 @@ import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
 import { Hospital, LabComparisonRow, LabOrder, User } from '../../../shared/models/hospital.model';
-import { buildLabOrderReportHtml } from './lab-order-report.builder';
+import { buildLabOrderReportHtml, openLabReportPrintWindow } from './lab-order-report.builder';
 import { isLabOrderReportReady } from './lab-print-details';
 
 type LabReportDateGroup = {
   dateKey: string;
   dateLabel: string;
   items: LabOrder[];
-};
-
-type UploadedReportLink = {
-  label: string;
-  url: string;
 };
 
 @Component({
@@ -28,8 +23,6 @@ type UploadedReportLink = {
   styleUrl: './created-lab-reports.component.scss',
 })
 export class CreatedLabReportsComponent implements OnInit, OnDestroy {
-  @ViewChild('reportPreviewFrame') reportPreviewFrame?: ElementRef<HTMLIFrameElement>;
-
   orders: LabOrder[] = [];
   reportGroups: LabReportDateGroup[] = [];
   hospital: Hospital | null = null;
@@ -47,9 +40,9 @@ export class CreatedLabReportsComponent implements OnInit, OnDestroy {
   viewComparison: LabComparisonRow[] = [];
   viewReportHtml = '';
   viewReportSrc: SafeResourceUrl | null = null;
-  uploadedReportLinks: UploadedReportLink[] = [];
   private listRequestId = 0;
   private viewRequestId = 0;
+  private viewReportBlobUrl: string | null = null;
   private searchDebounceId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -67,6 +60,8 @@ export class CreatedLabReportsComponent implements OnInit, OnDestroy {
     if (this.searchDebounceId) {
       clearTimeout(this.searchDebounceId);
     }
+
+    this.revokeViewReportBlobUrl();
   }
 
   loadReports(): void {
@@ -172,7 +167,6 @@ export class CreatedLabReportsComponent implements OnInit, OnDestroy {
     this.viewComparison = [];
     this.viewReportHtml = '';
     this.viewReportSrc = null;
-    this.uploadedReportLinks = this.collectUploadedReportLinks(order);
 
     this.backend
       .getLabOrder(order._id)
@@ -189,8 +183,14 @@ export class CreatedLabReportsComponent implements OnInit, OnDestroy {
             return;
           }
 
+          if (!isLabOrderReportReady(freshOrder)) {
+            this.viewModalOpen = false;
+            this.viewOrder = null;
+            this.toastr.error('Complete and verify all tests before opening the PDF report.');
+            return;
+          }
+
           this.viewOrder = freshOrder;
-          this.uploadedReportLinks = this.collectUploadedReportLinks(freshOrder);
           this.loadComparisonAndPreview(freshOrder, requestId);
         },
         error: (err) => {
@@ -212,22 +212,17 @@ export class CreatedLabReportsComponent implements OnInit, OnDestroy {
     this.viewComparison = [];
     this.viewReportHtml = '';
     this.viewReportSrc = null;
-    this.uploadedReportLinks = [];
+    this.revokeViewReportBlobUrl();
   }
 
   printViewReport(): void {
-    const frame = this.reportPreviewFrame?.nativeElement;
-    const printWindow = frame?.contentWindow;
-
-    if (!printWindow) {
+    if (!this.viewReportHtml.trim()) {
       this.toastr.error('Report preview is not ready yet.');
       return;
     }
 
-    try {
-      printWindow.focus();
-      printWindow.print();
-    } catch {
+    const opened = openLabReportPrintWindow(this.viewReportHtml);
+    if (!opened) {
       this.toastr.error('Unable to open report print view.');
     }
   }
@@ -310,29 +305,19 @@ export class CreatedLabReportsComponent implements OnInit, OnDestroy {
       comparison,
       reportGeneratedBy: this.currentUser(),
     });
-    this.viewReportSrc = this.sanitizer.bypassSecurityTrustResourceUrl(
-      `data:text/html;charset=utf-8,${encodeURIComponent(this.viewReportHtml)}`
-    );
+    this.revokeViewReportBlobUrl();
+    const blob = new Blob([this.viewReportHtml], { type: 'text/html;charset=utf-8' });
+    this.viewReportBlobUrl = URL.createObjectURL(blob);
+    this.viewReportSrc = this.sanitizer.bypassSecurityTrustResourceUrl(this.viewReportBlobUrl);
   }
 
-  private collectUploadedReportLinks(order: LabOrder): UploadedReportLink[] {
-    const links: UploadedReportLink[] = [];
+  private revokeViewReportBlobUrl(): void {
+    if (!this.viewReportBlobUrl) {
+      return;
+    }
 
-    (order.items || []).forEach((item) => {
-      (item.reportFiles || []).forEach((file) => {
-        const url = String(file.fileUrl || '').trim();
-        if (!url) {
-          return;
-        }
-
-        links.push({
-          label: file.reportType || item.testName || 'Report',
-          url,
-        });
-      });
-    });
-
-    return links;
+    URL.revokeObjectURL(this.viewReportBlobUrl);
+    this.viewReportBlobUrl = null;
   }
 
   private reportFilterParams(): Record<string, unknown> {

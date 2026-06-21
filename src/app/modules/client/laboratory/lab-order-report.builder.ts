@@ -6,7 +6,8 @@ import {
   LabResultParameter,
   User,
 } from '../../../shared/models/hospital.model';
-import { resolveLabPrintDetails } from './lab-print-details';
+import { buildPreviousComparisonOrders } from './lab-comparison.utils';
+import { getLabReportItems, resolveLabPrintDetails, resolveLabReportThemeColors } from './lab-print-details';
 
 export interface LabReportRow {
   itemId: string;
@@ -38,6 +39,7 @@ interface LabReportColumn {
   label: string;
   subLabel: string;
   current: boolean;
+  orderId?: string;
 }
 
 interface LabCellValue {
@@ -71,13 +73,14 @@ export function buildLabOrderReportHtml(context: LabReportContext): string {
   const columns = buildReportColumns(context, reportingRaw);
   const totalColumnCount = 3 + columns.length;
   const reportCreatedBy = reportCreatorName(context);
+  const theme = resolveLabReportThemeColors(context.hospital);
 
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>${escapeHtml(context.order.orderNo)} - Lab Report</title>
-    <style>${reportStyles()}</style>
+    <style>${reportStyles(theme)}</style>
   </head>
   <body>
     <div class="report">
@@ -178,12 +181,10 @@ export function buildLabOrderReportHtml(context: LabReportContext): string {
 }
 
 function collectReportSections(order: LabOrder): LabReportSection[] {
-  return (order.items || [])
-    .filter((item) => item.status !== 'cancelled')
-    .map((item) => ({
-      item,
-      rows: collectItemRows(item),
-    }));
+  return getLabReportItems(order).map((item) => ({
+    item,
+    rows: collectItemRows(item),
+  }));
 }
 
 function collectItemRows(item: LabOrderItem): LabReportRow[] {
@@ -202,10 +203,11 @@ function collectItemRows(item: LabOrderItem): LabReportRow[] {
 }
 
 function buildReportColumns(context: LabReportContext, reportingRaw?: string): LabReportColumn[] {
-  const historyDates = uniqueHistoryDates(context.comparison)
-    .filter((date) => !sameCalendarDate(date, reportingRaw))
-    .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())
-    .slice(0, 4);
+  const previousOrders = buildPreviousComparisonOrders(
+    context.comparison,
+    String(context.order._id || ''),
+    4
+  );
 
   return [
     {
@@ -214,35 +216,14 @@ function buildReportColumns(context: LabReportContext, reportingRaw?: string): L
       subLabel: context.order.orderNo,
       current: true,
     },
-    ...historyDates.map((date) => ({
-      key: date,
-      label: formatColumnDate(date),
-      subLabel: historyOrderNo(context.comparison, date),
+    ...previousOrders.map((entry) => ({
+      key: entry.orderId,
+      orderId: entry.orderId,
+      label: formatColumnDate(entry.date),
+      subLabel: entry.orderNo || 'Previous',
       current: false,
     })),
   ];
-}
-
-function uniqueHistoryDates(comparison: LabComparisonRow[]): string[] {
-  const dates = new Set<string>();
-  comparison.forEach((row) => {
-    row.history.forEach((point) => {
-      if (point.date) {
-        dates.add(point.date);
-      }
-    });
-  });
-  return Array.from(dates);
-}
-
-function historyOrderNo(comparison: LabComparisonRow[], date: string): string {
-  for (const row of comparison) {
-    const point = row.history.find((item) => item.date === date);
-    if (point?.orderNo) {
-      return point.orderNo;
-    }
-  }
-  return 'Previous';
 }
 
 function sectionReportHtml(
@@ -322,7 +303,9 @@ function resultCellHtml(
   column: LabReportColumn,
   comparison: LabComparisonRow[]
 ): string {
-  const cell = column.current ? { value: row.resultValue, statusKey: row.statusKey } : historyCell(row, column.key, comparison);
+  const cell = column.current
+    ? { value: row.resultValue, statusKey: row.statusKey }
+    : historyCell(row, column, comparison);
   const value = cell.value === NA ? EMPTY_CELL : cell.value;
   const statusClass = cell.statusKey ? ` status-${escapeAttribute(cell.statusKey)}` : '';
   return `<td class="result-value${statusClass}">${escapeHtml(value)}</td>`;
@@ -330,11 +313,13 @@ function resultCellHtml(
 
 function historyCell(
   row: LabReportRow,
-  date: string,
+  column: LabReportColumn,
   comparison: LabComparisonRow[]
 ): LabCellValue {
   const match = matchingComparisonRow(row, comparison);
-  const point = match?.history.find((item) => item.date === date);
+  const point = match?.history.find(
+    (item) => String(item.orderId || '') === String(column.orderId || '')
+  );
 
   return {
     value: displayValue(point?.resultValue),
@@ -659,20 +644,6 @@ function latestDate(values: Array<string | undefined>): string | undefined {
   return new Date(Math.max(...timestamps)).toISOString();
 }
 
-function sameCalendarDate(left?: string | null, right?: string | null): boolean {
-  if (!left || !right) {
-    return false;
-  }
-
-  const leftDate = new Date(left);
-  const rightDate = new Date(right);
-  if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) {
-    return false;
-  }
-
-  return leftDate.toDateString() === rightDate.toDateString();
-}
-
 function initials(value: string): string {
   const parts = value
     .split(/\s+/)
@@ -705,7 +676,10 @@ function escapeAttribute(value: string | number | null | undefined): string {
   return escapeHtml(value).replace(/'/g, '&#039;');
 }
 
-function reportStyles(): string {
+function reportStyles(theme: { nameColor: string; borderColor: string }): string {
+  const nameColor = escapeAttribute(theme.nameColor);
+  const borderColor = escapeAttribute(theme.borderColor);
+
   return `
     @page {
       margin: 8mm 8mm 9mm;
@@ -740,8 +714,8 @@ function reportStyles(): string {
 
     .report-header {
       align-items: flex-start;
-      border-top: 4px solid #1f2a44;
-      border-bottom: 1px solid #c8d0dc;
+      border-top: 4px solid ${borderColor};
+      border-bottom: 3px solid ${borderColor};
       display: flex;
       gap: 12px;
       justify-content: space-between;
@@ -757,7 +731,7 @@ function reportStyles(): string {
 
     .brand-mark {
       align-items: center;
-      border: 1px solid #1f2a44;
+      border: 1px solid ${borderColor};
       border-radius: 5px;
       display: flex;
       height: 44px;
@@ -774,7 +748,7 @@ function reportStyles(): string {
     }
 
     .brand-mark-fallback {
-      background: #1f2a44;
+      background: ${borderColor};
       color: #fff;
       font-size: 15px;
       font-weight: 800;
@@ -782,7 +756,7 @@ function reportStyles(): string {
     }
 
     .brand-copy h1 {
-      color: #16213a;
+      color: ${nameColor};
       font-size: 20px;
       font-weight: 800;
       letter-spacing: 0.03em;
@@ -826,7 +800,7 @@ function reportStyles(): string {
       align-items: center;
       background: #f4f7fb;
       border: 1px solid #d7dee8;
-      border-left: 4px solid #1f2a44;
+      border-left: 4px solid ${borderColor};
       display: flex;
       justify-content: space-between;
       margin-top: 6px;
@@ -834,7 +808,7 @@ function reportStyles(): string {
     }
 
     .report-title-bar span {
-      color: #1f2a44;
+      color: ${borderColor};
       font-size: 9px;
       font-weight: 800;
       letter-spacing: 0.08em;
@@ -941,9 +915,9 @@ function reportStyles(): string {
     }
 
     .result-section h2 {
-      background: #f8fafc;
-      border-left: 4px solid #1f2a44;
-      color: #1f2a44;
+      background: color-mix(in srgb, ${borderColor} 8%, #ffffff);
+      border-left: 4px solid ${borderColor};
+      color: ${borderColor};
       font-size: 9.4px;
       font-weight: 800;
       letter-spacing: 0.03em;
@@ -954,7 +928,7 @@ function reportStyles(): string {
     }
 
     .report-table {
-      border: 1px solid #c8d0dc;
+      border: 1px solid ${borderColor};
       border-collapse: collapse;
       table-layout: fixed;
       width: 100%;
@@ -962,8 +936,8 @@ function reportStyles(): string {
 
     .report-table th,
     .report-table td {
-      border-bottom: 1px solid #d7dee8;
-      border-right: 1px solid #edf1f6;
+      border-bottom: 1px solid color-mix(in srgb, ${borderColor} 22%, #d7dee8);
+      border-right: 1px solid color-mix(in srgb, ${borderColor} 12%, #edf1f6);
       color: #303030;
       font-size: 7.5px;
       line-height: 1.2;
@@ -979,12 +953,12 @@ function reportStyles(): string {
     }
 
     .report-table tbody tr:nth-child(even):not(.subcategory-row) {
-      background: #fbfdff;
+      background: color-mix(in srgb, ${borderColor} 4%, #fbfdff);
     }
 
     .report-table th {
-      background: #1f2a44;
-      border-bottom: 1px solid #1f2a44;
+      background: ${borderColor};
+      border-bottom: 1px solid ${borderColor};
       color: #fff;
       font-size: 6.9px;
       font-weight: 800;
@@ -992,7 +966,7 @@ function reportStyles(): string {
     }
 
     .report-table th span {
-      color: #dbe4f0;
+      color: rgba(255, 255, 255, 0.78);
       display: block;
       font-size: 5.8px;
       font-weight: 700;
@@ -1023,7 +997,7 @@ function reportStyles(): string {
     }
 
     .result-value {
-      color: #172ac4 !important;
+      color: ${nameColor} !important;
       font-size: 8.2px !important;
       font-weight: 900;
       text-align: center !important;
@@ -1036,9 +1010,9 @@ function reportStyles(): string {
     }
 
     .subcategory-row td {
-      background: #eef3f9;
-      border-bottom-color: #c8d0dc;
-      color: #1f2a44;
+      background: color-mix(in srgb, ${borderColor} 10%, #ffffff);
+      border-bottom-color: color-mix(in srgb, ${borderColor} 28%, #c8d0dc);
+      color: ${borderColor};
       font-size: 7px;
       font-weight: 800;
       letter-spacing: 0.03em;
@@ -1075,7 +1049,7 @@ function reportStyles(): string {
     }
 
     .abnormal-strip strong {
-      color: #1f2a44;
+      color: ${borderColor};
       font-size: 7.4px;
       margin-right: 2px;
       text-transform: uppercase;
@@ -1157,4 +1131,62 @@ function reportStyles(): string {
       }
     }
   `;
+}
+
+export function openLabReportPrintWindow(html: string): boolean {
+  const content = String(html || '').trim();
+  if (!content) {
+    return false;
+  }
+
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('title', 'Lab report print');
+  iframe.setAttribute('aria-hidden', 'true');
+  Object.assign(iframe.style, {
+    border: '0',
+    height: '0',
+    left: '-10000px',
+    opacity: '0',
+    pointerEvents: 'none',
+    position: 'fixed',
+    top: '0',
+    width: '0',
+  });
+
+  document.body.appendChild(iframe);
+
+  const printWindow = iframe.contentWindow;
+  const printDocument = iframe.contentDocument || printWindow?.document;
+  if (!printWindow || !printDocument) {
+    iframe.remove();
+    return false;
+  }
+
+  printDocument.open();
+  printDocument.write(content);
+  printDocument.close();
+
+  let handled = false;
+  const finish = () => {
+    if (handled) {
+      return;
+    }
+
+    handled = true;
+    iframe.remove();
+  };
+
+  printWindow.onafterprint = finish;
+
+  window.setTimeout(() => {
+    try {
+      printWindow.focus();
+      printWindow.print();
+    } catch {
+      finish();
+    }
+  }, 300);
+
+  window.setTimeout(finish, 30000);
+  return true;
 }

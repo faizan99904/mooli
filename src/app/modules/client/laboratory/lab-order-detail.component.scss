@@ -275,6 +275,16 @@
   z-index: 1;
 }
 
+.comparison-table thead th small {
+  color: var(--lab-muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-top: 2px;
+  text-transform: none;
+}
+
 .result-table tbody tr:last-child td,
 .comparison-table tbody tr:last-child td {
   border-bottom: 0;

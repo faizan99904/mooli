@@ -31,7 +31,7 @@
           <i class="fa fa-barcode"></i>
           <span>Print Sample Labels</span>
         </button>
-        <button type="button" class="btn-primary" (click)="printReport()">
+        <button type="button" class="btn-primary" *ngIf="isReportReady()" (click)="printReport()">
           <i class="fa fa-file-pdf-o"></i> Print / PDF Report
         </button>
       </div>
@@ -220,7 +220,10 @@
                 <tr>
                   <th>Parameter</th>
                   <th>Ref Range</th>
-                  <th *ngFor="let date of comparisonDates()">{{ date | date:'dd MMM' }}</th>
+                  <th *ngFor="let column of comparisonColumns()">
+                    {{ column.label }}
+                    <small *ngIf="column.orderNo">{{ column.orderNo }}</small>
+                  </th>
                   <th>Trend</th>
                 </tr>
               </thead>
@@ -228,8 +231,8 @@
                 <tr *ngFor="let row of comparisonForActiveTest()">
                   <td><strong>{{ row.parameterName }}</strong></td>
                   <td>{{ row.referenceText || formatComparisonRange(row) }}</td>
-                  <td *ngFor="let date of comparisonDates()">
-                    <ng-container *ngIf="comparisonPoint(row, date) as point; else emptyPoint">
+                  <td *ngFor="let column of comparisonColumns()">
+                    <ng-container *ngIf="comparisonPoint(row, column) as point; else emptyPoint">
                       <span class="comparison-value" [ngClass]="paramStatusClass(point.status)">{{ point.resultValue || '—' }}</span>
                     </ng-container>
                     <ng-template #emptyPoint>—</ng-template>

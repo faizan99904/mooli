@@ -85,13 +85,8 @@
           </p>
         </div>
         <div class="created-view-actions">
-          <a class="btn-light" *ngFor="let file of uploadedReportLinks" [href]="file.url" target="_blank"
-            rel="noopener">
-            <i class="fa fa-external-link"></i>
-            {{ file.label }}
-          </a>
           <button type="button" class="btn-light" (click)="closeViewModal()">Close</button>
-          <button type="button" class="btn-primary" [disabled]="viewLoading || !viewReportSrc"
+          <button type="button" class="btn-primary" [disabled]="viewLoading || !viewReportHtml"
             (click)="printViewReport()">
             <i class="fa fa-print"></i>
             Print / PDF

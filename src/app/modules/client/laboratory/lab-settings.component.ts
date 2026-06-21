@@ -6,7 +6,7 @@ import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
 import { LabSettingsResponse, LaboratoryPrintSettings } from '../../../shared/models/hospital.model';
-import { resolveLabPrintDetails } from './lab-print-details';
+import { resolveLabPrintDetails, normalizeLabReportHexColor } from './lab-print-details';
 
 @Component({
   selector: 'app-lab-settings',
@@ -45,6 +45,11 @@ export class LabSettingsComponent implements OnInit {
             address: response.laboratorySettings?.address || '',
             city: response.laboratorySettings?.city || '',
             tagline: response.laboratorySettings?.tagline || 'Pathology & Diagnostic Laboratory',
+            reportNameColor: normalizeLabReportHexColor(response.laboratorySettings?.reportNameColor),
+            reportBorderColor: normalizeLabReportHexColor(
+              response.laboratorySettings?.reportBorderColor,
+              '#c92a2a'
+            ),
           };
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Unable to load laboratory settings.'),
@@ -62,11 +67,26 @@ export class LabSettingsComponent implements OnInit {
         address: this.form.address?.trim() || '',
         city: this.form.city?.trim() || '',
         tagline: this.form.tagline?.trim() || 'Pathology & Diagnostic Laboratory',
+        reportNameColor: normalizeLabReportHexColor(this.form.reportNameColor),
+        reportBorderColor: normalizeLabReportHexColor(this.form.reportBorderColor, '#c92a2a'),
       })
       .pipe(finalize(() => (this.saving = false)))
       .subscribe({
         next: (response) => {
           this.settingsResponse = response.data || this.settingsResponse;
+          if (response.data?.laboratorySettings) {
+            this.form = {
+              ...this.form,
+              ...response.data.laboratorySettings,
+              reportNameColor: normalizeLabReportHexColor(
+                response.data.laboratorySettings.reportNameColor
+              ),
+              reportBorderColor: normalizeLabReportHexColor(
+                response.data.laboratorySettings.reportBorderColor,
+                '#c92a2a'
+              ),
+            };
+          }
           this.toastr.success(response.message || 'Laboratory settings saved.');
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Unable to save laboratory settings.'),
@@ -108,6 +128,14 @@ export class LabSettingsComponent implements OnInit {
     return this.form.useCustomDetails === true;
   }
 
+  previewNameColor(): string {
+    return normalizeLabReportHexColor(this.form.reportNameColor);
+  }
+
+  previewBorderColor(): string {
+    return normalizeLabReportHexColor(this.form.reportBorderColor, '#c92a2a');
+  }
+
   private emptyForm(): LaboratoryPrintSettings {
     return {
       useCustomDetails: false,
@@ -117,6 +145,8 @@ export class LabSettingsComponent implements OnInit {
       address: '',
       city: '',
       tagline: 'Pathology & Diagnostic Laboratory',
+      reportNameColor: '#c92a2a',
+      reportBorderColor: '#c92a2a',
     };
   }
 }
