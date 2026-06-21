@@ -1,0 +1,144 @@
+<div id="main-content">
+  <div class="container-fluid pharmacy-admin-page">
+    <div class="block-header">
+      <div class="row clearfix align-items-center">
+        <div class="col-lg-7 col-md-12 col-sm-12">
+          <h1>Pharmacy Sales Returns</h1>
+          <span>Process returned pharmacy items against completed POS invoices.</span>
+        </div>
+        <div class="col-lg-5 col-md-12 col-sm-12">
+          <div class="pharmacy-page-actions">
+            <button class="btn btn-primary" type="button" (click)="openCreate()">Create Sales Return</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-filter-card">
+      <div class="pharmacy-filter-head">
+        <div>
+          <h2>Return Filters</h2>
+          <p>Review pharmacy returns by store and transaction date window.</p>
+        </div>
+      </div>
+
+      <div class="pharmacy-filter-grid">
+        <label>
+          <span>Store</span>
+          <input class="form-control" [(ngModel)]="storeId" />
+        </label>
+
+        <label>
+          <span>From Date</span>
+          <input class="form-control" type="date" [(ngModel)]="fromDate" />
+        </label>
+
+        <label>
+          <span>To Date</span>
+          <input class="form-control" type="date" [(ngModel)]="toDate" />
+        </label>
+
+        <div class="pharmacy-filter-actions">
+          <button class="btn btn-outline-primary" type="button" (click)="loadReturns()">Apply</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="reset()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-table-card">
+      <div class="pharmacy-table-head">
+        <div>
+          <h2>Return Register</h2>
+          <p>{{ returns.length }} sales return records are currently visible.</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div *ngIf="loading" class="pharmacy-empty-state">Loading sales returns...</div>
+        <div *ngIf="!loading && !returns.length" class="pharmacy-empty-state">No sales returns found.</div>
+        <div class="table-responsive" *ngIf="!loading && returns.length">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Return No.</th>
+                <th>Sale</th>
+                <th>Date</th>
+                <th>Items</th>
+                <th>Refund</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of returns">
+                <td class="fw-semibold">{{ item.returnNo }}</td>
+                <td>{{ item.saleId }}</td>
+                <td>{{ date(item.returnDate) }}</td>
+                <td>{{ item.items.length }}</td>
+                <td>{{ currency(item.refundAmount) }}</td>
+                <td>{{ item.status }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop fade show" *ngIf="modalOpen"></div>
+    <div class="modal fade show d-block" *ngIf="modalOpen">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Create Sales Return</h5>
+            <button type="button" class="btn-close" (click)="closeModal()"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label">Select Sale</label>
+                <select class="form-select" [(ngModel)]="selectedSaleId" (ngModelChange)="selectSale()">
+                  <option value="">Choose a sale</option>
+                  <option *ngFor="let sale of sales" [value]="sale._id">{{ sale.invoiceNo }} &middot; {{ currency(sale.total) }}</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Return Date</label>
+                <input class="form-control" type="date" [(ngModel)]="returnDate" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Refund Amount</label>
+                <input class="form-control" type="number" [(ngModel)]="refundAmount" />
+              </div>
+            </div>
+
+            <div class="table-responsive" *ngIf="selectedSale">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Sold Qty</th>
+                    <th>Return Qty</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let line of returnLines; let i = index">
+                    <td>{{ line.name || line.productId }}</td>
+                    <td>{{ line.soldQty }}</td>
+                    <td><input class="form-control" type="number" min="0" [max]="line.soldQty" [(ngModel)]="returnLines[i].qty" /></td>
+                    <td><input class="form-control" [(ngModel)]="returnLines[i].reason" /></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-light" type="button" (click)="closeModal()">Cancel</button>
+            <button class="btn btn-primary" type="button" (click)="save()" [disabled]="saving">
+              {{ saving ? 'Saving...' : 'Create Return' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

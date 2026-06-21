@@ -56,6 +56,17 @@ import { LabSettingsComponent } from './laboratory/lab-settings.component';
 import { PharmacyComponent } from './pharmacy/pharmacy.component';
 import { PharmacyProductsComponent } from './pharmacy-products/pharmacy-products.component';
 import { PharmacyPosComponent } from './pharmacy-pos/pharmacy-pos.component';
+import { PharmacyCustomersComponent } from './pharmacy-customers/pharmacy-customers.component';
+import { PharmacySuppliersComponent } from './pharmacy-suppliers/pharmacy-suppliers.component';
+import { PharmacyInventoryComponent } from './pharmacy-inventory/pharmacy-inventory.component';
+import { PharmacyStockMovementsComponent } from './pharmacy-stock-movements/pharmacy-stock-movements.component';
+import { PharmacySalesComponent } from './pharmacy-sales/pharmacy-sales.component';
+import { PharmacySaleDetailComponent } from './pharmacy-sale-detail/pharmacy-sale-detail.component';
+import { PharmacySalesReturnsComponent } from './pharmacy-sales-returns/pharmacy-sales-returns.component';
+import { PharmacyPaymentsComponent } from './pharmacy-payments/pharmacy-payments.component';
+import { PharmacyRegisterSessionsComponent } from './pharmacy-register-sessions/pharmacy-register-sessions.component';
+import { PharmacyRegisterSessionDetailComponent } from './pharmacy-register-session-detail/pharmacy-register-session-detail.component';
+import { PharmacyExpensesComponent } from './pharmacy-expenses/pharmacy-expenses.component';
 import { PosReportsComponent } from './pos-reports/pos-reports.component';
 import { AuditLogsComponent } from './audit-logs/audit-logs.component';
 import { WardDashboardComponent } from './ward/ward-dashboard.component';
@@ -88,6 +99,18 @@ const AUDIT_LOGS_ACCESS = ['audit_logs.read'];
 const HISTORY_ACCESS = ['patients_history.read', 'patients_history.create'];
 const PRESCRIPTION_ACCESS = ['prescriptions.read', 'prescriptions.create'];
 const PHARMACY_ACCESS = ['products.read'];
+const PHARMACY_CUSTOMERS_ACCESS = ['customers.read'];
+const PHARMACY_SUPPLIERS_ACCESS = ['suppliers.read'];
+const PHARMACY_INVENTORY_ACCESS = ['inventory.read'];
+const PHARMACY_STOCK_MOVEMENTS_ACCESS = ['stock_movements.read'];
+const PHARMACY_SALES_ACCESS = ['sales.read'];
+const PHARMACY_TRANSFERS_ACCESS = ['transfers.read'];
+const PHARMACY_RETURNS_ACCESS = ['returns.read'];
+const PHARMACY_PAYMENTS_ACCESS = ['payments.read'];
+const PHARMACY_REGISTER_ACCESS = {
+  any: ['register_sessions.read', 'register_sessions.admin_read'],
+};
+const PHARMACY_EXPENSES_ACCESS = ['expenses.read'];
 const REPORT_ACCESS = {
   any: ['reports.read', 'sales.read', 'products.read', 'register_sessions.read'],
 };
@@ -457,10 +480,76 @@ export const clientRoutes: Routes = [
         canActivate: [roleGuard(PHARMACY_ACCESS)],
       },
       {
+        path: 'pharmacy/customers',
+        component: PharmacyCustomersComponent,
+        data: { title: 'Mooli | Pharmacy Customers' },
+        canActivate: [roleGuard(PHARMACY_CUSTOMERS_ACCESS)],
+      },
+      {
+        path: 'pharmacy/suppliers',
+        component: PharmacySuppliersComponent,
+        data: { title: 'Mooli | Pharmacy Suppliers' },
+        canActivate: [roleGuard(PHARMACY_SUPPLIERS_ACCESS)],
+      },
+      {
+        path: 'pharmacy/inventory',
+        component: PharmacyInventoryComponent,
+        data: { title: 'Mooli | Pharmacy Inventory' },
+        canActivate: [roleGuard(PHARMACY_INVENTORY_ACCESS)],
+      },
+      {
+        path: 'pharmacy/stock-movements',
+        component: PharmacyStockMovementsComponent,
+        data: { title: 'Mooli | Pharmacy Stock Movements' },
+        canActivate: [roleGuard(PHARMACY_STOCK_MOVEMENTS_ACCESS)],
+      },
+      {
+        path: 'pharmacy/sales',
+        component: PharmacySalesComponent,
+        data: { title: 'Mooli | Pharmacy Sales' },
+        canActivate: [roleGuard(PHARMACY_SALES_ACCESS)],
+      },
+      {
+        path: 'pharmacy/sales/:id',
+        component: PharmacySaleDetailComponent,
+        data: { title: 'Mooli | Pharmacy Sale Detail' },
+        canActivate: [roleGuard(PHARMACY_SALES_ACCESS)],
+      },
+      {
         path: 'pharmacy/pos',
         component: PharmacyPosComponent,
         data: { title: 'Mooli | Pharmacy POS' },
         canActivate: [roleGuard(PHARMACY_POS_ACCESS)],
+      },
+      {
+        path: 'pharmacy/returns/sales',
+        component: PharmacySalesReturnsComponent,
+        data: { title: 'Mooli | Pharmacy Sales Returns' },
+        canActivate: [roleGuard(PHARMACY_RETURNS_ACCESS)],
+      },
+      {
+        path: 'pharmacy/payments',
+        component: PharmacyPaymentsComponent,
+        data: { title: 'Mooli | Pharmacy Payments' },
+        canActivate: [roleGuard(PHARMACY_PAYMENTS_ACCESS)],
+      },
+      {
+        path: 'pharmacy/register-sessions',
+        component: PharmacyRegisterSessionsComponent,
+        data: { title: 'Mooli | Pharmacy Register Sessions' },
+        canActivate: [roleGuard(PHARMACY_REGISTER_ACCESS)],
+      },
+      {
+        path: 'pharmacy/register-sessions/:id',
+        component: PharmacyRegisterSessionDetailComponent,
+        data: { title: 'Mooli | Pharmacy Register Session Detail' },
+        canActivate: [roleGuard(PHARMACY_REGISTER_ACCESS)],
+      },
+      {
+        path: 'pharmacy/expenses',
+        component: PharmacyExpensesComponent,
+        data: { title: 'Mooli | Pharmacy Expenses' },
+        canActivate: [roleGuard(PHARMACY_EXPENSES_ACCESS)],
       },
       {
         path: 'pos-reports',

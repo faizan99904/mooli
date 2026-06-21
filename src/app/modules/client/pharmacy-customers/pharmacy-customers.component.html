@@ -1,0 +1,164 @@
+<div id="main-content">
+  <div class="container-fluid pharmacy-admin-page">
+    <div class="block-header">
+      <div class="row clearfix align-items-center">
+        <div class="col-lg-7 col-md-12 col-sm-12">
+          <h1>Pharmacy Customers</h1>
+          <span>Manage walk-in and repeat customers linked to pharmacy POS billing.</span>
+        </div>
+        <div class="col-lg-5 col-md-12 col-sm-12">
+          <div class="pharmacy-page-actions">
+            <button class="btn btn-primary" type="button" (click)="openCreate()" [disabled]="!canCreate">
+              Add Customer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-filter-card">
+      <div class="pharmacy-filter-head">
+        <div>
+          <h2>Customer Filters</h2>
+          <p>Search active and inactive customer profiles used at the pharmacy counter.</p>
+        </div>
+      </div>
+
+      <div class="pharmacy-filter-grid">
+        <label>
+          <span>Search</span>
+          <input class="form-control" [(ngModel)]="search" placeholder="Name, phone, email" />
+        </label>
+
+        <label>
+          <span>Status</span>
+          <select class="form-select" [(ngModel)]="statusFilter">
+            <option value="">All</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+        </label>
+
+        <div class="pharmacy-filter-actions">
+          <button class="btn btn-outline-primary" type="button" (click)="loadCustomers()">Apply</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="resetFilters()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-table-card">
+      <div class="pharmacy-table-head">
+        <div>
+          <h2>Customer Register</h2>
+          <p>{{ customers.length }} pharmacy customer records on this page.</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div *ngIf="loading" class="pharmacy-empty-state">Loading customers...</div>
+        <div *ngIf="!loading && !customers.length" class="pharmacy-empty-state">No customers found for the current filters.</div>
+        <div class="table-responsive" *ngIf="!loading && customers.length">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>City</th>
+                <th>Opening Balance</th>
+                <th>Credit Limit</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let customer of customers">
+                <td>
+                  <div class="fw-semibold">{{ customer.name }}</div>
+                  <small class="text-muted">{{ customer.address || 'No address' }}</small>
+                </td>
+                <td>
+                  <div>{{ customer.phone || 'No phone' }}</div>
+                  <small class="text-muted">{{ customer.email || 'No email' }}</small>
+                </td>
+                <td>{{ customer.city || '-' }}</td>
+                <td>{{ currency(customer.openingBalance) }}</td>
+                <td>{{ currency(customer.creditLimit) }}</td>
+                <td>
+                  <span class="badge" [class.bg-success]="customer.isActive" [class.bg-secondary]="!customer.isActive">
+                    {{ customer.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" type="button" (click)="openEdit(customer)" [disabled]="!canUpdate">Edit</button>
+                    <button class="btn btn-outline-danger" type="button" (click)="remove(customer)" [disabled]="!canDelete">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop fade show" *ngIf="modalOpen"></div>
+    <div class="modal fade show d-block" *ngIf="modalOpen" tabindex="-1">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">{{ editingCustomer ? 'Edit Customer' : 'Add Customer' }}</h5>
+            <button type="button" class="btn-close" (click)="closeModal()"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Name</label>
+                <input class="form-control" [(ngModel)]="form.name" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Phone</label>
+                <input class="form-control" [(ngModel)]="form.phone" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Email</label>
+                <input class="form-control" [(ngModel)]="form.email" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">City</label>
+                <input class="form-control" [(ngModel)]="form.city" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Opening Balance</label>
+                <input class="form-control" type="number" [(ngModel)]="form.openingBalance" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Credit Limit</label>
+                <input class="form-control" type="number" [(ngModel)]="form.creditLimit" />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Address</label>
+                <textarea class="form-control" rows="2" [(ngModel)]="form.address"></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" rows="2" [(ngModel)]="form.notes"></textarea>
+              </div>
+              <div class="col-12" *ngIf="editingCustomer">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="customerActive" [(ngModel)]="form.isActive" />
+                  <label class="form-check-label" for="customerActive">Customer is active</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-light" type="button" (click)="closeModal()">Cancel</button>
+            <button class="btn btn-primary" type="button" (click)="save()" [disabled]="saving">
+              {{ saving ? 'Saving...' : (editingCustomer ? 'Update Customer' : 'Create Customer') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -17,6 +17,7 @@ import {
   Category,
   ChargeCatalogItem,
   CloseRegisterPayload,
+  Customer,
   CreateHeldSalePayload,
   CreateSalesReturnPayload,
   CreateSalePayload,
@@ -28,6 +29,7 @@ import {
   DoctorMedicine,
   Encounter,
   EncounterLedger,
+  Expense,
   Hospital,
   ListResult,
   Patient,
@@ -47,15 +49,20 @@ import {
   AuditLog,
   OpenRegisterPayload,
   RegisterSession,
+  RegisterSessionDetail,
   RegisterSessionSummary,
   Role,
   Room,
   RoomAllotment,
   Sale,
+  StockMovement,
   Store,
   RestoreHeldSaleResponse,
   SalesReturn,
+  Supplier,
+  Transfer,
   User,
+  Warehouse,
 } from '../../shared/models/hospital.model';
 
 @Injectable({
@@ -550,6 +557,42 @@ export class BackendService {
     return this.post<Category>(CONFIG.categories, payload);
   }
 
+  getCustomers(params?: Record<string, unknown>): Observable<ListResult<Customer>> {
+    return this.get<PaginatedResponse<Customer>>(CONFIG.customers, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createCustomer(payload: Record<string, unknown>): Observable<ApiResponse<Customer>> {
+    return this.post<Customer>(CONFIG.customers, payload);
+  }
+
+  updateCustomer(id: string, payload: Record<string, unknown>): Observable<ApiResponse<Customer>> {
+    return this.patch<Customer>(`${CONFIG.customers}/${id}`, payload);
+  }
+
+  deleteCustomer(id: string): Observable<ApiResponse<Customer>> {
+    return this.delete<Customer>(`${CONFIG.customers}/${id}`);
+  }
+
+  getSuppliers(params?: Record<string, unknown>): Observable<ListResult<Supplier>> {
+    return this.get<PaginatedResponse<Supplier>>(CONFIG.suppliers, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createSupplier(payload: Record<string, unknown>): Observable<ApiResponse<Supplier>> {
+    return this.post<Supplier>(CONFIG.suppliers, payload);
+  }
+
+  updateSupplier(id: string, payload: Record<string, unknown>): Observable<ApiResponse<Supplier>> {
+    return this.patch<Supplier>(`${CONFIG.suppliers}/${id}`, payload);
+  }
+
+  deleteSupplier(id: string): Observable<ApiResponse<Supplier>> {
+    return this.delete<Supplier>(`${CONFIG.suppliers}/${id}`);
+  }
+
   getProducts(params?: Record<string, unknown>): Observable<ListResult<ProductCatalogItem>> {
     return this.get<PaginatedResponse<ProductCatalogItem>>(CONFIG.products, params).pipe(
       map((response) => this.unwrapData(response))
@@ -584,6 +627,18 @@ export class BackendService {
     );
   }
 
+  getWarehouses(params?: Record<string, unknown>): Observable<ListResult<Warehouse>> {
+    return this.get<PaginatedResponse<Warehouse>>(CONFIG.warehouses, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getStockMovements(params?: Record<string, unknown>): Observable<ListResult<StockMovement>> {
+    return this.get<PaginatedResponse<StockMovement>>(CONFIG.stockMovements, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
   createSale(payload: CreateSalePayload): Observable<ApiResponse<CreateSaleResponse>> {
     return this.post<CreateSaleResponse>(CONFIG.sales, payload);
   }
@@ -598,6 +653,10 @@ export class BackendService {
     return this.get<PaginatedResponse<Sale>>(CONFIG.sales, params).pipe(
       map((response) => this.unwrapData(response))
     );
+  }
+
+  cancelSale(id: string): Observable<ApiResponse<Sale>> {
+    return this.post<Sale>(`${CONFIG.sales}/${id}/cancel`, {});
   }
 
   createHeldSale(payload: CreateHeldSalePayload): Observable<ApiResponse<HeldSale>> {
@@ -683,6 +742,18 @@ export class BackendService {
     );
   }
 
+  getRegisterSessions(params?: Record<string, unknown>): Observable<ListResult<RegisterSession>> {
+    return this.get<PaginatedResponse<RegisterSession>>(CONFIG.registerSessions, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getRegisterSessionById(id: string): Observable<RegisterSessionDetail> {
+    return this.get<RegisterSessionDetail>(`${CONFIG.registerSessions}/${id}`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
   openRegister(payload: OpenRegisterPayload): Observable<ApiResponse<{ registerSession: RegisterSession }>> {
     return this.post<{ registerSession: RegisterSession }>(`${CONFIG.registerSessions}/open`, payload);
   }
@@ -695,6 +766,38 @@ export class BackendService {
       `${CONFIG.registerSessions}/${id}/close`,
       payload
     );
+  }
+
+  getTransfers(params?: Record<string, unknown>): Observable<ListResult<Transfer>> {
+    return this.get<PaginatedResponse<Transfer>>(CONFIG.transfers, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getTransferById(id: string): Observable<Transfer> {
+    return this.get<Transfer>(`${CONFIG.transfers}/${id}`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createTransfer(payload: Record<string, unknown>): Observable<ApiResponse<Transfer>> {
+    return this.post<Transfer>(CONFIG.transfers, payload);
+  }
+
+  approveTransfer(id: string): Observable<ApiResponse<Transfer>> {
+    return this.post<Transfer>(`${CONFIG.transfers}/${id}/approve`, {});
+  }
+
+  dispatchTransfer(id: string): Observable<ApiResponse<Transfer>> {
+    return this.post<Transfer>(`${CONFIG.transfers}/${id}/dispatch`, {});
+  }
+
+  receiveTransfer(id: string): Observable<ApiResponse<Transfer>> {
+    return this.post<Transfer>(`${CONFIG.transfers}/${id}/receive`, {});
+  }
+
+  cancelTransfer(id: string): Observable<ApiResponse<Transfer>> {
+    return this.post<Transfer>(`${CONFIG.transfers}/${id}/cancel`, {});
   }
 
   getRooms(params?: Record<string, unknown>): Observable<ListResult<Room>> {
@@ -877,6 +980,24 @@ export class BackendService {
 
   createPayment(payload: Record<string, unknown>): Observable<ApiResponse<Payment>> {
     return this.post<Payment>(CONFIG.payments, payload);
+  }
+
+  getExpenses(params?: Record<string, unknown>): Observable<ListResult<Expense>> {
+    return this.get<PaginatedResponse<Expense>>(CONFIG.expenses, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  createExpense(payload: Record<string, unknown>): Observable<ApiResponse<Expense>> {
+    return this.post<Expense>(CONFIG.expenses, payload);
+  }
+
+  updateExpense(id: string, payload: Record<string, unknown>): Observable<ApiResponse<Expense>> {
+    return this.patch<Expense>(`${CONFIG.expenses}/${id}`, payload);
+  }
+
+  deleteExpense(id: string): Observable<ApiResponse<Expense>> {
+    return this.delete<Expense>(`${CONFIG.expenses}/${id}`);
   }
 
   getRoles(params?: Record<string, unknown>): Observable<Role[]> {

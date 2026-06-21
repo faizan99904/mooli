@@ -1,0 +1,97 @@
+<div id="main-content">
+  <div class="container-fluid pharmacy-admin-page">
+    <div class="block-header">
+      <div class="row clearfix align-items-center">
+        <div class="col-lg-8 col-md-12 col-sm-12">
+          <h1>Pharmacy Stock Movements</h1>
+          <span>Audit every stock adjustment affecting pharmacy inventory across stores and warehouses.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-filter-card">
+      <div class="pharmacy-filter-head">
+        <div>
+          <h2>Movement Filters</h2>
+          <p>Find stock changes by reference source, location type, and posting date.</p>
+        </div>
+      </div>
+
+      <div class="pharmacy-filter-grid">
+        <label>
+          <span>Reference Type</span>
+          <input class="form-control" [(ngModel)]="referenceType" />
+        </label>
+
+        <label>
+          <span>Location Type</span>
+          <select class="form-select" [(ngModel)]="locationType">
+            <option value="">All</option>
+            <option value="store">Store</option>
+            <option value="warehouse">Warehouse</option>
+          </select>
+        </label>
+
+        <label>
+          <span>From Date</span>
+          <input class="form-control" type="date" [(ngModel)]="fromDate" />
+        </label>
+
+        <label>
+          <span>To Date</span>
+          <input class="form-control" type="date" [(ngModel)]="toDate" />
+        </label>
+
+        <div class="pharmacy-filter-actions">
+          <button class="btn btn-outline-primary" type="button" (click)="loadMovements()">Apply</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="reset()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-table-card">
+      <div class="pharmacy-table-head">
+        <div>
+          <h2>Movement Log</h2>
+          <p>{{ movements.length }} stock movements are visible for the selected filters.</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div *ngIf="loading" class="pharmacy-empty-state">Loading stock movements...</div>
+        <div *ngIf="!loading && !movements.length" class="pharmacy-empty-state">No stock movement records found.</div>
+        <div class="table-responsive" *ngIf="!loading && movements.length">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Reference</th>
+                <th>Movement</th>
+                <th>Location</th>
+                <th>Quantity</th>
+                <th>Balance</th>
+                <th>Unit Cost</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let movement of movements">
+                <td>{{ dateTime(movement.createdAt) }}</td>
+                <td>
+                  <div class="fw-semibold">{{ movement.referenceType || '-' }}</div>
+                  <small class="text-muted">{{ movement.referenceId || '-' }}</small>
+                </td>
+                <td>{{ movement.movementType || '-' }}</td>
+                <td>{{ movement.locationType || '-' }} / {{ movement.locationId || '-' }}</td>
+                <td>{{ movement.qty ?? movement.quantity ?? '-' }}</td>
+                <td>{{ movement.balanceQty ?? '-' }}</td>
+                <td>{{ currency(movement.unitCost) }}</td>
+                <td>{{ movement.note || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

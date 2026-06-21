@@ -77,6 +77,59 @@ export interface Store {
   isActive: boolean;
 }
 
+export interface Customer {
+  _id: string;
+  companyId: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  openingBalance?: number | string;
+  creditLimit?: number | string;
+  notes?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Supplier {
+  _id: string;
+  companyId: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  openingBalance?: number | string;
+  creditLimit?: number | string;
+  taxNumber?: string | null;
+  notes?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Warehouse {
+  _id: string;
+  companyId: string;
+  company?: {
+    _id: string;
+    name: string;
+    code: string;
+  } | null;
+  name: string;
+  code: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  managerName?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Category {
   _id: string;
   companyId: string;
@@ -641,12 +694,35 @@ export interface ChargeCatalogItem {
 
 export interface Payment {
   _id: string;
+  companyId?: string;
+  storeId?: string | null;
+  warehouseId?: string | null;
   referenceType: string;
   referenceId: string;
   method: string;
   amount: string;
   paymentDate: string;
   referenceNo: string;
+  note?: string | null;
+  createdBy?: string | null;
+  createdAt?: string;
+}
+
+export interface Expense {
+  _id: string;
+  companyId: string;
+  storeId?: string | null;
+  warehouseId?: string | null;
+  registerSessionId?: string | null;
+  title: string;
+  category: string;
+  amount: number | string;
+  expenseDate: string;
+  paymentMethod?: SalePaymentMethod | null;
+  paymentReferenceNo?: string | null;
+  note?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type ProductDiscountType = 'amount' | 'percentage';
@@ -713,6 +789,32 @@ export interface Sale {
   paymentStatus: 'unpaid' | 'partial' | 'paid';
   status: SaleStatus;
   note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TransferItem {
+  productId: string;
+  name?: string;
+  sku?: string;
+  qty: number | string;
+}
+
+export interface Transfer {
+  _id: string;
+  companyId?: string;
+  transferNo: string;
+  fromLocationType: 'store' | 'warehouse';
+  fromLocationId: string;
+  toLocationType: 'store' | 'warehouse';
+  toLocationId: string;
+  status: 'draft' | 'pending' | 'approved' | 'dispatched' | 'received' | 'cancelled';
+  items: TransferItem[];
+  note?: string | null;
+  approvedAt?: string | null;
+  dispatchedAt?: string | null;
+  receivedAt?: string | null;
+  cancelledAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -854,6 +956,45 @@ export interface OpenRegisterPayload {
 export interface CloseRegisterPayload {
   closingAmount: number;
   closeNote?: string;
+}
+
+export interface RegisterSessionDetail {
+  registerSession: RegisterSession;
+  sales: Sale[];
+  expenses: Expense[];
+  paymentsBreakdown: Record<string, number | string>;
+  payments?: Array<{
+    _id: string;
+    method: string;
+    amount: number | string;
+    paymentDate: string;
+    referenceNo?: string | null;
+    bankName?: string | null;
+    note?: string | null;
+    referenceType: string;
+    referenceId: string;
+    registerSessionId?: string | null;
+  }>;
+  summary: RegisterSessionSummary;
+}
+
+export interface StockMovement {
+  _id: string;
+  companyId?: string;
+  productId?: string;
+  locationType?: 'store' | 'warehouse';
+  locationId?: string;
+  movementType?: string;
+  referenceType?: string;
+  referenceId?: string;
+  qty?: number | string;
+  quantity?: number | string;
+  balanceQty?: number | string;
+  unitCost?: number | string;
+  note?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
 }
 
 export interface DashboardStatusBreakdown {

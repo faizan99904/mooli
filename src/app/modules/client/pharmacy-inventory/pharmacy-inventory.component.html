@@ -1,0 +1,119 @@
+<div id="main-content">
+  <div class="container-fluid pharmacy-admin-page">
+    <div class="block-header">
+      <div class="row clearfix align-items-center">
+        <div class="col-lg-7 col-md-12 col-sm-12">
+          <h1>Pharmacy Inventory</h1>
+          <span>Live stock snapshot for pharmacy medicines, store availability, and valuation.</span>
+        </div>
+        <div class="col-lg-5 col-md-12 col-sm-12">
+          <div class="pharmacy-page-actions">
+            <button class="btn btn-default" type="button" (click)="loadInventory()">Refresh</button>
+            <a class="btn btn-primary" routerLink="/pharmacy/products">Manage Products</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-stats-grid">
+      <div class="pharmacy-stat-card">
+        <span>Stock Units</span>
+        <strong>{{ totalUnits }}</strong>
+      </div>
+      <div class="pharmacy-stat-card">
+        <span>Retail Value</span>
+        <strong>{{ currency(totalRetailValue) }}</strong>
+      </div>
+      <div class="pharmacy-stat-card">
+        <span>Cost Value</span>
+        <strong>{{ currency(totalCostValue) }}</strong>
+      </div>
+      <div class="pharmacy-stat-card">
+        <span>Low Stock Lines</span>
+        <strong>{{ lowStockCount }}</strong>
+      </div>
+    </div>
+
+    <div class="pharmacy-filter-card">
+      <div class="pharmacy-filter-head">
+        <div>
+          <h2>Inventory Filters</h2>
+          <p>Search pharmacy medicines and narrow results by store or low-stock state.</p>
+        </div>
+      </div>
+
+      <div class="pharmacy-filter-grid">
+        <label>
+          <span>Search</span>
+          <input class="form-control" [(ngModel)]="search" (ngModelChange)="applyFilters()" placeholder="Medicine, SKU, barcode" />
+        </label>
+
+        <label>
+          <span>Store</span>
+          <select class="form-select" [(ngModel)]="storeId" (ngModelChange)="loadInventory()">
+            <option value="">Assigned / default store</option>
+            <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Inventory Mode</span>
+          <select class="form-select" [(ngModel)]="lowStockOnly" (ngModelChange)="applyFilters()">
+            <option [ngValue]="false">All stock lines</option>
+            <option [ngValue]="true">Low stock only</option>
+          </select>
+        </label>
+
+        <div class="pharmacy-filter-actions">
+          <button class="btn btn-outline-primary" type="button" (click)="applyFilters()">Apply</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="search=''; lowStockOnly=false; applyFilters()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-table-card">
+      <div class="pharmacy-table-head">
+        <div>
+          <h2>Inventory Lines</h2>
+          <p>{{ filteredProducts.length }} medicine lines visible in the current stock view.</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div *ngIf="loading" class="pharmacy-empty-state">Loading inventory...</div>
+        <div *ngIf="!loading && !filteredProducts.length" class="pharmacy-empty-state">No inventory items matched the current filters.</div>
+        <div class="table-responsive" *ngIf="!loading && filteredProducts.length">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Medicine</th>
+                <th>Batch</th>
+                <th>Expiry</th>
+                <th>Available</th>
+                <th>Reorder Level</th>
+                <th>Cost</th>
+                <th>Retail</th>
+                <th>Valuation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let product of filteredProducts">
+                <td>
+                  <div class="fw-semibold">{{ product.name }}</div>
+                  <small class="text-muted">{{ product.sku }}{{ product.brand ? ' · ' + product.brand : '' }}</small>
+                </td>
+                <td>{{ product.batchNumber || '-' }}</td>
+                <td>{{ product.expiryDate || '-' }}</td>
+                <td>{{ qty(product) }}</td>
+                <td>{{ reorder(product) }}</td>
+                <td>{{ currency(product.costPrice) }}</td>
+                <td>{{ currency(product.sellingPrice) }}</td>
+                <td>{{ currency(qty(product) * price(product)) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

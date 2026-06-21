@@ -1,0 +1,47 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
+
+import { BackendService } from '../../../core/services/backend.service';
+import { RegisterSessionDetail } from '../../../shared/models/hospital.model';
+import { formatCurrency, formatDate, formatDateTime } from '../pharmacy-admin.utils';
+
+@Component({
+  selector: 'app-pharmacy-register-session-detail',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  templateUrl: './pharmacy-register-session-detail.component.html',
+  styleUrl: './pharmacy-register-session-detail.component.scss',
+})
+export class PharmacyRegisterSessionDetailComponent implements OnInit {
+  detail: RegisterSessionDetail | null = null;
+
+  constructor(
+    private route: ActivatedRoute,
+    private backend: BackendService,
+    private toastr: ToastrService,
+  ) {}
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id') || '';
+    if (id) {
+      this.backend.getRegisterSessionById(id).subscribe({
+        next: (detail) => (this.detail = detail),
+        error: (err) => this.toastr.error(err?.error?.message || 'Unable to load register session detail.'),
+      });
+    }
+  }
+
+  currency(value: string | number | null | undefined): string {
+    return formatCurrency(value);
+  }
+
+  date(value: string | null | undefined): string {
+    return formatDate(value);
+  }
+
+  dateTime(value: string | null | undefined): string {
+    return formatDateTime(value);
+  }
+}

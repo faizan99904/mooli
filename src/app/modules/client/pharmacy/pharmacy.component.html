@@ -23,6 +23,65 @@
 
         <div class="row clearfix">
             <div class="col-12">
+                <div class="product-management-card">
+                    <div class="product-management-head">
+                        <div>
+                            <h3>Pharmacy Operations</h3>
+                            <span>Open pharmacy workflows directly without crowding the dashboard with plain tabs.</span>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <div class="pharmacy-dashboard-grid">
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/customers']">
+                                <i class="fa fa-users"></i>
+                                <strong>Customers</strong>
+                                <span>Walk-in and repeat POS profiles</span>
+                            </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/suppliers']">
+                                <i class="fa fa-truck"></i>
+                                <strong>Suppliers</strong>
+                                <span>Vendor records and purchase-side contacts</span>
+                            </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/inventory']">
+                                <i class="fa fa-cubes"></i>
+                                <strong>Inventory</strong>
+                                <span>Live stock position and valuations</span>
+                            </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/stock-movements']">
+                                <i class="fa fa-exchange"></i>
+                                <strong>Stock Movements</strong>
+                                <span>Audit every stock in and out event</span>
+                            </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/sales']">
+                                <i class="fa fa-file-text-o"></i>
+                                <strong>Sales</strong>
+                                <span>Invoices, payment status, and billing flow</span>
+                            </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/returns/sales']">
+                                <i class="fa fa-undo"></i>
+                                <strong>Sales Returns</strong>
+                                <span>Refund and return completed POS invoices</span>
+                            </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/payments']">
+                                <i class="fa fa-credit-card"></i>
+                                <strong>Payments</strong>
+                                <span>Track and create payment entries</span>
+                            </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/register-sessions']">
+                                <i class="fa fa-calculator"></i>
+                                <strong>Register Sessions</strong>
+                                <span>Open, close, and audit cashier shifts</span>
+                            </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/expenses']">
+                                <i class="fa fa-money"></i>
+                                <strong>Expenses</strong>
+                                <span>Counter costs and petty cash outflow</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
                 <div class="card">
                     <div class="body">
                         <div class="row mb-3">
