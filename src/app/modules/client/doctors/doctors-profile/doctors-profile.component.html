@@ -39,8 +39,11 @@
                             <div class="col-md-6 mb-3"><strong>Email:</strong> {{ doctor?.user?.email || '-' }}</div>
                             <div class="col-md-6 mb-3"><strong>Phone:</strong> {{ doctor?.user?.phone || '-' }}</div>
                             <div class="col-md-6 mb-3"><strong>Name (Urdu):</strong> {{ doctor?.nameUrdu || '-' }}</div>
-                            <div class="col-md-6 mb-3"><strong>Department:</strong> {{ doctor?.department?.name || '-' }}</div>
+                            <div class="col-md-6 mb-3"><strong>Department:</strong> {{ clinicalDepartmentLabel() }}</div>
+                            <div class="col-md-6 mb-3"><strong>Hospital Unit:</strong> {{ doctor?.department?.name || '-' }}</div>
+                            <div class="col-md-6 mb-3"><strong>Specialization:</strong> {{ doctor?.specialization || '-' }}</div>
                             <div class="col-md-6 mb-3"><strong>Qualification:</strong> {{ doctor?.qualification || '-' }}</div>
+                            <div class="col-md-6 mb-3"><strong>Prescription Template:</strong> {{ prescriptionTemplateLabel() }}</div>
                             <div class="col-md-6 mb-3"><strong>Experience:</strong> {{ doctor?.experienceYears || 0 }} years</div>
                             <div class="col-md-6 mb-3"><strong>Consultation Fee:</strong> {{ doctor?.consultationFee || 0 }}</div>
                             <div class="col-md-12 mb-3"><strong>Available Days:</strong> {{ availableDaysLabel(doctor?.availableDays) }}</div>

@@ -7,6 +7,25 @@ export type PrescriptionTemplate =
   | 'minimal-teal'
   | 'compact-mono';
 
+export type PrescriptionSpecialtyTemplate =
+  | 'general'
+  | 'eye'
+  | 'ultrasound'
+  | 'radiology'
+  | 'gynae'
+  | 'dental'
+  | 'physiotherapy'
+  | 'lab';
+
+export type ClinicalDepartmentKey =
+  | 'general_medical'
+  | 'surgery'
+  | 'women_child'
+  | 'eye_ent_dental'
+  | 'physiotherapy'
+  | 'diagnostics'
+  | 'other_common';
+
 export interface Role {
   _id: string;
   companyId?: string | null;
@@ -173,12 +192,14 @@ export interface Doctor {
   user?: User | null;
   departmentId?: string | null;
   department?: Department | null;
+  clinicalDepartment?: ClinicalDepartmentKey | null;
   specialization?: string | null;
   qualification?: string | null;
   nameUrdu?: string | null;
   experienceYears?: number;
   consultationFee?: number;
   prescriptionTemplate?: PrescriptionTemplate;
+  prescriptionSpecialtyTemplate?: PrescriptionSpecialtyTemplate;
   availableDays?: string[];
   availableSlots?: Array<{ day: string; startTime: string; endTime: string }>;
   status: Status;

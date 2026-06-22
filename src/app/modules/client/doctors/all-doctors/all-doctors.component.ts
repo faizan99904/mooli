@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { AppDialogService } from '../../../../core/services/app-dialog.service';
 import { BackendService } from '../../../../core/services/backend.service';
+import { clinicalDepartmentLabel } from '../../../../shared/catalogs/doctor-specialization.catalog';
 import { Department, Doctor } from '../../../../shared/models/hospital.model';
 
 @Component({
@@ -116,5 +117,9 @@ export class AllDoctorsComponent implements OnInit {
 
     this.page = nextPage;
     this.loadDoctors();
+  }
+
+  departmentLabel(doctor: Doctor): string {
+    return clinicalDepartmentLabel(doctor.clinicalDepartment);
   }
 }

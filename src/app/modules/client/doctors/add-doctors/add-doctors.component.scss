@@ -303,3 +303,127 @@
     grid-template-columns: 1fr;
   }
 }
+
+.catalog-select {
+  position: relative;
+  z-index: 1;
+}
+
+.catalog-select-field:focus-within {
+  z-index: 30;
+}
+
+.catalog-select-panel {
+  background: #fff;
+  border: 1px solid #d7dde5;
+  border-radius: 8px;
+  box-shadow: 0 14px 30px rgb(15 23 42 / 0.12);
+  left: 0;
+  margin-top: 6px;
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 40;
+}
+
+.catalog-select-trigger {
+  align-items: center;
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.catalog-select-trigger.is-open,
+.catalog-select-trigger:focus {
+  border-color: #019c9d;
+  box-shadow: 0 0 0 2px rgb(1 156 157 / 0.12);
+}
+
+.catalog-select-trigger:disabled {
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.catalog-select-trigger span.placeholder {
+  color: #94a3b8;
+}
+
+.catalog-select-trigger i {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.catalog-search-input {
+  border: 0;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.catalog-options {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.catalog-option {
+  background: transparent;
+  border: 0;
+  color: #1f2937;
+  display: block;
+  font-size: 14px;
+  padding: 10px 14px;
+  text-align: left;
+  width: 100%;
+}
+
+.catalog-option:hover,
+.catalog-option:focus {
+  background: #f0fdfa;
+  color: #003e86;
+}
+
+.catalog-option-custom {
+  border-top: 1px solid #e5e7eb;
+  color: #019c9d;
+  font-weight: 600;
+}
+
+.catalog-empty {
+  color: #94a3b8;
+  font-size: 13px;
+  margin: 0;
+  padding: 12px 14px;
+}
+
+.prescription-specialty-field {
+  margin-top: 8px;
+}
+
+.prescription-specialty-heading {
+  align-items: flex-end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.prescription-specialty-heading label,
+.prescription-specialty-heading small {
+  display: block;
+}
+
+.prescription-specialty-heading small {
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.prescription-specialty-heading > strong {
+  background: #e8f7f7;
+  border-radius: 999px;
+  color: #003e86;
+  font-size: 11px;
+  padding: 6px 10px;
+}

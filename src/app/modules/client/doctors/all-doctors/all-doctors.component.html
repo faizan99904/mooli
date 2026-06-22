@@ -49,6 +49,7 @@
                                         <th>Email</th>
                                         <th>Department</th>
                                         <th>Specialization</th>
+                                        <th>Qualification</th>
                                         <th>Fee</th>
                                         <th>Status</th>
                                         <th class="text-right">Action</th>
@@ -58,8 +59,9 @@
                                     <tr *ngFor="let doctor of doctors">
                                         <td>{{ doctor.user?.name || '-' }}</td>
                                         <td>{{ doctor.user?.email || '-' }}</td>
-                                        <td>{{ doctor.department?.name || '-' }}</td>
+                                        <td>{{ departmentLabel(doctor) }}</td>
                                         <td>{{ doctor.specialization || '-' }}</td>
+                                        <td>{{ doctor.qualification || '-' }}</td>
                                         <td>{{ doctor.consultationFee || 0 }}</td>
                                         <td>
                                             <span class="badge"
@@ -76,10 +78,10 @@
                                         </td>
                                     </tr>
                                     <tr *ngIf="!loading && doctors.length === 0">
-                                        <td colspan="7" class="text-center text-muted">No doctors found</td>
+                                        <td colspan="8" class="text-center text-muted">No doctors found</td>
                                     </tr>
                                     <tr *ngIf="loading">
-                                        <td colspan="7" class="text-center text-muted">Loading...</td>
+                                        <td colspan="8" class="text-center text-muted">Loading...</td>
                                     </tr>
                                 </tbody>
                             </table>

@@ -1,6 +1,14 @@
 import { Doctor } from '../../../shared/models/hospital.model';
 
-export type SpecialtyTemplateKey = 'general' | 'eye' | 'ultrasound' | 'radiology' | 'gynae' | 'dental';
+export type SpecialtyTemplateKey =
+  | 'general'
+  | 'eye'
+  | 'ultrasound'
+  | 'radiology'
+  | 'gynae'
+  | 'dental'
+  | 'physiotherapy'
+  | 'lab';
 
 export type SpecialtyField = {
   key: string;
@@ -65,6 +73,16 @@ const SPECIALTY_FIELDS: SpecialtyField[] = [
   { key: 'treatmentPlan', label: 'Treatment Plan', type: 'textarea', wide: true },
   { key: 'nextVisit', label: 'Next Visit', type: 'date' },
   { key: 'dentalNotes', label: 'Dental Notes', type: 'textarea', wide: true },
+  { key: 'chiefComplaint', label: 'Chief Complaint', type: 'textarea', wide: true },
+  { key: 'painScore', label: 'Pain Score', placeholder: '0-10' },
+  { key: 'rangeOfMotion', label: 'Range of Motion', type: 'textarea', wide: true },
+  { key: 'muscleStrength', label: 'Muscle Strength', placeholder: '4/5' },
+  { key: 'functionalAssessment', label: 'Functional Assessment', type: 'textarea', wide: true },
+  { key: 'therapyPlan', label: 'Therapy Plan', type: 'textarea', wide: true },
+  { key: 'exercisePlan', label: 'Exercise Plan', type: 'textarea', wide: true },
+  { key: 'sessionsRecommended', label: 'Sessions Recommended', placeholder: '3 per week' },
+  { key: 'labFindings', label: 'Lab Findings', type: 'textarea', wide: true },
+  { key: 'labImpression', label: 'Lab Impression', type: 'textarea', wide: true },
   { key: 'specialtyNotes', label: 'Specialty Notes', type: 'textarea', wide: true },
 ];
 
@@ -107,12 +125,29 @@ export const SPECIALTY_TEMPLATES: Record<SpecialtyTemplateKey, SpecialtyTemplate
     description: 'Tooth chart, procedure and treatment plan.',
     fields: ['toothNumber', 'dentalComplaint', 'procedure', 'treatmentPlan', 'nextVisit', 'dentalNotes'].map((key) => SPECIALTY_FIELD_MAP.get(key)!),
   },
+  physiotherapy: {
+    key: 'physiotherapy',
+    title: 'Physiotherapy Treatment Plan',
+    description: 'Assessment, therapy plan and exercise plan.',
+    fields: ['chiefComplaint', 'painScore', 'rangeOfMotion', 'muscleStrength', 'functionalAssessment', 'therapyPlan', 'exercisePlan', 'sessionsRecommended', 'specialtyNotes'].map((key) => SPECIALTY_FIELD_MAP.get(key)!),
+  },
+  lab: {
+    key: 'lab',
+    title: 'Lab Report',
+    description: 'Laboratory findings and impression.',
+    fields: ['studyType', 'clinicalHistory', 'labFindings', 'labImpression', 'recommendation', 'reportingDoctor', 'reportDate'].map((key) => SPECIALTY_FIELD_MAP.get(key)!),
+  },
 };
 
 export { SPECIALTY_FIELDS };
 
 export function inferSpecialtyTemplateKey(doctor?: Doctor | null): SpecialtyTemplateKey {
-  const source = [doctor?.specialization, doctor?.department?.name, doctor?.qualification]
+  const explicit = String(doctor?.prescriptionSpecialtyTemplate || '').trim() as SpecialtyTemplateKey;
+  if (explicit && SPECIALTY_TEMPLATES[explicit]) {
+    return explicit;
+  }
+
+  const source = [doctor?.specialization, doctor?.clinicalDepartment, doctor?.department?.name, doctor?.qualification]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
@@ -135,6 +170,14 @@ export function inferSpecialtyTemplateKey(doctor?: Doctor | null): SpecialtyTemp
 
   if (/dental|dentist|tooth|oral/.test(source)) {
     return 'dental';
+  }
+
+  if (/physio|rehab|chiropract|occupational therapist|manual therapist/.test(source)) {
+    return 'physiotherapy';
+  }
+
+  if (/patholog|microbiolog|hematolog|biochemist|lab consultant/.test(source)) {
+    return 'lab';
   }
 
   return 'general';

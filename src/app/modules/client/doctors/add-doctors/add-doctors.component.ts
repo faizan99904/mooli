@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -11,9 +11,24 @@ import { debounceTime, distinctUntilChanged, finalize, Subject, takeUntil } from
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../../core/services/backend.service';
 import {
+  AUTO_PRESCRIPTION_SPECIALTY,
+  CLINICAL_DEPARTMENTS,
+  CUSTOM_SPECIALIZATION_VALUE,
+  CatalogOption,
+  PRESCRIPTION_SPECIALTY_OPTIONS,
+  QUALIFICATION_OPTIONS,
+  findSpecializationOption,
+  inferClinicalDepartmentFromSpecialization,
+  resolveSpecialtyTemplateForSpecialization,
+  specializationsForDepartment,
+  specialtyTemplateLabel,
+} from '../../../../shared/catalogs/doctor-specialization.catalog';
+import {
+  ClinicalDepartmentKey,
   Department,
   Doctor,
   Hospital,
+  PrescriptionSpecialtyTemplate,
   PrescriptionTemplate,
   User,
 } from '../../../../shared/models/hospital.model';
@@ -38,8 +53,21 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
 
   saving = false;
   autoUrduName = true;
+  specializationSearch = '';
+  qualificationSearch = '';
+  specializationDropdownOpen = false;
+  qualificationDropdownOpen = false;
+  filteredSpecializationOptions: CatalogOption[] = [];
+  filteredQualificationOptions: CatalogOption[] = [];
+  autoPrescriptionSpecialtyLabelText = 'Auto by specialization';
   private lastAutoUrduName = '';
   private readonly destroy$ = new Subject<void>();
+
+  readonly clinicalDepartments = CLINICAL_DEPARTMENTS;
+  readonly qualificationOptions = QUALIFICATION_OPTIONS;
+  readonly prescriptionSpecialtyOptions = PRESCRIPTION_SPECIALTY_OPTIONS;
+  readonly customSpecializationValue = CUSTOM_SPECIALIZATION_VALUE;
+  readonly autoPrescriptionSpecialty = AUTO_PRESCRIPTION_SPECIALTY;
 
   days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   selectedDays: string[] = [];
@@ -84,10 +112,15 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
       password: ['', [Validators.required, Validators.minLength(8)]],
       phone: [''],
       departmentId: [''],
-      specialization: [''],
-      qualification: [''],
+      clinicalDepartment: ['', Validators.required],
+      specializationSelect: ['', Validators.required],
+      specializationCustom: [''],
+      qualificationSelect: ['', Validators.required],
+      qualificationCustom: [''],
       experienceYears: [0],
-      consultationFee: [0],
+      consultationFee: [0, [Validators.required, Validators.min(0)]],
+      prescriptionSpecialtyMode: [AUTO_PRESCRIPTION_SPECIALTY, Validators.required],
+      prescriptionSpecialtyTemplate: ['general' as PrescriptionSpecialtyTemplate],
       prescriptionTemplate: ['classic' as PrescriptionTemplate, Validators.required],
       slotDay: ['monday'],
       startTime: ['09:00'],
@@ -101,12 +134,45 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
     this.setLoggedInUser();
     this.applyEditingState();
     this.setupNameTranslation();
+    this.setupClinicalFieldWatchers();
     this.loadInitialData();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  get showCustomSpecialization(): boolean {
+    return this.doctorForm.get('specializationSelect')?.value === CUSTOM_SPECIALIZATION_VALUE;
+  }
+
+  get showCustomQualification(): boolean {
+    return this.doctorForm.get('qualificationSelect')?.value === CUSTOM_SPECIALIZATION_VALUE;
+  }
+
+  get isManualPrescriptionSpecialty(): boolean {
+    return this.doctorForm.get('prescriptionSpecialtyMode')?.value !== AUTO_PRESCRIPTION_SPECIALTY;
+  }
+
+  selectedClinicalDepartment(): ClinicalDepartmentKey | '' {
+    return String(this.doctorForm.get('clinicalDepartment')?.value || '') as ClinicalDepartmentKey | '';
+  }
+
+  selectedSpecializationLabel(): string {
+    const value = String(this.doctorForm.get('specializationSelect')?.value || '');
+    if (!value || value === CUSTOM_SPECIALIZATION_VALUE) {
+      return this.doctorForm.get('specializationCustom')?.value || 'Select specialization';
+    }
+    return value;
+  }
+
+  selectedQualificationLabel(): string {
+    const value = String(this.doctorForm.get('qualificationSelect')?.value || '');
+    if (!value || value === CUSTOM_SPECIALIZATION_VALUE) {
+      return this.doctorForm.get('qualificationCustom')?.value || 'Select qualification';
+    }
+    return value;
   }
 
   setLoggedInUser(): void {
@@ -178,6 +244,126 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
     this.loadDepartments();
   }
 
+  onClinicalDepartmentChange(): void {
+    this.specializationSearch = '';
+    this.closeCatalogDropdowns();
+    this.doctorForm.patchValue({
+      specializationSelect: '',
+      specializationCustom: '',
+    });
+    this.syncSpecializationValidators();
+    this.refreshSpecializationOptions();
+    this.applyAutoPrescriptionSpecialty();
+  }
+
+  toggleSpecializationDropdown(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this.selectedClinicalDepartment()) {
+      return;
+    }
+
+    this.qualificationDropdownOpen = false;
+    this.specializationDropdownOpen = !this.specializationDropdownOpen;
+
+    if (this.specializationDropdownOpen) {
+      this.refreshSpecializationOptions();
+    }
+  }
+
+  toggleQualificationDropdown(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.specializationDropdownOpen = false;
+    this.qualificationDropdownOpen = !this.qualificationDropdownOpen;
+
+    if (this.qualificationDropdownOpen) {
+      this.refreshQualificationOptions();
+    }
+  }
+
+  onSpecializationSearchInput(event: Event): void {
+    this.specializationSearch = (event.target as HTMLInputElement).value;
+    this.refreshSpecializationOptions();
+  }
+
+  onQualificationSearchInput(event: Event): void {
+    this.qualificationSearch = (event.target as HTMLInputElement).value;
+    this.refreshQualificationOptions();
+  }
+
+  closeCatalogDropdowns(): void {
+    this.specializationDropdownOpen = false;
+    this.qualificationDropdownOpen = false;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.catalog-select')) {
+      return;
+    }
+
+    this.closeCatalogDropdowns();
+  }
+
+  trackCatalogOption(_index: number, option: CatalogOption): string {
+    return option.value;
+  }
+
+  selectSpecialization(option: CatalogOption | typeof CUSTOM_SPECIALIZATION_VALUE): void {
+    if (option === CUSTOM_SPECIALIZATION_VALUE) {
+      this.doctorForm.patchValue({
+        specializationSelect: CUSTOM_SPECIALIZATION_VALUE,
+        specializationCustom: '',
+      });
+    } else {
+      this.doctorForm.patchValue({
+        specializationSelect: option.value,
+        specializationCustom: '',
+      });
+    }
+
+    this.specializationSearch = '';
+    this.specializationDropdownOpen = false;
+    this.refreshSpecializationOptions();
+    this.syncSpecializationValidators();
+    this.applyAutoPrescriptionSpecialty();
+  }
+
+  selectQualification(option: CatalogOption | typeof CUSTOM_SPECIALIZATION_VALUE): void {
+    if (option === CUSTOM_SPECIALIZATION_VALUE) {
+      this.doctorForm.patchValue({
+        qualificationSelect: CUSTOM_SPECIALIZATION_VALUE,
+        qualificationCustom: '',
+      });
+    } else {
+      this.doctorForm.patchValue({
+        qualificationSelect: option.value,
+        qualificationCustom: '',
+      });
+    }
+
+    this.qualificationSearch = '';
+    this.qualificationDropdownOpen = false;
+    this.refreshQualificationOptions();
+    this.syncQualificationValidators();
+  }
+
+  onPrescriptionSpecialtyModeChange(): void {
+    const manual = this.isManualPrescriptionSpecialty;
+    const control = this.doctorForm.get('prescriptionSpecialtyTemplate');
+    if (manual) {
+      control?.setValidators([Validators.required]);
+    } else {
+      control?.clearValidators();
+      this.applyAutoPrescriptionSpecialty();
+    }
+    control?.updateValueAndValidity();
+  }
+
   toggleDay(day: string, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
 
@@ -214,6 +400,9 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.syncSpecializationValidators();
+    this.syncQualificationValidators();
+
     if (this.doctorForm.invalid) {
       this.doctorForm.markAllAsTouched();
       return;
@@ -221,6 +410,8 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
 
     const value = this.doctorForm.value;
     const hospitalId = value.hospitalId || this.currentHospitalId;
+    const specialization = this.resolvedSpecialization();
+    const qualification = this.resolvedQualification();
 
     const payload: Record<string, unknown> = {
       name: value.name,
@@ -228,21 +419,23 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
       email: value.email,
       phone: value.phone || undefined,
       departmentId: value.departmentId || undefined,
-      specialization: value.specialization || undefined,
-      qualification: value.qualification || undefined,
+      clinicalDepartment: value.clinicalDepartment,
+      specialization,
+      qualification,
       experienceYears: Number(value.experienceYears || 0),
       consultationFee: Number(value.consultationFee || 0),
       prescriptionTemplate: value.prescriptionTemplate || 'classic',
+      prescriptionSpecialtyTemplate: this.resolvedPrescriptionSpecialtyTemplate(),
       availableDays: this.normalizeDays(this.selectedDays),
       availableSlots:
         value.startTime && value.endTime
           ? [
-            {
-              day: value.slotDay,
-              startTime: value.startTime,
-              endTime: value.endTime,
-            },
-          ]
+              {
+                day: value.slotDay,
+                startTime: value.startTime,
+                endTime: value.endTime,
+              },
+            ]
           : [],
       status: value.status,
     };
@@ -271,6 +464,13 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
       });
   }
 
+  private setupClinicalFieldWatchers(): void {
+    this.doctorForm
+      .get('specializationCustom')
+      ?.valueChanges.pipe(debounceTime(150), takeUntil(this.destroy$))
+      .subscribe(() => this.applyAutoPrescriptionSpecialty());
+  }
+
   private applyEditingState(): void {
     if (!this.editingDoctor) {
       return;
@@ -278,6 +478,22 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
 
     this.selectedDays = this.normalizeDays(this.editingDoctor.availableDays || []);
     const primarySlot = this.editingDoctor.availableSlots?.[0];
+    const specialization = String(this.editingDoctor.specialization || '').trim();
+    const qualification = String(this.editingDoctor.qualification || '').trim();
+    const clinicalDepartment =
+      this.editingDoctor.clinicalDepartment ||
+      inferClinicalDepartmentFromSpecialization(specialization) ||
+      '';
+    const specializationMatch = findSpecializationOption(clinicalDepartment, specialization);
+    const qualificationMatch = this.qualificationOptions.find(
+      (item) => item.value.toLowerCase() === qualification.toLowerCase()
+    );
+    const autoTemplate = resolveSpecialtyTemplateForSpecialization(
+      specialization,
+      clinicalDepartment as ClinicalDepartmentKey
+    );
+    const storedTemplate = this.editingDoctor.prescriptionSpecialtyTemplate || autoTemplate;
+    const manualPrescriptionSpecialty = storedTemplate !== autoTemplate;
 
     this.doctorForm.patchValue({
       hospitalId: this.editingDoctor.hospitalId || this.currentHospitalId || '',
@@ -287,10 +503,23 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
       password: '',
       phone: this.editingDoctor.user?.phone || '',
       departmentId: this.editingDoctor.departmentId || '',
-      specialization: this.editingDoctor.specialization || '',
-      qualification: this.editingDoctor.qualification || '',
+      clinicalDepartment,
+      specializationSelect: specializationMatch
+        ? specializationMatch.value
+        : specialization
+          ? CUSTOM_SPECIALIZATION_VALUE
+          : '',
+      specializationCustom: specializationMatch ? '' : specialization,
+      qualificationSelect: qualificationMatch
+        ? qualificationMatch.value
+        : qualification
+          ? CUSTOM_SPECIALIZATION_VALUE
+          : '',
+      qualificationCustom: qualificationMatch ? '' : qualification,
       experienceYears: this.editingDoctor.experienceYears || 0,
       consultationFee: this.editingDoctor.consultationFee || 0,
+      prescriptionSpecialtyMode: manualPrescriptionSpecialty ? 'manual' : AUTO_PRESCRIPTION_SPECIALTY,
+      prescriptionSpecialtyTemplate: storedTemplate,
       prescriptionTemplate: this.editingDoctor.prescriptionTemplate || 'classic',
       slotDay: primarySlot?.day || this.selectedDays[0] || 'monday',
       startTime: primarySlot?.startTime || '09:00',
@@ -300,6 +529,11 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
 
     this.doctorForm.get('password')?.clearValidators();
     this.doctorForm.get('password')?.updateValueAndValidity();
+    this.syncSpecializationValidators();
+    this.syncQualificationValidators();
+    this.refreshSpecializationOptions();
+    this.refreshQualificationOptions();
+    this.updateAutoPrescriptionSpecialtyLabel();
     this.autoUrduName = true;
   }
 
@@ -336,6 +570,101 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
     urduControl?.setValue(translatedName, { emitEvent: false });
     this.lastAutoUrduName = translatedName;
     this.autoUrduName = true;
+  }
+
+  private resolvedSpecialization(): string {
+    const selected = String(this.doctorForm.get('specializationSelect')?.value || '').trim();
+    if (selected === CUSTOM_SPECIALIZATION_VALUE) {
+      return String(this.doctorForm.get('specializationCustom')?.value || '').trim();
+    }
+    return selected;
+  }
+
+  private resolvedQualification(): string {
+    const selected = String(this.doctorForm.get('qualificationSelect')?.value || '').trim();
+    if (selected === CUSTOM_SPECIALIZATION_VALUE) {
+      return String(this.doctorForm.get('qualificationCustom')?.value || '').trim();
+    }
+    return selected;
+  }
+
+  private resolvedPrescriptionSpecialtyTemplate(): PrescriptionSpecialtyTemplate {
+    if (this.isManualPrescriptionSpecialty) {
+      return (this.doctorForm.get('prescriptionSpecialtyTemplate')?.value ||
+        'general') as PrescriptionSpecialtyTemplate;
+    }
+
+    const specialization = this.resolvedSpecialization();
+    return resolveSpecialtyTemplateForSpecialization(
+      specialization,
+      this.selectedClinicalDepartment()
+    );
+  }
+
+  private applyAutoPrescriptionSpecialty(): void {
+    if (this.isManualPrescriptionSpecialty) {
+      this.updateAutoPrescriptionSpecialtyLabel();
+      return;
+    }
+
+    const template = this.resolvedPrescriptionSpecialtyTemplate();
+    this.doctorForm.patchValue(
+      {
+        prescriptionSpecialtyTemplate: template,
+      },
+      { emitEvent: false }
+    );
+    this.updateAutoPrescriptionSpecialtyLabel();
+  }
+
+  private refreshSpecializationOptions(): void {
+    const department = this.selectedClinicalDepartment();
+    const query = this.specializationSearch.trim().toLowerCase();
+    this.filteredSpecializationOptions = specializationsForDepartment(department).filter((item) =>
+      !query ? true : item.value.toLowerCase().includes(query)
+    );
+  }
+
+  private refreshQualificationOptions(): void {
+    const query = this.qualificationSearch.trim().toLowerCase();
+    this.filteredQualificationOptions = this.qualificationOptions.filter((item) =>
+      !query ? true : item.value.toLowerCase().includes(query)
+    );
+  }
+
+  private updateAutoPrescriptionSpecialtyLabel(): void {
+    const specialization = this.resolvedSpecialization();
+    const department = this.selectedClinicalDepartment();
+
+    if (!specialization) {
+      this.autoPrescriptionSpecialtyLabelText = 'Auto by specialization';
+      return;
+    }
+
+    const key = resolveSpecialtyTemplateForSpecialization(specialization, department);
+    this.autoPrescriptionSpecialtyLabelText = specialtyTemplateLabel(key);
+  }
+
+  private syncSpecializationValidators(): void {
+    const customControl = this.doctorForm.get('specializationCustom');
+    if (this.showCustomSpecialization) {
+      customControl?.setValidators([Validators.required, Validators.maxLength(150)]);
+    } else {
+      customControl?.clearValidators();
+      customControl?.setValue('', { emitEvent: false });
+    }
+    customControl?.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private syncQualificationValidators(): void {
+    const customControl = this.doctorForm.get('qualificationCustom');
+    if (this.showCustomQualification) {
+      customControl?.setValidators([Validators.required, Validators.maxLength(150)]);
+    } else {
+      customControl?.clearValidators();
+      customControl?.setValue('', { emitEvent: false });
+    }
+    customControl?.updateValueAndValidity({ emitEvent: false });
   }
 
   private normalizeDays(days: string[]): string[] {

@@ -94,31 +94,131 @@
                                 </div>
 
                                 <div class="col-md-4 form-group">
-                                    <label>Department</label>
-                                    <select class="form-control" formControlName="departmentId">
+                                    <label>Department <span class="text-danger">*</span></label>
+                                    <select class="form-control" formControlName="clinicalDepartment"
+                                        (change)="onClinicalDepartmentChange()">
                                         <option value="">Select department</option>
+                                        <option *ngFor="let department of clinicalDepartments" [value]="department.key">
+                                            {{ department.label }}
+                                        </option>
+                                    </select>
+
+                                    <small class="text-danger"
+                                        *ngIf="doctorForm.get('clinicalDepartment')?.touched && doctorForm.get('clinicalDepartment')?.invalid">
+                                        Department is required
+                                    </small>
+                                </div>
+
+                                <div class="col-md-4 form-group">
+                                    <label>Hospital Unit</label>
+                                    <select class="form-control" formControlName="departmentId">
+                                        <option value="">Select hospital unit (optional)</option>
                                         <option *ngFor="let department of departments" [value]="department._id">
                                             {{ department.name }}
                                         </option>
                                     </select>
+                                    <small class="text-muted">Internal hospital ward / unit mapping.</small>
                                 </div>
 
-                                <div class="col-md-4 form-group">
-                                    <label>Status</label>
-                                    <select class="form-control" formControlName="status">
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                    </select>
+                                <div class="col-md-4 form-group catalog-select-field">
+                                    <label>Specialization <span class="text-danger">*</span></label>
+                                    <div class="catalog-select">
+                                        <button type="button" class="catalog-select-trigger form-control"
+                                            [class.is-open]="specializationDropdownOpen"
+                                            [disabled]="!selectedClinicalDepartment()"
+                                            (click)="toggleSpecializationDropdown($event)">
+                                            <span [class.placeholder]="!doctorForm.get('specializationSelect')?.value">
+                                                {{ selectedClinicalDepartment() ? selectedSpecializationLabel() : 'Select department first' }}
+                                            </span>
+                                            <i class="fa fa-chevron-down"></i>
+                                        </button>
+
+                                        <div class="catalog-select-panel" *ngIf="specializationDropdownOpen">
+                                            <input type="text" class="form-control catalog-search-input"
+                                                placeholder="Search specialization..."
+                                                [value]="specializationSearch"
+                                                (input)="onSpecializationSearchInput($event)">
+
+                                            <div class="catalog-options">
+                                                <button type="button" class="catalog-option"
+                                                    *ngFor="let option of filteredSpecializationOptions; trackBy: trackCatalogOption"
+                                                    (click)="selectSpecialization(option)">
+                                                    {{ option.label || option.value }}
+                                                </button>
+
+                                                <p class="catalog-empty" *ngIf="filteredSpecializationOptions.length === 0">
+                                                    No matching specialization
+                                                </p>
+
+                                                <button type="button" class="catalog-option catalog-option-custom"
+                                                    (click)="selectSpecialization(customSpecializationValue)">
+                                                    <i class="fa fa-plus"></i> Add Custom Specialization
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <input *ngIf="showCustomSpecialization" class="form-control mt-2"
+                                        formControlName="specializationCustom" placeholder="Enter specialization">
+
+                                    <small class="text-danger"
+                                        *ngIf="doctorForm.get('specializationSelect')?.touched && doctorForm.get('specializationSelect')?.invalid">
+                                        Specialization is required
+                                    </small>
+                                    <small class="text-danger"
+                                        *ngIf="showCustomSpecialization && doctorForm.get('specializationCustom')?.touched && doctorForm.get('specializationCustom')?.invalid">
+                                        Custom specialization is required
+                                    </small>
                                 </div>
 
-                                <div class="col-md-4 form-group">
-                                    <label>Specialization</label>
-                                    <input class="form-control" formControlName="specialization">
-                                </div>
+                                <div class="col-md-4 form-group catalog-select-field">
+                                    <label>Qualification <span class="text-danger">*</span></label>
+                                    <div class="catalog-select">
+                                        <button type="button" class="catalog-select-trigger form-control"
+                                            [class.is-open]="qualificationDropdownOpen"
+                                            (click)="toggleQualificationDropdown($event)">
+                                            <span [class.placeholder]="!doctorForm.get('qualificationSelect')?.value">
+                                                {{ selectedQualificationLabel() }}
+                                            </span>
+                                            <i class="fa fa-chevron-down"></i>
+                                        </button>
 
-                                <div class="col-md-4 form-group">
-                                    <label>Qualification</label>
-                                    <input class="form-control" formControlName="qualification">
+                                        <div class="catalog-select-panel" *ngIf="qualificationDropdownOpen">
+                                            <input type="text" class="form-control catalog-search-input"
+                                                placeholder="Search qualification..."
+                                                [value]="qualificationSearch"
+                                                (input)="onQualificationSearchInput($event)">
+
+                                            <div class="catalog-options">
+                                                <button type="button" class="catalog-option"
+                                                    *ngFor="let option of filteredQualificationOptions; trackBy: trackCatalogOption"
+                                                    (click)="selectQualification(option)">
+                                                    {{ option.label || option.value }}
+                                                </button>
+
+                                                <p class="catalog-empty" *ngIf="filteredQualificationOptions.length === 0">
+                                                    No matching qualification
+                                                </p>
+
+                                                <button type="button" class="catalog-option catalog-option-custom"
+                                                    (click)="selectQualification(customSpecializationValue)">
+                                                    <i class="fa fa-plus"></i> Add Custom Qualification
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <input *ngIf="showCustomQualification" class="form-control mt-2"
+                                        formControlName="qualificationCustom" placeholder="Enter qualification">
+
+                                    <small class="text-danger"
+                                        *ngIf="doctorForm.get('qualificationSelect')?.touched && doctorForm.get('qualificationSelect')?.invalid">
+                                        Qualification is required
+                                    </small>
+                                    <small class="text-danger"
+                                        *ngIf="showCustomQualification && doctorForm.get('qualificationCustom')?.touched && doctorForm.get('qualificationCustom')?.invalid">
+                                        Custom qualification is required
+                                    </small>
                                 </div>
 
                                 <div class="col-md-2 form-group">
@@ -129,6 +229,47 @@
                                 <div class="col-md-2 form-group">
                                     <label>Consultation Fee</label>
                                     <input class="form-control" type="number" formControlName="consultationFee">
+
+                                    <small class="text-danger"
+                                        *ngIf="doctorForm.get('consultationFee')?.touched && doctorForm.get('consultationFee')?.invalid">
+                                        Consultation fee is required
+                                    </small>
+                                </div>
+
+                                <div class="col-md-4 form-group">
+                                    <label>Status</label>
+                                    <select class="form-control" formControlName="status">
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Inactive</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-12 form-group prescription-specialty-field">
+                                    <div class="prescription-specialty-heading">
+                                        <div>
+                                            <label>Default Prescription Template</label>
+                                            <small>Prescription UI sections change based on doctor specialization.</small>
+                                        </div>
+                                        <strong *ngIf="!isManualPrescriptionSpecialty">{{ autoPrescriptionSpecialtyLabelText }}</strong>
+                                    </div>
+
+                                    <div class="row clearfix">
+                                        <div class="col-md-4 form-group">
+                                            <select class="form-control" formControlName="prescriptionSpecialtyMode"
+                                                (change)="onPrescriptionSpecialtyModeChange()">
+                                                <option [value]="autoPrescriptionSpecialty">Auto by Specialization</option>
+                                                <option value="manual">Choose Manually</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-8 form-group" *ngIf="isManualPrescriptionSpecialty">
+                                            <select class="form-control" formControlName="prescriptionSpecialtyTemplate">
+                                                <option *ngFor="let option of prescriptionSpecialtyOptions" [value]="option.key">
+                                                    {{ option.label }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="col-md-12 form-group prescription-template-field">

@@ -4,6 +4,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../../core/services/backend.service';
+import {
+  clinicalDepartmentLabel,
+  specialtyTemplateLabel,
+} from '../../../../shared/catalogs/doctor-specialization.catalog';
 import { Appointment, Doctor, Patient } from '../../../../shared/models/hospital.model';
 
 @Component({
@@ -86,6 +90,14 @@ export class DoctorsProfileComponent implements OnInit {
       .map((day) => day.charAt(0).toUpperCase() + day.slice(1));
 
     return labels.length ? labels.join(', ') : '-';
+  }
+
+  clinicalDepartmentLabel(): string {
+    return clinicalDepartmentLabel(this.doctor?.clinicalDepartment);
+  }
+
+  prescriptionTemplateLabel(): string {
+    return specialtyTemplateLabel(this.doctor?.prescriptionSpecialtyTemplate || 'general');
   }
 
   fullScreenSection(number:any) {
