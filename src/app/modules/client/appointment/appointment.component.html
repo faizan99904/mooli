@@ -183,6 +183,11 @@
               <span>Discount (PKR)</span>
               <input type="number" min="0" formControlName="discount" />
             </label>
+            <label class="wide" *ngIf="(appointmentForm.value.discount || 0) > 0">
+              <span>Discount Reason *</span>
+              <input type="text" formControlName="discountReason" maxlength="500"
+                placeholder="e.g. Staff discount, senior citizen, referral" />
+            </label>
             <div class="consultation-fee-card net-fee-card" *ngIf="appointmentForm.value.doctorId">
               <span>Net Fee</span>
               <strong>{{ formatConsultationFee(netConsultationFee) }}</strong>
@@ -350,6 +355,7 @@
                 <th>Visit Type</th>
                 <th>Date & Time</th>
                 <th>Fee</th>
+                <th>Discount Reason</th>
                 <th>Payment</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -381,6 +387,7 @@
                 <td class="visit-type-cell">{{ visitTypeLabel(appointment.visitType) }}</td>
                 <td>{{ shortDate(appointment.appointmentDate) }}<br />{{ appointmentTimeRange(appointment) }}</td>
                 <td>{{ formatAppointmentFee(appointment) }}</td>
+                <td class="discount-reason-cell" [title]="discountReasonLabel(appointment)">{{ discountReasonLabel(appointment) }}</td>
                 <td class="payment-cell">
                   <select class="inline-payment-select" [ngModel]="appointment.paymentStatus || 'unpaid'"
                     (ngModelChange)="changeAppointmentPaymentStatus(appointment, $event)"

@@ -8,7 +8,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, finalize, Subscription } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import {
@@ -408,6 +408,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
+    private router: Router,
     private backend: BackendService,
     readonly offline: MooliOfflineService,
     private toastr: ToastrService,
@@ -2305,6 +2306,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
         void this.offline.cacheValue(this.doctorsCacheKey(), this.doctors);
         this.initializePrescriptionTheme();
         this.refreshOpenPreviewData();
+        this.maybeRedirectToPhysiotherapyRoute();
       },
       error: () => {
         void this.loadCachedDoctors();
@@ -2704,13 +2706,42 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.editPrescription(prescription);
   }
 
+  private maybeRedirectToPhysiotherapyRoute(): void {
+    const prescriptionId = this.route.snapshot.queryParamMap.get('prescriptionId');
+    if (prescriptionId) {
+      return;
+    }
+
+    const doctor = this.selectedDoctorProfile();
+    if (!doctor || inferSpecialtyTemplateKey(doctor) !== 'physiotherapy') {
+      return;
+    }
+
+    void this.router.navigate(['/prescriptions/physiotherapy'], {
+      queryParams: this.route.snapshot.queryParams,
+      replaceUrl: true,
+    });
+  }
+
   private handlePrescriptionRouteAction(prescriptionId: string, mode: string): void {
     if (!prescriptionId || !mode) {
+      this.maybeRedirectToPhysiotherapyRoute();
       return;
     }
 
     if (mode === 'view') {
-      this.openPrintPreviewWithFreshData({ _id: prescriptionId } as Prescription);
+      this.backend.getPrescription(prescriptionId).subscribe({
+        next: (prescription) => {
+          if (prescription.specialtySection === 'physiotherapy') {
+            void this.router.navigate(['/prescriptions/physiotherapy'], {
+              queryParams: this.route.snapshot.queryParams,
+            });
+            return;
+          }
+          this.openPrintPreviewWithFreshData(prescription);
+        },
+        error: (err) => this.toastr.error(err?.error?.message || 'Unable to load prescription.'),
+      });
       return;
     }
 
@@ -2727,6 +2758,19 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   private applyPrescriptionRouteAction(prescription: Prescription, mode: string): void {
+    if (prescription.specialtySection === 'physiotherapy') {
+      void this.router.navigate(['/prescriptions/physiotherapy'], {
+        queryParams: {
+          prescriptionId: prescription._id,
+          patientId: prescription.patientId,
+          doctorId: prescription.doctorId,
+          appointmentId: prescription.appointmentId || undefined,
+          mode,
+        },
+      });
+      return;
+    }
+
     if (mode === 'view') {
       this.openPrintPreview(prescription);
       return;

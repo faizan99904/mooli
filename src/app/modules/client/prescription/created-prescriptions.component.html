@@ -80,14 +80,20 @@
     <div class="created-view-dialog" role="dialog" aria-labelledby="created-view-title">
       <div class="created-view-toolbar">
         <div>
-          <h3 id="created-view-title">Prescription View</h3>
+          <h3 id="created-view-title">{{ isPhysioView ? 'Physiotherapy Treatment Plan' : 'Prescription View' }}</h3>
           <p>
-            {{ viewLoading ? 'Loading latest prescription...' : 'Theme: ' + viewTemplateLabel }}
+            {{
+              viewLoading
+                ? 'Loading latest prescription...'
+                : isPhysioView
+                  ? 'Physiotherapy report preview'
+                  : 'Theme: ' + viewTemplateLabel
+            }}
           </p>
         </div>
         <div class="created-view-actions">
           <button type="button" class="btn-light" (click)="closeViewModal()">Close</button>
-          <button type="button" class="btn-primary" [disabled]="viewLoading || !viewPreviewData"
+          <button type="button" class="btn-primary" [disabled]="viewLoading || (!viewPreviewData && !viewPhysioHtml)"
             (click)="printCreatedPrescription()">
             <i class="fa fa-print"></i>
             Print
@@ -96,14 +102,21 @@
       </div>
 
       <div class="created-view-scroll">
-        <div class="created-view-loading" *ngIf="viewLoading && !viewPreviewData">
+        <div class="created-view-loading" *ngIf="viewLoading && !viewPhysioPreviewUrl && !viewPreviewData">
           Loading prescription view...
         </div>
+
+        <iframe
+          class="created-physio-preview"
+          *ngIf="viewPhysioPreviewUrl"
+          title="Physiotherapy treatment plan preview"
+          [src]="viewPhysioPreviewUrl"
+        ></iframe>
 
         <section class="prescription-print-sheet" #printContent
           [ngClass]="'prescription-template-' + printPreviewTemplate"
           [class.prescription-eye-sheet]="preview.specialtySection === 'eye'"
-          *ngIf="!printPreviewLoading && printPreviewData as preview">
+          *ngIf="!viewPhysioPreviewUrl && printPreviewData as preview">
           <ng-container *ngIf="printPreviewTemplate === 'clinical-blue'; else themedPrescriptionLayout">
             <div class="clinical-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
               <header class="clinical-rx-header">

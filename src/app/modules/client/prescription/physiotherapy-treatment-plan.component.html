@@ -1,0 +1,574 @@
+<div id="main-content" class="prescription-page physiotherapy-page">
+  <div class="rx-workspace">
+    <aside class="appointments-panel">
+      <div class="panel-heading">
+        <div>
+          <h2 routerLink="/appointments" style="cursor: pointer;">Today's Appointments</h2>
+          <span>{{ visibleAppointments.length }}</span>
+        </div>
+        <div class="panel-heading-actions">
+          <button type="button" class="appointments-refresh-btn" title="Refresh appointments"
+            [disabled]="appointmentsLoading" (click)="refreshAppointments()">
+            <i class="fa" [ngClass]="appointmentsLoading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="appointments-list-scroll">
+        <button class="appointment-row" type="button" *ngFor="let appointment of visibleAppointments"
+          [class.active]="appointment._id === selectedAppointmentId" (click)="selectAppointment(appointment)">
+          <strong>{{ appointment.startTime }}</strong>
+          <span>{{ patientName(appointment.patient) }}</span>
+          <small [ngClass]="appointmentStatusClass(appointment.status)">
+            {{ appointmentStatusLabel(appointment.status) }}
+          </small>
+        </button>
+      </div>
+
+      <div class="patient-card" *ngIf="selectedPatient() as patient">
+        <div class="patient-identity">
+          <div class="avatar">{{ initials(patientName(patient)) }}</div>
+          <div>
+            <h3>{{ patientName(patient) }}</h3>
+            <p>{{ patient.patientNo }} · {{ ageLabel(patient) }}, {{ patient.gender | titlecase }} · {{ patient.phone || '-' }}</p>
+          </div>
+        </div>
+
+        <dl>
+          <div><dt>Address</dt><dd>{{ patient.address || '-' }}</dd></div>
+          <div><dt>Blood Group</dt><dd>{{ patient.bloodGroup || '-' }}</dd></div>
+          <div><dt>Allergies</dt><dd>{{ patient.allergies?.join(', ') || 'No known allergies' }}</dd></div>
+          <div><dt>Doctor</dt><dd>{{ selectedDoctorName() }}</dd></div>
+        </dl>
+      </div>
+    </aside>
+
+    <main class="consultation-panel">
+      <form [formGroup]="physioForm" (ngSubmit)="submitPlan()">
+        <input type="hidden" formControlName="patientId" />
+        <input type="hidden" formControlName="doctorId" />
+        <input type="hidden" formControlName="appointmentId" />
+
+        <div class="consultation-header">
+          <div>
+            <h1>Physiotherapy Treatment Plan</h1>
+            <p>Create &amp; manage patient rehab plan</p>
+            <p class="appointment-meta" *ngIf="selectedAppointment() as appointment">
+              {{ appointment.appointmentNo }} · {{ appointment.appointmentDate | date:'mediumDate' }} · {{ appointment.startTime }} - {{ appointment.endTime }}
+            </p>
+          </div>
+          <div class="header-actions">
+            <a class="btn-light" routerLink="/prescriptions/created">Created Prescriptions</a>
+            <button type="button" class="btn-light" [disabled]="saving" (click)="submitPlan(false)">Save Draft</button>
+            <button type="button" class="btn-primary" [disabled]="saving" (click)="submitPlan(true)">
+              <i class="fa fa-print"></i> {{ saving ? 'Saving...' : 'Save &amp; Print' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="consultation-grid physio-top-grid physio-header-fields">
+          <label><span>Plan Title</span><input formControlName="planTitle" placeholder="Knee Pain Treatment Plan" /></label>
+          <label><span>Chief Complaint</span><input formControlName="chiefComplaint" placeholder="Right knee pain and stiffness" /></label>
+          <label><span>History</span><input formControlName="history" placeholder="Pain since 2 weeks after running" /></label>
+          <label><span>Physio Assessment</span><input formControlName="physioAssessment" placeholder="Tenderness over patella, reduced quadriceps strength" /></label>
+          <label><span>Diagnosis / Condition</span><input formControlName="diagnosis" placeholder="Patellofemoral Pain Syndrome" /></label>
+          <label><span>Treatment Goal</span><input formControlName="treatmentGoal" placeholder="Reduce pain, improve mobility" /></label>
+          <label class="wide"><span>Advice / Notes</span><textarea formControlName="advice" placeholder="Avoid deep squats, continue home exercises"></textarea></label>
+        </div>
+
+        <div class="physio-body-grid">
+          <div class="physio-tabs-row">
+            <div class="rx-tabs physio-tabs">
+              <button type="button" *ngFor="let tab of tabs" [class.active]="activeTab === tab.key"
+                (click)="selectTab(tab.key)">{{ tab.label }}</button>
+            </div>
+          </div>
+
+          <section class="physio-main-panel">
+            <section class="physio-tab-panel" *ngIf="activeTab === 'assessment'" formGroupName="assessment">
+              <div class="physio-section-card">
+                <div class="section-heading"><h3>Pain Details</h3></div>
+                <div class="physio-form-grid">
+                  <label class="wide pain-score-field">
+                    <span>Pain Score (0-10)</span>
+                    <div class="pain-score-row">
+                      <input type="range" min="0" max="10" formControlName="painScore" />
+                      <strong>{{ assessmentGroup.get('painScore')?.value || 0 }}/10</strong>
+                    </div>
+                  </label>
+                  <label><span>Pain Location</span><select formControlName="painLocation"><option value="">Select</option><option *ngFor="let item of painLocations" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Pain Type</span><select formControlName="painType"><option value="">Select</option><option *ngFor="let item of painTypes" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Radiating Pain</span><select formControlName="radiatingPain"><option value="Yes">Yes</option><option value="No">No</option></select></label>
+                  <label><span>Pain Since</span><select formControlName="painSince"><option value="">Select</option><option *ngFor="let item of painSinceOptions" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Worse With</span><input formControlName="worseWith" placeholder="Walking, Stairs, Squatting" /></label>
+                  <label><span>Better With</span><input formControlName="betterWith" placeholder="Rest, Ice, Exercise" /></label>
+                  <label><span>Pain Time</span><select formControlName="painTime"><option value="">Select</option><option *ngFor="let item of painTimeOptions" [value]="item">{{ item }}</option></select></label>
+                </div>
+              </div>
+
+              <div class="physio-section-card">
+                <div class="section-heading"><h3>Physical Assessment</h3></div>
+                <div class="physio-form-grid">
+                  <label><span>ROM</span><select formControlName="rom"><option value="">Select</option><option *ngFor="let item of romOptions" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Muscle Strength</span><select formControlName="muscleStrength"><option value="">Select</option><option *ngFor="let item of muscleStrengthOptions" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Swelling</span><select formControlName="swelling"><option value="">Select</option><option *ngFor="let item of swellingOptions" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Tenderness</span><select formControlName="tenderness"><option value="Yes">Yes</option><option value="No">No</option></select></label>
+                  <label><span>Posture</span><select formControlName="posture"><option *ngFor="let item of postureOptions" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Gait</span><select formControlName="gait"><option *ngFor="let item of gaitOptions" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Balance</span><select formControlName="balance"><option *ngFor="let item of balanceOptions" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Weight Bearing</span><select formControlName="weightBearing"><option *ngFor="let item of weightBearingOptions" [value]="item">{{ item }}</option></select></label>
+                  <label><span>Functional Score</span><input type="number" min="0" max="100" formControlName="functionalScore" placeholder="0-100" /></label>
+                </div>
+              </div>
+
+              <div class="physio-section-card">
+                <div class="section-heading">
+                  <h3>Special Tests</h3>
+                  <button type="button" class="btn-light" (click)="addSpecialTest()">+ Add Test</button>
+                </div>
+                <div class="special-test-chips">
+                  <button type="button" class="chip-btn" *ngFor="let test of specialTestOptions"
+                    (click)="addSpecialTest(test)">{{ test }}</button>
+                </div>
+                <div class="physio-table-wrap" formArrayName="specialTests">
+                  <table class="physio-table" *ngIf="specialTests.length > 0">
+                    <thead><tr><th>Test</th><th>Result</th><th>Notes</th><th></th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let row of specialTests.controls; let i = index" [formGroupName]="i">
+                        <td><input formControlName="testName" /></td>
+                        <td><select formControlName="result"><option *ngFor="let item of testResultOptions" [value]="item">{{ item }}</option></select></td>
+                        <td><input formControlName="notes" /></td>
+                        <td><button type="button" class="btn-icon danger" (click)="removeSpecialTest(i)"><i class="fa fa-trash"></i></button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="physio-section-card clinical-notes-card">
+                <div class="clinical-notes-header">
+                  <div class="clinical-notes-title">
+                    <span class="clinical-notes-icon" aria-hidden="true">
+                      <i class="fa fa-stethoscope"></i>
+                    </span>
+                    <div>
+                      <h3>Clinical Notes</h3>
+                      <p>Examination findings, observations and clinical impression for this visit.</p>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-light clinical-notes-clear" *ngIf="clinicalNotesLength > 0"
+                    (click)="clearClinicalNotes()">
+                    <i class="fa fa-eraser"></i> Clear
+                  </button>
+                </div>
+
+                <div class="clinical-notes-snippets">
+                  <span class="snippet-label">Quick insert</span>
+                  <div class="snippet-chip-row">
+                    <button type="button" class="snippet-chip" *ngFor="let snippet of clinicalNoteSnippets"
+                      (click)="appendClinicalNoteSnippet(snippet)">
+                      <i class="fa fa-plus"></i> {{ snippet.label }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="clinical-notes-editor">
+                  <textarea formControlName="clinicalNotes" rows="7"
+                    placeholder="Example: Patient has pain in right knee since 2 weeks. Tenderness over patella. Reduced quadriceps strength and tight hamstrings. Pain increases on stairs and squatting."></textarea>
+                  <div class="clinical-notes-footer">
+                    <span class="clinical-notes-hint">
+                      <i class="fa fa-info-circle"></i>
+                      Included in treatment plan print &amp; assessment summary
+                    </span>
+                    <span class="clinical-notes-count">{{ clinicalNotesLength }} characters</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="physio-tab-panel" *ngIf="activeTab === 'therapy'">
+              <div class="physio-section-card tab-panel-card">
+                <div class="tab-panel-toolbar">
+                  <div>
+                    <h3>Therapy Plan</h3>
+                    <p>Add clinic therapies, duration and session frequency for this treatment plan.</p>
+                  </div>
+                  <div class="tab-panel-actions">
+                    <button type="button" class="btn-light" (click)="addTherapyRow()">+ Add Therapy</button>
+                  </div>
+                </div>
+
+                <div class="physio-table-wrap modern-table" formArrayName="therapyPlan">
+                  <table class="physio-table">
+                    <thead>
+                      <tr><th>#</th><th>Therapy</th><th>Area / Site</th><th>Duration</th><th>Frequency</th><th>Sessions</th><th>Notes</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of therapyPlan.controls; let i = index" [formGroupName]="i">
+                        <td>{{ i + 1 }}</td>
+                        <td><input formControlName="therapy" /></td>
+                        <td><input formControlName="areaSite" /></td>
+                        <td><input formControlName="duration" /></td>
+                        <td><input formControlName="frequency" /></td>
+                        <td><input formControlName="sessions" /></td>
+                        <td><input formControlName="notes" /></td>
+                        <td><button type="button" class="btn-icon danger" (click)="removeTherapyRow(i)"><i class="fa fa-trash"></i></button></td>
+                      </tr>
+                      <tr *ngIf="therapyPlan.length === 0"><td colspan="8" class="empty-cell">No therapy added yet</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <section class="physio-tab-panel" *ngIf="activeTab === 'exercise'">
+              <div class="physio-section-card tab-panel-card">
+                <div class="tab-panel-toolbar">
+                  <div>
+                    <h3>Exercise Plan</h3>
+                    <p>Home and clinic exercises assigned to the patient.</p>
+                  </div>
+                  <div class="tab-panel-actions">
+                    <button type="button" class="btn-light" (click)="addExerciseRow()">+ Add Exercise</button>
+                    <button type="button" class="btn-light" (click)="printExercisePlan()">
+                      <i class="fa fa-print"></i> Print Exercise Plan
+                    </button>
+                  </div>
+                </div>
+
+                <div class="physio-table-wrap modern-table" formArrayName="exercisePlan">
+                  <table class="physio-table">
+                    <thead>
+                      <tr>
+                        <th>#</th><th>Exercise</th><th>Body Area</th><th>Sets</th><th>Reps / Hold</th>
+                        <th>Frequency</th><th>Instructions</th><th class="check-col">Home</th><th class="check-col">Clinic</th><th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of exercisePlan.controls; let i = index" [formGroupName]="i">
+                        <td>{{ i + 1 }}</td>
+                        <td><input formControlName="exercise" placeholder="Hamstring Stretch" /></td>
+                        <td><input formControlName="bodyArea" placeholder="Knee (Right)" /></td>
+                        <td><input formControlName="sets" placeholder="3" /></td>
+                        <td><input formControlName="repsHold" placeholder="30 sec hold" /></td>
+                        <td><input formControlName="frequency" placeholder="Daily" /></td>
+                        <td><input formControlName="instructions" placeholder="Keep knee straight" /></td>
+                        <td class="check-cell">
+                          <label class="exercise-check">
+                            <input type="checkbox" formControlName="isHomeExercise" />
+                          </label>
+                        </td>
+                        <td class="check-cell">
+                          <label class="exercise-check">
+                            <input type="checkbox" formControlName="isClinicExercise" />
+                          </label>
+                        </td>
+                        <td class="action-cell">
+                          <button type="button" class="btn-icon danger" (click)="removeExerciseRow(i)" title="Delete">
+                            <i class="fa fa-trash"></i>
+                          </button>
+                        </td>
+                      </tr>
+                      <tr *ngIf="exercisePlan.length === 0">
+                        <td colspan="10" class="empty-cell">No exercises added yet. Use Common Exercises or Add Exercise.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="tab-info-note" *ngIf="exerciseSummary.home > 0">
+                  <i class="fa fa-info-circle"></i>
+                  Patient should perform <strong>{{ exerciseSummary.home }}</strong> home exercise(s) daily as advised.
+                  Contact clinic if pain increases during home exercises.
+                </div>
+              </div>
+            </section>
+
+            <section class="physio-tab-panel" *ngIf="activeTab === 'sessions'">
+              <div class="physio-section-card tab-panel-card">
+                <div class="tab-panel-toolbar">
+                  <div>
+                    <h3>Session Plan</h3>
+                    <p>Track therapy and exercise completed in each session.</p>
+                  </div>
+                  <div class="tab-panel-actions">
+                    <button type="button" class="btn-light" (click)="addSessionRow()">+ Start Session</button>
+                  </div>
+                </div>
+
+                <div class="physio-table-wrap modern-table" formArrayName="sessions">
+                  <table class="physio-table">
+                    <thead>
+                      <tr>
+                        <th>Session #</th><th>Date</th><th>Therapy Done</th><th>Exercise Done</th>
+                        <th>Pain Before</th><th>Pain After</th><th>Status</th><th>Remarks</th><th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of sessions.controls; let i = index" [formGroupName]="i">
+                        <td><input formControlName="sessionNo" /></td>
+                        <td><input type="date" formControlName="date" /></td>
+                        <td><input formControlName="therapyDone" placeholder="TENS + Hot Pack" /></td>
+                        <td><input formControlName="exerciseDone" placeholder="Hamstring Stretch" /></td>
+                        <td><input formControlName="painBefore" placeholder="7/10" /></td>
+                        <td><input formControlName="painAfter" placeholder="5/10" /></td>
+                        <td>
+                          <select formControlName="status" [ngClass]="sessionStatusClass(row.get('status')?.value)">
+                            <option *ngFor="let item of sessionStatusOptions" [value]="item">{{ item }}</option>
+                          </select>
+                        </td>
+                        <td><input formControlName="remarks" /></td>
+                        <td class="action-cell">
+                          <button type="button" class="btn-icon" title="Mark completed" (click)="markSessionCompleted(i)"><i class="fa fa-check"></i></button>
+                          <button type="button" class="btn-icon" title="Print session note" (click)="printSessionNote(i)"><i class="fa fa-print"></i></button>
+                          <button type="button" class="btn-icon" title="Reschedule" (click)="rescheduleSession(i)"><i class="fa fa-calendar"></i></button>
+                          <button type="button" class="btn-icon danger" (click)="removeSessionRow(i)"><i class="fa fa-trash"></i></button>
+                        </td>
+                      </tr>
+                      <tr *ngIf="sessions.length === 0">
+                        <td colspan="9" class="empty-cell">No sessions recorded yet. Click Start Session to begin.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="session-legend">
+                  <span><i class="dot done"></i> Done</span>
+                  <span><i class="dot pending"></i> Pending</span>
+                  <span><i class="dot cancelled"></i> Cancelled</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="physio-tab-panel" *ngIf="activeTab === 'progress'">
+              <div class="physio-section-card tab-panel-card">
+                <div class="tab-panel-toolbar progress-toolbar">
+                  <div>
+                    <h3>Progress Overview</h3>
+                    <p>Compare current status against initial assessment.</p>
+                  </div>
+                  <label class="compare-select">
+                    <span>Compare With</span>
+                    <select [(ngModel)]="progressCompareWith" [ngModelOptions]="{ standalone: true }">
+                      <option value="initial">Initial Assessment</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="physio-table-wrap modern-table" formArrayName="progress">
+                  <table class="physio-table progress-table">
+                    <thead>
+                      <tr>
+                        <th>Parameter</th>
+                        <th>Initial ({{ progressInitialLabel() }})</th>
+                        <th>Current ({{ progressCurrentLabel() }})</th>
+                        <th>Change</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of progressRows.controls; let i = index" [formGroupName]="i">
+                        <td class="parameter-cell">{{ row.get('parameter')?.value }}</td>
+                        <td><input formControlName="initialValue" (input)="onProgressRowChange(i)" /></td>
+                        <td><input formControlName="currentValue" (input)="onProgressRowChange(i)" /></td>
+                        <td [ngClass]="progressChangeClass(row.get('change')?.value, row.get('status')?.value)">
+                          {{ row.get('change')?.value || '-' }}
+                        </td>
+                        <td>
+                          <span [ngClass]="progressStatusClass(row.get('status')?.value)">
+                            {{ row.get('status')?.value || '-' }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <label class="progress-notes-field">
+                  <span>Progress Notes</span>
+                  <textarea formControlName="progressNotes" rows="4"
+                    placeholder="Patient showing gradual improvement in pain and mobility. Continue current plan."></textarea>
+                </label>
+              </div>
+            </section>
+
+            <section class="physio-tab-panel" *ngIf="activeTab === 'advice'" formGroupName="adviceDetails">
+              <div class="physio-form-grid advice-grid">
+                <label class="wide"><span>Precautions</span><textarea formControlName="precautions"></textarea></label>
+                <label class="wide"><span>Home Care</span><textarea formControlName="homeCare"></textarea></label>
+                <label><span>Do's</span><textarea formControlName="dos"></textarea></label>
+                <label><span>Don'ts</span><textarea formControlName="donts"></textarea></label>
+                <label class="wide"><span>Red Flags</span><textarea formControlName="redFlags"></textarea></label>
+                <label class="wide"><span>Next Review Instructions</span><textarea formControlName="nextReviewInstructions"></textarea></label>
+              </div>
+            </section>
+
+            <section class="physio-tab-panel" *ngIf="activeTab === 'documents'">
+              <div class="physio-section-card tab-panel-card">
+                <div class="tab-panel-toolbar">
+                  <div>
+                    <h3>Documents</h3>
+                    <p>Attach X-rays, reports and other files linked to this treatment plan.</p>
+                  </div>
+                  <div class="tab-panel-actions">
+                    <button type="button" class="btn-light" (click)="addDocumentRow()">+ Add Document</button>
+                  </div>
+                </div>
+
+                <div class="physio-table-wrap modern-table" formArrayName="documents">
+                  <table class="physio-table">
+                    <thead><tr><th>File Name</th><th>Type</th><th>Date</th><th>Uploaded By</th><th>URL</th><th></th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let row of documents.controls; let i = index" [formGroupName]="i">
+                        <td><input formControlName="name" /></td>
+                        <td><select formControlName="type"><option *ngFor="let item of documentTypes" [value]="item">{{ item }}</option></select></td>
+                        <td><input type="datetime-local" formControlName="uploadedOn" /></td>
+                        <td><input formControlName="uploadedBy" /></td>
+                        <td><input formControlName="url" placeholder="https://..." /></td>
+                        <td><button type="button" class="btn-icon danger" (click)="removeDocumentRow(i)"><i class="fa fa-trash"></i></button></td>
+                      </tr>
+                      <tr *ngIf="documents.length === 0"><td colspan="6" class="empty-cell">No documents uploaded</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <aside class="physio-side-panel">
+            <ng-container *ngIf="activeTab === 'exercise'">
+              <div class="physio-side-card summary-card">
+                <div class="physio-side-card-head"><strong>Exercise Summary</strong></div>
+                <div class="summary-stat-grid">
+                  <div class="summary-stat"><span>Total Exercises</span><strong>{{ exerciseSummary.total }}</strong></div>
+                  <div class="summary-stat"><span>Home Exercises</span><strong>{{ exerciseSummary.home }}</strong></div>
+                  <div class="summary-stat"><span>Clinic Exercises</span><strong>{{ exerciseSummary.clinic }}</strong></div>
+                </div>
+              </div>
+
+              <div class="physio-side-card">
+                <div class="physio-side-card-head"><strong>Common Exercises</strong></div>
+                <div class="quick-add-list">
+                  <div class="quick-add-row" *ngFor="let exercise of commonExercises">
+                    <span>{{ exercise }}</span>
+                    <button type="button" class="btn-light mini-btn" (click)="addCommonExercise(exercise)">+ Add</button>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="activeTab === 'sessions'">
+              <div class="physio-side-card" formGroupName="sessionPlan">
+                <div class="physio-side-card-head"><strong>Session Plan</strong></div>
+                <label><span>Total Sessions</span><input formControlName="totalSessions" /></label>
+                <label><span>Frequency</span><input formControlName="frequency" /></label>
+                <label><span>Review After</span><input formControlName="reviewAfter" /></label>
+                <label><span>Next Session</span><input type="date" formControlName="nextSessionDate" /></label>
+              </div>
+
+              <div class="physio-side-card chart-card">
+                <div class="physio-side-card-head"><strong>Session Overview</strong></div>
+                <div class="donut-wrap">
+                  <svg viewBox="0 0 120 120" class="donut-chart">
+                    <circle cx="60" cy="60" r="42" fill="none" stroke="#edf2f7" stroke-width="14"></circle>
+                    <circle *ngFor="let segment of sessionDonutSegments; trackBy: trackByIndex" cx="60" cy="60" r="42" fill="none"
+                      [attr.stroke]="segment.color" stroke-width="14" stroke-linecap="round"
+                      [attr.stroke-dasharray]="segment.dash" [attr.stroke-dashoffset]="segment.offset"
+                      transform="rotate(-90 60 60)"></circle>
+                    <text x="60" y="56" text-anchor="middle" class="donut-total">{{ sessionOverview.total }}</text>
+                    <text x="60" y="72" text-anchor="middle" class="donut-label">Sessions</text>
+                  </svg>
+                </div>
+                <div class="overview-stats">
+                  <div><span>Done</span><strong>{{ sessionOverview.done }}</strong></div>
+                  <div><span>Pending</span><strong>{{ sessionOverview.pending }}</strong></div>
+                  <div><span>Cancelled</span><strong>{{ sessionOverview.cancelled }}</strong></div>
+                  <div><span>Remaining</span><strong>{{ sessionOverview.remaining }}</strong></div>
+                </div>
+              </div>
+
+              <div class="physio-side-card chart-card">
+                <div class="physio-side-card-head"><strong>Pain Trend (Session Wise)</strong></div>
+                <svg viewBox="0 0 260 120" class="line-chart" *ngIf="sessionPainTrendChart.hasData; else noSessionTrend">
+                  <path [attr.d]="sessionPainTrendChart.path" fill="none" stroke="#019c9d" stroke-width="2.5"></path>
+                  <circle *ngFor="let dot of sessionPainTrendChart.dots; trackBy: trackByIndex" [attr.cx]="dot.x" [attr.cy]="dot.y" r="3.5" fill="#012f75"></circle>
+                  <text *ngFor="let label of sessionPainTrendChart.labels; trackBy: trackByIndex" [attr.x]="label.x" y="115" text-anchor="middle" class="chart-label">{{ label.label }}</text>
+                </svg>
+                <ng-template #noSessionTrend>
+                  <p class="chart-empty">Add session pain scores to see trend.</p>
+                </ng-template>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="activeTab === 'progress'">
+              <div class="physio-side-card chart-card">
+                <div class="physio-side-card-head"><strong>Pain Progress</strong></div>
+                <svg viewBox="0 0 260 120" class="line-chart" *ngIf="painProgressChart.hasData; else noPainProgress">
+                  <path [attr.d]="painProgressChart.path" fill="none" stroke="#019c9d" stroke-width="2.5"></path>
+                  <circle *ngFor="let dot of painProgressChart.dots; trackBy: trackByIndex" [attr.cx]="dot.x" [attr.cy]="dot.y" r="3.5" fill="#012f75"></circle>
+                  <text *ngFor="let label of painProgressChart.labels; trackBy: trackByIndex" [attr.x]="label.x" y="115" text-anchor="middle" class="chart-label">{{ label.label }}</text>
+                </svg>
+                <ng-template #noPainProgress>
+                  <p class="chart-empty">Enter pain scores to view progress chart.</p>
+                </ng-template>
+              </div>
+
+              <div class="physio-side-card chart-card">
+                <div class="physio-side-card-head"><strong>ROM Progress</strong></div>
+                <svg viewBox="0 0 260 120" class="line-chart" *ngIf="romProgressChart.hasData; else noRomProgress">
+                  <path [attr.d]="romProgressChart.path" fill="none" stroke="#019c9d" stroke-width="2.5"></path>
+                  <circle *ngFor="let dot of romProgressChart.dots; trackBy: trackByIndex" [attr.cx]="dot.x" [attr.cy]="dot.y" r="3.5" fill="#012f75"></circle>
+                  <text *ngFor="let label of romProgressChart.labels; trackBy: trackByIndex" [attr.x]="label.x" y="115" text-anchor="middle" class="chart-label">{{ label.label }}</text>
+                </svg>
+                <ng-template #noRomProgress>
+                  <p class="chart-empty">Use numeric ROM values (e.g. 45, 75) for chart.</p>
+                </ng-template>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="activeTab !== 'exercise' && activeTab !== 'sessions' && activeTab !== 'progress'">
+              <div class="physio-side-card" formGroupName="summary">
+                <div class="physio-side-card-head"><strong>Pain &amp; Assessment</strong><span class="edit-pill">Editable</span></div>
+                <label><span>Pain Score</span><input formControlName="painScore" /></label>
+                <label><span>ROM</span><select formControlName="rom"><option value="">Select</option><option *ngFor="let item of romOptions" [value]="item">{{ item }}</option></select></label>
+                <label><span>Muscle Strength</span><select formControlName="muscleStrength"><option value="">Select</option><option *ngFor="let item of muscleStrengthOptions" [value]="item">{{ item }}</option></select></label>
+                <label><span>Swelling</span><select formControlName="swelling"><option value="">Select</option><option *ngFor="let item of swellingOptions" [value]="item">{{ item }}</option></select></label>
+                <label><span>Gait</span><select formControlName="gait"><option *ngFor="let item of gaitOptions" [value]="item">{{ item }}</option></select></label>
+                <label><span>Functional Score</span><input formControlName="functionalScore" /></label>
+              </div>
+
+              <div class="physio-side-card physio-therapies-card" *ngIf="activeTab === 'therapy'">
+                <div class="physio-side-card-head"><strong>Common Therapies</strong></div>
+                <div class="therapy-check-list">
+                  <label class="therapy-check" *ngFor="let therapy of commonTherapies">
+                    <input type="checkbox" [checked]="isTherapySelected(therapy)"
+                      (change)="toggleTherapySelection(therapy, $any($event.target).checked)" />
+                    <span>{{ therapy }}</span>
+                  </label>
+                </div>
+                <button type="button" class="btn-primary btn-block" (click)="addSelectedTherapiesToPlan()">Add to Plan</button>
+              </div>
+
+              <div class="physio-side-card" formGroupName="sessionPlan" *ngIf="activeTab === 'assessment' || activeTab === 'therapy' || activeTab === 'advice'">
+                <div class="physio-side-card-head"><strong>Session Plan</strong></div>
+                <label><span>Total Sessions</span><input formControlName="totalSessions" /></label>
+                <label><span>Frequency</span><input formControlName="frequency" /></label>
+                <label><span>Review After</span><input formControlName="reviewAfter" /></label>
+                <label><span>Next Session</span><input type="date" formControlName="nextSessionDate" /></label>
+              </div>
+
+              <div class="physio-side-card" *ngIf="activeTab === 'assessment'">
+                <div class="physio-side-card-head"><strong>Progress Snapshot</strong></div>
+                <div class="progress-snapshot-row" *ngFor="let item of progressSnapshotItems">
+                  <span>{{ item.label }}</span>
+                  <strong [class.good]="item.tone === 'good'">{{ item.text }}</strong>
+                  <small *ngIf="item.tone === 'good'">Improving</small>
+                </div>
+              </div>
+            </ng-container>
+          </aside>
+        </div>
+      </form>
+    </main>
+  </div>
+</div>

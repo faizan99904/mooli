@@ -983,6 +983,13 @@
   white-space: nowrap;
 }
 
+.appointments-table td.discount-reason-cell {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .appointments-table tr.appointment-row-link.is-clickable {
   cursor: pointer;
 }

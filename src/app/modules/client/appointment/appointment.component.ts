@@ -127,6 +127,7 @@ export class AppointmentComponent implements OnInit {
       reason: [''],
       consultationFee: [0],
       discount: [0],
+      discountReason: [''],
       paymentStatus: ['unpaid', Validators.required],
       status: ['pending', Validators.required],
       notes: [''],
@@ -493,9 +494,16 @@ export class AppointmentComponent implements OnInit {
     const paymentStatus = value.paymentStatus || 'unpaid';
     const consultationFee = Number(value.consultationFee || selectedDoctor?.consultationFee || 0);
     const discount = Number(value.discount || 0);
+    const discountReason = String(value.discountReason || '').trim();
 
     if (discount > consultationFee) {
       this.toastr.error('Discount cannot be greater than consultation fee');
+      return;
+    }
+
+    if (discount > 0 && !discountReason) {
+      this.toastr.error('Please enter discount reason');
+      this.appointmentForm.get('discountReason')?.markAsTouched();
       return;
     }
 
@@ -513,6 +521,7 @@ export class AppointmentComponent implements OnInit {
       reason: value.reason,
       consultationFee,
       discount,
+      discountReason: discount > 0 ? discountReason : undefined,
       paymentStatus,
       visitType: this.visitType || 'Consultation',
       status: paymentStatus === 'paid' ? 'confirmed' : value.status || 'pending',
@@ -525,7 +534,7 @@ export class AppointmentComponent implements OnInit {
 
     this.removeEmptyTimeFields(payload);
     if (!isEditing) {
-      this.removeEmptyOptionalTextFields(payload, ['reason', 'notes']);
+      this.removeEmptyOptionalTextFields(payload, ['reason', 'notes', 'discountReason']);
     }
 
     if (!this.editingId && this.currentHospitalId) {
@@ -593,6 +602,7 @@ export class AppointmentComponent implements OnInit {
       reason: appointment.reason || '',
       consultationFee: appointment.consultationFee ?? this.selectedDoctorConsultationFee,
       discount: appointment.discount ?? 0,
+      discountReason: appointment.discountReason || '',
       paymentStatus: appointment.paymentStatus || 'unpaid',
       status: appointment.status,
       notes: appointment.notes || '',
@@ -729,6 +739,7 @@ export class AppointmentComponent implements OnInit {
       appointmentDate: this.todayValue(),
       consultationFee: 0,
       discount: 0,
+      discountReason: '',
       paymentStatus: 'unpaid',
       status: 'pending',
     });
@@ -925,6 +936,15 @@ export class AppointmentComponent implements OnInit {
     }
 
     return this.formatConsultationFee(fee);
+  }
+
+  discountReasonLabel(appointment: Appointment): string {
+    const discount = Number(appointment.discount || 0);
+    if (discount <= 0) {
+      return '-';
+    }
+
+    return String(appointment.discountReason || '').trim() || '-';
   }
 
   paymentStatusLabel(value?: string | null): string {

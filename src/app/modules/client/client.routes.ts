@@ -47,6 +47,7 @@ import { CreateHospitalComponent } from './create-hospital/create-hospital.compo
 import { RolesComponent } from './roles/roles.component';
 import { CareRecordsComponent } from './care-records/care-records.component';
 import { PrescriptionComponent } from './prescription/prescription.component';
+import { PhysiotherapyTreatmentPlanComponent } from './prescription/physiotherapy-treatment-plan.component';
 import { CreatedPrescriptionsComponent } from './prescription/created-prescriptions.component';
 import { CreatedLabReportsComponent } from './laboratory/created-lab-reports.component';
 import { LabDashboardComponent } from './laboratory/lab-dashboard.component';
@@ -467,6 +468,12 @@ export const clientRoutes: Routes = [
           recordType: 'ward',
         },
         canActivate: [roleGuard(WARD_ADMIN_ACCESS)],
+      },
+      {
+        path: 'prescriptions/physiotherapy',
+        component: PhysiotherapyTreatmentPlanComponent,
+        data: { title: 'Mooli | Physiotherapy Treatment Plan' },
+        canActivate: [roleGuard(PRESCRIPTION_ACCESS)],
       },
       {
         path: 'prescriptions/created',

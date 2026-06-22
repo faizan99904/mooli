@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -16,6 +17,7 @@ import {
 } from '../../../shared/models/hospital.model';
 import { legacyAdmissionOrdersToItems } from './admission-order-data';
 import {
+  resolvePrescriptionRouteForPrescription,
   resolvePrintSpecialtyRows,
   resolvePrintSpecialtyTemplate,
   SpecialtyTemplateKey,
@@ -32,6 +34,11 @@ import {
   formatUrduQualification,
   stripDoctorPrefix,
 } from './prescription-print-urdu';
+import { buildPhysiotherapyPrintHtml } from './physiotherapy-print';
+import {
+  defaultPhysioPlanPayload,
+  parsePhysioPlanFromPrescription,
+} from './physiotherapy-treatment-plan.model';
 
 type PrescriptionDateGroup = {
   dateKey: string;
@@ -89,7 +96,7 @@ type DoseSlot = 'morning' | 'noon' | 'evening' | 'night';
   templateUrl: './created-prescriptions.component.html',
   styleUrl: './created-prescriptions.component.scss',
 })
-export class CreatedPrescriptionsComponent implements OnInit {
+export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
   @ViewChild('printContent', { static: false }) printContent?: ElementRef<HTMLElement>;
 
   prescriptions: Prescription[] = [];
@@ -113,6 +120,9 @@ export class CreatedPrescriptionsComponent implements OnInit {
   viewLoading = false;
   viewPrescription: Prescription | null = null;
   viewPreviewData: CreatedPrescriptionPreviewData | null = null;
+  viewPhysioHtml: string | null = null;
+  viewPhysioPreviewUrl: SafeResourceUrl | null = null;
+  private physioPreviewObjectUrl: string | null = null;
   readonly prescriptionTemplates: Array<{ id: PrescriptionTemplate; name: string }> = [
     { id: 'classic', name: 'Classic' },
     { id: 'clinical-blue', name: 'Clinical Blue' },
@@ -135,7 +145,8 @@ export class CreatedPrescriptionsComponent implements OnInit {
     private offline: MooliOfflineService,
     private toastr: ToastrService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private sanitizer: DomSanitizer
   ) {
     this.historyDateFrom = this.defaultHistoryDateFrom();
     this.historyDateTo = this.todayValue();
@@ -181,6 +192,14 @@ export class CreatedPrescriptionsComponent implements OnInit {
 
   get printPreviewTemplate(): PrescriptionTemplate {
     return this.viewPreviewData?.template || 'classic';
+  }
+
+  get isPhysioView(): boolean {
+    return Boolean(this.viewPhysioPreviewUrl) || this.viewPrescription?.specialtySection === 'physiotherapy';
+  }
+
+  ngOnDestroy(): void {
+    this.clearPhysioPreviewUrl();
   }
 
   loadLookups(): void {
@@ -325,7 +344,7 @@ export class CreatedPrescriptionsComponent implements OnInit {
       return;
     }
 
-    void this.router.navigate(['/prescriptions'], {
+    void this.router.navigate([resolvePrescriptionRouteForPrescription(prescription)], {
       queryParams: {
         prescriptionId: prescription._id,
         patientId: prescription.patientId,
@@ -339,14 +358,19 @@ export class CreatedPrescriptionsComponent implements OnInit {
   openView(prescription: Prescription): void {
     const requestId = ++this.viewRequestId;
     const fallbackTemplate = this.resolvePrescriptionTemplate(prescription);
+    const isPhysio = prescription.specialtySection === 'physiotherapy';
 
     this.viewModalOpen = true;
     this.viewLoading = true;
+    this.clearPhysioPreviewUrl();
     this.viewPrescription = {
       ...prescription,
       prescriptionTemplate: fallbackTemplate,
     };
-    this.viewPreviewData = this.buildViewPreviewData(this.viewPrescription, fallbackTemplate);
+    this.viewPreviewData = isPhysio ? null : this.buildViewPreviewData(this.viewPrescription, fallbackTemplate);
+    if (isPhysio) {
+      this.schedulePhysioPreview(this.viewPrescription, requestId);
+    }
 
     this.backend
       .getPrescription(prescription._id)
@@ -370,7 +394,13 @@ export class CreatedPrescriptionsComponent implements OnInit {
           };
 
           this.viewPrescription = resolvedPrescription;
-          this.viewPreviewData = this.buildViewPreviewData(resolvedPrescription, resolvedTemplate);
+          if (resolvedPrescription.specialtySection === 'physiotherapy') {
+            this.viewPreviewData = null;
+            this.schedulePhysioPreview(resolvedPrescription, requestId);
+          } else {
+            this.clearPhysioPreviewUrl();
+            this.viewPreviewData = this.buildViewPreviewData(resolvedPrescription, resolvedTemplate);
+          }
           this.prescriptions = this.prescriptions.map((item) =>
             item._id === resolvedPrescription._id ? resolvedPrescription : item
           );
@@ -381,7 +411,7 @@ export class CreatedPrescriptionsComponent implements OnInit {
             return;
           }
 
-          if (!this.viewPreviewData) {
+          if (!this.viewPreviewData && !this.viewPhysioPreviewUrl) {
             this.viewModalOpen = false;
             this.toastr.error(err?.error?.message || 'Unable to load prescription view.');
           } else {
@@ -397,9 +427,15 @@ export class CreatedPrescriptionsComponent implements OnInit {
     this.viewLoading = false;
     this.viewPrescription = null;
     this.viewPreviewData = null;
+    this.clearPhysioPreviewUrl();
   }
 
   printCreatedPrescription(): void {
+    if (this.viewPhysioHtml) {
+      this.openPhysioPrintWindow(this.viewPhysioHtml);
+      return;
+    }
+
     const content = this.printContent?.nativeElement?.outerHTML;
     if (!content) {
       return;
@@ -729,7 +765,19 @@ export class CreatedPrescriptionsComponent implements OnInit {
   }
 
   private refreshOpenViewPreview(): void {
-    if (!this.viewPrescription || !this.viewPreviewData) {
+    if (!this.viewPrescription) {
+      return;
+    }
+
+    if (this.viewPrescription.specialtySection === 'physiotherapy') {
+      this.schedulePhysioPreview(this.viewPrescription, this.viewRequestId);
+      this.viewPreviewData = null;
+      return;
+    }
+
+    this.clearPhysioPreviewUrl();
+
+    if (!this.viewPreviewData) {
       return;
     }
 
@@ -739,6 +787,101 @@ export class CreatedPrescriptionsComponent implements OnInit {
       prescriptionTemplate: template,
     };
     this.viewPreviewData = this.buildViewPreviewData(this.viewPrescription, template);
+  }
+
+  private schedulePhysioPreview(prescription: Prescription, requestId: number): void {
+    window.setTimeout(() => {
+      if (requestId !== this.viewRequestId || !this.viewPrescription) {
+        return;
+      }
+
+      try {
+        this.setPhysioViewHtml(this.buildPhysioReportHtml(prescription));
+      } catch {
+        this.toastr.error('Unable to build physiotherapy report preview');
+      }
+    }, 0);
+  }
+
+  private setPhysioViewHtml(html: string | null): void {
+    this.clearPhysioPreviewUrl();
+    this.viewPhysioHtml = html;
+
+    if (!html) {
+      return;
+    }
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    this.physioPreviewObjectUrl = URL.createObjectURL(blob);
+    this.viewPhysioPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.physioPreviewObjectUrl);
+  }
+
+  private clearPhysioPreviewUrl(): void {
+    if (this.physioPreviewObjectUrl) {
+      URL.revokeObjectURL(this.physioPreviewObjectUrl);
+      this.physioPreviewObjectUrl = null;
+    }
+
+    this.viewPhysioPreviewUrl = null;
+    this.viewPhysioHtml = null;
+  }
+
+  private buildPhysioReportHtml(prescription: Prescription): string {
+    const plan = parsePhysioPlanFromPrescription(prescription) || defaultPhysioPlanPayload();
+    const patient = this.resolveViewPatient(prescription);
+    const doctor = this.resolveViewDoctor(prescription);
+
+    return buildPhysiotherapyPrintHtml(
+      prescription,
+      patient,
+      doctor,
+      plan,
+      this.currentHospital
+    );
+  }
+
+  private openPhysioPrintWindow(html: string): void {
+    const frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    document.body.appendChild(frame);
+
+    let printed = false;
+    const printFrame = () => {
+      if (printed || !document.body.contains(frame)) {
+        return;
+      }
+
+      printed = true;
+      try {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+      } catch {
+        this.toastr.error('Unable to open physiotherapy print preview');
+      } finally {
+        window.setTimeout(() => frame.remove(), 1000);
+      }
+    };
+
+    frame.onload = () => {
+      window.setTimeout(printFrame, 150);
+    };
+
+    const doc = frame.contentDocument || frame.contentWindow?.document;
+    if (!doc) {
+      this.toastr.error('Unable to open physiotherapy print preview');
+      frame.remove();
+      return;
+    }
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+    window.setTimeout(printFrame, 500);
   }
 
   private isPrescriptionTemplate(value: unknown): value is PrescriptionTemplate {

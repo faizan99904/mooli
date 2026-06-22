@@ -219,6 +219,20 @@ export function resolvePrintSpecialtyTemplate(
   return SPECIALTY_TEMPLATES[inferSpecialtyTemplateKey(doctor || null)];
 }
 
+export function resolvePrescriptionRouteForDoctor(doctor?: Doctor | null): '/prescriptions' | '/prescriptions/physiotherapy' {
+  return inferSpecialtyTemplateKey(doctor) === 'physiotherapy'
+    ? '/prescriptions/physiotherapy'
+    : '/prescriptions';
+}
+
+export function resolvePrescriptionRouteForPrescription(
+  prescription?: { specialtySection?: string | null } | null
+): '/prescriptions' | '/prescriptions/physiotherapy' {
+  return prescription?.specialtySection === 'physiotherapy'
+    ? '/prescriptions/physiotherapy'
+    : '/prescriptions';
+}
+
 export function resolvePrintSpecialtyRows(
   source: Record<string, unknown>,
   template: SpecialtyTemplate

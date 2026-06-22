@@ -265,6 +265,7 @@ export interface Appointment {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   consultationFee?: number;
   discount?: number;
+  discountReason?: string | null;
   netFee?: number;
   paymentStatus?: 'unpaid' | 'paid';
   vitals?: Record<string, string>;

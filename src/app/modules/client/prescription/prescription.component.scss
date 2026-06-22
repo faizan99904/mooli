@@ -194,6 +194,13 @@
   width: 100%;
 }
 
+.appointment-row:focus,
+.appointment-row:focus-visible {
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
 .appointment-row:hover {
   background: #f8fbff;
 }
