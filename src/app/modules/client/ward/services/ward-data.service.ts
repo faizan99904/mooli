@@ -28,6 +28,7 @@ import {
   buildFloorOptions,
   buildDashboardKpis,
   buildDashboardSections,
+  getWardOptionsFromCatalog,
   getWardOptionsFromRooms,
   mapAdmissionRows,
   mapAllotmentToWardPatient,
@@ -166,9 +167,17 @@ export class WardDataService {
       switchMap((hospitalWards) => {
         const wards = hospitalWards.items;
         const activeWard = wards.find((ward) => ward.name === wardFilter) || wards[0];
-        const floors$ = activeWard
-          ? this.backend.getWardFloors(activeWard._id, { limit: 100, status: 'active' })
-          : of({ items: [] as WardFloor[], pagination: { page: 1, limit: 100, total: 0, totalPages: 0 } });
+        const floors$ =
+          wards.length === 0
+            ? of([] as WardFloor[])
+            : forkJoin(
+                wards.map((ward) =>
+                  this.backend.getWardFloors(ward._id, { limit: 100, status: 'active' }).pipe(
+                    map((response) => response.items),
+                    catchError(() => of([] as WardFloor[]))
+                  )
+                )
+              ).pipe(map((groups) => groups.flat()));
 
         return forkJoin({
           wards: of(wards),
@@ -179,9 +188,9 @@ export class WardDataService {
         });
       }),
       map(({ wards, floors, rooms, allotments, wardBeds }) => {
-        const wardFloors = floors.items;
+        const wardFloors = floors;
         const activeWard = wards.find((ward) => ward.name === wardFilter) || wards[0];
-        const filteredRooms = rooms.items.filter((room) => matchesWardFilter(room, wardFilter));
+        const filteredRooms = rooms.items.filter((room) => matchesWardFilter(room, wardFilter, wards));
         const wardRooms = filteredRooms.map((room) => {
           const allotment = allotments.items.find((item) => item.roomId === room._id && item.status === 'admitted');
           return mapRoomToWardRoom(room, allotment);
@@ -209,7 +218,9 @@ export class WardDataService {
         return {
           rooms: wardRooms,
           beds: fallbackBeds,
-          wardOptions: getWardOptionsFromRooms(rooms.items, wards),
+          wardOptions: wards.length
+            ? getWardOptionsFromCatalog(wards)
+            : getWardOptionsFromRooms(rooms.items, wards),
           hospitalWards: wards,
           wardFloors,
           floorOptions: buildFloorOptions(wardFloors, activeWard?._id || ''),

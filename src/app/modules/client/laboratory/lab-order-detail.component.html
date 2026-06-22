@@ -156,20 +156,20 @@
                     </td>
                   </tr>
                   <tr *ngFor="let parameter of group.parameters" [class.row-critical]="parameter.status === 'critical'">
-                    <td class="col-parameter"><strong>{{ parameter.parameterName }}</strong></td>
-                    <td class="col-subcategory">{{ parameter.subCategory || '—' }}</td>
-                    <td class="col-result">
+                    <td class="col-parameter" data-label="Parameter"><strong>{{ parameter.parameterName }}</strong></td>
+                    <td class="col-subcategory" data-label="Sub Category">{{ parameter.subCategory || '—' }}</td>
+                    <td class="col-result" data-label="Result">
                       <input type="text" [(ngModel)]="parameter.resultValue" placeholder="Enter value" />
                     </td>
-                    <td class="col-unit">{{ parameter.unit || '—' }}</td>
-                    <td class="col-range">{{ parameter.referenceText || formatRange(parameter) }}</td>
-                    <td class="col-status">
+                    <td class="col-unit" data-label="Unit">{{ parameter.unit || '—' }}</td>
+                    <td class="col-range" data-label="Reference Range">{{ parameter.referenceText || formatRange(parameter) }}</td>
+                    <td class="col-status" data-label="Status">
                       <span class="param-status" [ngClass]="paramStatusClass(parameter.status)">
                         {{ parameter.status || '—' }}
                       </span>
                     </td>
-                    <td class="col-prev">{{ parameter.previousValue ?? '—' }}</td>
-                    <td class="col-trend">
+                    <td class="col-prev" data-label="Previous">{{ parameter.previousValue ?? '—' }}</td>
+                    <td class="col-trend" data-label="Trend">
                       <span class="trend-pill" [ngClass]="trendClass(parameter.trend)" *ngIf="parameter.trend; else noTrend">
                         {{ trendLabel(parameter.trend) }}
                       </span>
@@ -229,15 +229,15 @@
               </thead>
               <tbody>
                 <tr *ngFor="let row of comparisonForActiveTest()">
-                  <td><strong>{{ row.parameterName }}</strong></td>
-                  <td>{{ row.referenceText || formatComparisonRange(row) }}</td>
-                  <td *ngFor="let column of comparisonColumns()">
+                  <td data-label="Parameter"><strong>{{ row.parameterName }}</strong></td>
+                  <td data-label="Ref Range">{{ row.referenceText || formatComparisonRange(row) }}</td>
+                  <td *ngFor="let column of comparisonColumns()" [attr.data-label]="column.label">
                     <ng-container *ngIf="comparisonPoint(row, column) as point; else emptyPoint">
                       <span class="comparison-value" [ngClass]="paramStatusClass(point.status)">{{ point.resultValue || '—' }}</span>
                     </ng-container>
                     <ng-template #emptyPoint>—</ng-template>
                   </td>
-                  <td>
+                  <td data-label="Trend">
                     <span class="trend-pill" [ngClass]="trendClass(latestTrend(row))" *ngIf="latestTrend(row); else noRowTrend">
                       {{ trendLabel(latestTrend(row)) }}
                     </span>

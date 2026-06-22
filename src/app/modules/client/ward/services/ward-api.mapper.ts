@@ -682,9 +682,23 @@ export function mapWardApiBedToRecord(
   };
 }
 
-export function matchesWardFilter(room: Room | null | undefined, wardFilter: string): boolean {
+export function matchesWardFilter(
+  room: Room | null | undefined,
+  wardFilter: string,
+  wards: HospitalWard[] = []
+): boolean {
   if (!wardFilter) {
     return true;
   }
+
+  const selectedWard = wards.find((ward) => ward.name === wardFilter);
+  if (selectedWard?._id && room?.wardId) {
+    return String(room.wardId) === String(selectedWard._id);
+  }
+
+  if (selectedWard?._id && room?.ward?._id) {
+    return String(room.ward._id) === String(selectedWard._id);
+  }
+
   return wardNameFromRoom(room) === wardFilter;
 }

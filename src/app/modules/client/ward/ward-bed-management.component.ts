@@ -245,7 +245,11 @@ export class WardBedManagementComponent implements OnInit {
       code: value.code || undefined,
       description: value.description || undefined,
     }).subscribe({
-      next: () => {
+      next: (response) => {
+        const createdName = String(response?.data?.name || value.name || '').trim();
+        if (createdName) {
+          this.filters.ward = createdName;
+        }
         this.toastr.success('Ward created successfully.');
         this.closeModal();
         this.loadData();
@@ -274,7 +278,15 @@ export class WardBedManagementComponent implements OnInit {
       name: value.name,
       label: value.label || undefined,
     }).subscribe({
-      next: () => {
+      next: (response) => {
+        const ward = this.hospitalWards.find((item) => item._id === value.wardId);
+        if (ward?.name) {
+          this.filters.ward = ward.name;
+        }
+        const floorId = String(response?.data?._id || '');
+        if (floorId) {
+          this.filters.gallery = floorId;
+        }
         this.toastr.success('Floor created successfully.');
         this.closeModal();
         this.loadData();
@@ -285,11 +297,13 @@ export class WardBedManagementComponent implements OnInit {
 
   openAddRoom(): void {
     const wardId = this.selectedWardId;
-    const floorId = this.galleryOptions[0]?.id || '';
+    const floors = this.floorsForWardId(wardId);
+    const floorId = floors[0]?._id || this.filters.gallery || this.galleryOptions[0]?.id || '';
     this.roomModalMode = 'add';
     this.roomForm.reset({
       wardId,
       floorId,
+      roomName: '',
       roomType: 'general',
       capacity: 1,
       dailyCharge: 2500,
@@ -422,6 +436,11 @@ export class WardBedManagementComponent implements OnInit {
     }
 
     const value = this.roomForm.getRawValue();
+    if (!this.floorsForRoomForm().length) {
+      this.toastr.error('Pehle is ward ke liye floor add karein.');
+      return;
+    }
+
     const payload = this.wardData.buildRoomPayload({
       roomName: value.roomName,
       roomType: value.roomType,
@@ -437,7 +456,7 @@ export class WardBedManagementComponent implements OnInit {
           this.closeModal();
           this.loadData();
         },
-        error: () => this.toastr.error('Failed to create room.'),
+        error: (err) => this.toastr.error(err?.error?.message || 'Failed to create room.'),
       });
       return;
     }
@@ -453,7 +472,7 @@ export class WardBedManagementComponent implements OnInit {
         this.closeModal();
         this.loadData();
       },
-      error: () => this.toastr.error('Failed to update room.'),
+      error: (err) => this.toastr.error(err?.error?.message || 'Failed to update room.'),
     });
   }
 
