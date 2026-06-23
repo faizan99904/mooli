@@ -13,6 +13,7 @@ import {
   RoomAllotment,
   HospitalWard,
   WardFloor,
+  ListResult,
 } from '../../../../shared/models/hospital.model';
 import { WardBedRecord, WardGalleryOption, WardRoomRecord } from '../ward-bed-management.models';
 import {
@@ -43,6 +44,10 @@ import {
   mapWardApiBedToRecord,
   WardActivityRecord,
   matchesWardFilter,
+  normalizeHospitalWardRecord,
+  normalizeHospitalWardRecords,
+  normalizeWardFloorRecord,
+  normalizeWardFloorRecords,
   wardRoomPayloadFromForm,
 } from './ward-api.mapper';
 
@@ -80,6 +85,17 @@ export interface WardClinicalBundle {
 @Injectable({ providedIn: 'root' })
 export class WardDataService {
   constructor(private backend: BackendService) {}
+
+  private emptyList<T>(): ListResult<T> {
+    return {
+      items: [],
+      pagination: { page: 1, limit: 0, total: 0, totalPages: 0 },
+    };
+  }
+
+  private safeList<T>(request: Observable<ListResult<T>>): Observable<ListResult<T>> {
+    return request.pipe(catchError(() => of(this.emptyList<T>())));
+  }
 
   loadClinicalBundle(): Observable<WardClinicalBundle> {
     return forkJoin({
@@ -163,18 +179,16 @@ export class WardDataService {
   }
 
   loadBedManagement(wardFilter = ''): Observable<WardBedManagementData> {
-    return this.backend.getHospitalWards({ limit: 100, status: 'active' }).pipe(
+    return this.safeList(this.backend.getHospitalWards({ limit: 100 })).pipe(
       switchMap((hospitalWards) => {
-        const wards = hospitalWards.items;
-        const activeWard = wards.find((ward) => ward.name === wardFilter) || wards[0];
+        const wards = normalizeHospitalWardRecords(hospitalWards.items);
         const floors$ =
           wards.length === 0
             ? of([] as WardFloor[])
             : forkJoin(
                 wards.map((ward) =>
-                  this.backend.getWardFloors(ward._id, { limit: 100, status: 'active' }).pipe(
-                    map((response) => response.items),
-                    catchError(() => of([] as WardFloor[]))
+                  this.safeList(this.backend.getWardFloors(ward._id, { limit: 100 })).pipe(
+                    map((response) => normalizeWardFloorRecords(response.items, ward._id))
                   )
                 )
               ).pipe(map((groups) => groups.flat()));
@@ -182,38 +196,46 @@ export class WardDataService {
         return forkJoin({
           wards: of(wards),
           floors: floors$,
-          rooms: this.backend.getRooms({ limit: 100 }),
-          allotments: this.backend.getRoomAllotments({ status: 'admitted', limit: 100 }),
-          wardBeds: this.backend.getWardBeds({ limit: 100 }),
+          rooms: this.safeList(this.backend.getRooms({ limit: 100 })),
+          allotments: this.safeList(this.backend.getRoomAllotments({ status: 'admitted', limit: 100 })),
+          wardBeds: this.safeList(this.backend.getWardBeds({ limit: 100 })),
         });
       }),
       map(({ wards, floors, rooms, allotments, wardBeds }) => {
-        const wardFloors = floors;
+        const wardFloors = floors as WardFloor[];
         const activeWard = wards.find((ward) => ward.name === wardFilter) || wards[0];
-        const filteredRooms = rooms.items.filter((room) => matchesWardFilter(room, wardFilter, wards));
-        const wardRooms = filteredRooms.map((room) => {
+        const allRooms = rooms.items;
+        const wardRooms = allRooms.map((room) => {
           const allotment = allotments.items.find((item) => item.roomId === room._id && item.status === 'admitted');
           return mapRoomToWardRoom(room, allotment);
         });
 
-        const apiBeds = wardBeds.items
-          .filter((bed) => filteredRooms.some((room) => room._id === bed['roomId']))
-          .map((bed) => {
+        const roomIds = new Set(allRooms.map((room) => String(room._id)));
+        const apiBedsByRoom = new Map<string, WardBedRecord[]>();
+        wardBeds.items
+          .filter((bed) => roomIds.has(String(bed['roomId'])))
+          .forEach((bed) => {
             const allotment = allotments.items.find(
               (item) => item.roomId === bed['roomId'] && item.status === 'admitted'
             );
-            return mapWardApiBedToRecord(bed, allotment);
+            const record = mapWardApiBedToRecord(bed, allotment);
+            const roomKey = String(record.roomId);
+            const group = apiBedsByRoom.get(roomKey) || [];
+            group.push(record);
+            apiBedsByRoom.set(roomKey, group);
           });
 
-        const fallbackBeds =
-          apiBeds.length > 0
-            ? apiBeds
-            : filteredRooms.map((room) => {
-                const allotment = allotments.items.find(
-                  (item) => item.roomId === room._id && item.status === 'admitted'
-                );
-                return mapRoomToWardBed(room, allotment);
-              });
+        const fallbackBeds = allRooms.flatMap((room) => {
+          const persisted = apiBedsByRoom.get(String(room._id));
+          if (persisted?.length) {
+            return persisted;
+          }
+
+          const allotment = allotments.items.find(
+            (item) => item.roomId === room._id && item.status === 'admitted'
+          );
+          return [mapRoomToWardBed(room, allotment)];
+        });
 
         return {
           rooms: wardRooms,
@@ -225,17 +247,32 @@ export class WardDataService {
           wardFloors,
           floorOptions: buildFloorOptions(wardFloors, activeWard?._id || ''),
         };
-      }),
-      catchError(() =>
-        of({
-          rooms: [],
-          beds: [],
-          wardOptions: [],
-          hospitalWards: [],
-          wardFloors: [],
-          floorOptions: [],
-        })
-      )
+      })
+    );
+  }
+
+  refreshHospitalWards(search = ''): Observable<HospitalWard[]> {
+    const params: Record<string, unknown> = { limit: 100 };
+    const query = search.trim();
+    if (query) {
+      params['search'] = query;
+    }
+
+    return this.safeList(this.backend.getHospitalWards(params)).pipe(
+      map((result) => normalizeHospitalWardRecords(result.items)),
+      switchMap((wards) => {
+        if (wards.length || !query) {
+          return of(wards);
+        }
+
+        return this.safeList(this.backend.getHospitalWards({ limit: 100 })).pipe(
+          map((fallback) =>
+            normalizeHospitalWardRecords(fallback.items).filter(
+              (ward) => ward.name.toLowerCase() === query.toLowerCase()
+            )
+          )
+        );
+      })
     );
   }
 
@@ -249,6 +286,18 @@ export class WardDataService {
 
   loadWardFloors(wardId: string) {
     return this.backend.getWardFloors(wardId, { limit: 100, status: 'active' });
+  }
+
+  fetchWardFloors(wardId: string): Observable<WardFloor[]> {
+    const id = String(wardId || '').trim();
+    if (!id) {
+      return of([]);
+    }
+
+    return this.backend.getWardFloors(id, { limit: 100 }).pipe(
+      map((result) => normalizeWardFloorRecords(result.items, id)),
+      catchError(() => of([] as WardFloor[]))
+    );
   }
 
   loadDashboard(wardFilter = ''): Observable<WardDashboardData> {

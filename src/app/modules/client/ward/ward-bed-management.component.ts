@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import {
   WardBedManagementFilters,
@@ -14,6 +15,12 @@ import {
 } from './ward-bed-management.models';
 import { HospitalWard, WardFloor } from '../../../shared/models/hospital.model';
 import { WardDataService } from './services/ward-data.service';
+import {
+  buildFloorOptions,
+  isPersistedWardBedId,
+  normalizeHospitalWardRecord,
+  normalizeWardFloorRecord,
+} from './services/ward-api.mapper';
 
 type ActiveModal = 'ward' | 'floor' | 'room' | 'bed' | 'status' | 'viewBed' | null;
 
@@ -38,6 +45,17 @@ export class WardBedManagementComponent implements OnInit {
   galleryOptions: WardGalleryOption[] = [];
   hospitalWards: HospitalWard[] = [];
   wardFloors: WardFloor[] = [];
+  activeWardId = '';
+  activeWardName = '';
+  selectedWardId = '';
+  canAddFloor = false;
+  canAddRoom = false;
+  hasWardSetup = false;
+  roomFormFloors: WardFloor[] = [];
+  bedFormFloors: WardFloor[] = [];
+  bedFormRooms: WardRoomRecord[] = [];
+  private roomFormWardSub?: Subscription;
+  private bedFormWardSub?: Subscription;
   readonly roomTypeOptions: Array<{ value: string; label: string }> = [
     { value: '', label: 'All Room Types' },
     { value: 'general', label: 'General Ward' },
@@ -135,23 +153,108 @@ export class WardBedManagementComponent implements OnInit {
     });
   }
 
-  get roomsForBedForm(): WardRoomRecord[] {
-    const wardId = String(this.bedForm.get('wardId')?.value || '');
-    const floorId = String(this.bedForm.get('floorId')?.value || '');
-    return this.rooms.filter((room) => {
-      const matchesWard = !wardId || room.wardId === wardId;
-      const matchesFloor = !floorId || room.galleryId === floorId;
-      return matchesWard && matchesFloor;
-    });
-  }
-
   get floorsForSelectedWard(): WardFloor[] {
     const wardId = String(this.selectedWardId || '');
-    return this.wardFloors.filter((floor) => !wardId || floor.wardId === wardId);
+    return this.wardFloors.filter((floor) => !wardId || String(floor.wardId) === wardId);
   }
 
-  get selectedWardId(): string {
-    return this.hospitalWards.find((ward) => ward.name === this.filters.ward)?._id || this.hospitalWards[0]?._id || '';
+  private isMongoId(value: string | null | undefined): boolean {
+    return /^[a-f\d]{24}$/i.test(String(value || '').trim());
+  }
+
+  private resolveSelectedWardId(): string {
+    const wardName = String(this.filters.ward || '').trim();
+
+    const fromCatalog = this.hospitalWards.find((ward) => ward.name === wardName)?._id;
+    if (fromCatalog) {
+      return fromCatalog;
+    }
+
+    if (wardName && wardName === this.activeWardName && this.activeWardId) {
+      return this.activeWardId;
+    }
+
+    const fromFloor = this.wardFloors.find((floor) => floor._id === this.filters.gallery)?.wardId;
+    if (this.isMongoId(fromFloor)) {
+      return String(fromFloor);
+    }
+
+    const fromRoom = this.rooms.find(
+      (room) => (!wardName || room.wardName === wardName) && this.isMongoId(room.wardId)
+    )?.wardId;
+    if (fromRoom) {
+      return fromRoom;
+    }
+
+    const fromSelectedRoom = this.selectedRoom?.wardId;
+    if (this.isMongoId(fromSelectedRoom)) {
+      return String(fromSelectedRoom);
+    }
+
+    const fromAnyFloor = this.wardFloors.find((floor) => this.isMongoId(floor.wardId))?.wardId;
+    if (fromAnyFloor) {
+      return String(fromAnyFloor);
+    }
+
+    return this.hospitalWards[0]?._id || this.activeWardId || '';
+  }
+
+  private hydrateHospitalWardsFromContext(): void {
+    const merged = new Map<string, HospitalWard>(this.hospitalWards.map((ward) => [String(ward._id), ward]));
+    const wardName = String(this.filters.ward || '').trim();
+
+    this.rooms.forEach((room) => {
+      if (!this.isMongoId(room.wardId)) {
+        return;
+      }
+
+      const existing = merged.get(room.wardId);
+      merged.set(room.wardId, {
+        _id: room.wardId,
+        hospitalId: existing?.hospitalId || '',
+        name: existing?.name || room.wardName || wardName || `Ward ${room.wardId.slice(-6)}`,
+        code: existing?.code || '',
+        description: existing?.description || '',
+        status: existing?.status || 'active',
+      });
+    });
+
+    this.wardFloors.forEach((floor) => {
+      if (!this.isMongoId(floor.wardId)) {
+        return;
+      }
+
+      const existing = merged.get(String(floor.wardId));
+      if (existing) {
+        return;
+      }
+
+      merged.set(String(floor.wardId), {
+        _id: String(floor.wardId),
+        hospitalId: floor.hospitalId || '',
+        name: `Ward ${String(floor.wardId).slice(-6)}`,
+        status: floor.status === 'inactive' ? 'inactive' : 'active',
+      });
+    });
+
+    if (!merged.size) {
+      return;
+    }
+
+    this.hospitalWards = Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name));
+    this.wardOptions = Array.from(new Set([...this.wardOptions, ...this.hospitalWards.map((ward) => ward.name)])).sort(
+      (a, b) => a.localeCompare(b)
+    );
+
+    if (!this.filters.ward && this.hospitalWards.length) {
+      const activeId = this.resolveSelectedWardId();
+      const activeWard = this.hospitalWards.find((ward) => ward._id === activeId) || this.hospitalWards[0];
+      if (activeWard) {
+        this.filters.ward = activeWard.name;
+        this.rememberActiveWard(activeWard);
+      }
+    }
+    this.refreshActionState();
   }
 
   get selectedRoom(): WardRoomRecord | null {
@@ -184,25 +287,175 @@ export class WardBedManagementComponent implements OnInit {
     return Boolean(this.selectedRoom && this.selectedRoom.occupiedBeds === 0);
   }
 
+  private refreshActionState(): void {
+    this.selectedWardId = this.resolveSelectedWardId();
+    this.canAddFloor = Boolean(this.selectedWardId);
+    this.canAddRoom = this.canAddFloor;
+    this.hasWardSetup =
+      this.hospitalWards.length > 0 || Boolean(this.selectedWardId) || this.wardOptions.length > 0;
+  }
+
+  private refreshRoomFormFloors(): void {
+    const wardId = String(this.roomForm.get('wardId')?.value || this.selectedWardId);
+    this.syncPlacementFloors(wardId, 'room');
+  }
+
+  private refreshBedFormFloors(): void {
+    const wardId = String(this.bedForm.get('wardId')?.value || this.selectedWardId);
+    this.syncPlacementFloors(wardId, 'bed');
+  }
+
+  private refreshBedFormRooms(): void {
+    const wardId = String(this.bedForm.get('wardId')?.value || '');
+    const floorId = String(this.bedForm.get('floorId')?.value || '');
+    this.bedFormRooms = this.rooms.filter((room) => {
+      const matchesWard = !wardId || String(room.wardId) === wardId;
+      const matchesFloor = !floorId || String(room.galleryId) === floorId;
+      return matchesWard && matchesFloor;
+    });
+  }
+
+  private rememberActiveWard(ward: HospitalWard | null | undefined): void {
+    if (!ward?._id || !ward?.name) {
+      return;
+    }
+
+    this.activeWardId = String(ward._id);
+    this.activeWardName = ward.name;
+    this.refreshActionState();
+  }
+
+  private mergeHospitalWards(...groups: HospitalWard[][]): HospitalWard[] {
+    const merged = new Map<string, HospitalWard>();
+    groups.flat().forEach((ward) => {
+      const normalized = normalizeHospitalWardRecord(ward);
+      if (!normalized?._id || !normalized?.name) {
+        return;
+      }
+      merged.set(String(normalized._id), normalized);
+    });
+    return Array.from(merged.values());
+  }
+
+  private applyHospitalWards(incoming: HospitalWard[], preferredName = ''): void {
+    if (!incoming.length && !this.hospitalWards.length) {
+      return;
+    }
+
+    this.hospitalWards = this.mergeHospitalWards(this.hospitalWards, incoming);
+    this.wardOptions = Array.from(
+      new Set([...this.wardOptions, ...this.hospitalWards.map((ward) => ward.name)])
+    ).sort((a, b) => a.localeCompare(b));
+
+    const wards = this.hospitalWards;
+    const preferred =
+      preferredName && wards.some((ward) => ward.name === preferredName)
+        ? preferredName
+        : this.filters.ward && wards.some((ward) => ward.name === this.filters.ward)
+          ? this.filters.ward
+          : wards[0]?.name || '';
+
+    if (preferred) {
+      this.filters.ward = preferred;
+      this.rememberActiveWard(wards.find((ward) => ward.name === preferred) || wards[0]);
+    }
+    this.refreshActionState();
+  }
+
+  private refreshGalleryForSelectedWard(): void {
+    const wardId = this.resolveSelectedWardId();
+    const fromFloors = buildFloorOptions(this.wardFloors, wardId);
+    const fromRooms = this.buildGalleryOptions(
+      this.rooms.filter((room) => wardId && String(room.wardId) === wardId)
+    );
+    this.galleryOptions = fromFloors.length ? fromFloors : fromRooms;
+
+    if (this.filters.gallery && !this.galleryOptions.some((option) => option.id === this.filters.gallery)) {
+      this.filters.gallery = this.galleryOptions[0]?.id || '';
+    } else if (!this.filters.gallery && this.galleryOptions.length) {
+      this.filters.gallery = this.galleryOptions[0].id;
+    }
+  }
+
+  private upsertWardFloorsForWard(wardId: string, floors: WardFloor[]): void {
+    const id = String(wardId || '').trim();
+    if (!id) {
+      return;
+    }
+
+    const normalized = floors.map((floor) => ({
+      ...floor,
+      _id: String(floor._id),
+      wardId: id,
+    }));
+    const otherWardFloors = this.wardFloors.filter((floor) => String(floor.wardId) !== id);
+    this.wardFloors = this.mergeWardFloors(otherWardFloors, normalized);
+  }
+
+  private reloadFloorsForWard(wardId: string, onDone?: () => void): void {
+    const id = String(wardId || '').trim();
+    if (!id) {
+      onDone?.();
+      return;
+    }
+
+    this.wardData.fetchWardFloors(id).subscribe({
+      next: (floors) => {
+        this.upsertWardFloorsForWard(id, floors);
+        if (String(this.resolveSelectedWardId()) === id) {
+          this.refreshGalleryForSelectedWard();
+        }
+        onDone?.();
+      },
+      error: () => onDone?.(),
+    });
+  }
+
   loadData(): void {
+    const previousWards = this.hospitalWards;
+    const previousFloors = this.wardFloors;
+    const previousWardFilter = this.filters.ward;
     this.loading = true;
     this.wardData.loadBedManagement(this.filters.ward).subscribe({
       next: (data) => {
-        this.wardOptions = data.wardOptions;
-        this.hospitalWards = data.hospitalWards;
-        this.wardFloors = data.wardFloors;
-        if (!this.filters.ward && this.wardOptions.length) {
-          this.filters.ward = this.wardOptions[0];
+        const loadedWards = this.mergeHospitalWards(data.hospitalWards || [], previousWards);
+        if (loadedWards.length) {
+          this.applyHospitalWards(loadedWards, previousWardFilter || this.filters.ward);
+        } else if (previousWards.length) {
+          this.applyHospitalWards(previousWards, previousWardFilter || this.filters.ward);
+          if (data.wardOptions.length) {
+            this.wardOptions = Array.from(new Set([...this.wardOptions, ...data.wardOptions]));
+          }
+        } else {
+          this.hospitalWards = [];
+          this.wardOptions = data.wardOptions;
         }
 
+        this.wardFloors = (data.wardFloors || []).length
+          ? this.mergeWardFloors(data.wardFloors, previousFloors)
+          : previousFloors;
         this.rooms = data.rooms;
         this.beds = data.beds;
-        this.galleryOptions = data.floorOptions.length ? data.floorOptions : this.buildGalleryOptions(this.rooms);
-        if (!this.filters.gallery && this.galleryOptions.length) {
-          this.filters.gallery = this.galleryOptions[0].id;
+
+        if (!data.hospitalWards?.length && previousWards.length) {
+          this.toastr.warning('Ward list could not be refreshed from the server. Showing saved wards.');
         }
 
         this.recalculateRoomCounts();
+        this.hydrateHospitalWardsFromContext();
+        const activeWardId = this.resolveSelectedWardId();
+        if (activeWardId) {
+          this.reloadFloorsForWard(activeWardId, () => {
+            this.refreshGalleryForSelectedWard();
+            this.refreshActionState();
+            this.selectedRoomId = this.filteredRooms[0]?.id || '';
+            this.loading = false;
+          });
+          return;
+        }
+
+        this.refreshGalleryForSelectedWard();
+        this.refreshActionState();
         this.selectedRoomId = this.filteredRooms[0]?.id || '';
         this.loading = false;
       },
@@ -216,7 +469,19 @@ export class WardBedManagementComponent implements OnInit {
   }
 
   onWardFilterChange(): void {
-    this.loadData();
+    const ward = this.hospitalWards.find((item) => item.name === this.filters.ward);
+    if (ward) {
+      this.rememberActiveWard(ward);
+      this.reloadFloorsForWard(String(ward._id), () => {
+        this.selectedRoomId = this.filteredRooms[0]?.id || '';
+        this.refreshActionState();
+      });
+      return;
+    }
+
+    this.refreshGalleryForSelectedWard();
+    this.selectedRoomId = this.filteredRooms[0]?.id || '';
+    this.refreshActionState();
   }
 
   refresh(): void {
@@ -246,21 +511,63 @@ export class WardBedManagementComponent implements OnInit {
       description: value.description || undefined,
     }).subscribe({
       next: (response) => {
-        const createdName = String(response?.data?.name || value.name || '').trim();
-        if (createdName) {
-          this.filters.ward = createdName;
+        const createdName = String(value.name || '').trim();
+        const responseBody = response as unknown as Record<string, unknown>;
+        const created =
+          normalizeHospitalWardRecord(response?.data) ||
+          normalizeHospitalWardRecord(responseBody?.['data']) ||
+          normalizeHospitalWardRecord(response);
+        const optimistic = created ? [created] : [];
+
+        if (created) {
+          this.rememberActiveWard(created);
+          if (createdName) {
+            this.filters.ward = createdName;
+            this.wardOptions = Array.from(new Set([...this.wardOptions, createdName]));
+          }
+          this.applyHospitalWards(this.mergeHospitalWards(this.hospitalWards, optimistic), createdName);
         }
-        this.toastr.success('Ward created successfully.');
-        this.closeModal();
-        this.loadData();
+
+        this.wardData.refreshHospitalWards().subscribe({
+          next: (wards) => {
+            const resolved = this.mergeHospitalWards(this.hospitalWards, wards, optimistic);
+            if (resolved.length) {
+              this.applyHospitalWards(resolved, createdName);
+            } else if (created) {
+              this.applyHospitalWards([created], createdName);
+            } else {
+              this.toastr.warning(
+                'Ward may have been created, but it could not be loaded. Check ward read permissions and refresh.'
+              );
+            }
+
+            this.toastr.success('Ward created successfully.');
+            this.closeModal();
+            this.loadData();
+          },
+          error: () => {
+            if (created) {
+              this.applyHospitalWards([created], createdName);
+            }
+            this.toastr.success('Ward created successfully.');
+            this.closeModal();
+            this.loadData();
+          },
+        });
       },
       error: (err) => this.toastr.error(err?.error?.message || 'Failed to create ward.'),
     });
   }
 
   openAddFloor(): void {
+    const wardId = this.selectedWardId;
+    if (!wardId) {
+      this.toastr.error('Select or create a ward before adding a floor.');
+      return;
+    }
+
     this.floorForm.reset({
-      wardId: this.selectedWardId,
+      wardId,
       name: '',
       label: '',
     });
@@ -282,22 +589,58 @@ export class WardBedManagementComponent implements OnInit {
         const ward = this.hospitalWards.find((item) => item._id === value.wardId);
         if (ward?.name) {
           this.filters.ward = ward.name;
+          this.rememberActiveWard(ward);
         }
-        const floorId = String(response?.data?._id || '');
-        if (floorId) {
+        const floor = response?.data;
+        const normalizedFloor = normalizeWardFloorRecord(floor, String(value.wardId));
+        const floorId = String(normalizedFloor?._id || '');
+        if (normalizedFloor) {
+          this.upsertWardFloorsForWard(String(value.wardId), [normalizedFloor]);
+          this.filters.gallery = normalizedFloor._id;
+        } else if (floorId && floor) {
+          this.upsertWardFloorsForWard(String(value.wardId), [
+            {
+              _id: floorId,
+              hospitalId: String(floor.hospitalId || ''),
+              wardId: String(value.wardId),
+              name: String(floor.name || value.name || ''),
+              label: String(floor.label || value.label || ''),
+              status: floor.status || 'active',
+            },
+          ]);
           this.filters.gallery = floorId;
         }
+        this.refreshGalleryForSelectedWard();
+        this.reloadFloorsForWard(String(value.wardId));
         this.toastr.success('Floor created successfully.');
         this.closeModal();
-        this.loadData();
       },
-      error: (err) => this.toastr.error(err?.error?.message || 'Failed to create floor.'),
+      error: (err) => {
+        const message = err?.error?.message || 'Failed to create floor.';
+        if (err?.error?.error === 'WARD_FLOOR_ALREADY_EXISTS') {
+          this.reloadFloorsForWard(String(value.wardId), () => {
+            this.refreshGalleryForSelectedWard();
+            this.toastr.warning('This floor already exists in the ward. Floor list refreshed.');
+          });
+          return;
+        }
+        this.toastr.error(message);
+      },
     });
   }
 
   openAddRoom(): void {
     const wardId = this.selectedWardId;
-    const floors = this.floorsForWardId(wardId);
+    if (!wardId) {
+      this.toastr.error('Select or create a ward before adding a room.');
+      return;
+    }
+
+    const floors = this.resolveFloorsForWard(wardId);
+    if (!floors.length) {
+      this.toastr.warning('No floors found for this ward. Add a floor first or refresh the page.');
+    }
+
     const floorId = floors[0]?._id || this.filters.gallery || this.galleryOptions[0]?.id || '';
     this.roomModalMode = 'add';
     this.roomForm.reset({
@@ -308,7 +651,10 @@ export class WardBedManagementComponent implements OnInit {
       capacity: 1,
       dailyCharge: 2500,
       description: '',
-    });
+    }, { emitEvent: false });
+    this.roomFormFloors = floors;
+    this.bindRoomFormWardListener();
+    this.syncPlacementFloors(wardId, 'room');
     this.activeModal = 'room';
   }
 
@@ -327,7 +673,9 @@ export class WardBedManagementComponent implements OnInit {
       capacity: room.capacity,
       dailyCharge: room.dailyCharge,
       description: room.description,
-    });
+    }, { emitEvent: false });
+    this.bindRoomFormWardListener();
+    this.syncPlacementFloors(String(room.wardId), 'room');
     this.activeModal = 'room';
   }
 
@@ -344,7 +692,9 @@ export class WardBedManagementComponent implements OnInit {
       status: 'available',
       dailyCharge: this.selectedRoom?.dailyCharge || 2500,
       notes: '',
-    });
+    }, { emitEvent: false });
+    this.bindBedFormWardListener();
+    this.syncPlacementFloors(wardId, 'bed');
     this.syncBedFormRoomSelection();
     this.activeModal = 'bed';
   }
@@ -362,45 +712,158 @@ export class WardBedManagementComponent implements OnInit {
       status: bed.status,
       dailyCharge: bed.dailyCharge,
       notes: bed.notes || '',
-    });
+    }, { emitEvent: false });
+    this.bindBedFormWardListener();
+    this.syncPlacementFloors(String(room?.wardId || this.selectedWardId), 'bed');
     this.syncBedFormRoomSelection();
     this.activeModal = 'bed';
   }
 
   onBedFormPlacementChange(): void {
-    this.syncBedFormRoomSelection();
-  }
-
-  onRoomFormWardChange(): void {
-    const floors = this.floorsForRoomForm();
-    this.roomForm.patchValue({ floorId: floors[0]?._id || '' });
-  }
-
-  onBedFormWardChange(): void {
-    const wardId = String(this.bedForm.get('wardId')?.value || '');
-    const floors = this.floorsForWardId(wardId);
-    this.bedForm.patchValue({ floorId: floors[0]?._id || '' });
+    this.refreshBedFormRooms();
     this.syncBedFormRoomSelection();
   }
 
   floorsForWardId(wardId: string): WardFloor[] {
-    return this.wardFloors.filter((floor) => floor.wardId === wardId);
+    return this.resolveFloorsForWard(wardId);
   }
 
-  floorsForRoomForm(): WardFloor[] {
-    return this.floorsForWardId(String(this.roomForm.get('wardId')?.value || ''));
+  private mergeWardFloors(...groups: WardFloor[][]): WardFloor[] {
+    const merged = new Map<string, WardFloor>();
+    groups.flat().forEach((floor) => {
+      if (!floor?._id) {
+        return;
+      }
+      merged.set(String(floor._id), {
+        ...floor,
+        _id: String(floor._id),
+        wardId: String(floor.wardId || ''),
+        name: String(floor.name || floor.label || 'Floor'),
+        label: String(floor.label || floor.name || 'Floor'),
+      });
+    });
+    return Array.from(merged.values());
   }
 
-  floorsForBedForm(): WardFloor[] {
-    return this.floorsForWardId(String(this.bedForm.get('wardId')?.value || ''));
+  private mergeGalleryOptions(...groups: WardGalleryOption[][]): WardGalleryOption[] {
+    const merged = new Map<string, WardGalleryOption>();
+    groups.flat().forEach((option) => {
+      if (!option?.id) {
+        return;
+      }
+      merged.set(String(option.id), {
+        id: String(option.id),
+        label: String(option.label || 'Floor'),
+      });
+    });
+    return Array.from(merged.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  private resolveFloorsForWard(wardId: string): WardFloor[] {
+    const id = String(wardId || '').trim();
+    if (!id) {
+      return [];
+    }
+
+    const fromCatalog = this.wardFloors.filter((floor) => String(floor.wardId) === id);
+
+    const knownFloorIds = new Set(fromCatalog.map((floor) => String(floor._id)));
+    const fromRooms = this.rooms
+      .filter((room) => String(room.wardId) === id && Boolean(room.galleryId))
+      .filter((room) => !knownFloorIds.has(String(room.galleryId)))
+      .map((room) => ({
+        _id: String(room.galleryId),
+        hospitalId: '',
+        wardId: id,
+        name: room.galleryName,
+        label: room.galleryName,
+        status: 'active' as const,
+      }));
+
+    return this.mergeWardFloors(fromCatalog, fromRooms).sort((a, b) =>
+      String(a.label || a.name).localeCompare(String(b.label || b.name))
+    );
+  }
+
+  private syncPlacementFloors(wardId: string, target: 'room' | 'bed'): void {
+    const id = String(wardId || '').trim();
+    const applyFloors = (floors: WardFloor[]) => {
+      if (id && floors.length) {
+        this.upsertWardFloorsForWard(id, floors);
+      }
+
+      const resolved = this.resolveFloorsForWard(id);
+      if (target === 'room') {
+        this.roomFormFloors = resolved;
+        this.syncRoomFormFloorSelection();
+        return;
+      }
+
+      this.bedFormFloors = resolved;
+      const currentFloorId = String(this.bedForm.get('floorId')?.value || '');
+      const floorStillValid = resolved.some((floor) => String(floor._id) === currentFloorId);
+      if (!floorStillValid) {
+        this.bedForm.patchValue({ floorId: resolved[0]?._id || '' }, { emitEvent: false });
+      }
+      this.refreshBedFormRooms();
+      this.syncBedFormRoomSelection();
+    };
+
+    if (!id) {
+      if (target === 'room') {
+        this.roomFormFloors = [];
+      } else {
+        this.bedFormFloors = [];
+      }
+      return;
+    }
+
+    applyFloors(this.resolveFloorsForWard(id));
+    this.wardData.fetchWardFloors(id).subscribe({
+      next: (floors) => applyFloors(floors),
+      error: () => applyFloors(this.resolveFloorsForWard(id)),
+    });
+  }
+
+  private bindRoomFormWardListener(): void {
+    this.unbindRoomFormWardListener();
+    this.roomFormWardSub = this.roomForm.get('wardId')?.valueChanges.subscribe((wardId) => {
+      this.syncPlacementFloors(String(wardId || ''), 'room');
+    });
+  }
+
+  private bindBedFormWardListener(): void {
+    this.unbindBedFormWardListener();
+    this.bedFormWardSub = this.bedForm.get('wardId')?.valueChanges.subscribe((wardId) => {
+      this.syncPlacementFloors(String(wardId || ''), 'bed');
+    });
+  }
+
+  private unbindRoomFormWardListener(): void {
+    this.roomFormWardSub?.unsubscribe();
+    this.roomFormWardSub = undefined;
+  }
+
+  private unbindBedFormWardListener(): void {
+    this.bedFormWardSub?.unsubscribe();
+    this.bedFormWardSub = undefined;
+  }
+
+  private syncRoomFormFloorSelection(): void {
+    const floors = this.roomFormFloors;
+    const currentFloorId = String(this.roomForm.get('floorId')?.value || '');
+    const stillValid = floors.some((floor) => String(floor._id) === currentFloorId);
+    if (!stillValid) {
+      this.roomForm.patchValue({ floorId: floors[0]?._id || '' }, { emitEvent: false });
+    }
   }
 
   private syncBedFormRoomSelection(): void {
-    const rooms = this.roomsForBedForm;
+    const rooms = this.bedFormRooms;
     const currentRoomId = String(this.bedForm.get('roomId')?.value || '');
     const stillValid = rooms.some((room) => room.id === currentRoomId);
     if (!stillValid) {
-      this.bedForm.patchValue({ roomId: rooms[0]?.id || '' });
+      this.bedForm.patchValue({ roomId: rooms[0]?.id || '' }, { emitEvent: false });
     }
   }
 
@@ -424,9 +887,22 @@ export class WardBedManagementComponent implements OnInit {
   }
 
   closeModal(): void {
+    this.unbindRoomFormWardListener();
+    this.unbindBedFormWardListener();
     this.activeModal = null;
     this.selectedBed = null;
     this.statusReason = '';
+    this.roomFormFloors = [];
+    this.bedFormFloors = [];
+    this.bedFormRooms = [];
+  }
+
+  trackFloorById(_index: number, floor: WardFloor): string {
+    return floor._id;
+  }
+
+  trackRoomById(_index: number, room: WardRoomRecord): string {
+    return room.id;
   }
 
   saveRoom(): void {
@@ -436,8 +912,8 @@ export class WardBedManagementComponent implements OnInit {
     }
 
     const value = this.roomForm.getRawValue();
-    if (!this.floorsForRoomForm().length) {
-      this.toastr.error('Pehle is ward ke liye floor add karein.');
+    if (!this.roomFormFloors.length) {
+      this.toastr.error('Add a floor for this ward before creating a room.');
       return;
     }
 
@@ -489,7 +965,7 @@ export class WardBedManagementComponent implements OnInit {
       return;
     }
 
-    const payload: Record<string, unknown> = {
+    const createPayload: Record<string, unknown> = {
       roomId: value.roomId,
       bedNo: value.bedNo,
       bedType: value.bedType,
@@ -498,18 +974,35 @@ export class WardBedManagementComponent implements OnInit {
       notes: value.notes || '',
     };
 
-    const request$ =
-      this.bedModalMode === 'add'
-        ? this.wardData.createWardBed(payload)
-        : this.wardData.updateWardBed(this.selectedBed?.id || '', payload);
+    const updatePayload: Record<string, unknown> = {
+      bedNo: value.bedNo,
+      bedType: value.bedType,
+      status: value.status,
+      dailyCharge: Number(value.dailyCharge),
+      notes: value.notes || '',
+    };
+
+    const bedId = this.selectedBed?.id || '';
+    const shouldCreate =
+      this.bedModalMode === 'add' || !isPersistedWardBedId(bedId);
+
+    const request$ = shouldCreate
+      ? this.wardData.createWardBed(createPayload)
+      : this.wardData.updateWardBed(bedId, updatePayload);
 
     request$.subscribe({
       next: () => {
-        this.toastr.success(this.bedModalMode === 'add' ? 'Bed added successfully.' : 'Bed updated successfully.');
+        this.toastr.success(
+          shouldCreate && this.bedModalMode === 'edit'
+            ? 'Bed saved successfully.'
+            : this.bedModalMode === 'add'
+              ? 'Bed added successfully.'
+              : 'Bed updated successfully.'
+        );
         this.closeModal();
         this.loadData();
       },
-      error: () => this.toastr.error('Failed to save bed.'),
+      error: (err) => this.toastr.error(err?.error?.message || 'Failed to save bed.'),
     });
   }
 
@@ -526,13 +1019,29 @@ export class WardBedManagementComponent implements OnInit {
       return;
     }
 
-    this.wardData.updateWardBed(this.selectedBed.id, { status: nextStatus, notes: this.statusForm.get('reason')?.value || '' }).subscribe({
+    const statusPayload = {
+      status: nextStatus,
+      notes: this.statusForm.get('reason')?.value || '',
+    };
+
+    const request$ = isPersistedWardBedId(this.selectedBed.id)
+      ? this.wardData.updateWardBed(this.selectedBed.id, statusPayload)
+      : this.wardData.createWardBed({
+          roomId: this.selectedBed.roomId,
+          bedNo: this.selectedBed.bedNo,
+          bedType: this.selectedBed.bedType,
+          status: nextStatus,
+          dailyCharge: this.selectedBed.dailyCharge,
+          notes: statusPayload.notes,
+        });
+
+    request$.subscribe({
       next: () => {
         this.toastr.success('Bed status updated.');
         this.closeModal();
         this.loadData();
       },
-      error: () => this.toastr.error('Failed to update bed status.'),
+      error: (err) => this.toastr.error(err?.error?.message || 'Failed to update bed status.'),
     });
   }
 

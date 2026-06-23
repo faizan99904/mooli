@@ -9,10 +9,10 @@
         <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openAddWard()">
           <i class="fa fa-hospital-o"></i> Add Ward
         </button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openAddFloor()" [disabled]="!hospitalWards.length">
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openAddFloor()" [disabled]="!canAddFloor">
           <i class="fa fa-building-o"></i> Add Floor
         </button>
-        <button type="button" class="btn btn-sm btn-outline-primary" (click)="openAddRoom()" [disabled]="!hospitalWards.length || !galleryOptions.length">
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="openAddRoom()" [disabled]="!canAddRoom">
           <i class="fa fa-plus"></i> Add Room
         </button>
         <button type="button" class="btn btn-sm btn-primary" (click)="openAddBed()" [disabled]="!rooms.length">
@@ -25,12 +25,14 @@
       <label class="ward-filter ward-filter--compact">
         <span>Ward</span>
         <select [(ngModel)]="filters.ward" (ngModelChange)="onWardFilterChange()">
+          <option value="" *ngIf="!wardOptions.length">No wards yet</option>
           <option *ngFor="let ward of wardOptions" [value]="ward">{{ ward }}</option>
         </select>
       </label>
       <label class="ward-filter ward-filter--compact">
         <span>Floor</span>
         <select [(ngModel)]="filters.gallery" (ngModelChange)="selectedRoomId = filteredRooms[0]?.id || ''">
+          <option value="" *ngIf="!galleryOptions.length">No floors yet</option>
           <option *ngFor="let gallery of galleryOptions" [value]="gallery.id">{{ gallery.label }}</option>
         </select>
       </label>
@@ -59,12 +61,12 @@
       </button>
     </section>
 
-    <div class="ward-empty-setup" *ngIf="!loading && !hospitalWards.length">
-      <strong>Pehle ward setup karein.</strong>
-      <span>Add Ward par click karke apna ward banayein, phir Add Floor, phir Add Room aur Add Bed.</span>
+    <div class="ward-empty-setup" *ngIf="!loading && !hasWardSetup">
+      <strong>Set up your ward first.</strong>
+      <span>Click Add Ward to create a ward, then Add Floor, Add Room, and Add Bed.</span>
     </div>
 
-    <div class="ward-bed-layout" *ngIf="hospitalWards.length">
+    <div class="ward-bed-layout" *ngIf="hasWardSetup">
       <div class="ward-bed-left">
         <section class="ward-panel ward-panel--rooms">
           <div class="ward-panel__head">
@@ -224,6 +226,9 @@
           <label class="ward-simple-field ward-simple-field--full" [class.is-invalid]="isFieldInvalid(floorForm, 'wardId')">
             <span>Ward</span>
             <select formControlName="wardId">
+              <option *ngIf="!hospitalWards.length && selectedWardId" [value]="selectedWardId">
+                {{ filters.ward || 'Selected ward' }}
+              </option>
               <option *ngFor="let ward of hospitalWards" [value]="ward._id">{{ ward.name }}</option>
             </select>
           </label>
@@ -261,15 +266,19 @@
         <div class="ward-simple-modal__grid">
           <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(roomForm, 'wardId')">
             <span>Ward</span>
-            <select formControlName="wardId" (change)="onRoomFormWardChange()">
-              <option *ngFor="let ward of hospitalWards" [value]="ward._id">{{ ward.name }}</option>
+            <select formControlName="wardId">
+              <option *ngIf="!hospitalWards.length && selectedWardId" [ngValue]="selectedWardId">
+                {{ filters.ward || 'Selected ward' }}
+              </option>
+              <option *ngFor="let ward of hospitalWards" [ngValue]="ward._id">{{ ward.name }}</option>
             </select>
             <small>{{ fieldError(roomForm, 'wardId', 'Ward') }}</small>
           </label>
           <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(roomForm, 'floorId')">
             <span>Floor</span>
             <select formControlName="floorId">
-              <option *ngFor="let floor of floorsForRoomForm()" [value]="floor._id">{{ floor.label || floor.name }}</option>
+              <option value="" disabled *ngIf="!roomFormFloors.length">No floors available for this ward</option>
+              <option *ngFor="let floor of roomFormFloors; trackBy: trackFloorById" [ngValue]="floor._id">{{ floor.label || floor.name }}</option>
             </select>
             <small>{{ fieldError(roomForm, 'floorId', 'Floor') }}</small>
           </label>
@@ -328,21 +337,25 @@
         <div class="ward-simple-modal__grid">
           <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(bedForm, 'wardId')">
             <span>Ward</span>
-            <select formControlName="wardId" (change)="onBedFormWardChange()">
+            <select formControlName="wardId">
+              <option *ngIf="!hospitalWards.length && selectedWardId" [value]="selectedWardId">
+                {{ filters.ward || 'Selected ward' }}
+              </option>
               <option *ngFor="let ward of hospitalWards" [value]="ward._id">{{ ward.name }}</option>
             </select>
           </label>
           <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(bedForm, 'floorId')">
             <span>Floor</span>
             <select formControlName="floorId" (change)="onBedFormPlacementChange()">
-              <option *ngFor="let floor of floorsForBedForm()" [value]="floor._id">{{ floor.label || floor.name }}</option>
+              <option value="" disabled *ngIf="!bedFormFloors.length">No floors available for this ward</option>
+              <option *ngFor="let floor of bedFormFloors; trackBy: trackFloorById" [ngValue]="floor._id">{{ floor.label || floor.name }}</option>
             </select>
           </label>
           <label class="ward-simple-field ward-simple-field--full" [class.is-invalid]="isFieldInvalid(bedForm, 'roomId')">
             <span>Room</span>
             <select formControlName="roomId">
-              <option value="" disabled *ngIf="!roomsForBedForm.length">No rooms in this gallery</option>
-              <option *ngFor="let room of roomsForBedForm" [value]="room.id">{{ room.roomName }}</option>
+              <option value="" disabled *ngIf="!bedFormRooms.length">No rooms in this gallery</option>
+              <option *ngFor="let room of bedFormRooms; trackBy: trackRoomById" [value]="room.id">{{ room.roomName }}</option>
             </select>
             <small>{{ fieldError(bedForm, 'roomId', 'Room') }}</small>
           </label>

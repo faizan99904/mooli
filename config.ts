@@ -16,6 +16,7 @@ export const CONFIG = {
   hospitalDashboard: {
     summary: API_BASE_URL + '/hospital-dashboard/summary',
     doctorSummary: API_BASE_URL + '/hospital-dashboard/doctor-summary',
+    doctorSummaryEmail: API_BASE_URL + '/hospital-dashboard/doctor-summary/email',
   },
 
   hospitals: API_BASE_URL + '/hospitals',

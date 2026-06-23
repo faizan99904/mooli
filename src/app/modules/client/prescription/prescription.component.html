@@ -155,6 +155,10 @@
             <button type="button" class="btn-light" [disabled]="!offline.online() || offline.syncing() || offline.pendingCount() === 0" (click)="syncOfflineWork()">
               Sync
             </button>
+            <button type="button" class="btn-light" [disabled]="sendingDaySummary" (click)="sendDoctorDaySummaryEmail()">
+              <i class="fa" [ngClass]="sendingDaySummary ? 'fa-spinner fa-spin' : 'fa-envelope'"></i>
+              {{ sendingDaySummary ? 'Sending...' : 'Email Day Summary' }}
+            </button>
             <a class="btn-light" routerLink="/prescriptions/created">Created Prescriptions</a>
             <button type="button" class="btn-light theme-select-btn" (click)="openPrescriptionThemeModal()">
               <i class="fa fa-paint-brush"></i>

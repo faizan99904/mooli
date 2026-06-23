@@ -6,6 +6,7 @@ import { normalizeAccessKey, readStoredPermissions } from '../../modules/auth/ac
 import {
   ApiResponse,
   PaginatedResponse,
+  Pagination,
 } from '../../shared/models/api-response.model';
 import {
   CompanyProfile,
@@ -129,6 +130,61 @@ export class BackendService {
     return response.data;
   }
 
+  private unwrapListResult<T>(
+    response: ApiResponse<PaginatedResponse<T> | T[] | Record<string, unknown>>
+  ): ListResult<T> {
+    const data = response.data as unknown;
+
+    if (Array.isArray(data)) {
+      return {
+        items: data as T[],
+        pagination: {
+          page: 1,
+          limit: data.length,
+          total: data.length,
+          totalPages: 1,
+        },
+      };
+    }
+
+    if (data && typeof data === 'object') {
+      const record = data as Record<string, unknown>;
+      if (Array.isArray(record['items'])) {
+        return {
+          items: record['items'] as T[],
+          pagination: (record['pagination'] as Pagination) || {
+            page: 1,
+            limit: (record['items'] as T[]).length,
+            total: (record['items'] as T[]).length,
+            totalPages: 1,
+          },
+        };
+      }
+      if (Array.isArray(record['data'])) {
+        const items = record['data'] as T[];
+        return {
+          items,
+          pagination: {
+            page: 1,
+            limit: items.length,
+            total: items.length,
+            totalPages: 1,
+          },
+        };
+      }
+    }
+
+    return {
+      items: [],
+      pagination: {
+        page: 1,
+        limit: 0,
+        total: 0,
+        totalPages: 0,
+      },
+    };
+  }
+
   toDataTablesParams(dataTablesParameters?: any): Record<string, unknown> {
     const length = Number(dataTablesParameters?.length || 10);
     const start = Number(dataTablesParameters?.start || 0);
@@ -218,6 +274,18 @@ export class BackendService {
     return this.get<DashboardSummary>(CONFIG.hospitalDashboard.doctorSummary).pipe(
       map((response) => this.unwrapData(response))
     );
+  }
+
+  sendDoctorDailySummaryEmail(payload?: { doctorId?: string; date?: string }): Observable<ApiResponse<{
+    recipientEmail: string;
+    doctorName: string;
+    date: string;
+    shiftLabel: string;
+    totalPatients: number;
+    checkedPatients: number;
+    netCollected: number;
+  }>> {
+    return this.post(CONFIG.hospitalDashboard.doctorSummaryEmail, payload || {});
   }
 
   getHospitals(params?: Record<string, unknown>): Observable<ListResult<Hospital>> {
@@ -827,8 +895,8 @@ export class BackendService {
   }
 
   getHospitalWards(params?: Record<string, unknown>): Observable<ListResult<HospitalWard>> {
-    return this.get<PaginatedResponse<HospitalWard>>(CONFIG.hospitalWards, params).pipe(
-      map((response) => this.unwrapData(response))
+    return this.get<PaginatedResponse<HospitalWard> | HospitalWard[]>(CONFIG.hospitalWards, params).pipe(
+      map((response) => this.unwrapListResult(response))
     );
   }
 
@@ -845,9 +913,10 @@ export class BackendService {
   }
 
   getWardFloors(wardId: string, params?: Record<string, unknown>): Observable<ListResult<WardFloor>> {
-    return this.get<PaginatedResponse<WardFloor>>(`${CONFIG.hospitalWards}/${wardId}/floors`, params).pipe(
-      map((response) => this.unwrapData(response))
-    );
+    return this.get<PaginatedResponse<WardFloor> | WardFloor[]>(
+      `${CONFIG.hospitalWards}/${wardId}/floors`,
+      params
+    ).pipe(map((response) => this.unwrapListResult(response)));
   }
 
   createWardFloor(wardId: string, payload: Record<string, unknown>): Observable<ApiResponse<WardFloor>> {

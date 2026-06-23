@@ -238,6 +238,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   vitalsModalForm: FormGroup;
   appointmentsLoading = false;
   saving = false;
+  sendingDaySummary = false;
   private patientContextRequestId = 0;
   private offlineSyncSubscription?: Subscription;
   private offlineSyncToast: boolean | null = null;
@@ -3276,6 +3277,36 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     const doctorId = this.prescriptionForm.getRawValue().doctorId;
     const doctor = this.doctors.find((item) => item.userId === doctorId);
     return this.doctorName(doctor);
+  }
+
+  sendDoctorDaySummaryEmail(): void {
+    const doctorId = this.activeDoctorId();
+    if (!doctorId) {
+      this.toastr.error('Select a doctor before sending the day summary.');
+      return;
+    }
+
+    const doctor = this.resolvePrescriptionDoctor({ doctorId });
+    const doctorEmail = doctor?.user?.email || this.selectedAppointment()?.doctor?.email;
+    if (!doctorEmail) {
+      this.toastr.error('Doctor email is not configured. Update the doctor profile first.');
+      return;
+    }
+
+    this.sendingDaySummary = true;
+    const payload = this.isDoctorUser() ? {} : { doctorId };
+    this.backend
+      .sendDoctorDailySummaryEmail(payload)
+      .pipe(finalize(() => (this.sendingDaySummary = false)))
+      .subscribe({
+        next: (response) => {
+          const recipient = response.data?.recipientEmail || doctorEmail;
+          this.toastr.success(response.message || `Daily summary sent to ${recipient}`);
+        },
+        error: (error) => {
+          this.toastr.error(error?.error?.message || 'Failed to send daily summary email.');
+        },
+      });
   }
 
   selectedDoctorProfile(): Doctor | null {

@@ -348,13 +348,74 @@ export function getWardOptionsFromRooms(rooms: Room[], wards: HospitalWard[] = [
 }
 
 export function buildFloorOptions(floors: WardFloor[], wardId = ''): WardGalleryOption[] {
+  const normalizedWardId = String(wardId || '').trim();
   return floors
-    .filter((floor) => !wardId || floor.wardId === wardId)
+    .filter((floor) => !normalizedWardId || String(floor.wardId) === normalizedWardId)
     .map((floor) => ({
       id: floor._id,
       label: floor.label || floor.name,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+export function normalizeWardFloorRecord(raw: unknown, fallbackWardId = ''): WardFloor | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const nested = record['data'];
+  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+    return normalizeWardFloorRecord(nested, fallbackWardId);
+  }
+
+  const id = readRecordId(record);
+  const name = String(record['name'] || record['label'] || 'Floor').trim();
+  if (!id || !name) {
+    return null;
+  }
+
+  const rawWardId = record['wardId'];
+  const wardId =
+    (rawWardId && typeof rawWardId === 'object'
+      ? readRecordId(rawWardId as Record<string, unknown>)
+      : readRecordId({ _id: rawWardId, id: rawWardId })) || String(fallbackWardId || '').trim();
+  if (!wardId) {
+    return null;
+  }
+
+  return {
+    _id: id,
+    hospitalId: String(record['hospitalId'] || ''),
+    wardId,
+    name,
+    label: String(record['label'] || name),
+    sortOrder: Number(record['sortOrder'] || 0) || 0,
+    status: (String(record['status'] || 'active') as WardFloor['status']),
+  };
+}
+
+export function normalizeWardFloorRecords(raw: unknown, fallbackWardId = ''): WardFloor[] {
+  if (!raw) {
+    return [];
+  }
+
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) => normalizeWardFloorRecord(item, fallbackWardId))
+      .filter((floor): floor is WardFloor => Boolean(floor));
+  }
+
+  if (typeof raw === 'object') {
+    const record = raw as Record<string, unknown>;
+    if (Array.isArray(record['items'])) {
+      return normalizeWardFloorRecords(record['items'], fallbackWardId);
+    }
+    const single = normalizeWardFloorRecord(raw, fallbackWardId);
+    return single ? [single] : [];
+  }
+
+  return [];
 }
 
 export function mapAdmissionRows(allotments: RoomAllotment[], doctors: Doctor[] = []): WardModuleRow[] {
@@ -680,6 +741,97 @@ export function mapWardApiBedToRecord(
     dailyCharge: Number(bed['dailyCharge'] || 0),
     notes: String(bed['notes'] || ''),
   };
+}
+
+export function isPersistedWardBedId(id: string | null | undefined): boolean {
+  return /^[a-f\d]{24}$/i.test(String(id || '').trim());
+}
+
+export function readRecordId(record: Record<string, unknown>): string {
+  const raw = record['_id'] ?? record['id'];
+  if (!raw) {
+    return '';
+  }
+
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    return String(raw).trim();
+  }
+
+  if (typeof raw === 'object' && raw !== null) {
+    const objectId = raw as Record<string, unknown>;
+    if (typeof objectId['$oid'] === 'string') {
+      return objectId['$oid'];
+    }
+    if (typeof objectId['_id'] === 'string') {
+      return objectId['_id'];
+    }
+    if (typeof (raw as { toHexString?: () => string }).toHexString === 'function') {
+      return (raw as { toHexString: () => string }).toHexString();
+    }
+    const asString = String(raw).trim();
+    if (/^[a-f\d]{24}$/i.test(asString)) {
+      return asString;
+    }
+  }
+
+  return '';
+}
+
+export function normalizeHospitalWardRecord(raw: unknown): HospitalWard | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const nested = record['data'];
+  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+    return normalizeHospitalWardRecord(nested);
+  }
+
+  const name = String(record['name'] || '').trim();
+  if (!name) {
+    return null;
+  }
+
+  const id = readRecordId(record);
+  if (!id) {
+    return null;
+  }
+
+  return {
+    _id: id,
+    hospitalId: String(record['hospitalId'] || ''),
+    name,
+    code: String(record['code'] || ''),
+    description: String(record['description'] || ''),
+    status: (String(record['status'] || 'active') as HospitalWard['status']),
+  };
+}
+
+export function normalizeHospitalWardRecords(raw: unknown): HospitalWard[] {
+  if (!raw) {
+    return [];
+  }
+
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) => normalizeHospitalWardRecord(item))
+      .filter((ward): ward is HospitalWard => Boolean(ward));
+  }
+
+  if (typeof raw === 'object') {
+    const record = raw as Record<string, unknown>;
+    if (Array.isArray(record['items'])) {
+      return normalizeHospitalWardRecords(record['items']);
+    }
+    if (Array.isArray(record['data'])) {
+      return normalizeHospitalWardRecords(record['data']);
+    }
+    const single = normalizeHospitalWardRecord(raw);
+    return single ? [single] : [];
+  }
+
+  return [];
 }
 
 export function matchesWardFilter(
