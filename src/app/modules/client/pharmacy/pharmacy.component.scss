@@ -1,3 +1,5 @@
+@import '../pharmacy-shared.scss';
+
 .font-weight-bold {
   font-weight: 600;
 }
@@ -504,6 +506,10 @@
 
 .print-medicine-table tbody tr:nth-child(even) td {
   background: #fcfdff;
+}
+
+.body{
+  padding: 10px;
 }
 
 .print-medicine-title {

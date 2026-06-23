@@ -1,25 +1,23 @@
-<div id="main-content">
-    <div class="container-fluid">
-        <div class="block-header">
-            <div class="row clearfix">
-                <div class="col-lg-6 col-md-12 col-sm-12">
-                    <h1>Pharmacy Queue</h1>
-                    <span>Review doctor prescriptions and match them with POS medicine stock</span>
-                </div>
-                <div class="col-lg-6 col-md-12 col-sm-12 text-lg-right">
-                    <a class="btn btn-primary mr-2" [routerLink]="['/pharmacy/products']">
-                        <i class="fa fa-cubes"></i>
-                        Product Management
-                    </a>
-                    <button type="button" class="btn btn-success mr-2" *ngIf="canOpenPharmacyPos"
-                        (click)="openPharmacyPos()">
-                        <i class="fa fa-shopping-cart"></i>
-                        Open Mooli POS
-                    </button>
-                    <a class="btn btn-default" [routerLink]="['/prescriptions']">Prescriptions</a>
-                </div>
+<div id="main-content" class="pharmacy-page">
+    <div class="pharmacy-shell">
+        <header class="pharmacy-hero">
+            <div class="pharmacy-hero-main">
+                <h1>Pharmacy Queue</h1>
+                <p>Review doctor prescriptions and match them with POS medicine stock</p>
             </div>
-        </div>
+            <div class="pharmacy-hero-actions">
+                <a class="btn btn-primary mr-2" [routerLink]="['/pharmacy/products']">
+                    <i class="fa fa-cubes"></i>
+                    Product Management
+                </a>
+                <button type="button" class="btn btn-success mr-2" *ngIf="canOpenPharmacyPos"
+                    (click)="openPharmacyPos()">
+                    <i class="fa fa-shopping-cart"></i>
+                    Open Mooli POS
+                </button>
+                <a class="btn btn-default" [routerLink]="['/prescriptions']">Prescriptions</a>
+            </div>
+        </header>
 
         <div class="row clearfix">
             <div class="col-12">
@@ -52,6 +50,11 @@
                                 <strong>Stock Movements</strong>
                                 <span>Audit every stock in and out event</span>
                             </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/transfers']">
+                                <i class="fa fa-random"></i>
+                                <strong>Stock Transfers</strong>
+                                <span>Inter-store stock movement workflow</span>
+                            </a>
                             <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/sales']">
                                 <i class="fa fa-file-text-o"></i>
                                 <strong>Sales</strong>
@@ -76,6 +79,11 @@
                                 <i class="fa fa-money"></i>
                                 <strong>Expenses</strong>
                                 <span>Counter costs and petty cash outflow</span>
+                            </a>
+                            <a class="pharmacy-dashboard-tile" [routerLink]="['/pharmacy/reports']">
+                                <i class="fa fa-bar-chart"></i>
+                                <strong>Reports</strong>
+                                <span>Sales, inventory, payments and P&amp;L reports</span>
                             </a>
                         </div>
                     </div>

@@ -1,120 +1,129 @@
-<div id="main-content" *ngIf="detail">
-  <div class="container-fluid pharmacy-admin-page">
-    <div class="block-header">
-      <div class="row clearfix align-items-center">
-        <div class="col-lg-8 col-md-12 col-sm-12">
-          <a class="text-decoration-none small d-inline-block mb-2" routerLink="/pharmacy/register-sessions">&larr; Back to Register Sessions</a>
+<div id="main-content" class="pharmacy-page">
+  <div class="pharmacy-shell pharmacy-admin-page">
+    <div class="pharmacy-loading" *ngIf="loading">
+      <i class="fa fa-spinner fa-spin"></i> Loading register session...
+    </div>
+
+    <div class="pharmacy-empty-state" *ngIf="!loading && loadError">
+      {{ loadError }}
+      <a class="pharmacy-back-link" routerLink="/pharmacy/register-sessions">Back to Register Sessions</a>
+    </div>
+
+    <ng-container *ngIf="!loading && detail as current">
+      <header class="pharmacy-hero">
+        <div class="pharmacy-hero-main">
+          <a class="pharmacy-back-link" routerLink="/pharmacy/register-sessions">&larr; Back to Register Sessions</a>
           <h1>Register Session Detail</h1>
-          <span>{{ detail.registerSession.store?.name || detail.registerSession.storeId }} &middot; {{ date(detail.registerSession.businessDate) }}</span>
+          <p>{{ current.registerSession.store?.name || current.registerSession.storeId }} &middot; {{ date(current.registerSession.businessDate) }}</p>
         </div>
-      </div>
-    </div>
+      </header>
 
-    <div class="pharmacy-stats-grid">
-      <div class="pharmacy-stat-card">
-        <span>Opening Cash</span>
-        <strong>{{ currency(detail.registerSession.openingAmount) }}</strong>
-      </div>
-      <div class="pharmacy-stat-card">
-        <span>Sales Total</span>
-        <strong>{{ currency(detail.summary.totalSales) }}</strong>
-      </div>
-      <div class="pharmacy-stat-card">
-        <span>Expenses</span>
-        <strong>{{ currency(detail.summary.totalExpenses) }}</strong>
-      </div>
-      <div class="pharmacy-stat-card">
-        <span>Expected Drawer</span>
-        <strong>{{ currency(detail.summary.expectedCashInDrawer) }}</strong>
-      </div>
-    </div>
-
-    <div class="pharmacy-summary-card">
-      <div class="pharmacy-table-head">
-        <div>
-          <h2>Session Overview</h2>
-          <p>Operational summary for this cashier session.</p>
+      <div class="pharmacy-stats-grid">
+        <div class="pharmacy-stat-card">
+          <span>Opening Cash</span>
+          <strong>{{ currency(current.registerSession.openingAmount) }}</strong>
+        </div>
+        <div class="pharmacy-stat-card">
+          <span>Sales Total</span>
+          <strong>{{ currency(current.summary.totalSales) }}</strong>
+        </div>
+        <div class="pharmacy-stat-card">
+          <span>Expenses</span>
+          <strong>{{ currency(current.summary.totalExpenses) }}</strong>
+        </div>
+        <div class="pharmacy-stat-card">
+          <span>Expected Drawer</span>
+          <strong>{{ currency(current.summary.expectedCashInDrawer) }}</strong>
         </div>
       </div>
 
-      <div class="card-body">
-        <div class="row g-4">
-          <div class="col-md-4"><strong>Status</strong><div>{{ detail.registerSession.status }}</div></div>
-          <div class="col-md-4"><strong>Opened At</strong><div>{{ dateTime(detail.registerSession.openedAt) }}</div></div>
-          <div class="col-md-4"><strong>Closed At</strong><div>{{ dateTime(detail.registerSession.closedAt) }}</div></div>
-          <div class="col-md-4"><strong>Cashier</strong><div>{{ detail.registerSession.cashier?.name || detail.registerSession.cashierId }}</div></div>
-          <div class="col-md-4"><strong>Closing Amount</strong><div>{{ currency(detail.registerSession.closingAmount) }}</div></div>
-          <div class="col-md-4"><strong>Cash Difference</strong><div>{{ currency(detail.registerSession.cashDifference) }}</div></div>
+      <div class="pharmacy-summary-card">
+        <div class="pharmacy-table-head">
+          <div>
+            <h2>Session Overview</h2>
+            <p>Operational summary for this cashier session.</p>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div class="pharmacy-table-card">
-      <div class="pharmacy-table-head">
-        <div>
-          <h2>Sales in Session</h2>
-          <p>{{ detail.sales.length }} sale entries were posted during this shift.</p>
-        </div>
-      </div>
-
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table align-middle">
-            <thead>
-              <tr>
-                <th>Invoice</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Paid</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let sale of detail.sales">
-                <td>{{ sale.invoiceNo }}</td>
-                <td>{{ dateTime(sale.saleDate) }}</td>
-                <td>{{ sale.status }}</td>
-                <td>{{ currency(sale.total) }}</td>
-                <td>{{ currency(sale.paidAmount) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="pharmacy-table-card">
-      <div class="pharmacy-table-head">
-        <div>
-          <h2>Expenses in Session</h2>
-          <p>{{ detail.expenses.length }} expense entries were linked to this register session.</p>
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-md-4"><strong>Status</strong><div>{{ current.registerSession.status }}</div></div>
+            <div class="col-md-4"><strong>Opened At</strong><div>{{ dateTime(current.registerSession.openedAt) }}</div></div>
+            <div class="col-md-4"><strong>Closed At</strong><div>{{ dateTime(current.registerSession.closedAt) }}</div></div>
+            <div class="col-md-4"><strong>Cashier</strong><div>{{ current.registerSession.cashier?.name || current.registerSession.cashierId }}</div></div>
+            <div class="col-md-4"><strong>Closing Amount</strong><div>{{ currency(current.registerSession.closingAmount) }}</div></div>
+            <div class="col-md-4"><strong>Cash Difference</strong><div>{{ currency(current.registerSession.cashDifference) }}</div></div>
+          </div>
         </div>
       </div>
 
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table align-middle">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Method</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let expense of detail.expenses">
-                <td>{{ date(expense.expenseDate) }}</td>
-                <td>{{ expense.title }}</td>
-                <td>{{ expense.category }}</td>
-                <td>{{ expense.paymentMethod || '-' }}</td>
-                <td>{{ currency(expense.amount) }}</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="pharmacy-table-card">
+        <div class="pharmacy-table-head">
+          <div>
+            <h2>Sales in Session</h2>
+            <p>{{ current.sales.length }} sale entries were posted during this shift.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>Invoice</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Paid</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let sale of current.sales">
+                  <td>{{ sale.invoiceNo }}</td>
+                  <td>{{ dateTime(sale.saleDate) }}</td>
+                  <td>{{ sale.status }}</td>
+                  <td>{{ currency(sale.total) }}</td>
+                  <td>{{ currency(sale.paidAmount) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
+
+      <div class="pharmacy-table-card">
+        <div class="pharmacy-table-head">
+          <div>
+            <h2>Expenses in Session</h2>
+            <p>{{ current.expenses.length }} expense entries were linked to this register session.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Method</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let expense of current.expenses">
+                  <td>{{ date(expense.expenseDate) }}</td>
+                  <td>{{ expense.title }}</td>
+                  <td>{{ expense.category }}</td>
+                  <td>{{ expense.paymentMethod || '-' }}</td>
+                  <td>{{ currency(expense.amount) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </ng-container>
   </div>
 </div>

@@ -1,19 +1,15 @@
-<div id="main-content">
-  <div class="container-fluid pharmacy-admin-page">
-    <div class="block-header">
-      <div class="row clearfix align-items-center">
-        <div class="col-lg-7 col-md-12 col-sm-12">
-          <h1>Pharmacy Inventory</h1>
-          <span>Live stock snapshot for pharmacy medicines, store availability, and valuation.</span>
-        </div>
-        <div class="col-lg-5 col-md-12 col-sm-12">
-          <div class="pharmacy-page-actions">
-            <button class="btn btn-default" type="button" (click)="loadInventory()">Refresh</button>
-            <a class="btn btn-primary" routerLink="/pharmacy/products">Manage Products</a>
-          </div>
-        </div>
+<div id="main-content" class="pharmacy-page">
+  <div class="pharmacy-shell pharmacy-admin-page">
+    <header class="pharmacy-hero">
+      <div class="pharmacy-hero-main">
+        <h1>Pharmacy Inventory</h1>
+        <p>Live stock snapshot for pharmacy medicines, store availability, and valuation.</p>
       </div>
-    </div>
+      <div class="pharmacy-hero-actions">
+        <button class="btn btn-default" type="button" (click)="loadInventory()">Refresh</button>
+        <a class="btn btn-primary" routerLink="/pharmacy/products">Manage Products</a>
+      </div>
+    </header>
 
     <div class="pharmacy-stats-grid">
       <div class="pharmacy-stat-card">
@@ -94,6 +90,7 @@
                 <th>Cost</th>
                 <th>Retail</th>
                 <th>Valuation</th>
+                <th class="text-end" *ngIf="canAdjust()">Adjust</th>
               </tr>
             </thead>
             <tbody>
@@ -109,11 +106,37 @@
                 <td>{{ currency(product.costPrice) }}</td>
                 <td>{{ currency(product.sellingPrice) }}</td>
                 <td>{{ currency(qty(product) * price(product)) }}</td>
+                <td class="text-end" *ngIf="canAdjust()">
+                  <button class="btn btn-outline-primary btn-sm" type="button" (click)="openAdjust(product)">Adjust</button>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="pharmacy-modal-backdrop" *ngIf="adjustModalOpen" (click)="dismissAdjust()">
+  <div class="pharmacy-modal" (click)="$event.stopPropagation()">
+    <h3>Adjust Stock</h3>
+    <p *ngIf="adjustProduct as product">{{ product.name }} · current {{ qty(product) }} units</p>
+    <label class="field-label" for="adjust-type">Adjustment Type</label>
+    <select id="adjust-type" class="form-select" [(ngModel)]="adjustType">
+      <option value="INCREASE">Increase</option>
+      <option value="DECREASE">Decrease</option>
+      <option value="SET">Set Exact Quantity</option>
+    </select>
+    <label class="field-label mt-2" for="adjust-qty">Quantity</label>
+    <input id="adjust-qty" class="form-control" type="number" min="0" step="1" [(ngModel)]="adjustQty" />
+    <label class="field-label mt-2" for="adjust-note">Note</label>
+    <input id="adjust-note" class="form-control" type="text" [(ngModel)]="adjustNote" placeholder="Optional note" />
+    <div class="pharmacy-modal-actions">
+      <button class="btn btn-outline-secondary" type="button" (click)="dismissAdjust()" [disabled]="savingAdjust">Cancel</button>
+      <button class="btn btn-primary" type="button" (click)="submitAdjust()" [disabled]="savingAdjust">
+        {{ savingAdjust ? 'Saving...' : 'Save Adjustment' }}
+      </button>
     </div>
   </div>
 </div>

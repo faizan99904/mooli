@@ -81,13 +81,14 @@
                         <li *ngIf="canViewPharmacySuppliers"><a [routerLink]="['/pharmacy/suppliers']">Suppliers</a></li>
                         <li *ngIf="canViewPharmacyInventory"><a [routerLink]="['/pharmacy/inventory']">Inventory</a></li>
                         <li *ngIf="canViewPharmacyStockMovements"><a [routerLink]="['/pharmacy/stock-movements']">Stock Movements</a></li>
+                        <li *ngIf="canViewPharmacyTransfers"><a [routerLink]="['/pharmacy/transfers']">Stock Transfers</a></li>
                         <li *ngIf="canViewPharmacySales"><a [routerLink]="['/pharmacy/sales']">Sales</a></li>
                         <li *ngIf="canOpenPharmacyPos"><a [routerLink]="['/pharmacy/pos']">Pharmacy POS</a></li>
                         <li *ngIf="canViewPharmacyReturns"><a [routerLink]="['/pharmacy/returns/sales']">Sales Returns</a></li>
                         <li *ngIf="canViewPharmacyPayments"><a [routerLink]="['/pharmacy/payments']">Payments</a></li>
                         <li *ngIf="canViewPharmacyRegisterSessions"><a [routerLink]="['/pharmacy/register-sessions']">Register Sessions</a></li>
                         <li *ngIf="canViewPharmacyExpenses"><a [routerLink]="['/pharmacy/expenses']">Expenses</a></li>
-                        <li *ngIf="canViewPosReports"><a [routerLink]="['/pos-reports']">POS Reports</a></li>
+                        <li *ngIf="canViewPosReports"><a [routerLink]="['/pharmacy/reports']">Pharmacy Reports</a></li>
                     </ul>
                 </li>
 

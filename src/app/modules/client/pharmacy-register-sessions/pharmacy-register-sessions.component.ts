@@ -25,6 +25,10 @@ export class PharmacyRegisterSessionsComponent implements OnInit {
   status = '';
   fromDate = '';
   toDate = '';
+  closeModalOpen = false;
+  closingSession: RegisterSession | null = null;
+  closingAmount = 0;
+  closing = false;
 
   constructor(
     private backend: BackendService,
@@ -91,22 +95,42 @@ export class PharmacyRegisterSessionsComponent implements OnInit {
       return;
     }
 
-    const input = window.prompt(
-      'Enter closing amount',
-      String(session.expectedCashAmount || session.summary?.expectedCashInDrawer || 0)
-    );
-    const amount = Number(input);
-    if (input === null || !Number.isFinite(amount)) {
+    this.closingSession = session;
+    this.closingAmount = Number(session.expectedCashAmount || session.summary?.expectedCashInDrawer || 0);
+    this.closeModalOpen = true;
+  }
+
+  dismissCloseModal(): void {
+    if (!this.closing) {
+      this.closeModalOpen = false;
+      this.closingSession = null;
+    }
+  }
+
+  submitClose(): void {
+    if (!this.closingSession) {
       return;
     }
 
-    this.backend.closeRegister(session._id, { closingAmount: amount }).subscribe({
-      next: () => {
-        this.toastr.success('Register closed.');
-        this.loadSessions();
-      },
-      error: (err) => this.toastr.error(err?.error?.message || 'Unable to close register.'),
-    });
+    const amount = Number(this.closingAmount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      this.toastr.error('Enter a valid closing amount.');
+      return;
+    }
+
+    this.closing = true;
+    this.backend
+      .closeRegister(this.closingSession._id, { closingAmount: amount })
+      .pipe(finalize(() => (this.closing = false)))
+      .subscribe({
+        next: () => {
+          this.toastr.success('Register closed.');
+          this.closeModalOpen = false;
+          this.closingSession = null;
+          this.loadSessions();
+        },
+        error: (err) => this.toastr.error(err?.error?.message || 'Unable to close register.'),
+      });
   }
 
   currency(value: number | string | null | undefined): string {

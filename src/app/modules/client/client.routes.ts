@@ -69,6 +69,7 @@ import { PharmacyPaymentsComponent } from './pharmacy-payments/pharmacy-payments
 import { PharmacyRegisterSessionsComponent } from './pharmacy-register-sessions/pharmacy-register-sessions.component';
 import { PharmacyRegisterSessionDetailComponent } from './pharmacy-register-session-detail/pharmacy-register-session-detail.component';
 import { PharmacyExpensesComponent } from './pharmacy-expenses/pharmacy-expenses.component';
+import { PharmacyTransfersComponent } from './pharmacy-transfers/pharmacy-transfers.component';
 import { PosReportsComponent } from './pos-reports/pos-reports.component';
 import { AuditLogsComponent } from './audit-logs/audit-logs.component';
 import { WardDashboardComponent } from './ward/ward-dashboard.component';
@@ -518,6 +519,12 @@ export const clientRoutes: Routes = [
         canActivate: [roleGuard(PHARMACY_STOCK_MOVEMENTS_ACCESS)],
       },
       {
+        path: 'pharmacy/transfers',
+        component: PharmacyTransfersComponent,
+        data: { title: 'Mooli | Pharmacy Transfers' },
+        canActivate: [roleGuard(PHARMACY_TRANSFERS_ACCESS)],
+      },
+      {
         path: 'pharmacy/sales',
         component: PharmacySalesComponent,
         data: { title: 'Mooli | Pharmacy Sales' },
@@ -564,6 +571,12 @@ export const clientRoutes: Routes = [
         component: PharmacyExpensesComponent,
         data: { title: 'Mooli | Pharmacy Expenses' },
         canActivate: [roleGuard(PHARMACY_EXPENSES_ACCESS)],
+      },
+      {
+        path: 'pharmacy/reports',
+        component: PosReportsComponent,
+        data: { title: 'Mooli | Pharmacy Reports' },
+        canActivate: [roleGuard(REPORT_ACCESS)],
       },
       {
         path: 'pos-reports',

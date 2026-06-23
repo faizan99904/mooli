@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
 
 import { BackendService } from '../../../core/services/backend.service';
 import { StockMovement } from '../../../shared/models/hospital.model';
@@ -22,7 +23,10 @@ export class PharmacyStockMovementsComponent implements OnInit {
   fromDate = '';
   toDate = '';
 
-  constructor(private backend: BackendService) {}
+  constructor(
+    private backend: BackendService,
+    private toastr: ToastrService,
+  ) {}
 
   ngOnInit(): void {
     this.loadMovements();
@@ -40,7 +44,10 @@ export class PharmacyStockMovementsComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (result) => (this.movements = result.items),
-        error: () => (this.movements = []),
+        error: (err) => {
+          this.movements = [];
+          this.toastr.error(err?.error?.message || 'Unable to load stock movements.');
+        },
       });
   }
 

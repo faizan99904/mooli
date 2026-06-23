@@ -1,20 +1,16 @@
-<div id="main-content">
-  <div class="container-fluid pharmacy-admin-page">
-    <div class="block-header">
-      <div class="row clearfix align-items-center">
-        <div class="col-lg-7 col-md-12 col-sm-12">
-          <h1>Pharmacy Suppliers</h1>
-          <span>Track medicine vendors and supplier credit profiles used by pharmacy operations.</span>
-        </div>
-        <div class="col-lg-5 col-md-12 col-sm-12">
-          <div class="pharmacy-page-actions">
-            <button class="btn btn-primary" type="button" (click)="openCreate()" [disabled]="!canCreate">
-              Add Supplier
-            </button>
-          </div>
-        </div>
+<div id="main-content" class="pharmacy-page">
+  <div class="pharmacy-shell pharmacy-admin-page">
+    <header class="pharmacy-hero">
+      <div class="pharmacy-hero-main">
+        <h1>Pharmacy Suppliers</h1>
+        <p>Track medicine vendors and supplier credit profiles used by pharmacy operations.</p>
       </div>
-    </div>
+      <div class="pharmacy-hero-actions">
+        <button class="btn btn-primary" type="button" (click)="openCreate()" [disabled]="!canCreate">
+          Add Supplier
+        </button>
+      </div>
+    </header>
 
     <div class="pharmacy-filter-card">
       <div class="pharmacy-filter-head">

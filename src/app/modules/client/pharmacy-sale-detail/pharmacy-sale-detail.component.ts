@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 
 import { AppDialogService } from '../../../core/services/app-dialog.service';
@@ -17,6 +18,8 @@ import { formatCurrency, formatDate, formatDateTime } from '../pharmacy-admin.ut
 })
 export class PharmacySaleDetailComponent implements OnInit {
   sale: Sale | null = null;
+  loading = false;
+  loadError = '';
   cancelling = false;
 
   constructor(
@@ -28,12 +31,26 @@ export class PharmacySaleDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') || '';
-    if (id) {
-      this.backend.getSaleById(id).subscribe({
-        next: (sale) => (this.sale = sale),
-        error: (err) => this.toastr.error(err?.error?.message || 'Unable to load sale detail.'),
-      });
+    if (!id) {
+      this.loadError = 'Sale ID is missing.';
+      return;
     }
+
+    this.loading = true;
+    this.backend
+      .getSaleById(id)
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: (sale) => {
+          this.sale = sale;
+          this.loadError = sale ? '' : 'Sale not found.';
+        },
+        error: (err) => {
+          this.sale = null;
+          this.loadError = err?.error?.message || 'Unable to load sale detail.';
+          this.toastr.error(this.loadError);
+        },
+      });
   }
 
   canCancel(sale: Sale): boolean {
@@ -57,28 +74,37 @@ export class PharmacySaleDetailComponent implements OnInit {
     }
 
     this.cancelling = true;
-    this.backend.cancelSale(this.sale._id).subscribe({
-      next: (response) => {
-        this.sale = response.data;
-        this.cancelling = false;
-        this.toastr.success('Sale cancelled.');
-      },
-      error: (err) => {
-        this.cancelling = false;
-        this.toastr.error(err?.error?.message || 'Unable to cancel sale.');
-      },
-    });
+    this.backend
+      .cancelSale(this.sale._id)
+      .pipe(finalize(() => (this.cancelling = false)))
+      .subscribe({
+        next: (response) => {
+          this.sale = response.data;
+          this.toastr.success('Sale cancelled.');
+        },
+        error: (err) => this.toastr.error(err?.error?.message || 'Unable to cancel sale.'),
+      });
   }
 
   currency(value: string | number | null | undefined): string {
     return formatCurrency(value);
   }
 
-  date(_value: string | null | undefined): string {
-    return formatDate(_value);
+  date(value: string | null | undefined): string {
+    return formatDate(value);
   }
 
   dateTime(value: string | null | undefined): string {
     return formatDateTime(value);
+  }
+
+  statusClass(status?: string): string {
+    return `pharmacy-status-pill status-${String(status || 'draft').replace(/_/g, '-')}`;
+  }
+
+  balance(sale: Sale): number {
+    const total = Number(sale.total) || 0;
+    const paid = Number(sale.paidAmount) || 0;
+    return total - paid;
   }
 }

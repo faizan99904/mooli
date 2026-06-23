@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 
 import { BackendService } from '../../../core/services/backend.service';
@@ -16,6 +17,8 @@ import { formatCurrency, formatDate, formatDateTime } from '../pharmacy-admin.ut
 })
 export class PharmacyRegisterSessionDetailComponent implements OnInit {
   detail: RegisterSessionDetail | null = null;
+  loading = false;
+  loadError = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -25,12 +28,26 @@ export class PharmacyRegisterSessionDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') || '';
-    if (id) {
-      this.backend.getRegisterSessionById(id).subscribe({
-        next: (detail) => (this.detail = detail),
-        error: (err) => this.toastr.error(err?.error?.message || 'Unable to load register session detail.'),
-      });
+    if (!id) {
+      this.loadError = 'Register session ID is missing.';
+      return;
     }
+
+    this.loading = true;
+    this.backend
+      .getRegisterSessionById(id)
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: (detail) => {
+          this.detail = detail;
+          this.loadError = detail ? '' : 'Register session not found.';
+        },
+        error: (err) => {
+          this.detail = null;
+          this.loadError = err?.error?.message || 'Unable to load register session detail.';
+          this.toastr.error(this.loadError);
+        },
+      });
   }
 
   currency(value: string | number | null | undefined): string {

@@ -1,19 +1,15 @@
-<div id="main-content">
-  <div class="container-fluid pharmacy-admin-page">
-    <div class="block-header">
-      <div class="row clearfix align-items-center">
-        <div class="col-lg-7 col-md-12 col-sm-12">
-          <h1>Pharmacy Sales</h1>
-          <span>Completed and in-progress pharmacy POS invoices with drilldown and control actions.</span>
-        </div>
-        <div class="col-lg-5 col-md-12 col-sm-12">
-          <div class="pharmacy-page-actions">
-            <a class="btn btn-default" routerLink="/pharmacy/returns/sales">Sales Returns</a>
-            <a class="btn btn-primary" [routerLink]="['/pharmacy/pos']" [queryParams]="storeId ? { storeId: storeId } : null">Open POS</a>
-          </div>
-        </div>
+<div id="main-content" class="pharmacy-page">
+  <div class="pharmacy-shell pharmacy-admin-page">
+    <header class="pharmacy-hero">
+      <div class="pharmacy-hero-main">
+        <h1>Pharmacy Sales</h1>
+        <p>Completed and in-progress pharmacy POS invoices with drilldown and control actions.</p>
       </div>
-    </div>
+      <div class="pharmacy-hero-actions">
+        <a class="btn btn-default" routerLink="/pharmacy/returns/sales">Sales Returns</a>
+        <a class="btn btn-primary" [routerLink]="['/pharmacy/pos']" [queryParams]="storeId ? { storeId: storeId } : null">Open POS</a>
+      </div>
+    </header>
 
     <div class="pharmacy-filter-card">
       <div class="pharmacy-filter-head">

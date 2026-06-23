@@ -1,80 +1,89 @@
-<div id="main-content">
-  <div class="container-fluid pharmacy-admin-page" *ngIf="sale">
-    <div class="block-header">
-      <div class="row clearfix align-items-center">
-        <div class="col-lg-7 col-md-12 col-sm-12">
-          <a class="text-decoration-none small d-inline-block mb-2" routerLink="/pharmacy/sales">&larr; Back to Sales</a>
-          <h1>Sale Detail</h1>
-          <span>{{ sale.invoiceNo }}</span>
+<div id="main-content" class="pharmacy-page">
+  <div class="pharmacy-shell pharmacy-admin-page">
+    <div class="pharmacy-loading" *ngIf="loading">
+      <i class="fa fa-spinner fa-spin"></i> Loading sale detail...
+    </div>
+
+    <div class="pharmacy-empty-state" *ngIf="!loading && loadError">
+      {{ loadError }}
+      <a class="pharmacy-back-link" routerLink="/pharmacy/sales">Back to Sales</a>
+    </div>
+
+    <ng-container *ngIf="!loading && sale as current">
+      <header class="pharmacy-hero">
+        <div class="pharmacy-hero-main">
+          <a class="pharmacy-back-link" routerLink="/pharmacy/sales">&larr; Back to Sales</a>
+          <h1>{{ current.invoiceNo }}</h1>
+          <p>Sale detail · {{ dateTime(current.saleDate) }}</p>
+          <span class="pharmacy-status-pill" [ngClass]="statusClass(current.status)">{{ current.status }}</span>
         </div>
-        <div class="col-lg-5 col-md-12 col-sm-12">
-          <div class="pharmacy-page-actions">
-            <button class="btn btn-outline-danger" type="button" *ngIf="canCancel(sale)" (click)="cancel()" [disabled]="cancelling">
-              {{ cancelling ? 'Cancelling...' : 'Cancel Sale' }}
-            </button>
+        <div class="pharmacy-hero-actions">
+          <a class="btn btn-outline-primary" routerLink="/pharmacy/returns/sales">Sales Returns</a>
+          <button class="btn btn-outline-danger" type="button" *ngIf="canCancel(current)" (click)="cancel()" [disabled]="cancelling">
+            {{ cancelling ? 'Cancelling...' : 'Cancel Sale' }}
+          </button>
+        </div>
+      </header>
+
+      <div class="pharmacy-summary-card">
+        <div class="pharmacy-table-head">
+          <div>
+            <h2>Invoice Summary</h2>
+            <p>Core billing and transaction details for this pharmacy sale.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-md-4"><strong>Sale Date</strong><div>{{ dateTime(current.saleDate) }}</div></div>
+            <div class="col-md-4"><strong>Created</strong><div>{{ dateTime(current.createdAt) }}</div></div>
+            <div class="col-md-4"><strong>Payment Status</strong><div>{{ current.paymentStatus }}</div></div>
+            <div class="col-md-4"><strong>Total</strong><div>{{ currency(current.total) }}</div></div>
+            <div class="col-md-4"><strong>Paid</strong><div>{{ currency(current.paidAmount) }}</div></div>
+            <div class="col-md-4"><strong>Balance</strong><div>{{ currency(balance(current)) }}</div></div>
+            <div class="col-12"><strong>Note</strong><div>{{ current.note || 'No note' }}</div></div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="pharmacy-summary-card">
-      <div class="pharmacy-table-head">
-        <div>
-          <h2>Invoice Summary</h2>
-          <p>Core billing and transaction details for this pharmacy sale.</p>
+      <div class="pharmacy-table-card">
+        <div class="pharmacy-table-head">
+          <div>
+            <h2>Sale Items</h2>
+            <p>{{ current.items.length }} line items are included in this invoice.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Unit Price</th>
+                  <th>Discount</th>
+                  <th>Tax</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of current.items">
+                  <td>
+                    <div class="fw-semibold">{{ item.name || item.productId }}</div>
+                    <small class="text-muted">{{ item.sku || item.productId }}</small>
+                  </td>
+                  <td>{{ item.qty }}</td>
+                  <td>{{ currency(item.unitPrice) }}</td>
+                  <td>{{ currency(item.discount) }}</td>
+                  <td>{{ currency(item.tax) }}</td>
+                  <td>{{ currency(item.total) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-
-      <div class="card-body">
-        <div class="row g-4">
-          <div class="col-md-4"><strong>Sale Date</strong><div>{{ dateTime(sale.saleDate) }}</div></div>
-          <div class="col-md-4"><strong>Created</strong><div>{{ dateTime(sale.createdAt) }}</div></div>
-          <div class="col-md-4"><strong>Status</strong><div>{{ sale.status }}</div></div>
-          <div class="col-md-4"><strong>Payment Status</strong><div>{{ sale.paymentStatus }}</div></div>
-          <div class="col-md-4"><strong>Total</strong><div>{{ currency(sale.total) }}</div></div>
-          <div class="col-md-4"><strong>Paid</strong><div>{{ currency(sale.paidAmount) }}</div></div>
-          <div class="col-12"><strong>Note</strong><div>{{ sale.note || 'No note' }}</div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="pharmacy-table-card">
-      <div class="pharmacy-table-head">
-        <div>
-          <h2>Sale Items</h2>
-          <p>{{ sale.items.length }} line items are included in this invoice.</p>
-        </div>
-      </div>
-
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table align-middle">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Discount</th>
-                <th>Tax</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of sale.items">
-                <td>
-                  <div class="fw-semibold">{{ item.name || item.productId }}</div>
-                  <small class="text-muted">{{ item.sku || item.productId }}</small>
-                </td>
-                <td>{{ item.qty }}</td>
-                <td>{{ currency(item.unitPrice) }}</td>
-                <td>{{ currency(item.discount) }}</td>
-                <td>{{ currency(item.tax) }}</td>
-                <td>{{ currency(item.total) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    </ng-container>
   </div>
 </div>

@@ -1,0 +1,150 @@
+<div id="main-content" class="pharmacy-page">
+  <div class="pharmacy-shell pharmacy-admin-page">
+    <header class="pharmacy-hero">
+      <div class="pharmacy-hero-main">
+        <a class="pharmacy-back-link" routerLink="/pharmacy">&larr; Pharmacy Queue</a>
+        <h1>Stock Transfers</h1>
+        <p>Move pharmacy stock between stores and warehouses with approval workflow controls.</p>
+      </div>
+      <div class="pharmacy-hero-actions">
+        <a class="btn btn-default" routerLink="/pharmacy/inventory">Inventory</a>
+        <a class="btn btn-default" routerLink="/pharmacy/stock-movements">Stock Movements</a>
+      </div>
+    </header>
+
+    <div class="pharmacy-filter-card">
+      <div class="pharmacy-filter-head">
+        <div>
+          <h2>Transfer Filters</h2>
+          <p>Filter transfers by store origin, status, transfer number, and date range.</p>
+        </div>
+      </div>
+
+      <div class="pharmacy-filter-grid">
+        <label>
+          <span>From Store</span>
+          <select class="form-select" [(ngModel)]="storeId">
+            <option value="">All stores</option>
+            <option *ngFor="let store of stores" [value]="store._id">{{ store.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Status</span>
+          <select class="form-select" [(ngModel)]="status">
+            <option value="">All</option>
+            <option value="draft">Draft</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="dispatched">Dispatched</option>
+            <option value="received">Received</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Transfer No</span>
+          <input class="form-control" type="text" [(ngModel)]="transferNo" placeholder="TRF-..." />
+        </label>
+
+        <label>
+          <span>From Date</span>
+          <input class="form-control" type="date" [(ngModel)]="fromDate" />
+        </label>
+
+        <label>
+          <span>To Date</span>
+          <input class="form-control" type="date" [(ngModel)]="toDate" />
+        </label>
+
+        <div class="pharmacy-filter-actions">
+          <button class="btn btn-outline-primary" type="button" (click)="loadTransfers()">Apply</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="reset()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pharmacy-table-card">
+      <div class="pharmacy-table-head">
+        <div>
+          <h2>Transfer Records</h2>
+          <p>{{ transfers.length }} transfers in the current result set.</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div *ngIf="loading" class="pharmacy-empty-state">Loading stock transfers...</div>
+        <div *ngIf="!loading && !transfers.length" class="pharmacy-empty-state">No stock transfers matched the current filters.</div>
+
+        <div class="table-responsive" *ngIf="!loading && transfers.length">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Transfer No</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Items</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let transfer of transfers">
+                <td>
+                  <div class="fw-semibold">{{ transfer.transferNo }}</div>
+                  <small class="text-muted" *ngIf="transfer.note">{{ transfer.note }}</small>
+                </td>
+                <td>{{ storeName(transfer.fromLocationId, transfer.fromLocationType) }}</td>
+                <td>{{ storeName(transfer.toLocationId, transfer.toLocationType) }}</td>
+                <td>{{ itemCount(transfer) }}</td>
+                <td><span [ngClass]="statusClass(transfer.status)">{{ transfer.status }}</span></td>
+                <td>{{ dateTime(transfer.createdAt) }}</td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <button
+                      class="btn btn-outline-primary"
+                      type="button"
+                      *ngIf="canApprove(transfer)"
+                      [disabled]="actingId === transfer._id"
+                      (click)="approve(transfer)"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      class="btn btn-outline-primary"
+                      type="button"
+                      *ngIf="canDispatch(transfer)"
+                      [disabled]="actingId === transfer._id"
+                      (click)="dispatch(transfer)"
+                    >
+                      Dispatch
+                    </button>
+                    <button
+                      class="btn btn-outline-success"
+                      type="button"
+                      *ngIf="canReceive(transfer)"
+                      [disabled]="actingId === transfer._id"
+                      (click)="receive(transfer)"
+                    >
+                      Receive
+                    </button>
+                    <button
+                      class="btn btn-outline-danger"
+                      type="button"
+                      *ngIf="canCancel(transfer)"
+                      [disabled]="actingId === transfer._id"
+                      (click)="cancel(transfer)"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

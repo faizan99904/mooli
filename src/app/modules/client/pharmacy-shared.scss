@@ -1,0 +1,161 @@
+.pharmacy-page {
+  --pharmacy-navy: #003e86;
+  --pharmacy-teal: #019c9d;
+  --pharmacy-ink: #111827;
+  --pharmacy-muted: #64748b;
+  --pharmacy-line: #e2e8f0;
+  --pharmacy-panel: #fff;
+  background: #fbfcfe;
+  min-height: 100vh;
+  padding: 10px 12px !important;
+}
+
+.pharmacy-shell {
+  margin: 0 auto;
+  max-width: 1280px;
+}
+
+.pharmacy-hero {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.pharmacy-hero-main h1 {
+  color: var(--pharmacy-ink);
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.pharmacy-hero-main p,
+.pharmacy-hero-main > span {
+  color: var(--pharmacy-muted);
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 0 0;
+}
+
+.pharmacy-badge,
+.pharmacy-back-link {
+  color: var(--pharmacy-navy);
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.pharmacy-back-link:hover {
+  color: var(--pharmacy-teal);
+}
+
+.pharmacy-hero-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.pharmacy-loading,
+.pharmacy-empty-state {
+  align-items: center;
+  background: var(--pharmacy-panel);
+  border: 1px solid var(--pharmacy-line);
+  border-radius: 10px;
+  color: var(--pharmacy-muted);
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 120px;
+  padding: 24px;
+}
+
+.pharmacy-status-pill {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+  text-transform: uppercase;
+}
+
+.pharmacy-status-pill.is-completed,
+.pharmacy-status-pill.status-completed {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.pharmacy-status-pill.is-cancelled,
+.pharmacy-status-pill.status-cancelled {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.pharmacy-status-pill.is-open,
+.pharmacy-status-pill.status-open {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.pharmacy-modal-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 16px;
+  position: fixed;
+  z-index: 1200;
+}
+
+.pharmacy-modal {
+  background: #fff;
+  border: 1px solid var(--pharmacy-line);
+  border-radius: 12px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  max-width: 420px;
+  padding: 18px;
+  width: 100%;
+}
+
+.pharmacy-modal h3 {
+  color: var(--pharmacy-ink);
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.pharmacy-modal p {
+  color: var(--pharmacy-muted);
+  font-size: 12px;
+  margin: 0 0 14px;
+}
+
+.pharmacy-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+@media (max-width: 768px) {
+  .pharmacy-hero {
+    flex-direction: column;
+  }
+
+  .pharmacy-hero-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}

@@ -1,20 +1,16 @@
-<div id="main-content">
-  <div class="container-fluid pharmacy-admin-page">
-    <div class="block-header">
-      <div class="row clearfix align-items-center">
-        <div class="col-lg-7 col-md-12 col-sm-12">
-          <h1>Pharmacy Payments</h1>
-          <span>Track POS-linked payment records and create payment entries against sales, returns, and expenses.</span>
-        </div>
-        <div class="col-lg-5 col-md-12 col-sm-12">
-          <div class="pharmacy-page-actions">
-            <button class="btn btn-primary" type="button" (click)="openCreate()" [disabled]="!canCreate">
-              Add Payment
-            </button>
-          </div>
-        </div>
+<div id="main-content" class="pharmacy-page">
+  <div class="pharmacy-shell pharmacy-admin-page">
+    <header class="pharmacy-hero">
+      <div class="pharmacy-hero-main">
+        <h1>Pharmacy Payments</h1>
+        <p>Track POS-linked payment records and create payment entries against sales, returns, and expenses.</p>
       </div>
-    </div>
+      <div class="pharmacy-hero-actions">
+        <button class="btn btn-primary" type="button" (click)="openCreate()" [disabled]="!canCreate">
+          Add Payment
+        </button>
+      </div>
+    </header>
 
     <div class="pharmacy-filter-card">
       <div class="pharmacy-filter-head">

@@ -92,7 +92,7 @@ export class PharmacySalesReturnsComponent implements OnInit {
       qty: 0,
       reason: '',
     }));
-    this.refundAmount = Number(this.selectedSale?.total || 0);
+    this.refundAmount = 0;
   }
 
   save(): void {

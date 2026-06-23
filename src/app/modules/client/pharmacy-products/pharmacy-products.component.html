@@ -1,27 +1,25 @@
-<div id="main-content">
-    <div class="container-fluid pharmacy-products-page">
-        <div class="block-header">
-            <div class="row clearfix align-items-center">
-                <div class="col-lg-6 col-md-12 col-sm-12">
-                    <h1>Product Management</h1>
-                    <span>Add, review, and remove pharmacy medicines for the assigned store</span>
-                </div>
-                <div class="col-lg-6 col-md-12 col-sm-12 text-lg-right">
-                    <a class="btn btn-default mr-2" [routerLink]="['/pharmacy']">
-                        <i class="fa fa-arrow-left"></i>
-                        Pharmacy Queue
-                    </a>
-                    <a class="btn btn-success mr-2" [routerLink]="['/pharmacy/pos']">
-                        <i class="fa fa-shopping-cart"></i>
-                        Open POS
-                    </a>
-                    <button type="button" class="btn btn-primary" *ngIf="canCreateProducts" (click)="openProductModal()">
-                        <i class="fa fa-plus"></i>
-                        Add Medicine
-                    </button>
-                </div>
+<div id="main-content" class="pharmacy-page">
+    <div class="pharmacy-shell pharmacy-products-page">
+        <header class="pharmacy-hero">
+            <div class="pharmacy-hero-main">
+                <h1>Product Management</h1>
+                <p>Add, review, and remove pharmacy medicines for the assigned store</p>
             </div>
-        </div>
+            <div class="pharmacy-hero-actions">
+                <a class="btn btn-default mr-2" [routerLink]="['/pharmacy']">
+                    <i class="fa fa-arrow-left"></i>
+                    Pharmacy Queue
+                </a>
+                <a class="btn btn-success mr-2" [routerLink]="['/pharmacy/pos']">
+                    <i class="fa fa-shopping-cart"></i>
+                    Open POS
+                </a>
+                <button type="button" class="btn btn-primary" *ngIf="canCreateProducts" (click)="openProductModal()">
+                    <i class="fa fa-plus"></i>
+                    Add Medicine
+                </button>
+            </div>
+        </header>
 
         <div class="product-toolbar">
             <label class="product-search">

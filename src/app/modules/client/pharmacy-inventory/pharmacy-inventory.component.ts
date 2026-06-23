@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
 
 import { BackendService } from '../../../core/services/backend.service';
 import { ProductCatalogItem, Store } from '../../../shared/models/hospital.model';
@@ -20,11 +21,20 @@ export class PharmacyInventoryComponent implements OnInit {
   products: ProductCatalogItem[] = [];
   filteredProducts: ProductCatalogItem[] = [];
   loading = false;
+  savingAdjust = false;
   search = '';
   storeId = readAssignedStoreId();
   lowStockOnly = false;
+  adjustModalOpen = false;
+  adjustProduct: ProductCatalogItem | null = null;
+  adjustType: 'INCREASE' | 'DECREASE' | 'SET' = 'INCREASE';
+  adjustQty = 0;
+  adjustNote = '';
 
-  constructor(private backend: BackendService) {}
+  constructor(
+    private backend: BackendService,
+    private toastr: ToastrService,
+  ) {}
 
   ngOnInit(): void {
     this.loadStores();
@@ -71,9 +81,10 @@ export class PharmacyInventoryComponent implements OnInit {
           this.products = result.items;
           this.applyFilters();
         },
-        error: () => {
+        error: (err) => {
           this.products = [];
           this.filteredProducts = [];
+          this.toastr.error(err?.error?.message || 'Unable to load inventory.');
         },
       });
   }
@@ -113,5 +124,59 @@ export class PharmacyInventoryComponent implements OnInit {
 
   currency(value: number | string | null | undefined): string {
     return formatCurrency(value);
+  }
+
+  canAdjust(): boolean {
+    return this.backend.hasPermission('inventory.adjust') && Boolean(this.storeId);
+  }
+
+  openAdjust(product: ProductCatalogItem): void {
+    this.adjustProduct = product;
+    this.adjustType = 'INCREASE';
+    this.adjustQty = 0;
+    this.adjustNote = '';
+    this.adjustModalOpen = true;
+  }
+
+  dismissAdjust(): void {
+    if (!this.savingAdjust) {
+      this.adjustModalOpen = false;
+      this.adjustProduct = null;
+    }
+  }
+
+  submitAdjust(): void {
+    if (!this.adjustProduct || !this.storeId) {
+      this.toastr.error('Select a store before adjusting stock.');
+      return;
+    }
+
+    const quantity = Number(this.adjustQty);
+    if (!Number.isFinite(quantity) || (this.adjustType !== 'SET' && quantity <= 0)) {
+      this.toastr.error('Enter a valid adjustment quantity.');
+      return;
+    }
+
+    this.savingAdjust = true;
+    this.backend
+      .adjustInventory({
+        productId: this.adjustProduct._id,
+        locationType: 'store',
+        locationId: this.storeId,
+        adjustmentType: this.adjustType,
+        quantity,
+        reason: 'MANUAL_ADJUSTMENT',
+        note: this.adjustNote.trim() || undefined,
+      })
+      .pipe(finalize(() => (this.savingAdjust = false)))
+      .subscribe({
+        next: () => {
+          this.toastr.success('Stock adjusted.');
+          this.adjustModalOpen = false;
+          this.adjustProduct = null;
+          this.loadInventory();
+        },
+        error: (err) => this.toastr.error(err?.error?.message || 'Unable to adjust stock.'),
+      });
   }
 }
