@@ -59,16 +59,11 @@ export function buildLabComparisonColumns(
 
   const currentId = String(currentOrderId || '').trim();
   const current = currentId ? sorted.find((entry) => entry.orderId === currentId) : undefined;
-  const previous = sorted.filter((entry) => entry.orderId !== currentId).slice(0, previousLimit);
+  const previous = sorted
+    .filter((entry) => entry.orderId !== currentId)
+    .slice(0, previousLimit)
+    .reverse();
   const columns: LabComparisonColumn[] = [];
-
-  if (current) {
-    columns.push({
-      ...current,
-      label: formatComparisonColumnLabel(current.date),
-      isCurrent: true,
-    });
-  }
 
   previous.forEach((entry) => {
     columns.push({
@@ -78,6 +73,14 @@ export function buildLabComparisonColumns(
     });
   });
 
+  if (current) {
+    columns.push({
+      ...current,
+      label: formatComparisonColumnLabel(current.date),
+      isCurrent: true,
+    });
+  }
+
   return columns;
 }
 
@@ -86,6 +89,63 @@ export function findComparisonHistoryPoint(
   orderId: string
 ): LabComparisonRow['history'][number] | undefined {
   return row.history.find((point) => String(point.orderId || '') === String(orderId || ''));
+}
+
+function normalizeComparisonText(value: string | null | undefined): string {
+  return String(value || '').trim().toLowerCase();
+}
+
+export function findHistoryPointForReport(
+  comparison: LabComparisonRow[],
+  row: {
+    testName: string;
+    shortCode?: string;
+    parameterName: string;
+    subCategory?: string;
+  },
+  orderId: string
+): LabComparisonRow['history'][number] | undefined {
+  const targetOrderId = String(orderId || '').trim();
+  if (!targetOrderId) {
+    return undefined;
+  }
+
+  const parameterKey = normalizeComparisonText(row.parameterName);
+  const testKey = normalizeComparisonText(row.testName);
+  const shortKey = normalizeComparisonText(row.shortCode);
+  const subCategoryKey = normalizeComparisonText(row.subCategory);
+  const candidates = comparison.filter(
+    (item) => normalizeComparisonText(item.parameterName) === parameterKey
+  );
+
+  const scoreCandidate = (item: LabComparisonRow): number => {
+    const itemTest = normalizeComparisonText(item.testName);
+    const itemSubCategory = normalizeComparisonText(item.subCategory);
+    let score = 0;
+
+    if (itemTest && (itemTest === testKey || (shortKey && itemTest === shortKey))) {
+      score += 4;
+    }
+
+    if (subCategoryKey && itemSubCategory === subCategoryKey) {
+      score += 2;
+    } else if (!subCategoryKey || !itemSubCategory) {
+      score += 1;
+    }
+
+    return score;
+  };
+
+  const ranked = [...candidates].sort((left, right) => scoreCandidate(right) - scoreCandidate(left));
+
+  for (const item of ranked) {
+    const point = findComparisonHistoryPoint(item, targetOrderId);
+    if (String(point?.resultValue || '').trim()) {
+      return point;
+    }
+  }
+
+  return undefined;
 }
 
 export function buildPreviousComparisonOrders(

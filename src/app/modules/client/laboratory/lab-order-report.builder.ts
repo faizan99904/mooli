@@ -6,7 +6,7 @@ import {
   LabResultParameter,
   User,
 } from '../../../shared/models/hospital.model';
-import { buildPreviousComparisonOrders } from './lab-comparison.utils';
+import { buildPreviousComparisonOrders, findHistoryPointForReport } from './lab-comparison.utils';
 import { getLabReportItems, resolveLabPrintDetails, resolveLabReportThemeColors } from './lab-print-details';
 
 export interface LabReportRow {
@@ -20,6 +20,7 @@ export interface LabReportRow {
   referenceRange: string;
   status: string;
   statusKey: string;
+  previousValue: string;
 }
 
 export interface LabReportContext {
@@ -71,6 +72,8 @@ export function buildLabOrderReportHtml(context: LabReportContext): string {
     context.order.updatedAt ||
     context.order.createdAt;
   const columns = buildReportColumns(context, reportingRaw);
+  const previousColumns = columns.filter((column) => !column.current);
+  const latestPreviousOrderId = previousColumns[previousColumns.length - 1]?.orderId;
   const totalColumnCount = 3 + columns.length;
   const reportCreatedBy = reportCreatorName(context);
   const theme = resolveLabReportThemeColors(context.hospital);
@@ -140,7 +143,13 @@ export function buildLabOrderReportHtml(context: LabReportContext): string {
           sections.length
             ? sections
                 .map((section) =>
-                  sectionReportHtml(section, columns, context.comparison, totalColumnCount)
+                  sectionReportHtml(
+                    section,
+                    columns,
+                    context.comparison,
+                    totalColumnCount,
+                    latestPreviousOrderId
+                  )
                 )
                 .join('')
             : emptyReportSectionHtml(totalColumnCount)
@@ -199,6 +208,7 @@ function collectItemRows(item: LabOrderItem): LabReportRow[] {
     referenceRange: referenceRange(parameter),
     status: statusLabel(parameter.status),
     statusKey: String(parameter.status || '').toLowerCase(),
+    previousValue: displayValue(parameter.previousValue),
   }));
 }
 
@@ -210,12 +220,6 @@ function buildReportColumns(context: LabReportContext, reportingRaw?: string): L
   );
 
   return [
-    {
-      key: 'current',
-      label: formatColumnDate(reportingRaw || context.order.updatedAt || context.order.createdAt),
-      subLabel: context.order.orderNo,
-      current: true,
-    },
     ...previousOrders.map((entry) => ({
       key: entry.orderId,
       orderId: entry.orderId,
@@ -223,6 +227,12 @@ function buildReportColumns(context: LabReportContext, reportingRaw?: string): L
       subLabel: entry.orderNo || 'Previous',
       current: false,
     })),
+    {
+      key: 'current',
+      label: formatColumnDate(reportingRaw || context.order.updatedAt || context.order.createdAt),
+      subLabel: context.order.orderNo,
+      current: true,
+    },
   ];
 }
 
@@ -230,7 +240,8 @@ function sectionReportHtml(
   section: LabReportSection,
   columns: LabReportColumn[],
   comparison: LabComparisonRow[],
-  columnCount: number
+  columnCount: number,
+  firstPreviousOrderId?: string
 ): string {
   return `<section class="result-section">
     <h2>${escapeHtml(sectionTitle(section.item))}</h2>
@@ -251,7 +262,7 @@ function sectionReportHtml(
       <tbody>
         ${
           section.rows.length
-            ? sectionRowsHtml(section.rows, columns, comparison, columnCount)
+            ? sectionRowsHtml(section.rows, columns, comparison, columnCount, firstPreviousOrderId)
             : emptySectionRowsHtml(columnCount)
         }
       </tbody>
@@ -264,7 +275,8 @@ function sectionRowsHtml(
   rows: LabReportRow[],
   columns: LabReportColumn[],
   comparison: LabComparisonRow[],
-  columnCount: number
+  columnCount: number,
+  firstPreviousOrderId?: string
 ): string {
   let currentSubCategory = '';
 
@@ -280,7 +292,7 @@ function sectionRowsHtml(
         currentSubCategory = subCategory;
       }
 
-      return `${subCategoryHeader}${resultRowHtml(row, columns, comparison)}`;
+      return `${subCategoryHeader}${resultRowHtml(row, columns, comparison, firstPreviousOrderId)}`;
     })
     .join('');
 }
@@ -288,24 +300,26 @@ function sectionRowsHtml(
 function resultRowHtml(
   row: LabReportRow,
   columns: LabReportColumn[],
-  comparison: LabComparisonRow[]
+  comparison: LabComparisonRow[],
+  firstPreviousOrderId?: string
 ): string {
   return `<tr>
     <td class="test-name">${escapeHtml(row.parameterName)}</td>
     <td>${escapeHtml(row.referenceRange)}</td>
     <td>${escapeHtml(row.unit)}</td>
-    ${columns.map((column) => resultCellHtml(row, column, comparison)).join('')}
+    ${columns.map((column) => resultCellHtml(row, column, comparison, firstPreviousOrderId)).join('')}
   </tr>`;
 }
 
 function resultCellHtml(
   row: LabReportRow,
   column: LabReportColumn,
-  comparison: LabComparisonRow[]
+  comparison: LabComparisonRow[],
+  firstPreviousOrderId?: string
 ): string {
   const cell = column.current
     ? { value: row.resultValue, statusKey: row.statusKey }
-    : historyCell(row, column, comparison);
+    : historyCell(row, column, comparison, firstPreviousOrderId);
   const value = cell.value === NA ? EMPTY_CELL : cell.value;
   const statusClass = cell.statusKey ? ` status-${escapeAttribute(cell.statusKey)}` : '';
   return `<td class="result-value${statusClass}">${escapeHtml(value)}</td>`;
@@ -314,39 +328,32 @@ function resultCellHtml(
 function historyCell(
   row: LabReportRow,
   column: LabReportColumn,
-  comparison: LabComparisonRow[]
+  comparison: LabComparisonRow[],
+  firstPreviousOrderId?: string
 ): LabCellValue {
-  const match = matchingComparisonRow(row, comparison);
-  const point = match?.history.find(
-    (item) => String(item.orderId || '') === String(column.orderId || '')
-  );
-
-  return {
-    value: displayValue(point?.resultValue),
-    statusKey: String(point?.status || '').toLowerCase(),
-  };
-}
-
-function matchingComparisonRow(
-  row: LabReportRow,
-  comparison: LabComparisonRow[]
-): LabComparisonRow | undefined {
-  const exact = comparison.find(
-    (item) =>
-      normalize(item.testName) === normalize(row.testName) &&
-      normalize(item.parameterName) === normalize(row.parameterName) &&
-      (!item.subCategory || row.subCategory === NA || normalize(item.subCategory) === normalize(row.subCategory))
-  );
-
-  if (exact) {
-    return exact;
+  const point = findHistoryPointForReport(comparison, row, column.orderId || '');
+  if (point?.resultValue) {
+    return {
+      value: displayValue(point.resultValue),
+      statusKey: String(point.status || '').toLowerCase(),
+    };
   }
 
-  return comparison.find(
-    (item) =>
-      normalize(item.parameterName) === normalize(row.parameterName) &&
-      (!item.subCategory || row.subCategory === NA || normalize(item.subCategory) === normalize(row.subCategory))
-  );
+  if (
+    firstPreviousOrderId &&
+    String(column.orderId || '') === String(firstPreviousOrderId) &&
+    row.previousValue !== NA
+  ) {
+    return {
+      value: row.previousValue,
+      statusKey: '',
+    };
+  }
+
+  return {
+    value: NA,
+    statusKey: '',
+  };
 }
 
 function emptySectionRowsHtml(columnCount: number): string {
@@ -658,10 +665,6 @@ function initials(value: string): string {
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join('');
-}
-
-function normalize(value: string | null | undefined): string {
-  return String(value || '').trim().toLowerCase();
 }
 
 function escapeHtml(value: string | number | null | undefined): string {
