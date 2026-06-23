@@ -105,7 +105,7 @@
         <span>{{ current.items.length }} test(s)</span>
       </div>
       <div class="test-tabs">
-        <button type="button" class="test-tab" *ngFor="let item of current.items"
+        <button type="button" class="test-tab" *ngFor="let item of current.items; trackBy: trackByItemId"
           [class.active]="activeItemId === item._id" (click)="selectItem(item)">
           <span class="test-tab-code">{{ item.shortCode || item.testName }}</span>
           <span class="test-tab-name">{{ item.testName }}</span>
@@ -115,7 +115,7 @@
       </div>
     </section>
 
-    <div class="detail-workspace" *ngIf="activeItem() as item">
+    <div class="detail-workspace" *ngIf="activeItemSnapshot as item">
       <div class="workspace-main">
         <section class="lab-panel result-panel">
           <div class="panel-head">
@@ -129,12 +129,12 @@
             <span class="mode-badge">{{ resultModeLabel(item.resultMode) }}</span>
           </div>
 
-          <div class="result-entry-help" *ngIf="item.parameters.length > 0">
+          <div class="result-entry-help" *ngIf="(item.parameters?.length || 0) > 0">
             Enter patient result values in the <strong>Result</strong> column for each parameter row below.
             Sub categories are labels from the test catalog; ranges and units are pre-filled.
           </div>
 
-          <div class="result-table-wrap" *ngIf="item.parameters.length > 0; else noParameters">
+          <div class="result-table-wrap" *ngIf="(item.parameters?.length || 0) > 0; else noParameters">
             <table class="result-table">
               <thead>
                 <tr>
@@ -155,7 +155,7 @@
                       <span class="subcategory-label">{{ group.subCategory }}</span>
                     </td>
                   </tr>
-                  <tr *ngFor="let parameter of group.parameters" [class.row-critical]="parameter.status === 'critical'">
+                  <tr *ngFor="let parameter of group.parameters; trackBy: trackByParameterKey" [class.row-critical]="parameter.status === 'critical'">
                     <td class="col-parameter" data-label="Parameter"><strong>{{ parameter.parameterName }}</strong></td>
                     <td class="col-subcategory" data-label="Sub Category">{{ parameter.subCategory || '—' }}</td>
                     <td class="col-result" data-label="Result">
@@ -214,13 +214,13 @@
             </div>
           </div>
 
-          <div class="comparison-table-wrap" *ngIf="comparisonForActiveTest().length > 0; else noComparison">
+          <div class="comparison-table-wrap" *ngIf="comparisonRowsSnapshot.length > 0; else noComparison">
             <table class="comparison-table">
               <thead>
                 <tr>
                   <th>Parameter</th>
                   <th>Ref Range</th>
-                  <th *ngFor="let column of comparisonColumns()">
+                  <th *ngFor="let column of comparisonColumnsSnapshot; trackBy: trackByComparisonColumn">
                     {{ column.label }}
                     <small *ngIf="column.orderNo">{{ column.orderNo }}</small>
                   </th>
@@ -228,10 +228,10 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let row of comparisonForActiveTest()">
+                <tr *ngFor="let row of comparisonRowsSnapshot; trackBy: trackByComparisonRow">
                   <td data-label="Parameter"><strong>{{ row.parameterName }}</strong></td>
                   <td data-label="Ref Range">{{ row.referenceText || formatComparisonRange(row) }}</td>
-                  <td *ngFor="let column of comparisonColumns()" [attr.data-label]="column.label">
+                  <td *ngFor="let column of comparisonColumnsSnapshot; trackBy: trackByComparisonColumn" [attr.data-label]="column.label">
                     <ng-container *ngIf="comparisonPoint(row, column) as point; else emptyPoint">
                       <span class="comparison-value" [ngClass]="paramStatusClass(point.status)">{{ point.resultValue || '—' }}</span>
                     </ng-container>
@@ -275,9 +275,10 @@
           <div class="panel-head compact">
             <h2>Add Extra Tests</h2>
           </div>
-          <input class="addon-search" type="search" [(ngModel)]="addonSearch" placeholder="Search HbA1c, HBC, RFT..." />
+          <input class="addon-search" type="search" [(ngModel)]="addonSearch" (ngModelChange)="refreshFilteredAddons()"
+            placeholder="Search HbA1c, HBC, RFT..." />
           <div class="addon-list">
-            <label class="addon-item" *ngFor="let test of filteredAddons()">
+            <label class="addon-item" *ngFor="let test of filteredAddonsSnapshot; trackBy: trackByCatalogTestId">
               <input type="checkbox" [checked]="selectedAddonIds.includes(test._id)" (change)="toggleAddon(test)" />
               <span class="addon-copy">
                 <strong>{{ test.shortCode }}</strong>
@@ -286,7 +287,7 @@
               <span class="addon-price">Rs. {{ test.price | number:'1.0-0' }}</span>
             </label>
           </div>
-          <div class="panel-empty compact" *ngIf="filteredAddons().length === 0">No more tests available to add.</div>
+          <div class="panel-empty compact" *ngIf="filteredAddonsSnapshot.length === 0">No more tests available to add.</div>
           <button type="button" class="btn-primary btn-block" [disabled]="selectedAddonIds.length === 0" (click)="addExtraTests()">
             Add Selected Tests
           </button>

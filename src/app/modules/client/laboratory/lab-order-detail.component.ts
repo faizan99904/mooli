@@ -54,6 +54,10 @@ export class LabOrderDetailComponent implements OnInit {
     parameters: LabResultParameter[];
     showHeader: boolean;
   }> = [];
+  activeItemSnapshot: LabOrderItem | null = null;
+  comparisonRowsSnapshot: LabComparisonRow[] = [];
+  comparisonColumnsSnapshot: LabComparisonColumn[] = [];
+  filteredAddonsSnapshot: LabTestCatalog[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -71,6 +75,7 @@ export class LabOrderDetailComponent implements OnInit {
     this.backend.getLabTests({ limit: 100, isActive: true }).subscribe({
       next: (result) => {
         this.catalog = result.items;
+        this.refreshFilteredAddons();
       },
     });
   }
@@ -84,7 +89,10 @@ export class LabOrderDetailComponent implements OnInit {
         next: (order) => {
           if (!order) {
             this.order = null;
+            this.activeItemSnapshot = null;
             this.parameterGroups = [];
+            this.comparisonRowsSnapshot = [];
+            this.comparisonColumnsSnapshot = [];
             return;
           }
 
@@ -94,15 +102,16 @@ export class LabOrderDetailComponent implements OnInit {
             order.items?.find((item) => item._id === previousItemId)?._id ||
             order.items?.[0]?._id ||
             '';
-          const activeItem = this.activeItem();
-          this.remarks = activeItem?.remarks || '';
-          this.refreshParameterGroups();
+          this.refreshActiveItemView();
           this.loadHospital(order.hospitalId);
           this.loadComparison(order.patientId);
         },
         error: (err) => {
           this.order = null;
+          this.activeItemSnapshot = null;
           this.parameterGroups = [];
+          this.comparisonRowsSnapshot = [];
+          this.comparisonColumnsSnapshot = [];
           this.toastr.error(err?.error?.message || 'Unable to load lab order.');
         },
       });
@@ -151,15 +160,86 @@ export class LabOrderDetailComponent implements OnInit {
     this.backend.getPatientLabComparison(patientId).subscribe({
       next: (rows) => {
         this.comparison = rows;
+        this.refreshComparisonView();
       },
       error: () => {
         this.comparison = [];
+        this.refreshComparisonView();
       },
     });
   }
 
   activeItem(): LabOrderItem | null {
-    return this.order?.items.find((item) => item._id === this.activeItemId) || this.order?.items[0] || null;
+    return this.activeItemSnapshot;
+  }
+
+  selectItem(item: LabOrderItem): void {
+    if (this.activeItemId === item._id) {
+      return;
+    }
+
+    this.activeItemId = item._id;
+    this.refreshActiveItemView();
+  }
+
+  trackByItemId(_index: number, item: LabOrderItem): string {
+    return item._id;
+  }
+
+  trackByParameterKey(_index: number, parameter: LabResultParameter): string {
+    return `${parameter.subCategory || ''}:${parameter.parameterName}`;
+  }
+
+  trackByComparisonColumn(_index: number, column: LabComparisonColumn): string {
+    return column.orderId;
+  }
+
+  trackByComparisonRow(_index: number, row: LabComparisonRow): string {
+    return row.parameterName;
+  }
+
+  trackByCatalogTestId(_index: number, test: LabTestCatalog): string {
+    return test._id;
+  }
+
+  refreshActiveItemView(): void {
+    this.activeItemSnapshot =
+      this.order?.items.find((item) => item._id === this.activeItemId) ||
+      this.order?.items[0] ||
+      null;
+    this.remarks = this.activeItemSnapshot?.remarks || '';
+    this.refreshParameterGroups();
+    this.refreshComparisonView();
+  }
+
+  refreshComparisonView(): void {
+    const item = this.activeItemSnapshot;
+    if (!item) {
+      this.comparisonRowsSnapshot = [];
+      this.comparisonColumnsSnapshot = [];
+      return;
+    }
+
+    const testName = item.testName.toLowerCase();
+    this.comparisonRowsSnapshot = this.comparison.filter(
+      (row) => row.testName.toLowerCase() === testName
+    );
+    this.comparisonColumnsSnapshot = buildLabComparisonColumns(
+      this.comparisonRowsSnapshot,
+      this.order?._id,
+      4
+    );
+  }
+
+  refreshFilteredAddons(): void {
+    const existing = new Set((this.order?.items || []).map((item) => item.testName.toLowerCase()));
+    const query = this.addonSearch.trim().toLowerCase();
+    this.filteredAddonsSnapshot = this.catalog.filter((test) => {
+      if (existing.has(test.name.toLowerCase()) || existing.has(test.shortCode.toLowerCase())) {
+        return false;
+      }
+      return !query || `${test.name} ${test.shortCode}`.toLowerCase().includes(query);
+    });
   }
 
   patientName(): string {
@@ -209,12 +289,6 @@ export class LabOrderDetailComponent implements OnInit {
     return linked.every((item) => ['sample_collected', 'ordered'].includes(item.status));
   }
 
-  selectItem(item: LabOrderItem): void {
-    this.activeItemId = item._id;
-    this.remarks = item.remarks || '';
-    this.refreshParameterGroups();
-  }
-
   refreshParameterGroups(): void {
     const item = this.activeItem();
     if (!item) {
@@ -257,7 +331,8 @@ export class LabOrderDetailComponent implements OnInit {
     this.backend.collectLabSample(this.order._id, {}).subscribe({
       next: (response) => {
         this.order = response.data || this.order;
-        this.refreshParameterGroups();
+        this.refreshActiveItemView();
+        this.refreshFilteredAddons();
         const labels = (this.order?.samples || []).filter((sample) => sample.status === 'collected');
         if (this.order && labels.length) {
           printLabSampleLabels(this.order, labels);
@@ -303,7 +378,8 @@ export class LabOrderDetailComponent implements OnInit {
     this.backend.rejectLabSample(this.order._id, sample._id, { rejectionReason: reason.trim() }).subscribe({
       next: (response) => {
         this.order = response.data || this.order;
-        this.refreshParameterGroups();
+        this.refreshActiveItemView();
+        this.refreshFilteredAddons();
         this.toastr.success('Sample rejected. Collect again to generate a new sample ID.');
       },
       error: (err) => this.toastr.error(err?.error?.message || 'Unable to reject sample.'),
@@ -328,7 +404,7 @@ export class LabOrderDetailComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.order = response.data || order;
-          this.refreshParameterGroups();
+          this.refreshActiveItemView();
           this.toastr.success(submitForVerification ? 'Sent for verification.' : 'Results saved.');
           this.loadComparison(order.patientId);
         },
@@ -357,7 +433,7 @@ export class LabOrderDetailComponent implements OnInit {
         next: (response) => {
           this.order = response.data || order;
           this.uploadUrl = '';
-          this.refreshParameterGroups();
+          this.refreshActiveItemView();
           this.toastr.success('Report uploaded.');
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Unable to upload report.'),
@@ -374,21 +450,10 @@ export class LabOrderDetailComponent implements OnInit {
     this.backend.verifyLabOrderItem(order._id, item._id, { remarks: this.remarks }).subscribe({
       next: (response) => {
         this.order = response.data || order;
-        this.refreshParameterGroups();
+        this.refreshActiveItemView();
         this.toastr.success('Result verified.');
       },
       error: (err) => this.toastr.error(err?.error?.message || 'Unable to verify result.'),
-    });
-  }
-
-  filteredAddons(): LabTestCatalog[] {
-    const existing = new Set((this.order?.items || []).map((item) => item.testName.toLowerCase()));
-    const query = this.addonSearch.trim().toLowerCase();
-    return this.catalog.filter((test) => {
-      if (existing.has(test.name.toLowerCase()) || existing.has(test.shortCode.toLowerCase())) {
-        return false;
-      }
-      return !query || `${test.name} ${test.shortCode}`.toLowerCase().includes(query);
     });
   }
 
@@ -412,24 +477,12 @@ export class LabOrderDetailComponent implements OnInit {
           this.order = response.data || this.order;
           this.activeItemId = this.order?.items?.[0]?._id || this.activeItemId;
           this.selectedAddonIds = [];
-          this.refreshParameterGroups();
+          this.refreshActiveItemView();
+          this.refreshFilteredAddons();
           this.toastr.success('Extra tests added to order.');
         },
         error: (err) => this.toastr.error(err?.error?.message || 'Unable to add tests.'),
       });
-  }
-
-  comparisonForActiveTest(): LabComparisonRow[] {
-    const item = this.activeItem();
-    if (!item) {
-      return [];
-    }
-
-    return this.comparison.filter((row) => row.testName.toLowerCase() === item.testName.toLowerCase());
-  }
-
-  comparisonColumns(): LabComparisonColumn[] {
-    return buildLabComparisonColumns(this.comparisonForActiveTest(), this.order?._id, 4);
   }
 
   comparisonPoint(row: LabComparisonRow, column: LabComparisonColumn) {
