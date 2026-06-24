@@ -331,9 +331,12 @@ export class WardDataService {
           activities: bundle.activities,
         };
 
+        const dashboardRooms = wardFilter ? scopedRooms : allRooms;
+        const dashboardAllotments = wardFilter ? scopedAllotments : allAllotments;
+
         return {
-          kpiCards: buildDashboardKpis(scopedRooms, scopedAllotments, bundleContext),
-          bedSections: buildDashboardSections(allRooms, allAllotments, wards, bundleContext),
+          kpiCards: buildDashboardKpis(dashboardRooms, dashboardAllotments, bundleContext),
+          bedSections: buildDashboardSections(dashboardRooms, dashboardAllotments, wards, bundleContext),
           todaySummary: [
             { label: 'Admitted Patients', value: admittedCount, route: '/ward/patient-list' },
             { label: 'Medicine Due', value: bundle.prescriptions.reduce((total, item) => total + (item.medicines?.length || 0), 0), route: '/ward/mar' },
