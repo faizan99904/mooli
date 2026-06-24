@@ -2,7 +2,7 @@
   <div class="container-fluid ward-page-container">
     <div class="ward-page-header ward-page-header--compact">
       <div class="ward-page-header__copy">
-        <h1>Ward Admin Dashboard</h1>
+        <h1>Ward & Nursing Center</h1>
         <p>{{ dashboardSubtitle }}</p>
       </div>
       <div class="ward-page-header__actions">
@@ -23,6 +23,9 @@
             <option *ngFor="let shift of shiftOptions" [value]="shift.value">{{ shift.label }}</option>
           </select>
         </label>
+        <button type="button" class="btn btn-sm ward-bed-mgmt-btn ward-bed-mgmt-btn--primary" (click)="navigateTo('/ward/bed-management')">
+          <i class="fa fa-bed"></i> Bed Management
+        </button>
         <button type="button" class="btn btn-sm ward-refresh-btn" (click)="refresh()" [disabled]="loading">
           <i class="fa" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i>
           Refresh
@@ -30,15 +33,34 @@
       </div>
     </div>
 
+    <nav class="ward-workflow-tabs" aria-label="Ward workflow">
+      <button
+        type="button"
+        class="ward-workflow-tab"
+        *ngFor="let tab of workflowTabs"
+        [class.is-active]="tab.key === 'dashboard'"
+        (click)="navigateTo(tab.route)"
+      >
+        <i class="fa" [ngClass]="tab.icon"></i>
+        {{ tab.label }}
+      </button>
+    </nav>
+
     <section class="ward-kpi-grid ward-dashboard-kpis">
-      <article class="ward-kpi-card" *ngFor="let card of kpiCards" [ngClass]="'ward-kpi-card--' + card.tone">
+      <button
+        type="button"
+        class="ward-kpi-card"
+        *ngFor="let card of kpiCards"
+        [ngClass]="'ward-kpi-card--' + card.tone"
+        (click)="navigateTo(card.route)"
+      >
         <span class="ward-kpi-card__icon"><i class="fa" [ngClass]="card.icon"></i></span>
         <span class="ward-kpi-card__copy">
           <strong>{{ card.value }}</strong>
           <small>{{ card.label }}</small>
           <em *ngIf="card.percent != null">{{ card.percent }}%</em>
         </span>
-      </article>
+      </button>
     </section>
 
     <div class="ward-overview-layout">
@@ -48,46 +70,29 @@
             <h2>{{ bedOverviewTitle }}</h2>
             <p>{{ selectedShiftLabel }}</p>
           </div>
-          <button type="button" class="btn btn-sm ward-bed-mgmt-btn" (click)="navigateTo('/ward/bed-management')">
-            Bed Management
-          </button>
+        </div>
+
+        <div class="ward-bed-toolbar">
+          <div class="ward-bed-search">
+            <i class="fa fa-search" aria-hidden="true"></i>
+            <input
+              type="text"
+              [(ngModel)]="bedSearchQuery"
+              (ngModelChange)="onSearchChange()"
+              placeholder="Search patient, MR no, room, doctor..."
+            />
+          </div>
         </div>
 
         <div class="ward-bed-status-bar">
           <button
             type="button"
             class="ward-status-chip"
-            [class.is-active]="statusFilter === 'all'"
-            (click)="onStatusFilterChange('all')"
+            *ngFor="let filter of statusFilters"
+            [class.is-active]="statusFilter === filter.key"
+            (click)="onStatusFilterChange(filter.key)"
           >
-            All
-          </button>
-          <button
-            type="button"
-            class="ward-status-chip"
-            [class.is-active]="statusFilter === 'available'"
-            (click)="onStatusFilterChange('available')"
-          >
-            <span class="ward-status-chip__dot ward-status-chip__dot--available"></span>
-            Available
-          </button>
-          <button
-            type="button"
-            class="ward-status-chip"
-            [class.is-active]="statusFilter === 'occupied'"
-            (click)="onStatusFilterChange('occupied')"
-          >
-            <span class="ward-status-chip__dot ward-status-chip__dot--occupied"></span>
-            Occupied
-          </button>
-          <button
-            type="button"
-            class="ward-status-chip"
-            [class.is-active]="statusFilter === 'maintenance'"
-            (click)="onStatusFilterChange('maintenance')"
-          >
-            <i class="fa fa-wrench"></i>
-            Maintenance
+            {{ filter.label }}
           </button>
         </div>
 
@@ -95,20 +100,27 @@
           <ng-container *ngIf="filteredBedSections.length; else emptyBeds">
             <div class="ward-section" *ngFor="let section of filteredBedSections; trackBy: trackBySectionName">
               <div class="ward-section__head">
-                <h3>{{ section.sectionName }}</h3>
-                <span>{{ section.subtitle }} · {{ section.beds.length }} beds</span>
+                <div>
+                  <h3>{{ section.sectionName }}</h3>
+                  <span>{{ section.subtitle }}</span>
+                </div>
+                <em>{{ section.beds.length }} beds</em>
               </div>
 
               <div class="ward-bed-grid">
-                <div
+                <article
                   class="ward-bed-card"
                   *ngFor="let bed of section.beds; trackBy: trackByBedKey"
-                  [ngClass]="bedStatusClass(bed.status)"
+                  [ngClass]="bedStatusClass(bed)"
                   [class.ward-bed-card--menu-open]="isBedMenuOpen(bed)"
+                  [class.ward-bed-card--occupied]="isOccupiedBed(bed)"
                   (click)="onBedClick(bed, $event)"
                 >
                   <div class="ward-bed-card__top">
-                    <strong>{{ bed.bedNo }}</strong>
+                    <div class="ward-bed-card__title-wrap">
+                      <strong>{{ bedTitle(bed) }}</strong>
+                      <small>{{ wardTypeLabel(bed) }}</small>
+                    </div>
                     <div class="ward-bed-card__menu-wrap">
                       <button
                         type="button"
@@ -143,18 +155,43 @@
                     </div>
                   </div>
 
-                  <ng-container *ngIf="bed.status === 'occupied' || bed.status === 'critical'; else emptyBed">
-                    <h4>{{ bed.patientName || 'Occupied' }}</h4>
-                    <p *ngIf="patientMeta(bed)">{{ patientMeta(bed) }}</p>
-                    <div class="ward-bed-card__nurse" *ngIf="bed.nurseName">
-                      <i class="fa fa-user-md"></i> {{ bed.nurseName }}
+                  <ng-container *ngIf="isOccupiedBed(bed); else availableBedCard">
+                    <div class="ward-bed-card__patient">
+                      <h4>{{ bed.patientName || 'Occupied' }}</h4>
+                      <p>{{ patientMeta(bed) }}</p>
+                    </div>
+                    <div class="ward-bed-card__meta">
+                      <span>{{ bed.patientNo || '—' }} | {{ bed.doctorName || 'Doctor —' }}</span>
+                    </div>
+                    <div class="ward-bed-card__status-row">
+                      <span class="ward-bed-card__badge">{{ bedStatusLabel(bed) }}</span>
+                      <small>Admitted: {{ admissionLabel(bed) }}</small>
+                    </div>
+                    <p class="ward-bed-card__diagnosis" *ngIf="bed.diagnosis">{{ bed.diagnosis }}</p>
+                    <div class="ward-bed-card__signals">
+                      <span *ngIf="bed.vitalsSummary"><i class="fa fa-heartbeat"></i> {{ bed.vitalsSummary }}</span>
+                      <span *ngIf="bed.ivRunningLabel" class="is-iv"><i class="fa fa-tint"></i> {{ bed.ivRunningLabel }}</span>
+                      <span *ngIf="bed.medicinesDue"><i class="fa fa-medkit"></i> Medicine Due: {{ bed.medicinesDue }}</span>
+                    </div>
+                    <div class="ward-bed-card__actions">
+                      <button type="button" class="ward-bed-card__quick-btn" (click)="onBedQuickAction('view_chart', bed, $event)">Chart</button>
+                      <button type="button" class="ward-bed-card__quick-btn" (click)="onBedQuickAction('add_vitals', bed, $event)">Vitals</button>
+                      <button type="button" class="ward-bed-card__quick-btn" (click)="onBedQuickAction('mar', bed, $event)">MAR</button>
+                      <button type="button" class="ward-bed-card__quick-btn" (click)="onBedQuickAction('add_note', bed, $event)">Notes</button>
                     </div>
                   </ng-container>
 
-                  <ng-template #emptyBed>
-                    <h4>{{ bedStatusLabel(bed) }}</h4>
+                  <ng-template #availableBedCard>
+                    <div class="ward-bed-card__empty">
+                      <span class="ward-bed-card__badge">{{ bedStatusLabel(bed) }}</span>
+                      <p>{{ wardTypeLabel(bed) }}</p>
+                    </div>
+                    <div class="ward-bed-card__actions ward-bed-card__actions--available">
+                      <button type="button" class="ward-bed-card__quick-btn is-primary" (click)="onBedQuickAction('admit_patient', bed, $event)">Admit Patient</button>
+                      <button type="button" class="ward-bed-card__quick-btn" (click)="onBedQuickAction('maintenance', bed, $event)">Maintenance</button>
+                    </div>
                   </ng-template>
-                </div>
+                </article>
               </div>
             </div>
           </ng-container>
@@ -163,7 +200,7 @@
             <div class="ward-bed-empty">
               <i class="fa fa-bed"></i>
               <strong>No beds found</strong>
-              <p>Try changing ward or status filter.</p>
+              <p>Try changing ward, filter, or search.</p>
             </div>
           </ng-template>
         </div>
@@ -171,32 +208,45 @@
 
       <aside class="ward-summary-column">
         <section class="ward-panel ward-summary-card">
-          <div class="ward-panel__head"><h2>Today's Summary</h2></div>
-          <ul class="ward-summary-list">
-            <li *ngFor="let row of todaySummary">
-              <button type="button" [class.is-link]="row.route" (click)="navigateTo(row.route)">
+          <div class="ward-panel__head"><h2>Today's Alerts</h2></div>
+          <ul class="ward-alert-list">
+            <li *ngFor="let row of todayAlerts">
+              <button type="button" [class]="'is-' + row.tone" (click)="navigateTo(row.route)">
                 <span>{{ row.label }}</span>
                 <strong>{{ row.value }}</strong>
               </button>
             </li>
           </ul>
-          <button type="button" class="ward-link-btn" (click)="navigateTo('/ward/reports')">View All Alerts</button>
+        </section>
+
+        <section class="ward-panel ward-summary-card">
+          <div class="ward-panel__head"><h2>Nursing Tasks</h2></div>
+          <ul class="ward-task-list">
+            <li *ngFor="let task of nursingTasks">
+              <button type="button" (click)="navigateTo(task.route)">
+                <span class="ward-task-list__time">{{ task.time }}</span>
+                <span class="ward-task-list__label">{{ task.label }}</span>
+              </button>
+            </li>
+          </ul>
+          <button type="button" class="ward-link-btn" (click)="navigateTo('/ward/nursing-care')">View All Tasks</button>
         </section>
 
         <section class="ward-panel ward-summary-card">
           <div class="ward-panel__head"><h2>Nursing Summary</h2></div>
           <ul class="ward-summary-list ward-summary-list--nursing">
             <li *ngFor="let row of nursingSummary">
-              <span><i class="nursing-dot nursing-dot--{{ row.tone }}"></i>{{ row.label }}</span>
-              <strong>{{ row.value }}</strong>
+              <button type="button" (click)="navigateTo(row.route)">
+                <span><i class="nursing-dot nursing-dot--{{ row.tone }}"></i>{{ row.label }}</span>
+                <strong>{{ row.value }}</strong>
+              </button>
             </li>
           </ul>
-          <button type="button" class="ward-link-btn" (click)="navigateTo('/ward/nurses-staff')">View Nurse Roster</button>
         </section>
       </aside>
     </div>
 
-    <section class="ward-monitor-grid">
+    <section class="ward-monitor-grid ward-monitor-grid--compact">
       <button
         type="button"
         class="ward-monitor-card"

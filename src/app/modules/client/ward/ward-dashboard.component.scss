@@ -6,7 +6,80 @@
 }
 
 .ward-dashboard-kpis {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.ward-kpi-card {
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.ward-bed-mgmt-btn--primary {
+  background: var(--ward-primary);
+  border-color: var(--ward-primary);
+  color: #fff;
+}
+
+.ward-workflow-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ward-workflow-tab {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 999px;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.ward-workflow-tab.is-active,
+.ward-workflow-tab:hover {
+  background: var(--ward-primary-soft);
+  border-color: #bfdbfe;
+  color: var(--ward-primary);
+}
+
+.ward-bed-toolbar {
+  border-bottom: 1px solid var(--ward-border);
+  padding: 10px 12px;
+}
+
+.ward-bed-search {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 10px;
+  display: flex;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.ward-bed-search input {
+  border: 0;
+  flex: 1;
+  font-size: 12px;
+  min-height: 38px;
+  outline: none;
+}
+
+.ward-bed-search i {
+  color: #94a3b8;
 }
 
 .ward-kpi-card__copy em {
@@ -144,24 +217,150 @@
 
 .ward-bed-grid {
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   overflow: visible;
 }
 
 .ward-bed-card {
   background: #fff;
   border: 1px solid var(--ward-border);
-  border-left-width: 4px;
-  border-radius: 10px;
+  border-left-width: 5px;
+  border-radius: 14px;
   cursor: pointer;
-  min-height: 108px;
-  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 220px;
+  padding: 12px;
   position: relative;
   text-align: left;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   width: 100%;
   z-index: 1;
+}
+
+.ward-bed-card--occupied {
+  min-height: 280px;
+}
+
+.ward-bed-card__title-wrap strong {
+  color: #0f172a;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ward-bed-card__title-wrap small {
+  color: var(--ward-muted);
+  display: block;
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.ward-bed-card__patient h4 {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.ward-bed-card__patient p,
+.ward-bed-card__meta,
+.ward-bed-card__status-row small,
+.ward-bed-card__diagnosis {
+  color: var(--ward-muted);
+  font-size: 11px;
+  margin: 0;
+}
+
+.ward-bed-card__meta {
+  margin-top: 2px;
+}
+
+.ward-bed-card__status-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.ward-bed-card__badge {
+  background: #e2e8f0;
+  border-radius: 999px;
+  color: #334155;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 8px;
+}
+
+.ward-bed-card__diagnosis {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  overflow: hidden;
+}
+
+.ward-bed-card__signals {
+  display: grid;
+  gap: 4px;
+}
+
+.ward-bed-card__signals span {
+  align-items: center;
+  color: #475569;
+  display: inline-flex;
+  font-size: 10px;
+  gap: 6px;
+}
+
+.ward-bed-card__signals .is-iv {
+  color: #0369a1;
+}
+
+.ward-bed-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.ward-bed-card__actions--available {
+  margin-top: auto;
+}
+
+.ward-bed-card__quick-btn {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #334155;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 8px;
+}
+
+.ward-bed-card__quick-btn.is-primary,
+.ward-bed-card__quick-btn:hover {
+  background: var(--ward-primary-soft);
+  border-color: #bfdbfe;
+  color: var(--ward-primary);
+}
+
+.ward-bed-card__empty {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ward-bed-card__empty p {
+  color: var(--ward-muted);
+  font-size: 11px;
+  margin: 0;
 }
 
 .ward-bed-card--menu-open {
@@ -289,15 +488,15 @@
 .ward-bed-card__alert--critical { color: #dc2626; }
 
 .ward-bed--occupied {
-  background: #f0fdf4;
-  border-color: #86efac;
-  border-left-color: #22c55e;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  border-left-color: #2563eb;
 }
 
 .ward-bed--available {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  border-left-color: #3b82f6;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  border-left-color: #16a34a;
 }
 
 .ward-bed--on_hold {
@@ -307,16 +506,33 @@
 }
 
 .ward-bed--cleaning {
-  background: #f5f3ff;
-  border-color: #ddd6fe;
-  border-left-color: #8b5cf6;
+  background: #fffbeb;
+  border-color: #fde68a;
+  border-left-color: #d97706;
 }
 
-.ward-bed--maintenance,
+.ward-bed--maintenance {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  border-left-color: #64748b;
+}
+
 .ward-bed--critical {
   background: #fef2f2;
   border-color: #fecaca;
-  border-left-color: #ef4444;
+  border-left-color: #dc2626;
+}
+
+.ward-bed--discharge {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+  border-left-color: #9333ea;
+}
+
+.ward-bed--observation {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  border-left-color: #ea580c;
 }
 
 .ward-bed-empty {
@@ -396,6 +612,68 @@
 .nursing-dot--green { background: #16a34a; }
 .nursing-dot--amber { background: #d97706; }
 .nursing-dot--gray { background: #94a3b8; }
+.nursing-dot--red { background: #dc2626; }
+.nursing-dot--purple { background: #9333ea; }
+
+.ward-alert-list,
+.ward-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px;
+}
+
+.ward-alert-list li + li,
+.ward-task-list li + li {
+  border-top: 1px solid var(--ward-border);
+}
+
+.ward-alert-list button,
+.ward-task-list button,
+.ward-summary-list--nursing button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  padding: 8px 0;
+  text-align: left;
+  width: 100%;
+}
+
+.ward-alert-list button.is-red strong,
+.ward-task-list button:hover .ward-task-list__label {
+  color: #dc2626;
+}
+
+.ward-alert-list button.is-amber strong { color: #d97706; }
+.ward-alert-list button.is-purple strong { color: #9333ea; }
+.ward-alert-list button.is-green strong { color: #16a34a; }
+
+.ward-task-list button {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ward-task-list__time {
+  color: var(--ward-primary);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ward-task-list__label {
+  color: #334155;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.ward-monitor-grid--compact {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
 
 .ward-link-btn {
   background: var(--ward-primary-soft);

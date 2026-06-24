@@ -13,10 +13,11 @@ import {
 } from '../../../../shared/models/hospital.model';
 import { WardBedRecord, WardBedStatus, WardRoomRecord, WardRoomType, WardGalleryOption } from '../ward-bed-management.models';
 import {
+  WardAlertRow,
   WardBed,
-  WardDashboardFilters,
   WardKpiCard,
   WardSection,
+  WardTaskRow,
 } from '../ward-dashboard.models';
 import { WardModuleRow } from '../ward-module.models';
 import { PatientStatus, WardPatient } from '../ward-patient-list.models';
@@ -257,31 +258,166 @@ export function mapRoomToWardBed(room: Room, allotment?: RoomAllotment | null): 
   };
 }
 
-export function mapRoomToDashboardBed(room: Room, allotment?: RoomAllotment | null): WardBed {
+export function formatRoomTypeLabel(roomType?: Room['roomType'] | string | null): string {
+  const key = String(roomType || 'general').toLowerCase();
+  const labels: Record<string, string> = {
+    general: 'General',
+    private: 'Private',
+    icu: 'ICU',
+    emergency: 'Emergency',
+    operation_theater: 'OT',
+  };
+
+  return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+export function formatBedVitalsSummary(vitals?: Record<string, string> | null): string {
+  if (!vitals || !Object.keys(vitals).length) {
+    return '';
+  }
+
+  const bp = vitals['bloodPressure'] || vitals['bp'] || '';
+  const temp = vitals['temperature'] || vitals['temp'] || '';
+  const spo2 = vitals['spo2'] || vitals['SpO2'] || '';
+  const parts = [bp, temp, spo2 ? `SpO2 ${spo2}` : ''].filter(Boolean);
+  return parts.join(' | ');
+}
+
+export function getIvRunningLabel(prescriptions: Prescription[], patientId?: string): string {
+  if (!patientId) {
+    return '';
+  }
+
+  const running = prescriptions
+    .filter((item) => item.patientId === patientId)
+    .flatMap((item) => item.ivFluids || [])
+    .find((fluid) => fluid.status === 'running');
+
+  if (!running) {
+    return '';
+  }
+
+  return `IV Running: ${running.name}${running.rate ? ` @ ${running.rate}` : ''}`;
+}
+
+export function formatAdmissionDateTime(value?: string | null): string {
+  if (!value) {
+    return '—';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export interface WardActivityRecord {
+  _id: string;
+  activityType: string;
+  patient?: { firstName?: string; lastName?: string } | null;
+  patientId?: string;
+  admissionId?: string;
+  title?: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  shift?: string;
+  metadata?: Record<string, unknown>;
+  createdAt?: string;
+}
+
+export interface WardDashboardBundleContext {
+  doctors: Doctor[];
+  history: PatientHistory[];
+  prescriptions: Prescription[];
+  encounters: Encounter[];
+  labOrders: LabOrder[];
+  activities: WardActivityRecord[];
+}
+
+export function mapRoomToDashboardBed(
+  room: Room,
+  allotment?: RoomAllotment | null,
+  context?: WardDashboardBundleContext
+): WardBed {
   const patient = allotment?.patient;
-  const status =
+  const baseStatus: WardBed['status'] =
     room.status === 'maintenance'
       ? 'maintenance'
-      : allotment?.status === 'admitted'
-        ? 'occupied'
-        : 'available';
+      : room.status === 'available' && !allotment
+        ? 'available'
+        : allotment?.status === 'admitted'
+          ? 'occupied'
+          : room.status === 'occupied'
+            ? 'occupied'
+            : 'available';
 
-  return {
+  const bed: WardBed = {
     bedNo: allotment?.bedLabel || room.roomNo,
-    status,
+    roomNo: room.roomNo,
+    roomType: formatRoomTypeLabel(room.roomType),
+    status: baseStatus,
     patientName: patient ? patientFullName(patient) : undefined,
     age: patient ? patientAge(patient) : undefined,
     sex: patient ? patientSex(patient) : undefined,
     nurseName: undefined,
     admissionId: allotment?._id,
-    alertType: status === 'occupied' ? 'warning' : undefined,
+    alertType: baseStatus === 'occupied' ? 'warning' : undefined,
+  };
+
+  if (!allotment || allotment.status !== 'admitted' || !context) {
+    return bed;
+  }
+
+  const wardPatient = mapAllotmentToWardPatient(
+    allotment,
+    context.doctors,
+    context.history,
+    context.prescriptions,
+    context.encounters
+  );
+  const latestVitals = context.history
+    .filter((item) => item.patientId === allotment.patientId && item.vitals && Object.keys(item.vitals).length)
+    .sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())[0];
+
+  const clinicalStatus =
+    wardPatient.status === 'critical'
+      ? 'critical'
+      : wardPatient.status === 'dischargePlanned'
+        ? 'discharge_pending'
+        : wardPatient.status === 'watch'
+          ? 'observation'
+          : 'stable';
+
+  return {
+    ...bed,
+    patientId: allotment.patientId,
+    patientNo: wardPatient.mrn,
+    doctorName: wardPatient.doctorName,
+    admittedAt: allotment.admittedAt,
+    diagnosis: wardPatient.diagnosis,
+    clinicalStatus,
+    vitalsSummary: formatBedVitalsSummary(latestVitals?.vitals),
+    ivRunningLabel: getIvRunningLabel(context.prescriptions, allotment.patientId),
+    medicinesDue: wardPatient.medicationsDue,
+    vitalsDue: wardPatient.vitalsDue,
+    status: clinicalStatus === 'critical' ? 'critical' : bed.status,
+    alertType: clinicalStatus === 'critical' ? 'critical' : bed.alertType,
   };
 }
 
 export function buildDashboardSections(
   rooms: Room[],
   allotments: RoomAllotment[],
-  wards: HospitalWard[] = []
+  wards: HospitalWard[] = [],
+  context?: WardDashboardBundleContext
 ): WardSection[] {
   const wardNameById = new Map(wards.map((ward) => [String(ward._id), ward.name]));
   const grouped = new Map<string, WardBed[]>();
@@ -308,7 +444,7 @@ export function buildDashboardSections(
     const beds = grouped.get(groupKey) || [];
 
     beds.push({
-      ...mapRoomToDashboardBed(room, allotment),
+      ...mapRoomToDashboardBed(room, allotment, context),
       roomId: room._id,
       patientId: allotment?.patientId || allotment?.patient?._id,
       wardName,
@@ -341,17 +477,41 @@ export function buildDashboardSections(
     .map(({ sectionName, subtitle, beds }) => ({ sectionName, subtitle, beds }));
 }
 
-export function buildDashboardKpis(rooms: Room[], allotments: RoomAllotment[]): WardKpiCard[] {
-  const admitted = allotments.filter((item) => item.status === 'admitted').length;
+export function buildDashboardKpis(
+  rooms: Room[],
+  allotments: RoomAllotment[],
+  context?: WardDashboardBundleContext
+): WardKpiCard[] {
+  const admitted = allotments.filter((item) => item.status === 'admitted');
   const total = rooms.length || 1;
-  const occupied = rooms.filter((room) => room.status === 'occupied').length || admitted;
-  const available = rooms.filter((room) => room.status === 'available').length;
+  const occupied = admitted.length || rooms.filter((room) => room.status === 'occupied').length;
+  const available = rooms.filter((room) => room.status === 'available' && !admitted.some((item) => item.roomId === room._id)).length;
   const maintenance = rooms.filter((room) => room.status === 'maintenance').length;
-  const onHold = 0;
-  const cleaning = 0;
+  const cleaning = rooms.filter((room) => room.status === 'available' && admitted.some((item) => item.roomId === room._id && item.dischargedAt)).length;
+
+  let critical = 0;
+  let dischargePending = 0;
+
+  if (context) {
+    admitted.forEach((allotment) => {
+      const status = mapAllotmentToWardPatient(
+        allotment,
+        context.doctors,
+        context.history,
+        context.prescriptions,
+        context.encounters
+      ).status;
+      if (status === 'critical') {
+        critical += 1;
+      }
+      if (status === 'dischargePlanned') {
+        dischargePending += 1;
+      }
+    });
+  }
 
   return [
-    { key: 'total', label: 'Total Beds', value: rooms.length, icon: 'fa-bed', tone: 'blue' },
+    { key: 'total', label: 'Total Beds', value: rooms.length, icon: 'fa-bed', tone: 'blue', route: '/ward/bed-management' },
     {
       key: 'occupied',
       label: 'Occupied',
@@ -359,6 +519,7 @@ export function buildDashboardKpis(rooms: Room[], allotments: RoomAllotment[]): 
       percent: Math.round((occupied / total) * 100),
       icon: 'fa-user',
       tone: 'green',
+      route: '/ward/patient-list',
     },
     {
       key: 'available',
@@ -367,32 +528,126 @@ export function buildDashboardKpis(rooms: Room[], allotments: RoomAllotment[]): 
       percent: Math.round((available / total) * 100),
       icon: 'fa-check-circle',
       tone: 'blue',
-    },
-    {
-      key: 'on_hold',
-      label: 'On Hold',
-      value: onHold,
-      percent: Math.round((onHold / total) * 100),
-      icon: 'fa-pause-circle',
-      tone: 'amber',
+      route: '/ward/bed-management',
     },
     {
       key: 'cleaning',
       label: 'Cleaning',
       value: cleaning,
-      percent: Math.round((cleaning / total) * 100),
       icon: 'fa-shower',
-      tone: 'purple',
+      tone: 'amber',
+      route: '/ward/bed-management',
     },
     {
       key: 'maintenance',
       label: 'Maintenance',
       value: maintenance,
-      percent: Math.round((maintenance / total) * 100),
       icon: 'fa-wrench',
       tone: 'red',
+      route: '/ward/bed-management',
+    },
+    {
+      key: 'critical',
+      label: 'Critical Patients',
+      value: critical,
+      icon: 'fa-exclamation-triangle',
+      tone: 'red',
+      route: '/ward/patient-list',
+    },
+    {
+      key: 'discharge_pending',
+      label: 'Discharge Pending',
+      value: dischargePending,
+      icon: 'fa-sign-out',
+      tone: 'purple',
+      route: '/ward/admissions',
     },
   ];
+}
+
+export function buildDashboardAlerts(
+  bundle: WardDashboardBundleContext,
+  allotments: RoomAllotment[]
+): WardAlertRow[] {
+  const admitted = allotments.filter((item) => item.status === 'admitted');
+  const medicinesDue = bundle.prescriptions.reduce((total, item) => total + (item.medicines?.length || 0), 0);
+  const vitalsOverdue = admitted.reduce(
+    (total, allotment) => total + countVitalsDue(bundle.history, allotment.patientId),
+    0
+  );
+  const dripsRunning = bundle.prescriptions
+    .flatMap((item) => item.ivFluids || [])
+    .filter((fluid) => fluid.status === 'running').length;
+  const labPending = bundle.labOrders.filter((order) => !['completed', 'cancelled'].includes(String(order.status || '').toLowerCase())).length;
+  const criticalCount = admitted.filter((allotment) =>
+    derivePatientStatus(
+      allotment,
+      bundle.encounters.find((item) => item._id === allotment.encounterId),
+      bundle.history
+    ) === 'critical'
+  ).length;
+  const dischargePending = admitted.filter((allotment) =>
+    derivePatientStatus(
+      allotment,
+      bundle.encounters.find((item) => item._id === allotment.encounterId),
+      bundle.history
+    ) === 'dischargePlanned'
+  ).length;
+
+  return [
+    { label: 'Medicine due', value: medicinesDue, route: '/ward/mar', tone: 'amber' },
+    { label: 'Vitals overdue', value: vitalsOverdue, route: '/ward/vitals', tone: 'red' },
+    { label: 'Lab report pending', value: labPending, route: '/ward/orders-services', tone: 'purple' },
+    { label: 'Critical vitals', value: criticalCount, route: '/ward/patient-list', tone: 'red' },
+    { label: 'Discharge pending', value: dischargePending, route: '/ward/admissions', tone: 'purple' },
+    { label: 'Drips running', value: dripsRunning, route: '/ward/drips-iv', tone: 'green' },
+  ];
+}
+
+export function buildDashboardTasks(
+  bundle: WardDashboardBundleContext,
+  allotments: RoomAllotment[]
+): WardTaskRow[] {
+  const tasks: WardTaskRow[] = [];
+  const admitted = allotments.filter((item) => item.status === 'admitted');
+
+  bundle.prescriptions.forEach((prescription) => {
+    const patientName = patientFullName(prescription.patient);
+    const bed = admitted.find((item) => item.patientId === prescription.patientId);
+    const bedLabel = bed?.bedLabel || bed?.room?.roomNo || 'bed';
+
+    (prescription.medicines || []).slice(0, 2).forEach((medicine, index) => {
+      tasks.push({
+        time: medicine.morning ? '08:00 AM' : medicine.noon ? '01:00 PM' : medicine.evening ? '06:00 PM' : '09:00 PM',
+        label: `Give ${medicine.name} to ${bedLabel} (${patientName})`,
+        route: `/ward/mar?admissionId=${bed?._id || ''}&patientId=${prescription.patientId || ''}`,
+      });
+
+      if (index === 0 && countVitalsDue(bundle.history, prescription.patientId || '')) {
+        tasks.push({
+          time: '10:30 AM',
+          label: `Check vitals for ${bedLabel} (${patientName})`,
+          route: `/ward/vitals?admissionId=${bed?._id || ''}&patientId=${prescription.patientId || ''}`,
+        });
+      }
+    });
+  });
+
+  bundle.prescriptions.forEach((prescription) => {
+    const running = (prescription.ivFluids || []).find((fluid) => fluid.status === 'running');
+    if (!running) {
+      return;
+    }
+
+    const bed = admitted.find((item) => item.patientId === prescription.patientId);
+    tasks.push({
+      time: '11:00 AM',
+      label: `Monitor drip ${running.name} at ${bed?.bedLabel || bed?.room?.roomNo || 'bed'}`,
+      route: `/ward/drips-iv?admissionId=${bed?._id || ''}&patientId=${prescription.patientId || ''}`,
+    });
+  });
+
+  return tasks.slice(0, 8);
 }
 
 export function wardRoomPayloadFromForm(value: {
@@ -642,21 +897,6 @@ export function mapOrderRows(labOrders: LabOrder[], prescriptions: Prescription[
   );
 
   return [...labRows, ...admissionRows];
-}
-
-export interface WardActivityRecord {
-  _id: string;
-  activityType: string;
-  patient?: { firstName?: string; lastName?: string } | null;
-  patientId?: string;
-  admissionId?: string;
-  title?: string;
-  description?: string;
-  status?: string;
-  priority?: string;
-  shift?: string;
-  metadata?: Record<string, unknown>;
-  createdAt?: string;
 }
 
 export function mapWardActivityRows(activities: WardActivityRecord[], type?: string): WardModuleRow[] {

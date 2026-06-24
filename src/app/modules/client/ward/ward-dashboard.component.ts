@@ -3,16 +3,20 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
+import { formatAdmissionDateTime } from './services/ward-api.mapper';
 import {
   MonitoringCard,
   NursingSummaryRow,
   TodaySummaryRow,
+  WardAlertRow,
   WardBed,
   WardBedMenuAction,
   WardDashboardFilters,
   WardKpiCard,
   WardRoomStatusFilter,
   WardSection,
+  WardTaskRow,
+  WardWorkflowTab,
 } from './ward-dashboard.models';
 import { WardDataService } from './services/ward-data.service';
 
@@ -28,17 +32,44 @@ export class WardDashboardComponent implements OnInit {
   bedSections: WardSection[] = [];
   filteredBedSections: WardSection[] = [];
   todaySummary: TodaySummaryRow[] = [];
+  todayAlerts: WardAlertRow[] = [];
+  nursingTasks: WardTaskRow[] = [];
   nursingSummary: NursingSummaryRow[] = [];
   monitoringCards: MonitoringCard[] = [];
 
   wardOptions: string[] = [];
   statusFilter: WardRoomStatusFilter = 'all';
+  bedSearchQuery = '';
   activeBedMenu: { key: string; bed: WardBed; actions: WardBedMenuAction[]; opensUp: boolean } | null = null;
 
   readonly shiftOptions = [
     { value: 'day', label: 'Day Shift (08 AM - 02 PM)' },
     { value: 'evening', label: 'Evening Shift (02 PM - 08 PM)' },
     { value: 'night', label: 'Night Shift (08 PM - 08 AM)' },
+  ];
+
+  readonly statusFilters: Array<{ key: WardRoomStatusFilter; label: string }> = [
+    { key: 'all', label: 'All' },
+    { key: 'available', label: 'Available' },
+    { key: 'occupied', label: 'Occupied' },
+    { key: 'icu', label: 'ICU' },
+    { key: 'private', label: 'Private' },
+    { key: 'general', label: 'General' },
+    { key: 'cleaning', label: 'Cleaning' },
+    { key: 'maintenance', label: 'Maintenance' },
+    { key: 'critical', label: 'Critical' },
+    { key: 'discharge_pending', label: 'Discharge Pending' },
+  ];
+
+  readonly workflowTabs: WardWorkflowTab[] = [
+    { key: 'dashboard', label: 'Dashboard', route: '/ward/dashboard', icon: 'fa-th-large' },
+    { key: 'beds', label: 'Beds', route: '/ward/bed-management', icon: 'fa-bed' },
+    { key: 'admissions', label: 'Admissions', route: '/ward/admissions', icon: 'fa-hospital-o' },
+    { key: 'vitals', label: 'Vitals', route: '/ward/vitals', icon: 'fa-heartbeat' },
+    { key: 'mar', label: 'MAR', route: '/ward/mar', icon: 'fa-medkit' },
+    { key: 'drips', label: 'Drips / IV', route: '/ward/drips-iv', icon: 'fa-tint' },
+    { key: 'notes', label: 'Notes', route: '/ward/nursing-care', icon: 'fa-sticky-note' },
+    { key: 'discharge', label: 'Discharge', route: '/ward/admissions', icon: 'fa-sign-out' },
   ];
 
   filters: WardDashboardFilters = {
@@ -67,8 +98,8 @@ export class WardDashboardComponent implements OnInit {
 
   get dashboardSubtitle(): string {
     return this.filters.ward
-      ? `${this.filters.ward} overview · ${this.selectedShiftLabel}`
-      : `All wards overview · ${this.selectedShiftLabel}`;
+      ? `${this.filters.ward} nurse task center · ${this.selectedShiftLabel}`
+      : `All wards nurse task center · ${this.selectedShiftLabel}`;
   }
 
   loadDashboard(): void {
@@ -78,10 +109,12 @@ export class WardDashboardComponent implements OnInit {
         this.wardOptions = data.wardOptions;
         this.kpiCards = data.kpiCards;
         this.bedSections = data.bedSections;
-        this.applyBedFilters();
         this.todaySummary = data.todaySummary;
+        this.todayAlerts = data.todayAlerts;
+        this.nursingTasks = data.nursingTasks;
         this.nursingSummary = data.nursingSummary;
         this.monitoringCards = data.monitoringCards;
+        this.applyBedFilters();
         this.loading = false;
       },
       error: () => {
@@ -100,14 +133,22 @@ export class WardDashboardComponent implements OnInit {
     this.applyBedFilters();
   }
 
+  onSearchChange(): void {
+    this.applyBedFilters();
+  }
+
   refresh(): void {
     this.loadDashboard();
     this.toastr.success('Ward dashboard refreshed.');
   }
 
+  isOccupiedBed(bed: WardBed): boolean {
+    return bed.status === 'occupied' || bed.status === 'critical';
+  }
+
   onBedClick(bed: WardBed, event?: Event): void {
     const target = event?.target as HTMLElement | undefined;
-    if (target?.closest('.ward-bed-card__menu-wrap')) {
+    if (target?.closest('.ward-bed-card__menu-wrap, .ward-bed-card__actions, .ward-bed-card__quick-btn')) {
       return;
     }
 
@@ -116,12 +157,23 @@ export class WardDashboardComponent implements OnInit {
       return;
     }
 
-    if ((bed.status === 'occupied' || bed.status === 'critical') && bed.admissionId) {
+    if (this.isOccupiedBed(bed) && bed.admissionId) {
       void this.router.navigate(['/ward/patient-detail', bed.admissionId]);
       return;
     }
 
-    void this.router.navigate(['/ward/bed-management']);
+    void this.router.navigate(['/ward/bed-management'], {
+      queryParams: {
+        roomId: bed.roomId || undefined,
+        bedNo: bed.bedNo,
+      },
+    });
+  }
+
+  onBedQuickAction(action: string, bed: WardBed, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.onBedMenuAction(action, bed, event);
   }
 
   toggleBedMenu(bed: WardBed, event: Event): void {
@@ -160,7 +212,7 @@ export class WardDashboardComponent implements OnInit {
     }
 
     const buttonRect = button.getBoundingClientRect();
-    const menuHeight = dropdown.getBoundingClientRect().height || 200;
+    const menuHeight = dropdown.getBoundingClientRect().height || 220;
     const spaceBelow = window.innerHeight - buttonRect.bottom;
     const spaceAbove = buttonRect.top;
     const opensUp = spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow;
@@ -186,35 +238,41 @@ export class WardDashboardComponent implements OnInit {
   }
 
   private buildBedMenuActions(bed: WardBed): WardBedMenuAction[] {
-    const occupied = bed.status === 'occupied' || bed.status === 'critical';
+    const occupied = this.isOccupiedBed(bed);
     const available = bed.status === 'available';
+    const cleaning = bed.status === 'cleaning';
     const actions: WardBedMenuAction[] = [];
 
     if (occupied && bed.admissionId) {
       actions.push(
-        { key: 'view_patient', label: 'View Patient', icon: 'fa-eye' },
-        { key: 'vitals', label: 'View Vitals', icon: 'fa-heartbeat' },
-        { key: 'mar', label: 'View MAR', icon: 'fa-medkit' },
+        { key: 'view_chart', label: 'Patient Chart', icon: 'fa-file-text-o' },
+        { key: 'add_vitals', label: 'Add Vitals', icon: 'fa-heartbeat' },
+        { key: 'add_note', label: 'Add Nursing Note', icon: 'fa-sticky-note' },
+        { key: 'mar', label: 'Medication / MAR', icon: 'fa-medkit' },
+        { key: 'add_drip', label: 'Add Drip / IV', icon: 'fa-tint' },
         { key: 'transfer', label: 'Transfer Bed', icon: 'fa-random' },
-        { key: 'discharge', label: 'Discharge Patient', icon: 'fa-sign-out' }
+        { key: 'discharge', label: 'Request Discharge', icon: 'fa-sign-out' }
       );
     }
 
     if (available) {
       actions.push(
-        { key: 'add_patient', label: 'Add Patient', icon: 'fa-user-plus' },
-        { key: 'admit_patient', label: 'Admit Patient', icon: 'fa-hospital-o' }
+        { key: 'admit_patient', label: 'Admit Patient', icon: 'fa-hospital-o' },
+        { key: 'reserve_bed', label: 'Reserve Bed', icon: 'fa-bookmark' },
+        { key: 'mark_cleaning', label: 'Mark Cleaning', icon: 'fa-shower' },
+        { key: 'maintenance', label: 'Mark Maintenance', icon: 'fa-wrench' }
       );
+    }
+
+    if (cleaning) {
+      actions.push({ key: 'mark_available', label: 'Mark Available', icon: 'fa-check-circle' });
     }
 
     if (bed.status === 'maintenance') {
       actions.push({ key: 'mark_available', label: 'Mark Available', icon: 'fa-check-circle' });
-    } else if (!occupied) {
-      actions.push({ key: 'maintenance', label: 'Mark Maintenance', icon: 'fa-wrench' });
     }
 
     actions.push({ key: 'bed_details', label: 'Bed Details', icon: 'fa-bed' });
-
     return actions;
   }
 
@@ -223,60 +281,61 @@ export class WardDashboardComponent implements OnInit {
     event.stopPropagation();
     this.activeBedMenu = null;
 
+    const query = {
+      admissionId: bed.admissionId || undefined,
+      patientId: bed.patientId || undefined,
+      roomId: bed.roomId || undefined,
+      bedNo: bed.bedNo,
+      wardName: bed.wardName || undefined,
+    };
+
     switch (action) {
-      case 'add_patient':
-        void this.router.navigate(['/patients/add-patient'], {
-          queryParams: bed.roomId ? { roomId: bed.roomId } : undefined,
-        });
-        return;
       case 'admit_patient':
-        void this.router.navigate(['/room-allotment/add-alloted-rooms'], {
-          queryParams: {
-            roomId: bed.roomId || undefined,
-            bedNo: bed.bedNo,
-            wardName: bed.wardName || undefined,
-          },
-        });
+        void this.router.navigate(['/room-allotment/add-alloted-rooms'], { queryParams: query });
         return;
-      case 'view_patient':
-        if (bed.admissionId) {
-          void this.router.navigate(['/ward/patient-detail', bed.admissionId]);
-        }
-        return;
-      case 'vitals':
-        void this.router.navigate(['/ward/vitals'], {
-          queryParams: { admissionId: bed.admissionId || undefined, patientId: bed.patientId || undefined },
-        });
-        return;
-      case 'mar':
-        void this.router.navigate(['/ward/mar'], {
-          queryParams: { admissionId: bed.admissionId || undefined, patientId: bed.patientId || undefined },
-        });
-        return;
-      case 'transfer':
-        void this.router.navigate(['/ward/bed-management'], {
-          queryParams: {
-            admissionId: bed.admissionId || undefined,
-            bedNo: bed.bedNo,
-            roomId: bed.roomId || undefined,
-          },
-        });
-        return;
-      case 'discharge':
-        void this.router.navigate(['/ward/admissions'], {
-          queryParams: { admissionId: bed.admissionId || undefined, action: 'discharge' },
-        });
-        return;
+      case 'reserve_bed':
+      case 'mark_cleaning':
       case 'maintenance':
       case 'mark_available':
       case 'bed_details':
         void this.router.navigate(['/ward/bed-management'], {
           queryParams: {
-            roomId: bed.roomId || undefined,
-            bedNo: bed.bedNo,
-            status: action === 'maintenance' ? 'maintenance' : action === 'mark_available' ? 'available' : undefined,
+            ...query,
+            status:
+              action === 'maintenance'
+                ? 'maintenance'
+                : action === 'mark_available'
+                  ? 'available'
+                  : action === 'mark_cleaning'
+                    ? 'cleaning'
+                    : undefined,
           },
         });
+        return;
+      case 'view_chart':
+      case 'view_patient':
+        if (bed.admissionId) {
+          void this.router.navigate(['/ward/patient-detail', bed.admissionId]);
+        }
+        return;
+      case 'add_vitals':
+      case 'vitals':
+        void this.router.navigate(['/ward/vitals'], { queryParams: query });
+        return;
+      case 'add_note':
+        void this.router.navigate(['/ward/nursing-care'], { queryParams: query });
+        return;
+      case 'mar':
+        void this.router.navigate(['/ward/mar'], { queryParams: query });
+        return;
+      case 'add_drip':
+        void this.router.navigate(['/ward/drips-iv'], { queryParams: query });
+        return;
+      case 'transfer':
+        void this.router.navigate(['/ward/bed-management'], { queryParams: query });
+        return;
+      case 'discharge':
+        void this.router.navigate(['/ward/admissions'], { queryParams: { ...query, action: 'discharge' } });
         return;
       default:
         return;
@@ -310,9 +369,19 @@ export class WardDashboardComponent implements OnInit {
   }
 
   bedStatusLabel(bed: WardBed): string {
+    if (bed.clinicalStatus === 'critical') {
+      return 'Critical';
+    }
+    if (bed.clinicalStatus === 'discharge_pending') {
+      return 'Discharge Pending';
+    }
+    if (bed.clinicalStatus === 'observation') {
+      return 'Observation';
+    }
+
     const labels: Record<WardBed['status'], string> = {
       available: 'Available',
-      occupied: 'Occupied / Stable',
+      occupied: 'Stable',
       on_hold: 'On Hold',
       cleaning: 'Cleaning',
       maintenance: 'Maintenance',
@@ -322,13 +391,36 @@ export class WardDashboardComponent implements OnInit {
     return labels[bed.status];
   }
 
-  bedStatusClass(status: WardBed['status']): string {
-    return `ward-bed--${status}`;
+  bedStatusClass(bed: WardBed): string {
+    if (bed.clinicalStatus === 'discharge_pending') {
+      return 'ward-bed--discharge';
+    }
+    if (bed.clinicalStatus === 'observation') {
+      return 'ward-bed--observation';
+    }
+
+    return `ward-bed--${bed.status}`;
   }
 
   patientMeta(bed: WardBed): string {
-    const parts = [bed.sex, bed.age != null ? `${bed.age} Y` : ''].filter(Boolean);
+    const parts = [
+      bed.age != null ? `${bed.age}Y` : '',
+      bed.sex || '',
+    ].filter(Boolean);
     return parts.join(' / ');
+  }
+
+  bedTitle(bed: WardBed): string {
+    const room = bed.roomNo || bed.bedNo;
+    return `${room} - ${bed.bedNo}`;
+  }
+
+  wardTypeLabel(bed: WardBed): string {
+    return bed.roomType ? `${bed.roomType} Ward` : bed.wardName || 'Ward';
+  }
+
+  admissionLabel(bed: WardBed): string {
+    return formatAdmissionDateTime(bed.admittedAt);
   }
 
   trackBySectionName(_index: number, section: WardSection): string {
@@ -336,24 +428,66 @@ export class WardDashboardComponent implements OnInit {
   }
 
   private applyBedFilters(): void {
+    const query = this.bedSearchQuery.trim().toLowerCase();
+
     this.filteredBedSections = this.bedSections
       .map((section) => ({
         ...section,
-        beds: section.beds.filter((bed) => this.matchesStatusFilter(bed.status)),
+        beds: section.beds.filter((bed) => this.matchesBedFilters(bed, query)),
       }))
       .filter((section) => section.beds.length > 0);
   }
 
-  private matchesStatusFilter(status: WardBed['status']): boolean {
-    if (this.statusFilter === 'all') {
+  private matchesBedFilters(bed: WardBed, query: string): boolean {
+    if (!this.matchesStatusFilter(bed)) {
+      return false;
+    }
+
+    if (!query) {
       return true;
     }
 
-    if (this.statusFilter === 'occupied') {
-      return status === 'occupied' || status === 'critical';
-    }
+    const haystack = [
+      bed.patientName,
+      bed.patientNo,
+      bed.bedNo,
+      bed.roomNo,
+      bed.doctorName,
+      bed.wardName,
+      bed.diagnosis,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
 
-    return status === this.statusFilter;
+    return haystack.includes(query);
+  }
+
+  private matchesStatusFilter(bed: WardBed): boolean {
+    switch (this.statusFilter) {
+      case 'all':
+        return true;
+      case 'available':
+        return bed.status === 'available';
+      case 'occupied':
+        return bed.status === 'occupied' || bed.status === 'critical';
+      case 'cleaning':
+        return bed.status === 'cleaning';
+      case 'maintenance':
+        return bed.status === 'maintenance';
+      case 'critical':
+        return bed.status === 'critical' || bed.clinicalStatus === 'critical';
+      case 'discharge_pending':
+        return bed.clinicalStatus === 'discharge_pending';
+      case 'icu':
+        return String(bed.roomType || '').toLowerCase() === 'icu';
+      case 'private':
+        return String(bed.roomType || '').toLowerCase() === 'private';
+      case 'general':
+        return String(bed.roomType || '').toLowerCase() === 'general';
+      default:
+        return true;
+    }
   }
 
   private todayInputValue(): string {

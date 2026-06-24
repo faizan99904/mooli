@@ -20,15 +20,19 @@ import {
   MonitoringCard,
   NursingSummaryRow,
   TodaySummaryRow,
+  WardAlertRow,
   WardKpiCard,
   WardSection,
+  WardTaskRow,
 } from '../ward-dashboard.models';
 import { WardModuleKey, WardModuleReportCard, WardModuleRow } from '../ward-module.models';
 import { WardPatient } from '../ward-patient-list.models';
 import {
   buildFloorOptions,
+  buildDashboardAlerts,
   buildDashboardKpis,
   buildDashboardSections,
+  buildDashboardTasks,
   getWardOptionsFromCatalog,
   getWardOptionsFromRooms,
   mapAdmissionRows,
@@ -64,6 +68,8 @@ export interface WardDashboardData {
   kpiCards: WardKpiCard[];
   bedSections: WardSection[];
   todaySummary: TodaySummaryRow[];
+  todayAlerts: WardAlertRow[];
+  nursingTasks: WardTaskRow[];
   nursingSummary: NursingSummaryRow[];
   monitoringCards: MonitoringCard[];
   wardOptions: string[];
@@ -316,28 +322,39 @@ export class WardDataService {
           ? allAllotments.filter((item) => matchesWardFilter(item.room, wardFilter, wards))
           : allAllotments;
         const admittedCount = scopedAllotments.filter((item) => item.status === 'admitted').length;
+        const bundleContext = {
+          doctors: bundle.doctors,
+          history: bundle.history,
+          prescriptions: bundle.prescriptions,
+          encounters: bundle.encounters,
+          labOrders: bundle.labOrders,
+          activities: bundle.activities,
+        };
 
         return {
-          kpiCards: buildDashboardKpis(scopedRooms, scopedAllotments),
-          bedSections: buildDashboardSections(allRooms, allAllotments, wards),
+          kpiCards: buildDashboardKpis(scopedRooms, scopedAllotments, bundleContext),
+          bedSections: buildDashboardSections(allRooms, allAllotments, wards, bundleContext),
           todaySummary: [
             { label: 'Admitted Patients', value: admittedCount, route: '/ward/patient-list' },
-            { label: 'Ward Records', value: bundle.history.length, route: '/ward-admin' },
+            { label: 'Medicine Due', value: bundle.prescriptions.reduce((total, item) => total + (item.medicines?.length || 0), 0), route: '/ward/mar' },
             { label: 'Running Drips', value: bundle.prescriptions.flatMap((item) => item.ivFluids || []).filter((fluid) => fluid.status === 'running').length, route: '/ward/drips-iv' },
             { label: 'Lab Orders', value: bundle.labOrders.length, route: '/ward/orders-services' },
           ],
+          todayAlerts: buildDashboardAlerts(bundleContext, scopedAllotments),
+          nursingTasks: buildDashboardTasks(bundleContext, scopedAllotments),
           nursingSummary: [
-            { label: 'Ward Notes', value: bundle.history.length, tone: 'green' },
-            { label: 'Vitals Records', value: bundle.history.filter((item) => item.vitals && Object.keys(item.vitals).length).length, tone: 'amber' },
-            { label: 'Open Encounters', value: bundle.encounters.filter((item) => item.status === 'admitted').length, tone: 'gray' },
+            { label: 'Medicine Due', value: bundle.prescriptions.reduce((total, item) => total + (item.medicines?.length || 0), 0), tone: 'amber', route: '/ward/mar' },
+            { label: 'Vitals Overdue', value: scopedAllotments.filter((item) => item.status === 'admitted').reduce((total, allotment) => total + (bundle.history.some((record) => record.patientId === allotment.patientId && record.vitals) ? 0 : 1), 0), tone: 'red', route: '/ward/vitals' },
+            { label: 'Nursing Notes', value: bundle.history.length, tone: 'green', route: '/ward/nursing-care' },
+            { label: 'Drips Running', value: bundle.prescriptions.flatMap((item) => item.ivFluids || []).filter((fluid) => fluid.status === 'running').length, tone: 'purple', route: '/ward/drips-iv' },
           ],
           monitoringCards: [
             { key: 'admissions', label: 'Admitted Patients', value: admittedCount, actionLabel: 'View List', route: '/ward/patient-list', icon: 'fa-user-plus', tone: 'blue' },
-            { key: 'medications', label: 'Medication Orders', value: bundle.prescriptions.reduce((total, item) => total + (item.medicines?.length || 0), 0), actionLabel: 'View MAR', route: '/ward/mar', icon: 'fa-medkit', tone: 'green' },
-            { key: 'vitals', label: 'Ward Records', value: bundle.history.length, actionLabel: 'View Vitals', route: '/ward/vitals', icon: 'fa-heartbeat', tone: 'teal' },
-            { key: 'drips', label: 'Drips Running', value: bundle.prescriptions.flatMap((item) => item.ivFluids || []).filter((fluid) => fluid.status === 'running').length, actionLabel: 'View List', route: '/ward/drips-iv', icon: 'fa-tint', tone: 'blue' },
-            { key: 'tasks', label: 'Nursing Notes', value: bundle.history.length, actionLabel: 'View Tasks', route: '/ward/nursing-care', icon: 'fa-tasks', tone: 'amber' },
-            { key: 'alerts', label: 'Lab Orders', value: bundle.labOrders.length, actionLabel: 'View Alerts', route: '/ward/reports', icon: 'fa-exclamation-triangle', tone: 'red' },
+            { key: 'medications', label: 'Medication Due', value: bundle.prescriptions.reduce((total, item) => total + (item.medicines?.length || 0), 0), actionLabel: 'Open MAR', route: '/ward/mar', icon: 'fa-medkit', tone: 'green' },
+            { key: 'vitals', label: 'Vitals Due', value: scopedAllotments.filter((item) => item.status === 'admitted').reduce((total, allotment) => total + (bundle.history.some((record) => record.patientId === allotment.patientId && record.vitals) ? 0 : 1), 0), actionLabel: 'Add Vitals', route: '/ward/vitals', icon: 'fa-heartbeat', tone: 'teal' },
+            { key: 'drips', label: 'Drips Running', value: bundle.prescriptions.flatMap((item) => item.ivFluids || []).filter((fluid) => fluid.status === 'running').length, actionLabel: 'View Drips', route: '/ward/drips-iv', icon: 'fa-tint', tone: 'blue' },
+            { key: 'tasks', label: 'Nursing Notes', value: bundle.history.length, actionLabel: 'Open Notes', route: '/ward/nursing-care', icon: 'fa-sticky-note', tone: 'amber' },
+            { key: 'alerts', label: 'Shift Handover', value: bundle.activities.filter((item) => item.activityType === 'handover').length, actionLabel: 'Open Handover', route: '/ward/shift-handover', icon: 'fa-exchange', tone: 'red' },
           ],
           wardOptions: getWardOptionsFromRooms(allRooms, wards),
         };
