@@ -1,4 +1,559 @@
-.card .body {
-  background: white;
-  margin-bottom: 1rem;
+:host {
+  --allotment-primary: #019c9d;
+  --allotment-primary-dark: #017f80;
+  --allotment-primary-soft: #e8f7f7;
+  --allotment-ink: #1f2937;
+  --allotment-muted: #6b7280;
+  --allotment-border: #e5e7eb;
+  --allotment-surface: #ffffff;
+  --allotment-bg: #f8fafc;
+  display: block;
+}
+
+#main-content.allotment-page {
+  background: var(--allotment-bg);
+  box-sizing: border-box;
+  color: var(--allotment-ink);
+  min-height: 100%;
+  padding: 24px 20px 32px;
+}
+
+@media screen and (max-width: 1280px) {
+  #main-content.allotment-page {
+    padding-bottom: 24px;
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-top: 16px;
+  }
+}
+
+.allotment-shell {
+  margin: 0 auto;
+  max-width: 1280px;
+}
+
+.allotment-header {
+  margin-bottom: 20px;
+}
+
+.allotment-header h1 {
+  color: var(--allotment-ink);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 4px;
+}
+
+.allotment-header p {
+  color: var(--allotment-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+.allotment-layout {
+  align-items: start;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+}
+
+.allotment-card {
+  background: var(--allotment-surface);
+  border: 1px solid var(--allotment-border);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.allotment-card__head {
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  gap: 10px;
+  padding: 18px 22px;
+}
+
+.allotment-card__icon {
+  align-items: center;
+  background: var(--allotment-primary-soft);
+  border-radius: 10px;
+  color: var(--allotment-primary);
+  display: inline-flex;
+  font-size: 14px;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.allotment-card__head h2 {
+  color: var(--allotment-ink);
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.allotment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+}
+
+.allotment-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px 22px 22px;
+}
+
+.allotment-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.allotment-field label {
+  color: var(--allotment-ink);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.field-hint {
+  color: var(--allotment-muted);
+  font-size: 12px;
+}
+
+.field-warning {
+  color: #b45309;
+  font-size: 12px;
+}
+
+.allotment-input {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  color: var(--allotment-ink);
+  font-size: 14px;
+  min-height: 46px;
+  padding: 0 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+}
+
+.allotment-input:focus {
+  border-color: var(--allotment-primary);
+  box-shadow: 0 0 0 3px rgba(1, 156, 157, 0.12);
+  outline: none;
+}
+
+.allotment-textarea {
+  min-height: 110px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.allotment-select {
+  appearance: none;
+  cursor: pointer;
+  padding-left: 42px;
+  padding-right: 42px;
+}
+
+.allotment-input--datetime {
+  color-scheme: light;
+  padding-right: 14px;
+}
+
+.allotment-input--datetime::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.select-field,
+.patient-search {
+  position: relative;
+}
+
+.field-leading-icon,
+.field-trailing-icon {
+  align-items: center;
+  color: #9ca3af;
+  display: inline-flex;
+  height: 46px;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 42px;
+}
+
+.field-leading-icon {
+  left: 0;
+}
+
+.field-trailing-icon {
+  right: 0;
+}
+
+.patient-search {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.patient-search .field-leading-icon {
+  left: 0;
+  z-index: 1;
+}
+
+.patient-search .allotment-input {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  padding-left: 42px;
+  padding-right: 120px;
+}
+
+.patient-search .allotment-btn {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: end;
+  margin: 5px;
+  min-height: 36px;
+  z-index: 2;
+}
+
+.allotment-btn {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.allotment-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.allotment-btn--primary {
+  background: var(--allotment-primary);
+  color: #fff;
+}
+
+.allotment-btn--primary:hover:not(:disabled) {
+  background: var(--allotment-primary-dark);
+}
+
+.allotment-btn--ghost {
+  background: #fff;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.allotment-btn--ghost:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.allotment-actions {
+  padding-top: 4px;
+}
+
+.allotment-btn--save {
+  min-width: 180px;
+}
+
+.patient-lookup-panel {
+  border: 1px solid #e7ebf0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.lookup-empty {
+  color: var(--allotment-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.lookup-empty strong {
+  color: var(--allotment-ink);
+}
+
+.lookup-empty .allotment-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.patient-results {
+  display: flex;
+  flex-direction: column;
+}
+
+.patient-result-card {
+  align-items: center;
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  outline: none;
+  padding: 14px 16px;
+  text-align: left;
+  width: 100%;
+}
+
+.patient-result-card:focus,
+.patient-result-card:focus-visible,
+.patient-result-card:active {
+  box-shadow: none;
+  outline: none;
+}
+
+.patient-result-card:last-child {
+  border-bottom: 0;
+}
+
+.patient-result-card:hover {
+  background: #f0fdfa;
+}
+
+.patient-result-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.patient-result-main strong {
+  color: var(--allotment-ink);
+}
+
+.patient-result-main small {
+  color: var(--allotment-muted);
+}
+
+.patient-select-badge {
+  background: var(--allotment-primary-soft);
+  border-radius: 999px;
+  color: #003e86;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+.selected-patient {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.selected-patient__avatar {
+  align-items: center;
+  background: var(--allotment-primary-soft);
+  border-radius: 50%;
+  color: var(--allotment-primary);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 16px;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.selected-patient__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.selected-patient__copy span {
+  color: var(--allotment-muted);
+  display: block;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.selected-patient__copy strong {
+  color: var(--allotment-ink);
+  display: block;
+}
+
+.selected-patient__copy small {
+  color: var(--allotment-muted);
+}
+
+.room-detail-row {
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+  padding: 12px 0;
+}
+
+.room-detail-row:last-of-type {
+  border-bottom: 0;
+}
+
+.room-detail-row span {
+  color: var(--allotment-muted);
+  font-size: 14px;
+}
+
+.room-detail-row strong {
+  color: var(--allotment-ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.room-status-badge {
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+.room-status-badge.is-available {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.room-status-badge.is-occupied {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.room-status-badge.is-maintenance {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.room-empty-state {
+  align-items: center;
+  color: var(--allotment-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 28px 12px;
+  text-align: center;
+}
+
+.room-empty-state__icon {
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 50%;
+  color: #94a3b8;
+  display: inline-flex;
+  font-size: 18px;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.room-empty-state strong {
+  color: var(--allotment-ink);
+}
+
+.room-warning {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  color: #9a3412;
+  font-size: 13px;
+  margin-top: 12px;
+  padding: 10px 12px;
+}
+
+@media (max-width: 991px) {
+  .allotment-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .allotment-details-card {
+    order: 2;
+  }
+
+  .allotment-form-card {
+    order: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  #main-content.allotment-page {
+    padding-bottom: 24px;
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-top: 14px;
+  }
+
+  .allotment-shell {
+    max-width: 100%;
+  }
+
+  .allotment-header h1 {
+    font-size: 24px;
+  }
+
+  .allotment-form,
+  .allotment-card__body,
+  .allotment-card__head {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .patient-search {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-search .allotment-input {
+    padding-right: 14px;
+  }
+
+  .patient-search .allotment-btn {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: stretch;
+    margin: 0;
+    width: 100%;
+  }
+
+  .selected-patient {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .selected-patient .allotment-btn {
+    width: 100%;
+  }
+
+  .allotment-btn--save {
+    width: 100%;
+  }
+
+  .room-detail-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+  }
+
+  .room-detail-row strong,
+  .room-detail-row .room-status-badge {
+    text-align: left;
+  }
 }

@@ -112,6 +112,11 @@ export const isDoctorRole = (role: string): boolean =>
 export const isWardAdminRole = (role: string): boolean =>
   normalizeAccessKey(role) === 'wardadmin';
 
+export const isReceptionRole = (role: string): boolean => {
+  const normalized = normalizeAccessKey(role);
+  return normalized === 'receptionist' || normalized === 'reception';
+};
+
 export const sanitizePermissions = (permissions: unknown): string[] => {
   if (!Array.isArray(permissions)) {
     return [];
@@ -167,6 +172,10 @@ export const resolveDefaultRoute = (
 
   if (isWardAdminRole(role)) {
     return '/ward/dashboard';
+  }
+
+  if (isReceptionRole(role)) {
+    return '/appointments';
   }
 
   return (

@@ -1,51 +1,172 @@
-<div id="main-content">
-    <div class="container-fluid">
-        <div class="block-header">
-            <div class="row clearfix">
-                <div class="col-lg-4 col-md-12 col-sm-12">
-                    <h1>Add Room Allotment</h1>
-                    <span>Admit patient to a room</span>
-                </div>
-            </div>
-        </div>
+<div id="main-content" class="allotment-page">
+    <div class="allotment-shell">
+        <header class="allotment-header">
+            <h1>Add Room Allotment</h1>
+            <p>Admit patient to a room</p>
+        </header>
 
-        <div class="row clearfix">
-            <div class="col-lg-8 col-md-12">
-                <div class="card">
-                    <div class="header"><h2>Allotment Information</h2></div>
-                    <div class="body">
-                        <form [formGroup]="allotmentForm" (ngSubmit)="submitAllotment()">
-                            <div class="form-group">
-                                <label>Patient</label>
-                                <select class="form-control" formControlName="patientId">
-                                    <option value="">Select patient</option>
-                                    <option *ngFor="let patient of patients" [value]="patient._id">{{ patientName(patient) }}</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Room</label>
-                                <select class="form-control" formControlName="roomId">
-                                    <option value="">Select available room</option>
-                                    <option *ngFor="let room of rooms" [value]="room._id">
-                                        {{ room.roomNo }} - {{ room.roomType }} - {{ room.chargesPerDay }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Admitted At</label>
-                                <input class="form-control" type="datetime-local" formControlName="admittedAt">
-                            </div>
-                            <div class="form-group">
-                                <label>Notes</label>
-                                <textarea class="form-control" formControlName="notes"></textarea>
-                            </div>
-                            <button class="btn btn-primary" type="submit" [disabled]="saving">
-                                {{ saving ? 'Saving...' : 'Save Allotment' }}
-                            </button>
-                        </form>
-                    </div>
+        <div class="allotment-layout">
+            <section class="allotment-card allotment-form-card">
+                <div class="allotment-card__head">
+                    <span class="allotment-card__icon"><i class="fa fa-file-text-o" aria-hidden="true"></i></span>
+                    <h2>Allotment Information</h2>
                 </div>
-            </div>
+
+                <form class="allotment-form" [formGroup]="allotmentForm" (ngSubmit)="submitAllotment()">
+                    <div class="allotment-field">
+                        <label for="patientSearch">Search Patient</label>
+                        <div class="patient-search">
+                            <span class="field-leading-icon"><i class="fa fa-search" aria-hidden="true"></i></span>
+                            <input id="patientSearch" class="allotment-input" type="text"
+                                [(ngModel)]="patientSearchQuery" [ngModelOptions]="{ standalone: true }"
+                                placeholder="Name, patient number, or phone"
+                                (keydown.enter)="$event.preventDefault(); lookupPatients()" />
+                            <button class="allotment-btn allotment-btn--primary" type="button"
+                                [disabled]="!canSearchPatients()" (click)="lookupPatients()">
+                                {{ patientLookupLoading ? 'Searching...' : 'Search' }}
+                            </button>
+                        </div>
+                        <small class="field-hint">Search by patient name, patient number, or phone number.</small>
+                    </div>
+
+                    <div class="patient-lookup-panel" *ngIf="patientLookupPerformed && !selectedPatient">
+                        <div class="lookup-empty" *ngIf="matchedPatients.length === 0">
+                            <strong>No patient found</strong>
+                            <span>Try another name, patient number, or phone.</span>
+                            <a class="allotment-btn allotment-btn--ghost" [routerLink]="['/patients/add-patient']"
+                                [queryParams]="addPatientQueryParams">
+                                Add New Patient
+                            </a>
+                        </div>
+
+                        <div class="patient-results" *ngIf="matchedPatients.length > 0">
+                            <button type="button" class="patient-result-card" *ngFor="let patient of matchedPatients"
+                                (click)="selectPatient(patient)">
+                                <div class="patient-result-main">
+                                    <strong>{{ patientName(patient) }}</strong>
+                                    <small>{{ patientSummary(patient) || 'No patient number or phone' }}</small>
+                                </div>
+                                <span class="patient-select-badge">Select</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="selected-patient" *ngIf="selectedPatient">
+                        <div class="selected-patient__avatar">
+                            <i class="fa fa-user" aria-hidden="true"></i>
+                        </div>
+                        <div class="selected-patient__copy">
+                            <span>Selected Patient</span>
+                            <strong>{{ patientName(selectedPatient) }}</strong>
+                            <small>{{ patientSummary(selectedPatient) }}</small>
+                        </div>
+                        <button class="allotment-btn allotment-btn--ghost" type="button"
+                            (click)="clearSelectedPatient()">
+                            Change
+                        </button>
+                    </div>
+
+                    <div class="allotment-field">
+                        <label for="roomId">Room</label>
+                        <div class="select-field">
+                            <span class="field-leading-icon"><i class="fa fa-bed" aria-hidden="true"></i></span>
+                            <select id="roomId" class="allotment-input allotment-select" formControlName="roomId"
+                                (change)="onRoomChange($any($event.target).value)">
+                                <option value="">Select room</option>
+                                <option *ngFor="let room of selectableRooms" [value]="room._id">
+                                    {{ roomOptionLabel(room) }}
+                                </option>
+                            </select>
+                            <span class="field-trailing-icon"><i class="fa fa-chevron-down" aria-hidden="true"></i></span>
+                        </div>
+                        <small class="field-hint" *ngIf="roomsLoading">Loading rooms...</small>
+                        <small class="field-warning" *ngIf="!roomsLoading && rooms.length === 0">
+                            No rooms found. Please add rooms first from Room Allotment &gt; Rooms.
+                        </small>
+                    </div>
+
+                    <div class="allotment-field">
+                        <label for="bedLabel">Bed / Room Label</label>
+                        <input id="bedLabel" class="allotment-input" type="text" formControlName="bedLabel"
+                            placeholder="Bed number or room label" />
+                    </div>
+
+                    <div class="allotment-field">
+                        <label for="admittedAt">Admitted At</label>
+                        <input id="admittedAt" class="allotment-input allotment-input--datetime" type="datetime-local"
+                            formControlName="admittedAt" />
+                    </div>
+
+                    <div class="allotment-field">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" class="allotment-input allotment-textarea" formControlName="notes"
+                            rows="4" placeholder="Enter any additional notes..."></textarea>
+                    </div>
+
+                    <div class="allotment-actions">
+                        <button class="allotment-btn allotment-btn--primary allotment-btn--save" type="submit"
+                            [disabled]="saving || roomsLoading">
+                            <i class="fa fa-save" aria-hidden="true"></i>
+                            {{ saving ? 'Saving...' : 'Save Allotment' }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <aside class="allotment-card allotment-details-card">
+                <div class="allotment-card__head">
+                    <span class="allotment-card__icon"><i class="fa fa-hospital-o" aria-hidden="true"></i></span>
+                    <h2>Room Details</h2>
+                </div>
+
+                <div class="allotment-card__body">
+                    <ng-container *ngIf="selectedRoom; else noRoomSelected">
+                        <div class="room-detail-row">
+                            <span>Room No</span>
+                            <strong>{{ selectedRoom.roomNo }}</strong>
+                        </div>
+                        <div class="room-detail-row">
+                            <span>Ward</span>
+                            <strong>{{ roomWardName(selectedRoom) }}</strong>
+                        </div>
+                        <div class="room-detail-row">
+                            <span>Floor</span>
+                            <strong>{{ roomFloorLabel(selectedRoom) }}</strong>
+                        </div>
+                        <div class="room-detail-row">
+                            <span>Room Type</span>
+                            <strong>{{ roomTypeLabel(selectedRoom.roomType) }}</strong>
+                        </div>
+                        <div class="room-detail-row">
+                            <span>Status</span>
+                            <span class="room-status-badge" [class.is-available]="selectedRoom.status === 'available'"
+                                [class.is-occupied]="selectedRoom.status === 'occupied'"
+                                [class.is-maintenance]="selectedRoom.status === 'maintenance'">
+                                {{ roomStatusLabel(selectedRoom.status) }}
+                            </span>
+                        </div>
+                        <div class="room-detail-row">
+                            <span>Charges / Day</span>
+                            <strong>{{ selectedRoom.chargesPerDay | number:'1.0-0' }}</strong>
+                        </div>
+                        <div class="room-detail-row" *ngIf="allotmentForm.get('bedLabel')?.value">
+                            <span>Bed Label</span>
+                            <strong>{{ allotmentForm.get('bedLabel')?.value }}</strong>
+                        </div>
+                        <div class="room-warning" *ngIf="selectedRoom.status !== 'available'">
+                            This room is {{ roomStatusLabel(selectedRoom.status) }}. Choose another available room before saving.
+                        </div>
+                    </ng-container>
+
+                    <ng-template #noRoomSelected>
+                        <div class="room-empty-state">
+                            <span class="room-empty-state__icon"><i class="fa fa-bed" aria-hidden="true"></i></span>
+                            <strong>No room selected</strong>
+                            <span>Select a room from the form to view ward, floor, type, and charges.</span>
+                        </div>
+                    </ng-template>
+                </div>
+            </aside>
         </div>
     </div>
 </div>

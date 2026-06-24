@@ -236,19 +236,15 @@ export class SettingsComponent implements OnInit {
       return;
     }
 
-    if (file.size > 700 * 1024) {
-      this.toaster.error('Logo image must be under 700 KB.');
-      input.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.hospitalLogoUrl = String(reader.result || '');
-      this.prescriptionShowLogo = true;
-    };
-    reader.onerror = () => this.toaster.error('Unable to read selected logo.');
-    reader.readAsDataURL(file);
+    void this.prepareHospitalLogo(file)
+      .then((dataUrl) => {
+        this.hospitalLogoUrl = dataUrl;
+        this.prescriptionShowLogo = true;
+      })
+      .catch(() => this.toaster.error('Unable to read selected logo.'))
+      .finally(() => {
+        input.value = '';
+      });
   }
 
   clearHospitalLogo(): void {
@@ -386,5 +382,41 @@ export class SettingsComponent implements OnInit {
 
   private linesToTextarea(lines: string[] | null | undefined): string {
     return Array.isArray(lines) ? lines.join('\n') : '';
+  }
+
+  private async prepareHospitalLogo(file: File): Promise<string> {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const maxSide = 1800;
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height, 1));
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement('canvas');
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext('2d');
+      if (!context) {
+        bitmap.close();
+        return this.readFileAsDataUrl(file);
+      }
+
+      context.drawImage(bitmap, 0, 0, width, height);
+      bitmap.close();
+
+      return canvas.toDataURL('image/jpeg', 0.92);
+    } catch {
+      return this.readFileAsDataUrl(file);
+    }
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('read failed'));
+      reader.readAsDataURL(file);
+    });
   }
 }

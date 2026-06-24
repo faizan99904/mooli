@@ -5,6 +5,7 @@ import { BackendService } from '../../../core/services/backend.service';
 import { FormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { User } from '../../../shared/models/hospital.model';
+import { readStoredPermissions, resolveDefaultRoute } from '../../auth/access-control';
 
 @Component({
   selector: 'app-header',
@@ -161,6 +162,10 @@ export class HeaderComponent implements OnInit {
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
+  }
+
+  goHome(): void {
+    this.router.navigateByUrl(resolveDefaultRoute(readStoredPermissions()));
   }
 
   private getStoredUser(): User | null {

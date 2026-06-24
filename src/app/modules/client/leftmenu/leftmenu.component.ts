@@ -18,7 +18,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../core/services/backend.service';
-import { readStoredPermissions } from '../../auth/access-control';
+import { readStoredPermissions, resolveDefaultRoute } from '../../auth/access-control';
 @Component({
   selector: 'app-leftmenu',
   animations: [
@@ -102,6 +102,10 @@ export class LeftmenuComponent implements OnInit, AfterViewInit {
 
   get dashboardRoute(): string {
     return this.isDoctor ? '/doctor-dashboard' : '/';
+  }
+
+  get homeRoute(): string {
+    return resolveDefaultRoute(this.permissions, this.role);
   }
 
   get canViewDoctors(): boolean {
