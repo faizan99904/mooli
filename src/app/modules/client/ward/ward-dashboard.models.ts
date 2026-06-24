@@ -19,6 +19,10 @@ export interface WardKpiCard {
 
 export interface WardBed {
   bedNo: string;
+  roomId?: string;
+  patientId?: string;
+  wardName?: string;
+  galleryName?: string;
   patientName?: string;
   age?: number;
   sex?: 'M' | 'F';
@@ -28,11 +32,19 @@ export interface WardBed {
   alertType?: WardBedAlertType;
 }
 
+export interface WardBedMenuAction {
+  key: string;
+  label: string;
+  icon: string;
+}
+
 export interface WardSection {
   sectionName: string;
   subtitle: string;
   beds: WardBed[];
 }
+
+export type WardRoomStatusFilter = 'all' | 'available' | 'occupied' | 'maintenance';
 
 export interface TodaySummaryRow {
   label: string;

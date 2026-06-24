@@ -3,12 +3,13 @@
     <div class="ward-page-header ward-page-header--compact">
       <div class="ward-page-header__copy">
         <h1>Ward Admin Dashboard</h1>
-        <p>{{ filters.ward }} overview · {{ selectedShiftLabel }}</p>
+        <p>{{ dashboardSubtitle }}</p>
       </div>
       <div class="ward-page-header__actions">
         <label class="ward-header-filter">
           <span>Ward</span>
           <select [(ngModel)]="filters.ward" (ngModelChange)="onWardChange()">
+            <option value="">All Wards</option>
             <option *ngFor="let ward of wardOptions" [value]="ward">{{ ward }}</option>
           </select>
         </label>
@@ -22,8 +23,9 @@
             <option *ngFor="let shift of shiftOptions" [value]="shift.value">{{ shift.label }}</option>
           </select>
         </label>
-        <button type="button" class="btn btn-sm btn-primary ward-refresh-btn" (click)="refresh()" [disabled]="loading">
+        <button type="button" class="btn btn-sm ward-refresh-btn" (click)="refresh()" [disabled]="loading">
           <i class="fa" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-refresh'"></i>
+          Refresh
         </button>
       </div>
     </div>
@@ -34,49 +36,136 @@
         <span class="ward-kpi-card__copy">
           <strong>{{ card.value }}</strong>
           <small>{{ card.label }}</small>
+          <em *ngIf="card.percent != null">{{ card.percent }}%</em>
         </span>
       </article>
     </section>
 
     <div class="ward-overview-layout">
-      <section class="ward-panel ward-bed-panel">
-        <div class="ward-panel__head">
+      <section class="ward-panel ward-bed-panel" [class.is-loading]="loading">
+        <div class="ward-panel__head ward-bed-panel__head">
           <div>
             <h2>{{ bedOverviewTitle }}</h2>
             <p>{{ selectedShiftLabel }}</p>
           </div>
-          <button type="button" class="btn btn-sm btn-outline-primary" (click)="navigateTo('/ward/bed-management')">Bed Management</button>
+          <button type="button" class="btn btn-sm ward-bed-mgmt-btn" (click)="navigateTo('/ward/bed-management')">
+            Bed Management
+          </button>
         </div>
 
-        <div class="ward-section" *ngFor="let section of bedSections">
-          <div class="ward-section__head">
-            <h3>{{ section.sectionName }}</h3>
-            <span>{{ section.subtitle }} · {{ section.beds.length }} beds</span>
-          </div>
-          <div class="ward-bed-grid">
-            <button
-              type="button"
-              class="ward-bed-card"
-              *ngFor="let bed of section.beds"
-              [ngClass]="bedStatusClass(bed.status)"
-              (click)="onBedClick(bed)"
-            >
-              <div class="ward-bed-card__top">
-                <strong>{{ bed.bedNo }}</strong>
-                <span class="ward-bed-card__alert" *ngIf="bed.alertType === 'warning'"><i class="fa fa-info-circle"></i></span>
-                <span class="ward-bed-card__alert ward-bed-card__alert--critical" *ngIf="bed.alertType === 'critical'"><i class="fa fa-exclamation-triangle"></i></span>
+        <div class="ward-bed-status-bar">
+          <button
+            type="button"
+            class="ward-status-chip"
+            [class.is-active]="statusFilter === 'all'"
+            (click)="onStatusFilterChange('all')"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="ward-status-chip"
+            [class.is-active]="statusFilter === 'available'"
+            (click)="onStatusFilterChange('available')"
+          >
+            <span class="ward-status-chip__dot ward-status-chip__dot--available"></span>
+            Available
+          </button>
+          <button
+            type="button"
+            class="ward-status-chip"
+            [class.is-active]="statusFilter === 'occupied'"
+            (click)="onStatusFilterChange('occupied')"
+          >
+            <span class="ward-status-chip__dot ward-status-chip__dot--occupied"></span>
+            Occupied
+          </button>
+          <button
+            type="button"
+            class="ward-status-chip"
+            [class.is-active]="statusFilter === 'maintenance'"
+            (click)="onStatusFilterChange('maintenance')"
+          >
+            <i class="fa fa-wrench"></i>
+            Maintenance
+          </button>
+        </div>
+
+        <div class="ward-bed-panel__body">
+          <ng-container *ngIf="filteredBedSections.length; else emptyBeds">
+            <div class="ward-section" *ngFor="let section of filteredBedSections; trackBy: trackBySectionName">
+              <div class="ward-section__head">
+                <h3>{{ section.sectionName }}</h3>
+                <span>{{ section.subtitle }} · {{ section.beds.length }} beds</span>
               </div>
-              <ng-container *ngIf="bed.status === 'occupied'; else emptyBed">
-                <h4>{{ bed.patientName }}</h4>
-                <p>{{ bed.age }} / {{ bed.sex }}</p>
-                <div class="ward-bed-card__nurse"><i class="fa fa-user-md"></i> {{ bed.nurseName }}</div>
-              </ng-container>
-              <ng-template #emptyBed>
-                <h4>{{ bedStatusLabel(bed) }}</h4>
-              </ng-template>
-              <span class="ward-bed-card__badge">{{ bedStatusLabel(bed) }}</span>
-            </button>
-          </div>
+
+              <div class="ward-bed-grid">
+                <div
+                  class="ward-bed-card"
+                  *ngFor="let bed of section.beds; trackBy: trackByBedKey"
+                  [ngClass]="bedStatusClass(bed.status)"
+                  [class.ward-bed-card--menu-open]="isBedMenuOpen(bed)"
+                  (click)="onBedClick(bed, $event)"
+                >
+                  <div class="ward-bed-card__top">
+                    <strong>{{ bed.bedNo }}</strong>
+                    <div class="ward-bed-card__menu-wrap">
+                      <button
+                        type="button"
+                        class="ward-bed-card__menu"
+                        title="More actions"
+                        (mousedown)="$event.stopPropagation()"
+                        (click)="toggleBedMenu(bed, $event)"
+                        aria-label="Bed actions"
+                        aria-haspopup="menu"
+                        [attr.aria-expanded]="isBedMenuOpen(bed)"
+                      >
+                        <i class="fa fa-ellipsis-v"></i>
+                      </button>
+                      <div
+                        class="ward-bed-card__dropdown"
+                        [class.ward-bed-card__dropdown--up]="menuOpensUp(bed)"
+                        *ngIf="isBedMenuOpen(bed)"
+                        role="menu"
+                        (mousedown)="$event.stopPropagation()"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <button
+                          type="button"
+                          role="menuitem"
+                          *ngFor="let action of activeMenuActions(bed); trackBy: trackByMenuAction"
+                          (click)="onBedMenuAction(action.key, bed, $event)"
+                        >
+                          <i class="fa" [ngClass]="action.icon"></i>
+                          {{ action.label }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <ng-container *ngIf="bed.status === 'occupied' || bed.status === 'critical'; else emptyBed">
+                    <h4>{{ bed.patientName || 'Occupied' }}</h4>
+                    <p *ngIf="patientMeta(bed)">{{ patientMeta(bed) }}</p>
+                    <div class="ward-bed-card__nurse" *ngIf="bed.nurseName">
+                      <i class="fa fa-user-md"></i> {{ bed.nurseName }}
+                    </div>
+                  </ng-container>
+
+                  <ng-template #emptyBed>
+                    <h4>{{ bedStatusLabel(bed) }}</h4>
+                  </ng-template>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <ng-template #emptyBeds>
+            <div class="ward-bed-empty">
+              <i class="fa fa-bed"></i>
+              <strong>No beds found</strong>
+              <p>Try changing ward or status filter.</p>
+            </div>
+          </ng-template>
         </div>
       </section>
 
@@ -98,32 +187,28 @@
           <div class="ward-panel__head"><h2>Nursing Summary</h2></div>
           <ul class="ward-summary-list ward-summary-list--nursing">
             <li *ngFor="let row of nursingSummary">
-              <span><i class="nursing-dot" [ngClass]="nursingToneClass(row.tone)"></i>{{ row.label }}</span>
+              <span><i class="nursing-dot nursing-dot--{{ row.tone }}"></i>{{ row.label }}</span>
               <strong>{{ row.value }}</strong>
             </li>
           </ul>
           <button type="button" class="ward-link-btn" (click)="navigateTo('/ward/nurses-staff')">View Nurse Roster</button>
         </section>
-
-        <section class="ward-panel ward-summary-card">
-          <div class="ward-panel__head"><h2>Ward Hierarchy</h2></div>
-          <div class="ward-hierarchy-tree ward-hierarchy-tree--compact">
-            <div class="ward-hierarchy-node ward-hierarchy-node--level-1"><i class="fa fa-hospital-o"></i><span>Main Hospital</span></div>
-            <div class="ward-hierarchy-node ward-hierarchy-node--level-2"><i class="fa fa-building"></i><span>Floor 2 — Paediatrics</span></div>
-            <div class="ward-hierarchy-node ward-hierarchy-node--level-3"><i class="fa fa-heartbeat"></i><span>Peads Ward</span></div>
-            <div class="ward-hierarchy-node ward-hierarchy-node--level-4"><i class="fa fa-th-large"></i><span>Gallery A — Male</span></div>
-            <div class="ward-hierarchy-node ward-hierarchy-node--level-5"><i class="fa fa-bed"></i><span>Room 101</span></div>
-          </div>
-        </section>
       </aside>
     </div>
 
-    <section class="ward-kpi-grid ward-monitor-grid">
-      <button type="button" class="ward-kpi-card" *ngFor="let card of monitoringCards" [ngClass]="'ward-kpi-card--' + card.tone" (click)="navigateTo(card.route)">
-        <span class="ward-kpi-card__icon"><i class="fa" [ngClass]="card.icon"></i></span>
-        <span class="ward-kpi-card__copy">
-          <strong>{{ card.value }}</strong>
+    <section class="ward-monitor-grid">
+      <button
+        type="button"
+        class="ward-monitor-card"
+        *ngFor="let card of monitoringCards"
+        [ngClass]="'ward-monitor-card--' + card.tone"
+        (click)="navigateTo(card.route)"
+      >
+        <span class="ward-monitor-card__icon"><i class="fa" [ngClass]="card.icon"></i></span>
+        <span class="ward-monitor-card__copy">
           <small>{{ card.label }}</small>
+          <strong>{{ card.value }}</strong>
+          <em>{{ card.actionLabel }}</em>
         </span>
       </button>
     </section>

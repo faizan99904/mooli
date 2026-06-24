@@ -278,40 +278,120 @@ export function mapRoomToDashboardBed(room: Room, allotment?: RoomAllotment | nu
   };
 }
 
-export function buildDashboardSections(rooms: Room[], allotments: RoomAllotment[]): WardSection[] {
+export function buildDashboardSections(
+  rooms: Room[],
+  allotments: RoomAllotment[],
+  wards: HospitalWard[] = []
+): WardSection[] {
+  const wardNameById = new Map(wards.map((ward) => [String(ward._id), ward.name]));
   const grouped = new Map<string, WardBed[]>();
+  const sectionMeta = new Map<string, { sectionName: string; subtitle: string; sortKey: string }>();
+
+  const resolveWardName = (room: Room): string => {
+    if (room.ward?.name) {
+      return room.ward.name;
+    }
+
+    const wardId = String(room.wardId || room.ward?._id || '').trim();
+    if (wardId && wardNameById.has(wardId)) {
+      return wardNameById.get(wardId) || wardNameFromRoom(room);
+    }
+
+    return wardNameFromRoom(room);
+  };
 
   rooms.forEach((room) => {
     const allotment = allotments.find((item) => item.roomId === room._id && item.status === 'admitted');
-    const sectionName = wardNameFromRoom(room);
-    const beds = grouped.get(sectionName) || [];
-    beds.push(mapRoomToDashboardBed(room, allotment));
-    grouped.set(sectionName, beds);
+    const wardName = resolveWardName(room);
+    const gallery = galleryLabelFromRoom(room);
+    const groupKey = `${wardName}::${gallery}`;
+    const beds = grouped.get(groupKey) || [];
+
+    beds.push({
+      ...mapRoomToDashboardBed(room, allotment),
+      roomId: room._id,
+      patientId: allotment?.patientId || allotment?.patient?._id,
+      wardName,
+      galleryName: gallery,
+    });
+    grouped.set(groupKey, beds);
+
+    if (!sectionMeta.has(groupKey)) {
+      sectionMeta.set(groupKey, {
+        sectionName: gallery,
+        subtitle: wardName,
+        sortKey: `${wardName}|${gallery}`,
+      });
+    }
   });
 
-  return Array.from(grouped.entries()).map(([sectionName, beds]) => ({
-    sectionName,
-    subtitle: galleryLabelFromRoom(rooms.find((room) => wardNameFromRoom(room) === sectionName)),
-    beds,
-  }));
+  return Array.from(grouped.entries())
+    .map(([groupKey, beds]) => {
+      const meta = sectionMeta.get(groupKey)!;
+      return {
+        sectionName: meta.sectionName,
+        subtitle: meta.subtitle,
+        beds: beds.sort((left, right) =>
+          left.bedNo.localeCompare(right.bedNo, undefined, { numeric: true })
+        ),
+        sortKey: meta.sortKey,
+      };
+    })
+    .sort((left, right) => left.sortKey.localeCompare(right.sortKey))
+    .map(({ sectionName, subtitle, beds }) => ({ sectionName, subtitle, beds }));
 }
 
 export function buildDashboardKpis(rooms: Room[], allotments: RoomAllotment[]): WardKpiCard[] {
   const admitted = allotments.filter((item) => item.status === 'admitted').length;
-  const total = rooms.length;
+  const total = rooms.length || 1;
+  const occupied = rooms.filter((room) => room.status === 'occupied').length || admitted;
   const available = rooms.filter((room) => room.status === 'available').length;
   const maintenance = rooms.filter((room) => room.status === 'maintenance').length;
-  const occupied = rooms.filter((room) => room.status === 'occupied').length;
+  const onHold = 0;
+  const cleaning = 0;
 
   return [
-    { key: 'total', label: 'Total Beds', value: total, icon: 'fa-bed', tone: 'blue' },
-    { key: 'occupied', label: 'Occupied Beds', value: occupied || admitted, percent: total ? Math.round(((occupied || admitted) / total) * 100) : 0, icon: 'fa-user', tone: 'green' },
-    { key: 'available', label: 'Available Beds', value: available, percent: total ? Math.round((available / total) * 100) : 0, icon: 'fa-check-circle', tone: 'blue' },
-    { key: 'maintenance', label: 'Maintenance', value: maintenance, percent: total ? Math.round((maintenance / total) * 100) : 0, icon: 'fa-wrench', tone: 'red' },
-    { key: 'admitted', label: 'Admitted Patients', value: admitted, icon: 'fa-users', tone: 'teal' },
-    { key: 'alerts', label: 'Ward Records', value: admitted, icon: 'fa-file-text-o', tone: 'purple' },
-    { key: 'nurses', label: 'Rooms Occupied', value: occupied, icon: 'fa-hospital-o', tone: 'teal' },
-    { key: 'critical', label: 'Critical Alerts', value: 0, icon: 'fa-exclamation-triangle', tone: 'red' },
+    { key: 'total', label: 'Total Beds', value: rooms.length, icon: 'fa-bed', tone: 'blue' },
+    {
+      key: 'occupied',
+      label: 'Occupied',
+      value: occupied,
+      percent: Math.round((occupied / total) * 100),
+      icon: 'fa-user',
+      tone: 'green',
+    },
+    {
+      key: 'available',
+      label: 'Available',
+      value: available,
+      percent: Math.round((available / total) * 100),
+      icon: 'fa-check-circle',
+      tone: 'blue',
+    },
+    {
+      key: 'on_hold',
+      label: 'On Hold',
+      value: onHold,
+      percent: Math.round((onHold / total) * 100),
+      icon: 'fa-pause-circle',
+      tone: 'amber',
+    },
+    {
+      key: 'cleaning',
+      label: 'Cleaning',
+      value: cleaning,
+      percent: Math.round((cleaning / total) * 100),
+      icon: 'fa-shower',
+      tone: 'purple',
+    },
+    {
+      key: 'maintenance',
+      label: 'Maintenance',
+      value: maintenance,
+      percent: Math.round((maintenance / total) * 100),
+      icon: 'fa-wrench',
+      tone: 'red',
+    },
   ];
 }
 

@@ -6,7 +6,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { BackendService } from '../../../../core/services/backend.service';
@@ -29,7 +29,8 @@ export class AddAllotmentComponent implements OnInit {
     private fb: FormBuilder,
     private backend: BackendService,
     private toastr: ToastrService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     this.allotmentForm = this.fb.group({
       patientId: ['', Validators.required],
@@ -47,7 +48,13 @@ export class AddAllotmentComponent implements OnInit {
       error: () => (this.patients = []),
     });
     this.backend.getRooms({ limit: 100, status: 'available' }).subscribe({
-      next: (result) => (this.rooms = result.items),
+      next: (result) => {
+        this.rooms = result.items;
+        const roomId = String(this.route.snapshot.queryParamMap.get('roomId') || '').trim();
+        if (roomId && this.rooms.some((room) => room._id === roomId)) {
+          this.allotmentForm.patchValue({ roomId });
+        }
+      },
       error: () => (this.rooms = []),
     });
   }

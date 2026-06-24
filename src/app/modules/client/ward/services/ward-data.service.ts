@@ -301,15 +301,25 @@ export class WardDataService {
   }
 
   loadDashboard(wardFilter = ''): Observable<WardDashboardData> {
-    return this.loadClinicalBundle().pipe(
-      map((bundle) => {
-        const rooms = bundle.rooms.filter((room) => matchesWardFilter(room, wardFilter));
-        const allotments = bundle.allotments.filter((item) => matchesWardFilter(item.room, wardFilter));
-        const admittedCount = allotments.length;
+    return forkJoin({
+      bundle: this.loadClinicalBundle(),
+      hospitalWards: this.safeList(this.backend.getHospitalWards({ limit: 100 })),
+    }).pipe(
+      map(({ bundle, hospitalWards }) => {
+        const wards = normalizeHospitalWardRecords(hospitalWards.items);
+        const allRooms = bundle.rooms;
+        const allAllotments = bundle.allotments;
+        const scopedRooms = wardFilter
+          ? allRooms.filter((room) => matchesWardFilter(room, wardFilter, wards))
+          : allRooms;
+        const scopedAllotments = wardFilter
+          ? allAllotments.filter((item) => matchesWardFilter(item.room, wardFilter, wards))
+          : allAllotments;
+        const admittedCount = scopedAllotments.filter((item) => item.status === 'admitted').length;
 
         return {
-          kpiCards: buildDashboardKpis(rooms, allotments),
-          bedSections: buildDashboardSections(rooms, allotments),
+          kpiCards: buildDashboardKpis(scopedRooms, scopedAllotments),
+          bedSections: buildDashboardSections(allRooms, allAllotments, wards),
           todaySummary: [
             { label: 'Admitted Patients', value: admittedCount, route: '/ward/patient-list' },
             { label: 'Ward Records', value: bundle.history.length, route: '/ward-admin' },
@@ -329,7 +339,7 @@ export class WardDataService {
             { key: 'tasks', label: 'Nursing Notes', value: bundle.history.length, actionLabel: 'View Tasks', route: '/ward/nursing-care', icon: 'fa-tasks', tone: 'amber' },
             { key: 'alerts', label: 'Lab Orders', value: bundle.labOrders.length, actionLabel: 'View Alerts', route: '/ward/reports', icon: 'fa-exclamation-triangle', tone: 'red' },
           ],
-          wardOptions: getWardOptionsFromRooms(bundle.rooms),
+          wardOptions: getWardOptionsFromRooms(allRooms, wards),
         };
       })
     );
