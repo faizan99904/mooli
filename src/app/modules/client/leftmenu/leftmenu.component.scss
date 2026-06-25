@@ -2,6 +2,22 @@
   left: none !important;
 }
 
+#left-sidebar.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: visible;
+}
+
+#left-sidebar .menu_toggle {
+  position: absolute;
+  z-index: 100000;
+}
+
+#left-sidebar .navbar-brand {
+  flex-shrink: 0;
+}
+
 .menu_toggle {
   color: white;
 }
@@ -26,7 +42,30 @@
 .sidebar-account-action {
   border-top: 1px solid rgba(23, 25, 28, 0.08);
   margin-top: 8px;
+  margin-bottom: 18px;
   padding-top: 8px;
+  padding-bottom: 10px;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  height: auto !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 56px;
+  scroll-padding-bottom: 32px;
+  box-sizing: border-box;
+}
+
+#main-menu {
+  padding-bottom: 24px;
+}
+
+#main-menu > li.sidebar-account-action a {
+  align-items: center;
+  display: flex;
+  min-height: 40px;
 }
 
 .password-modal-backdrop {

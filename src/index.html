@@ -36,8 +36,14 @@
     }
 
     .sidebar-scroll {
-      height: calc(100vh - 65px);
-      overflow: auto;
+      flex: 1;
+      min-height: 0;
+      height: auto;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 56px;
+      box-sizing: border-box;
+      scroll-padding-bottom: 32px;
     }
 
     ::-webkit-scrollbar {
