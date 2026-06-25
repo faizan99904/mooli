@@ -21,6 +21,7 @@ export interface WardKpiCard {
 }
 
 export interface WardBed {
+  id?: string;
   bedNo: string;
   roomId?: string;
   roomNo?: string;

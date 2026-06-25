@@ -20,6 +20,8 @@ import {
 } from './ward-dashboard.models';
 import { WardDataService } from './services/ward-data.service';
 
+type ManageableBedStatus = 'available' | 'on_hold' | 'cleaning' | 'maintenance';
+
 @Component({
   selector: 'app-ward-dashboard',
   imports: [CommonModule, FormsModule],
@@ -41,6 +43,7 @@ export class WardDashboardComponent implements OnInit {
   statusFilter: WardRoomStatusFilter = 'all';
   bedSearchQuery = '';
   activeBedMenu: { key: string; bed: WardBed; actions: WardBedMenuAction[]; opensUp: boolean } | null = null;
+  savingBedStatusKey: string | null = null;
 
   readonly shiftOptions = [
     { value: 'day', label: 'Day Shift (08 AM - 02 PM)' },
@@ -164,6 +167,7 @@ export class WardDashboardComponent implements OnInit {
 
     void this.router.navigate(['/ward/bed-management'], {
       queryParams: {
+        bedId: bed.id || undefined,
         roomId: bed.roomId || undefined,
         bedNo: bed.bedNo,
       },
@@ -234,7 +238,7 @@ export class WardDashboardComponent implements OnInit {
   }
 
   bedMenuKey(bed: WardBed): string {
-    return String(bed.roomId || bed.bedNo);
+    return String(bed.id || `${bed.roomId || ''}:${bed.bedNo}`);
   }
 
   private buildBedMenuActions(bed: WardBed): WardBedMenuAction[] {
@@ -282,6 +286,7 @@ export class WardDashboardComponent implements OnInit {
     this.activeBedMenu = null;
 
     const query = {
+      bedId: bed.id || undefined,
       admissionId: bed.admissionId || undefined,
       patientId: bed.patientId || undefined,
       patientName: bed.patientName || undefined,
@@ -295,22 +300,20 @@ export class WardDashboardComponent implements OnInit {
         void this.router.navigate(['/room-allotment/add-alloted-rooms'], { queryParams: query });
         return;
       case 'reserve_bed':
+        this.updateBedStatusFromDashboard(bed, 'on_hold');
+        return;
       case 'mark_cleaning':
+        this.updateBedStatusFromDashboard(bed, 'cleaning');
+        return;
       case 'maintenance':
+        this.updateBedStatusFromDashboard(bed, 'maintenance');
+        return;
       case 'mark_available':
+        this.updateBedStatusFromDashboard(bed, 'available');
+        return;
       case 'bed_details':
         void this.router.navigate(['/ward/bed-management'], {
-          queryParams: {
-            ...query,
-            status:
-              action === 'maintenance'
-                ? 'maintenance'
-                : action === 'mark_available'
-                  ? 'available'
-                  : action === 'mark_cleaning'
-                    ? 'cleaning'
-                    : undefined,
-          },
+          queryParams: query,
         });
         return;
       case 'view_chart':
@@ -341,6 +344,77 @@ export class WardDashboardComponent implements OnInit {
       default:
         return;
     }
+  }
+
+  private updateBedStatusFromDashboard(bed: WardBed, status: ManageableBedStatus): void {
+    if (this.savingBedStatusKey) {
+      return;
+    }
+
+    if (this.isOccupiedBed(bed)) {
+      this.toastr.error('Occupied beds cannot be marked from dashboard.');
+      return;
+    }
+
+    if (!bed.roomId) {
+      this.toastr.error('Room information is missing for this bed.');
+      return;
+    }
+
+    if (bed.status === status) {
+      this.toastr.info(`Bed is already ${this.formatStatusLabel(status)}.`);
+      return;
+    }
+
+    const payload = {
+      status,
+      notes: `Marked ${this.formatStatusLabel(status)} from ward dashboard.`,
+    };
+    const request$ = this.isPersistedBedId(bed.id)
+      ? this.wardData.updateWardBed(bed.id!, payload)
+      : this.wardData.createWardBed({
+          roomId: bed.roomId,
+          bedNo: bed.bedNo,
+          bedType: status === 'maintenance' ? 'standard' : this.bedTypeFromRoomType(bed.roomType),
+          status,
+          notes: payload.notes,
+        });
+
+    this.savingBedStatusKey = this.bedMenuKey(bed);
+    request$.subscribe({
+      next: () => {
+        this.toastr.success(`Bed marked ${this.formatStatusLabel(status)}.`);
+        this.savingBedStatusKey = null;
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.savingBedStatusKey = null;
+        this.toastr.error(err?.error?.message || 'Failed to update bed status.');
+      },
+    });
+  }
+
+  private isPersistedBedId(value: string | null | undefined): boolean {
+    return /^[a-f\d]{24}$/i.test(String(value || '').trim());
+  }
+
+  private formatStatusLabel(status: ManageableBedStatus): string {
+    const labels: Record<ManageableBedStatus, string> = {
+      available: 'Available',
+      on_hold: 'On Hold',
+      cleaning: 'Cleaning',
+      maintenance: 'Maintenance',
+    };
+    return labels[status];
+  }
+
+  private bedTypeFromRoomType(roomType?: string): string {
+    const value = String(roomType || '').toLowerCase();
+    return value.includes('icu')
+      ? 'icu'
+      : value.includes('isolation')
+        ? 'isolation'
+        : 'standard';
   }
 
   @HostListener('document:click', ['$event'])

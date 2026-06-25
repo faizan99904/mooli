@@ -222,13 +222,36 @@ export class WardDataService {
         });
 
         const roomIds = new Set(allRooms.map((room) => String(room._id)));
+        const admittedAllotments = allotments.items.filter((item) => item.status === 'admitted');
+        const claimedLegacyAllotments = new Set<string>();
+        const findAllotmentForBed = (bed: Record<string, unknown>): RoomAllotment | undefined => {
+          const bedId = normalizeEntityId(bed['_id']);
+          const roomId = String(bed['roomId'] || '');
+          const direct = admittedAllotments.find((item) => normalizeEntityId(item.bedId) === bedId);
+          if (direct) {
+            return direct;
+          }
+
+          const legacyInRoom = admittedAllotments.filter(
+            (item) =>
+              !normalizeEntityId(item.bedId) &&
+              String(item.roomId) === roomId &&
+              !claimedLegacyAllotments.has(normalizeEntityId(item._id))
+          );
+          const bedNo = String(bed['bedNo'] || '');
+          const legacy =
+            legacyInRoom.find((item) => String(item.bedLabel || '') === bedNo) ||
+            legacyInRoom[0];
+          if (legacy) {
+            claimedLegacyAllotments.add(normalizeEntityId(legacy._id));
+          }
+          return legacy;
+        };
         const apiBedsByRoom = new Map<string, WardBedRecord[]>();
         wardBeds.items
           .filter((bed) => roomIds.has(String(bed['roomId'])))
           .forEach((bed) => {
-            const allotment = allotments.items.find(
-              (item) => item.roomId === bed['roomId'] && item.status === 'admitted'
-            );
+            const allotment = findAllotmentForBed(bed);
             const record = mapWardApiBedToRecord(bed, allotment);
             const roomKey = String(record.roomId);
             const group = apiBedsByRoom.get(roomKey) || [];
@@ -242,8 +265,8 @@ export class WardDataService {
             return persisted;
           }
 
-          const allotment = allotments.items.find(
-            (item) => item.roomId === room._id && item.status === 'admitted'
+          const allotment = admittedAllotments.find(
+            (item) => item.roomId === room._id && !normalizeEntityId(item.bedId)
           );
           return [mapRoomToWardBed(room, allotment)];
         });
@@ -338,10 +361,14 @@ export class WardDataService {
 
         const dashboardRooms = wardFilter ? scopedRooms : allRooms;
         const dashboardAllotments = wardFilter ? scopedAllotments : allAllotments;
+        const dashboardRoomIds = new Set(dashboardRooms.map((room) => String(room._id)));
+        const dashboardWardBeds = bundle.wardBeds.filter((bed) =>
+          dashboardRoomIds.has(normalizeEntityId(bed['roomId']) || normalizeEntityId((bed['room'] as Record<string, unknown> | undefined)?.['_id']))
+        );
 
         return {
-          kpiCards: buildDashboardKpis(dashboardRooms, dashboardAllotments, bundleContext),
-          bedSections: buildDashboardSections(dashboardRooms, dashboardAllotments, wards, bundleContext),
+          kpiCards: buildDashboardKpis(dashboardRooms, dashboardAllotments, bundleContext, dashboardWardBeds),
+          bedSections: buildDashboardSections(dashboardRooms, dashboardAllotments, wards, bundleContext, dashboardWardBeds),
           todaySummary: [
             { label: 'Admitted Patients', value: admittedCount, route: '/ward/patient-list' },
             { label: 'Medicine Due', value: bundle.prescriptions.reduce((total, item) => total + (item.medicines?.length || 0), 0), route: '/ward/mar' },

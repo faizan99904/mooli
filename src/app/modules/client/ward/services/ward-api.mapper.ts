@@ -471,15 +471,49 @@ export function mapRoomToDashboardBed(
   };
 }
 
+function roomIdFromWardBed(bed: Record<string, unknown>): string {
+  return normalizeEntityId(bed['roomId']) || normalizeEntityId((bed['room'] as Record<string, unknown> | undefined)?.['_id']);
+}
+
+function mapWardApiBedToDashboardBed(
+  bedRecord: Record<string, unknown>,
+  room: Room,
+  allotment?: RoomAllotment | null,
+  context?: WardDashboardBundleContext
+): WardBed {
+  const bed = mapRoomToDashboardBed(
+    {
+      ...room,
+      status: bedRecord['status'] === 'maintenance' ? 'maintenance' : room.status,
+    },
+    allotment,
+    context
+  );
+  const rawStatus = String(bedRecord['status'] || 'available');
+  const persistedStatus = (rawStatus === 'blocked' ? 'on_hold' : rawStatus) as WardBed['status'];
+
+  return {
+    ...bed,
+    id: normalizeEntityId(bedRecord['_id']) || undefined,
+    bedNo: String(bedRecord['bedNo'] || bed.bedNo),
+    status: allotment?.status === 'admitted' ? bed.status : persistedStatus,
+  };
+}
+
 export function buildDashboardSections(
   rooms: Room[],
   allotments: RoomAllotment[],
   wards: HospitalWard[] = [],
-  context?: WardDashboardBundleContext
+  context?: WardDashboardBundleContext,
+  wardBeds: Record<string, unknown>[] = []
 ): WardSection[] {
   const wardNameById = new Map(wards.map((ward) => [String(ward._id), ward.name]));
   const grouped = new Map<string, WardBed[]>();
   const sectionMeta = new Map<string, { sectionName: string; subtitle: string; sortKey: string }>();
+  const roomsById = new Map(rooms.map((room) => [String(room._id), room]));
+  const persistedRoomIds = new Set<string>();
+  const admittedAllotments = allotments.filter((item) => item.status === 'admitted');
+  const claimedLegacyAllotments = new Set<string>();
 
   const resolveWardName = (room: Room): string => {
     if (room.ward?.name) {
@@ -494,15 +528,14 @@ export function buildDashboardSections(
     return wardNameFromRoom(room);
   };
 
-  rooms.forEach((room) => {
-    const allotment = allotments.find((item) => item.roomId === room._id && item.status === 'admitted');
+  const addBed = (room: Room, bed: WardBed, allotment?: RoomAllotment | null): void => {
     const wardName = resolveWardName(room);
     const gallery = galleryLabelFromRoom(room);
     const groupKey = `${wardName}::${gallery}`;
     const beds = grouped.get(groupKey) || [];
 
     beds.push({
-      ...mapRoomToDashboardBed(room, allotment, context),
+      ...bed,
       roomId: room._id,
       patientId: allotment ? resolveAllotmentPatientId(allotment) : undefined,
       wardName,
@@ -517,6 +550,41 @@ export function buildDashboardSections(
         sortKey: `${wardName}|${gallery}`,
       });
     }
+  };
+
+  wardBeds.forEach((bedRecord) => {
+    const roomId = roomIdFromWardBed(bedRecord);
+    const room = roomsById.get(roomId);
+    if (!room) {
+      return;
+    }
+
+    persistedRoomIds.add(roomId);
+
+    const bedId = normalizeEntityId(bedRecord['_id']);
+    const directAllotment = admittedAllotments.find((item) => normalizeEntityId(item.bedId) === bedId);
+    const legacyAllotment = directAllotment
+      ? undefined
+      : admittedAllotments.find((item) => {
+          const allotmentId = normalizeEntityId(item._id);
+          return !normalizeEntityId(item.bedId) &&
+            String(item.roomId) === roomId &&
+            !claimedLegacyAllotments.has(allotmentId) &&
+            (String(item.bedLabel || '') === String(bedRecord['bedNo'] || '') || !item.bedLabel);
+        });
+    const allotment = directAllotment || legacyAllotment;
+    if (legacyAllotment) {
+      claimedLegacyAllotments.add(normalizeEntityId(legacyAllotment._id));
+    }
+
+    addBed(room, mapWardApiBedToDashboardBed(bedRecord, room, allotment, context), allotment);
+  });
+
+  rooms
+    .filter((room) => !persistedRoomIds.has(String(room._id)))
+    .forEach((room) => {
+      const allotment = allotments.find((item) => item.roomId === room._id && item.status === 'admitted');
+      addBed(room, mapRoomToDashboardBed(room, allotment, context), allotment);
   });
 
   return Array.from(grouped.entries())
@@ -538,14 +606,24 @@ export function buildDashboardSections(
 export function buildDashboardKpis(
   rooms: Room[],
   allotments: RoomAllotment[],
-  context?: WardDashboardBundleContext
+  context?: WardDashboardBundleContext,
+  wardBeds: Record<string, unknown>[] = []
 ): WardKpiCard[] {
   const admitted = allotments.filter((item) => item.status === 'admitted');
-  const total = rooms.length || 1;
+  const roomIdsWithBeds = new Set(wardBeds.map((bed) => roomIdFromWardBed(bed)).filter(Boolean));
+  const fallbackRooms = rooms.filter((room) => !roomIdsWithBeds.has(String(room._id)));
+  const totalBeds = wardBeds.length + fallbackRooms.length;
+  const total = totalBeds || 1;
   const occupied = admitted.length || rooms.filter((room) => room.status === 'occupied').length;
-  const available = rooms.filter((room) => room.status === 'available' && !admitted.some((item) => item.roomId === room._id)).length;
-  const maintenance = rooms.filter((room) => room.status === 'maintenance').length;
-  const cleaning = rooms.filter((room) => room.status === 'available' && admitted.some((item) => item.roomId === room._id && item.dischargedAt)).length;
+  const available =
+    wardBeds.filter((bed) => bed['status'] === 'available').length +
+    fallbackRooms.filter((room) => room.status === 'available' && !admitted.some((item) => item.roomId === room._id)).length;
+  const maintenance =
+    wardBeds.filter((bed) => bed['status'] === 'maintenance').length +
+    fallbackRooms.filter((room) => room.status === 'maintenance').length;
+  const cleaning =
+    wardBeds.filter((bed) => bed['status'] === 'cleaning').length +
+    fallbackRooms.filter((room) => room.status === 'available' && admitted.some((item) => item.roomId === room._id && item.dischargedAt)).length;
 
   let critical = 0;
   let dischargePending = 0;
@@ -569,7 +647,7 @@ export function buildDashboardKpis(
   }
 
   return [
-    { key: 'total', label: 'Total Beds', value: rooms.length, icon: 'fa-bed', tone: 'blue', route: '/ward/bed-management' },
+    { key: 'total', label: 'Total Beds', value: totalBeds, icon: 'fa-bed', tone: 'blue', route: '/ward/bed-management' },
     {
       key: 'occupied',
       label: 'Occupied',

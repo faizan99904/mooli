@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import {
@@ -22,7 +22,15 @@ import {
   normalizeWardFloorRecord,
 } from './services/ward-api.mapper';
 
-type ActiveModal = 'ward' | 'floor' | 'room' | 'bed' | 'status' | 'viewBed' | null;
+type ActiveModal = 'ward' | 'floor' | 'room' | 'bed' | 'status' | 'viewBed' | 'transfer' | null;
+
+interface TransferContext {
+  admissionId: string;
+  patientName: string;
+  currentBedNo: string;
+  currentRoomId: string;
+  currentBedId: string;
+}
 
 @Component({
   selector: 'app-ward-bed-management',
@@ -30,7 +38,7 @@ type ActiveModal = 'ward' | 'floor' | 'room' | 'bed' | 'status' | 'viewBed' | nu
   templateUrl: './ward-bed-management.component.html',
   styleUrl: './ward-bed-management.component.scss',
 })
-export class WardBedManagementComponent implements OnInit {
+export class WardBedManagementComponent implements OnInit, OnDestroy {
   loading = false;
   rooms: WardRoomRecord[] = [];
   beds: WardBedRecord[] = [];
@@ -54,8 +62,19 @@ export class WardBedManagementComponent implements OnInit {
   roomFormFloors: WardFloor[] = [];
   bedFormFloors: WardFloor[] = [];
   bedFormRooms: WardRoomRecord[] = [];
+  transferFloors: WardFloor[] = [];
+  transferRooms: WardRoomRecord[] = [];
+  transferContext: TransferContext = {
+    admissionId: '',
+    patientName: '',
+    currentBedNo: '',
+    currentRoomId: '',
+    currentBedId: '',
+  };
   private roomFormWardSub?: Subscription;
   private bedFormWardSub?: Subscription;
+  private routeSub?: Subscription;
+  private pendingTransferContext: TransferContext | null = null;
   readonly roomTypeOptions: Array<{ value: string; label: string }> = [
     { value: '', label: 'All Room Types' },
     { value: 'general', label: 'General Ward' },
@@ -90,9 +109,11 @@ export class WardBedManagementComponent implements OnInit {
   statusForm: FormGroup;
   wardForm: FormGroup;
   floorForm: FormGroup;
+  transferForm: FormGroup;
 
   constructor(
     private fb: FormBuilder,
+    private route: ActivatedRoute,
     private router: Router,
     private toastr: ToastrService,
     private wardData: WardDataService
@@ -130,6 +151,15 @@ export class WardBedManagementComponent implements OnInit {
       label: [''],
     });
 
+    this.transferForm = this.fb.group({
+      wardId: ['', Validators.required],
+      floorId: [''],
+      roomId: ['', Validators.required],
+      bedId: [''],
+      bedLabel: [''],
+      notes: [''],
+    });
+
     this.statusForm = this.fb.group({
       status: ['available', Validators.required],
       reason: ['', Validators.required],
@@ -137,7 +167,29 @@ export class WardBedManagementComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.routeSub = this.route.queryParamMap.subscribe((params) => {
+      const admissionId = params.get('admissionId') || '';
+      const transferBedId = params.get('transferBedId') || '';
+      if (!admissionId && !transferBedId) {
+        return;
+      }
+
+      this.pendingTransferContext = {
+        admissionId,
+        patientName: params.get('patientName') || '',
+        currentBedNo: params.get('bedNo') || '',
+        currentRoomId: params.get('roomId') || '',
+        currentBedId: transferBedId,
+      };
+      this.openPendingTransfer();
+    });
     this.loadData();
+  }
+
+  ngOnDestroy(): void {
+    this.routeSub?.unsubscribe();
+    this.unbindRoomFormWardListener();
+    this.unbindBedFormWardListener();
   }
 
   get filteredRooms(): WardRoomRecord[] {
@@ -261,6 +313,16 @@ export class WardBedManagementComponent implements OnInit {
     return this.rooms.find((room) => room.id === this.selectedRoomId) || this.filteredRooms[0] || null;
   }
 
+  get transferAvailableBeds(): WardBedRecord[] {
+    const roomId = String(this.transferForm.get('roomId')?.value || '');
+    const currentBedId = String(this.transferContext.currentBedId || '');
+    return this.beds
+      .filter((bed) => bed.roomId === roomId)
+      .filter((bed) => bed.status === 'available')
+      .filter((bed) => !currentBedId || bed.id !== currentBedId)
+      .sort((a, b) => a.bedNo.localeCompare(b.bedNo, undefined, { numeric: true }));
+  }
+
   get roomBeds(): WardBedRecord[] {
     if (!this.selectedRoom) {
       return [];
@@ -313,6 +375,151 @@ export class WardBedManagementComponent implements OnInit {
       const matchesFloor = !floorId || String(room.galleryId) === floorId;
       return matchesWard && matchesFloor;
     });
+  }
+
+  private openPendingTransfer(): void {
+    if (!this.pendingTransferContext || this.loading || (!this.rooms.length && !this.beds.length)) {
+      return;
+    }
+
+    const context = this.pendingTransferContext;
+    this.pendingTransferContext = null;
+    const bed =
+      (context.currentBedId && this.beds.find((item) => item.id === context.currentBedId)) ||
+      (context.admissionId && this.beds.find((item) => item.admissionId === context.admissionId)) ||
+      (context.currentRoomId && context.currentBedNo
+        ? this.beds.find(
+            (item) => item.roomId === context.currentRoomId && item.bedNo === context.currentBedNo
+          )
+        : null);
+
+    if (bed) {
+      this.openTransferForBed(bed, context);
+      return;
+    }
+
+    if (context.admissionId) {
+      this.openTransferModal(context);
+    }
+  }
+
+  private openTransferForBed(bed: WardBedRecord, overrides: Partial<TransferContext> = {}): void {
+    const admissionId = overrides.admissionId || bed.admissionId || '';
+    if (!admissionId) {
+      this.toastr.warning('No active admission found for this bed.');
+      return;
+    }
+
+    this.openTransferModal({
+      admissionId,
+      patientName: overrides.patientName || bed.patientName || '',
+      currentBedNo: overrides.currentBedNo || bed.bedNo,
+      currentRoomId: overrides.currentRoomId || bed.roomId,
+      currentBedId: overrides.currentBedId || bed.id,
+    });
+  }
+
+  private openTransferModal(context: TransferContext): void {
+    const currentRoom = this.rooms.find((room) => room.id === context.currentRoomId) || this.selectedRoom;
+    const defaultBed = this.beds.find(
+      (bed) => bed.status === 'available' && bed.id !== context.currentBedId
+    );
+    const defaultRoom =
+      (defaultBed ? this.rooms.find((room) => room.id === defaultBed.roomId) : null) ||
+      this.rooms.find((room) => room.id !== context.currentRoomId && room.availableBeds > 0) ||
+      currentRoom ||
+      this.rooms[0];
+
+    this.transferContext = context;
+    this.transferForm.reset(
+      {
+        wardId: defaultRoom?.wardId || currentRoom?.wardId || this.selectedWardId || '',
+        floorId: defaultRoom?.galleryId || currentRoom?.galleryId || '',
+        roomId: defaultRoom?.id || '',
+        bedId: defaultBed?.id || '',
+        bedLabel: defaultBed?.bedNo || context.currentBedNo || '',
+        notes: '',
+      },
+      { emitEvent: false }
+    );
+    this.syncTransferPlacement();
+    this.activeModal = 'transfer';
+  }
+
+  onTransferWardChange(): void {
+    const wardId = String(this.transferForm.get('wardId')?.value || '');
+    const floors = this.resolveFloorsForWard(wardId);
+    this.transferForm.patchValue({ floorId: floors[0]?._id || '' }, { emitEvent: false });
+    this.syncTransferPlacement();
+  }
+
+  onTransferFloorChange(): void {
+    this.syncTransferPlacement();
+  }
+
+  onTransferRoomChange(): void {
+    this.syncTransferBedSelection();
+  }
+
+  onTransferBedChange(): void {
+    const bedId = String(this.transferForm.get('bedId')?.value || '');
+    const bed = this.beds.find((item) => item.id === bedId);
+    if (!bed) {
+      return;
+    }
+
+    const room = this.rooms.find((item) => item.id === bed.roomId);
+    this.transferForm.patchValue(
+      {
+        roomId: bed.roomId,
+        wardId: room?.wardId || this.transferForm.get('wardId')?.value || '',
+        floorId: room?.galleryId || this.transferForm.get('floorId')?.value || '',
+        bedLabel: bed.bedNo,
+      },
+      { emitEvent: false }
+    );
+    this.syncTransferPlacement();
+  }
+
+  private syncTransferPlacement(): void {
+    const wardId = String(this.transferForm.get('wardId')?.value || '');
+    const floorId = String(this.transferForm.get('floorId')?.value || '');
+    this.transferFloors = this.resolveFloorsForWard(wardId);
+
+    if (wardId && this.transferFloors.length && !this.transferFloors.some((floor) => floor._id === floorId)) {
+      this.transferForm.patchValue({ floorId: this.transferFloors[0]._id }, { emitEvent: false });
+    }
+
+    const activeFloorId = String(this.transferForm.get('floorId')?.value || '');
+    this.transferRooms = this.rooms
+      .filter((room) => !wardId || room.wardId === wardId)
+      .filter((room) => !activeFloorId || room.galleryId === activeFloorId)
+      .sort((a, b) => a.roomName.localeCompare(b.roomName, undefined, { numeric: true }));
+
+    const currentRoomId = String(this.transferForm.get('roomId')?.value || '');
+    if (!this.transferRooms.some((room) => room.id === currentRoomId)) {
+      const preferred =
+        this.transferRooms.find((room) => room.availableBeds > 0 && room.id !== this.transferContext.currentRoomId) ||
+        this.transferRooms[0];
+      this.transferForm.patchValue({ roomId: preferred?.id || '' }, { emitEvent: false });
+    }
+
+    this.syncTransferBedSelection();
+  }
+
+  private syncTransferBedSelection(): void {
+    const bedId = String(this.transferForm.get('bedId')?.value || '');
+    const availableBeds = this.transferAvailableBeds;
+    const selectedBed = availableBeds.find((bed) => bed.id === bedId);
+    const nextBed = selectedBed || availableBeds[0];
+
+    this.transferForm.patchValue(
+      {
+        bedId: nextBed?.id || '',
+        bedLabel: nextBed?.bedNo || this.transferForm.get('bedLabel')?.value || '',
+      },
+      { emitEvent: false }
+    );
   }
 
   private rememberActiveWard(ward: HospitalWard | null | undefined): void {
@@ -450,6 +657,7 @@ export class WardBedManagementComponent implements OnInit {
             this.refreshActionState();
             this.selectedRoomId = this.filteredRooms[0]?.id || '';
             this.loading = false;
+            this.openPendingTransfer();
           });
           return;
         }
@@ -458,6 +666,7 @@ export class WardBedManagementComponent implements OnInit {
         this.refreshActionState();
         this.selectedRoomId = this.filteredRooms[0]?.id || '';
         this.loading = false;
+        this.openPendingTransfer();
       },
       error: () => {
         this.rooms = [];
@@ -887,6 +1096,7 @@ export class WardBedManagementComponent implements OnInit {
   }
 
   closeModal(): void {
+    const closingTransfer = this.activeModal === 'transfer';
     this.unbindRoomFormWardListener();
     this.unbindBedFormWardListener();
     this.activeModal = null;
@@ -895,6 +1105,18 @@ export class WardBedManagementComponent implements OnInit {
     this.roomFormFloors = [];
     this.bedFormFloors = [];
     this.bedFormRooms = [];
+    this.transferFloors = [];
+    this.transferRooms = [];
+    this.transferContext = {
+      admissionId: '',
+      patientName: '',
+      currentBedNo: '',
+      currentRoomId: '',
+      currentBedId: '',
+    };
+    if (closingTransfer) {
+      this.clearTransferQuery();
+    }
   }
 
   trackFloorById(_index: number, floor: WardFloor): string {
@@ -1045,6 +1267,55 @@ export class WardBedManagementComponent implements OnInit {
     });
   }
 
+  saveTransfer(): void {
+    if (this.transferForm.invalid) {
+      this.transferForm.markAllAsTouched();
+      return;
+    }
+
+    const admissionId = this.transferContext.admissionId;
+    if (!admissionId) {
+      this.toastr.error('No active admission found for transfer.');
+      return;
+    }
+
+    const value = this.transferForm.getRawValue();
+    const selectedBed = this.beds.find((bed) => bed.id === value.bedId);
+    const targetRoomId = selectedBed?.roomId || String(value.roomId || '');
+    const targetBedId = selectedBed?.id || '';
+
+    if (!targetRoomId) {
+      this.toastr.error('Select a target room.');
+      return;
+    }
+
+    if (targetBedId && targetBedId === this.transferContext.currentBedId) {
+      this.toastr.warning('Select a different target bed.');
+      return;
+    }
+
+    if (!targetBedId && targetRoomId === this.transferContext.currentRoomId) {
+      this.toastr.warning('Select a different room or an available target bed.');
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      roomId: targetRoomId,
+      bedId: isPersistedWardBedId(targetBedId) ? targetBedId : undefined,
+      bedLabel: selectedBed?.bedNo || String(value.bedLabel || '').trim() || undefined,
+      notes: String(value.notes || '').trim() || undefined,
+    };
+
+    this.wardData.transferAdmission(admissionId, payload).subscribe({
+      next: () => {
+        this.toastr.success('Patient transferred successfully.');
+        this.closeModal();
+        this.loadData();
+      },
+      error: (err) => this.toastr.error(err?.error?.message || 'Failed to transfer patient.'),
+    });
+  }
+
   deleteRoom(): void {
     const room = this.selectedRoom;
     if (!room) {
@@ -1074,12 +1345,18 @@ export class WardBedManagementComponent implements OnInit {
   }
 
   assignPatient(bed: WardBedRecord): void {
-    void this.router.navigate(['/ward/admissions'], { queryParams: { bedId: bed.id, roomId: bed.roomId } });
+    void this.router.navigate(['/room-allotment/add-alloted-rooms'], {
+      queryParams: {
+        bedId: isPersistedWardBedId(bed.id) ? bed.id : undefined,
+        roomId: bed.roomId,
+        bedNo: bed.bedNo,
+        wardName: this.filters.ward || undefined,
+      },
+    });
   }
 
   transferPatient(bed: WardBedRecord): void {
-    void this.router.navigate(['/ward/bed-management'], { queryParams: { transferBedId: bed.id } });
-    this.toastr.info(`Transfer flow for ${bed.patientName} will open in the next phase.`);
+    this.openTransferForBed(bed);
   }
 
   roomTypeLabel(type: WardRoomType): string {
@@ -1172,6 +1449,23 @@ export class WardBedManagementComponent implements OnInit {
         onHoldBeds: roomBeds.filter((bed) => bed.status === 'on_hold').length,
         capacity: Math.max(room.capacity, roomBeds.length),
       };
+    });
+  }
+
+  private clearTransferQuery(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        admissionId: null,
+        patientId: null,
+        patientName: null,
+        roomId: null,
+        bedNo: null,
+        wardName: null,
+        transferBedId: null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 }

@@ -305,7 +305,13 @@ export class WardPatientListComponent implements OnInit, OnDestroy {
 
   transferBed(patient: WardPatient): void {
     void this.router.navigate(['/ward/bed-management'], {
-      queryParams: { admissionId: patient.admissionId, bedNo: patient.bedNo },
+      queryParams: {
+        admissionId: patient.admissionId,
+        patientId: patient.patientId,
+        patientName: patient.patientName,
+        wardName: patient.wardName,
+        bedNo: patient.bedNo,
+      },
     });
   }
 

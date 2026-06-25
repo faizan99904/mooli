@@ -146,9 +146,10 @@
                           type="button"
                           role="menuitem"
                           *ngFor="let action of activeMenuActions(bed); trackBy: trackByMenuAction"
+                          [disabled]="savingBedStatusKey === bedMenuKey(bed)"
                           (click)="onBedMenuAction(action.key, bed, $event)"
                         >
-                          <i class="fa" [ngClass]="action.icon"></i>
+                          <i class="fa" [ngClass]="savingBedStatusKey === bedMenuKey(bed) ? 'fa-spinner fa-spin' : action.icon"></i>
                           {{ action.label }}
                         </button>
                       </div>
@@ -188,7 +189,14 @@
                     </div>
                     <div class="ward-bed-card__actions ward-bed-card__actions--available">
                       <button type="button" class="ward-bed-card__quick-btn is-primary" (click)="onBedQuickAction('admit_patient', bed, $event)">Admit Patient</button>
-                      <button type="button" class="ward-bed-card__quick-btn" (click)="onBedQuickAction('maintenance', bed, $event)">Maintenance</button>
+                      <button
+                        type="button"
+                        class="ward-bed-card__quick-btn"
+                        [disabled]="savingBedStatusKey === bedMenuKey(bed)"
+                        (click)="onBedQuickAction('maintenance', bed, $event)"
+                      >
+                        Maintenance
+                      </button>
                     </div>
                   </ng-template>
                 </article>

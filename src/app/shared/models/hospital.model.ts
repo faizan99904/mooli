@@ -614,6 +614,7 @@ export interface RoomAllotment {
   patient?: Patient | null;
   roomId: string;
   room?: Room | null;
+  bedId?: string | null;
   encounterId?: string | null;
   consultantDoctorId?: string | null;
   bedLabel?: string;
@@ -622,6 +623,7 @@ export interface RoomAllotment {
   dischargedAt?: string | null;
   status: 'admitted' | 'discharged';
   notes?: string | null;
+  assignedNurseId?: string | null;
 }
 
 export interface BillItem {

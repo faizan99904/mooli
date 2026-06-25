@@ -24,6 +24,7 @@ export class AddAllotmentComponent implements OnInit {
   rooms: Room[] = [];
   selectedRoom: Room | null = null;
   prefilledWardName = '';
+  prefilledBedId = '';
   currentHospitalId: string | null = null;
   saving = false;
   roomsLoading = false;
@@ -52,6 +53,7 @@ export class AddAllotmentComponent implements OnInit {
     const currentUser = JSON.parse(localStorage.getItem('user') || 'null') as { hospitalId?: string | null } | null;
     this.currentHospitalId = currentUser?.hospitalId || null;
     this.prefilledWardName = String(this.route.snapshot.queryParamMap.get('wardName') || '').trim();
+    this.prefilledBedId = String(this.route.snapshot.queryParamMap.get('bedId') || '').trim();
 
     const bedNo = String(this.route.snapshot.queryParamMap.get('bedNo') || '').trim();
     if (bedNo) {
@@ -273,6 +275,7 @@ export class AddAllotmentComponent implements OnInit {
     const payload: Record<string, unknown> = {
       patientId: this.selectedPatient._id,
       roomId: value.roomId,
+      bedId: /^[a-f\d]{24}$/i.test(this.prefilledBedId) ? this.prefilledBedId : undefined,
       admittedAt: value.admittedAt ? new Date(value.admittedAt).toISOString() : undefined,
       notes: value.notes || undefined,
       bedLabel: String(value.bedLabel || '').trim() || undefined,

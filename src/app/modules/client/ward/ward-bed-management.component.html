@@ -398,6 +398,79 @@
   </div>
 </div>
 
+<!-- Transfer Modal -->
+<div class="ward-simple-modal" *ngIf="activeModal === 'transfer'" role="dialog" aria-modal="true">
+  <div class="ward-simple-modal__backdrop" (click)="closeModal()"></div>
+  <div class="ward-simple-modal__dialog">
+    <div class="ward-simple-modal__head">
+      <div>
+        <h3>Transfer Patient</h3>
+        <p *ngIf="transferContext.patientName || transferContext.currentBedNo">
+          {{ transferContext.patientName || 'Selected patient' }}
+          <span *ngIf="transferContext.currentBedNo"> · Current bed {{ transferContext.currentBedNo }}</span>
+        </p>
+      </div>
+      <button type="button" class="ward-simple-modal__close" (click)="closeModal()" aria-label="Close">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+    <form class="ward-simple-modal__form" [formGroup]="transferForm" (ngSubmit)="saveTransfer()">
+      <div class="ward-simple-modal__body">
+        <div class="ward-simple-modal__grid">
+          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(transferForm, 'wardId')">
+            <span>Target Ward</span>
+            <select formControlName="wardId" (change)="onTransferWardChange()">
+              <option *ngIf="!hospitalWards.length && selectedWardId" [value]="selectedWardId">
+                {{ filters.ward || 'Selected ward' }}
+              </option>
+              <option *ngFor="let ward of hospitalWards" [value]="ward._id">{{ ward.name }}</option>
+            </select>
+            <small>{{ fieldError(transferForm, 'wardId', 'Target ward') }}</small>
+          </label>
+          <label class="ward-simple-field">
+            <span>Target Floor</span>
+            <select formControlName="floorId" (change)="onTransferFloorChange()">
+              <option value="" *ngIf="!transferFloors.length">No floor selected</option>
+              <option *ngFor="let floor of transferFloors; trackBy: trackFloorById" [value]="floor._id">{{ floor.label || floor.name }}</option>
+            </select>
+          </label>
+          <label class="ward-simple-field ward-simple-field--full" [class.is-invalid]="isFieldInvalid(transferForm, 'roomId')">
+            <span>Target Room</span>
+            <select formControlName="roomId" (change)="onTransferRoomChange()">
+              <option value="" disabled *ngIf="!transferRooms.length">No rooms available</option>
+              <option *ngFor="let room of transferRooms; trackBy: trackRoomById" [value]="room.id">
+                {{ room.roomName }} · {{ room.availableBeds }} beds available
+              </option>
+            </select>
+            <small>{{ fieldError(transferForm, 'roomId', 'Target room') }}</small>
+          </label>
+          <label class="ward-simple-field" [class.is-invalid]="isFieldInvalid(transferForm, 'bedId')">
+            <span>Target Bed</span>
+            <select formControlName="bedId" (change)="onTransferBedChange()">
+              <option value="">Room only / no bed record</option>
+              <option *ngFor="let bed of transferAvailableBeds" [value]="bed.id">
+                {{ bed.bedNo }} · {{ bed.bedType | titlecase }} · {{ formatCurrency(bed.dailyCharge) }}
+              </option>
+            </select>
+          </label>
+          <label class="ward-simple-field">
+            <span>Bed Label</span>
+            <input type="text" formControlName="bedLabel" placeholder="A-1" />
+          </label>
+          <label class="ward-simple-field ward-simple-field--full">
+            <span>Transfer Notes</span>
+            <textarea rows="3" formControlName="notes" placeholder="Optional"></textarea>
+          </label>
+        </div>
+      </div>
+      <div class="ward-simple-modal__foot">
+        <button type="button" class="btn btn-sm btn-default" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">Transfer Patient</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="ward-modal-backdrop" *ngIf="activeModal === 'status'" (click)="closeModal()"></div>
 <div class="ward-modal ward-modal--narrow" *ngIf="activeModal === 'status' && selectedBed as bed">
   <div class="ward-modal__head">
