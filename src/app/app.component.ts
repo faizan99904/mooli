@@ -9,11 +9,12 @@ import { Title } from '@angular/platform-browser';
 import { filter } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { AppDialogComponent } from './shared/components/app-dialog/app-dialog.component';
+import { PyramidLoaderComponent } from './shared/components/pyramid-loader/pyramid-loader.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, AppDialogComponent],
+  imports: [RouterOutlet, CommonModule, AppDialogComponent, PyramidLoaderComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
@@ -54,7 +55,6 @@ export class AppComponent implements OnInit, AfterViewInit {
         });
       });
 
-    document.querySelector('.page-loader-wrapper')?.classList.add('HideDiv');
   }
 
   ngAfterViewInit(): void {
