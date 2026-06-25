@@ -91,6 +91,13 @@ export class WardPatientDetailComponent implements OnInit {
       return;
     }
 
-    void this.router.navigate([path], { queryParams: { admissionId: this.patient.admissionId } });
+    void this.router.navigate([path], {
+      queryParams: {
+        admissionId: this.patient.admissionId,
+        patientId: this.patient.patientId,
+        patientName: this.patient.patientName,
+        wardName: this.patient.wardName,
+      },
+    });
   }
 }

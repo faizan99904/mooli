@@ -4,8 +4,7 @@
 
 .app-loader-overlay {
   align-items: center;
-  background: rgba(15, 23, 42, 0.28);
-  backdrop-filter: blur(3px);
+  background: rgba(15, 23, 42, 0.18);
   display: flex;
   inset: 0;
   justify-content: center;
@@ -17,6 +16,7 @@
 
 .pyramid-loader {
   display: block;
+  filter: drop-shadow(0 16px 28px color-mix(in srgb, var(--primary-color, #019c9d) 38%, transparent));
   height: 220px;
   position: relative;
   transform: rotateX(-20deg);
@@ -52,32 +52,53 @@
 }
 
 .pyramid-loader .wrapper .side1 {
-  background: conic-gradient(#2bdeac, #f028fd, #d8cce6, #2f2585);
+  background: conic-gradient(
+    var(--primary-color, #019c9d),
+    var(--secondary-color, #003e86),
+    color-mix(in srgb, var(--primary-color, #019c9d) 55%, #ffffff),
+    var(--primary-color, #019c9d)
+  );
   transform: rotateZ(-30deg) rotateY(90deg);
 }
 
 .pyramid-loader .wrapper .side2 {
-  background: conic-gradient(#2f2585, #d8cce6, #f028fd, #2bdeac);
+  background: conic-gradient(
+    var(--secondary-color, #003e86),
+    var(--primary-color, #019c9d),
+    color-mix(in srgb, var(--secondary-color, #003e86) 70%, #ffffff),
+    var(--primary-color, #019c9d)
+  );
   transform: rotateZ(30deg) rotateY(90deg);
 }
 
 .pyramid-loader .wrapper .side3 {
-  background: conic-gradient(#2f2585, #d8cce6, #f028fd, #2bdeac);
+  background: conic-gradient(
+    var(--primary-color, #019c9d),
+    color-mix(in srgb, var(--primary-color, #019c9d) 45%, var(--secondary-color, #003e86)),
+    var(--secondary-color, #003e86),
+    var(--primary-color, #019c9d)
+  );
   transform: rotateX(30deg);
 }
 
 .pyramid-loader .wrapper .side4 {
-  background: conic-gradient(#2bdeac, #f028fd, #d8cce6, #2f2585);
+  background: conic-gradient(
+    var(--secondary-color, #003e86),
+    var(--primary-color, #019c9d),
+    color-mix(in srgb, var(--primary-color, #019c9d) 60%, #ffffff),
+    var(--secondary-color, #003e86)
+  );
   transform: rotateX(-30deg);
 }
 
 .pyramid-loader .wrapper .shadow {
-  background: #8b5ad5;
+  background: var(--primary-color, #019c9d);
   bottom: 0;
-  filter: blur(12px);
+  filter: blur(14px);
   height: 60px;
   left: 0;
   margin: auto;
+  opacity: 0.55;
   position: absolute;
   right: 0;
   top: 0;

@@ -1,0 +1,156 @@
+<section class="ward-vitals-trends" *ngIf="patientId">
+  <div class="ward-vitals-trends__head">
+    <div>
+      <h3>Vitals Trends</h3>
+      <p *ngIf="patientName">Patient: <strong>{{ patientName }}</strong></p>
+    </div>
+    <div class="ward-vitals-trends__actions">
+      <div class="vitals-range-switch">
+        <button
+          type="button"
+          *ngFor="let range of vitalsTrendRanges"
+          [class.active]="vitalsTrendRange === range.key"
+          (click)="setVitalsTrendRange(range.key)"
+        >
+          {{ range.label }}
+        </button>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" (click)="recordVitals.emit()">
+        <i class="fa fa-plus"></i> Record Vitals
+      </button>
+    </div>
+  </div>
+
+  <div class="ward-vitals-trends__loading" *ngIf="loading">Loading vitals trends...</div>
+
+  <div class="ward-vitals-summary" *ngIf="!loading && sidebarVitalItems.length">
+    <article class="ward-vitals-summary-card" *ngFor="let vital of sidebarVitalItems">
+      <span class="ward-vitals-summary-card__icon" [ngClass]="'tone-' + vital.iconTone">
+        <i class="fa" [ngClass]="vital.icon"></i>
+      </span>
+      <div>
+        <small>{{ vital.label }}</small>
+        <strong>{{ vital.displayValue }}</strong>
+        <span class="ward-vitals-summary-card__trend" [ngClass]="vital.trendClass" *ngIf="vital.compactTrend">
+          {{ vital.compactTrend }}
+        </span>
+      </div>
+      <span class="ward-vitals-summary-card__status" [ngClass]="vitalStatusClass(vital.status)">
+        {{ vital.statusLabel }}
+      </span>
+    </article>
+  </div>
+
+  <div class="ward-vitals-alerts" *ngIf="vitalAlerts.length">
+    <strong>Alerts</strong>
+    <ul>
+      <li *ngFor="let alert of vitalAlerts" [ngClass]="'alert-' + alert.severity">{{ alert.message }}</li>
+    </ul>
+  </div>
+
+  <div class="vitals-charts-grid" *ngIf="!loading">
+    <article class="vital-chart-card" *ngFor="let chart of vitalMiniCharts; trackBy: trackVitalChart">
+      <div class="vital-chart-card-head">
+        <strong>{{ chart.title }}</strong>
+        <div class="vital-chart-meta">
+          <span class="vital-chart-latest">{{ chart.latestValue }}</span>
+          <span class="vital-chart-trend" [ngClass]="chart.trendClass" *ngIf="chart.compactTrend">{{ chart.compactTrend }}</span>
+        </div>
+      </div>
+      <div class="vital-chart-body" *ngIf="chart.hasData; else emptyChart">
+        <apx-chart
+          [series]="chart.apex.series"
+          [chart]="chart.apex.chart"
+          [stroke]="chart.apex.stroke"
+          [markers]="chart.apex.markers"
+          [xaxis]="chart.apex.xaxis"
+          [yaxis]="vitalChartSharedYAxis"
+          [grid]="vitalChartSharedGrid"
+          [dataLabels]="vitalChartSharedDataLabels"
+          [tooltip]="vitalChartSharedTooltip"
+          [colors]="chart.apex.colors"
+          [autoUpdateSeries]="false"
+        ></apx-chart>
+      </div>
+      <ng-template #emptyChart>
+        <div class="vital-chart-empty">No data for selected range</div>
+      </ng-template>
+    </article>
+  </div>
+
+  <div class="vitals-history-panel" *ngIf="!loading">
+    <div class="vitals-history-head">
+      <h3>Vitals History</h3>
+    </div>
+
+    <div class="vitals-history-empty" *ngIf="vitalHistoryRows.length === 0">
+      No vitals history found for this patient.
+    </div>
+
+    <div class="vitals-history-table-wrap" *ngIf="vitalHistoryRows.length > 0">
+      <table class="vitals-history-table">
+        <thead>
+          <tr>
+            <th>Date &amp; Time</th>
+            <th>Weight (Kg)</th>
+            <th>Height (cm)</th>
+            <th>BP (mmHg)</th>
+            <th>Pulse (/min)</th>
+            <th>Temp (°F)</th>
+            <th>SpO2 (%)</th>
+            <th>Resp. Rate (/min)</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of vitalHistoryRows">
+            <td>{{ row.dateTime }}</td>
+            <td>
+              <span class="history-cell">
+                <small [ngClass]="historyTrendClass(row.trends['weight'])" *ngIf="historyTrendArrow(row.trends['weight'])">{{ historyTrendArrow(row.trends['weight']) }}</small>
+                {{ row.weight }}
+              </span>
+            </td>
+            <td>
+              <span class="history-cell">
+                <small [ngClass]="historyTrendClass(row.trends['height'])" *ngIf="historyTrendArrow(row.trends['height'])">{{ historyTrendArrow(row.trends['height']) }}</small>
+                {{ row.height }}
+              </span>
+            </td>
+            <td>
+              <span class="history-cell">
+                <small [ngClass]="historyTrendClass(row.trends['bp'])" *ngIf="historyTrendArrow(row.trends['bp'])">{{ historyTrendArrow(row.trends['bp']) }}</small>
+                {{ row.bp }}
+              </span>
+            </td>
+            <td>
+              <span class="history-cell">
+                <small [ngClass]="historyTrendClass(row.trends['pulse'])" *ngIf="historyTrendArrow(row.trends['pulse'])">{{ historyTrendArrow(row.trends['pulse']) }}</small>
+                {{ row.pulse }}
+              </span>
+            </td>
+            <td>
+              <span class="history-cell">
+                <small [ngClass]="historyTrendClass(row.trends['temperature'])" *ngIf="historyTrendArrow(row.trends['temperature'])">{{ historyTrendArrow(row.trends['temperature']) }}</small>
+                {{ row.temperature }}
+              </span>
+            </td>
+            <td>
+              <span class="history-cell">
+                <small [ngClass]="historyTrendClass(row.trends['spo2'])" *ngIf="historyTrendArrow(row.trends['spo2'])">{{ historyTrendArrow(row.trends['spo2']) }}</small>
+                {{ row.spo2 }}
+              </span>
+            </td>
+            <td>
+              <span class="history-cell">
+                <small [ngClass]="historyTrendClass(row.trends['respiratoryRate'])" *ngIf="historyTrendArrow(row.trends['respiratoryRate'])">{{ historyTrendArrow(row.trends['respiratoryRate']) }}</small>
+                {{ row.respiratoryRate }}
+              </span>
+            </td>
+            <td>{{ row.notes }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

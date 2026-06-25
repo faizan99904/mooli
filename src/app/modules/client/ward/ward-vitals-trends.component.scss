@@ -1,0 +1,262 @@
+.ward-vitals-trends {
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 12px;
+  display: grid;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding: 14px;
+}
+
+.ward-vitals-trends__head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.ward-vitals-trends__head h3 {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.ward-vitals-trends__head p {
+  color: var(--ward-muted);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.ward-vitals-trends__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ward-vitals-trends__loading {
+  color: var(--ward-muted);
+  font-size: 12px;
+  padding: 8px 0;
+}
+
+.vitals-range-switch {
+  background: #f8fafc;
+  border: 1px solid var(--ward-border);
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+
+.vitals-range-switch button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  min-height: 28px;
+  padding: 0 12px;
+}
+
+.vitals-range-switch button.active {
+  background: var(--ward-blue);
+  color: #fff;
+}
+
+.ward-vitals-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.ward-vitals-summary-card {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--ward-border);
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto 1fr auto;
+  padding: 10px;
+}
+
+.ward-vitals-summary-card__icon {
+  align-items: center;
+  border-radius: 8px;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.ward-vitals-summary-card__icon.tone-blue { background: #dbeafe; color: #1d4ed8; }
+.ward-vitals-summary-card__icon.tone-red { background: #fee2e2; color: #b91c1c; }
+.ward-vitals-summary-card__icon.tone-green { background: #dcfce7; color: #15803d; }
+.ward-vitals-summary-card__icon.tone-orange { background: #ffedd5; color: #c2410c; }
+.ward-vitals-summary-card__icon.tone-purple { background: #ede9fe; color: #6d28d9; }
+
+.ward-vitals-summary-card small {
+  color: var(--ward-muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ward-vitals-summary-card strong {
+  display: block;
+  font-size: 14px;
+}
+
+.ward-vitals-summary-card__trend {
+  color: #64748b;
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ward-vitals-summary-card__status {
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.vital-status-normal { background: #dcfce7; color: #15803d; }
+.vital-status-watch { background: #ffedd5; color: #c2410c; }
+.vital-status-warning,
+.vital-status-critical { background: #fee2e2; color: #b91c1c; }
+.vital-status-unknown { background: #f1f5f9; color: #64748b; }
+
+.ward-vitals-alerts {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.ward-vitals-alerts ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.ward-vitals-alerts li {
+  font-size: 12px;
+}
+
+.vitals-charts-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.vital-chart-card {
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 10px;
+  min-height: 220px;
+  padding: 12px;
+}
+
+.vital-chart-card-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.vital-chart-card-head strong {
+  font-size: 12px;
+}
+
+.vital-chart-meta {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+}
+
+.vital-chart-latest {
+  color: var(--ward-ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.vital-chart-trend {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.vital-chart-trend.normal { color: #16a34a; }
+.vital-chart-trend.watch { color: #f59e0b; }
+.vital-chart-trend.warning,
+.vital-chart-trend.critical { color: #dc2626; }
+.vital-chart-trend.unknown { color: #64748b; }
+
+.vital-chart-empty {
+  align-items: center;
+  color: var(--ward-muted);
+  display: flex;
+  font-size: 12px;
+  justify-content: center;
+  min-height: 150px;
+}
+
+.vitals-history-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.vitals-history-head h3 {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.vitals-history-empty {
+  color: var(--ward-muted);
+  font-size: 12px;
+}
+
+.vitals-history-table-wrap {
+  overflow-x: auto;
+}
+
+.vitals-history-table {
+  font-size: 12px;
+  width: 100%;
+}
+
+.vitals-history-table th,
+.vitals-history-table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.vitals-history-table th {
+  background: #fafbfd;
+  color: var(--ward-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.history-cell small.up { color: #dc2626; }
+.history-cell small.down { color: #16a34a; }
+
+@media (max-width: 1100px) {
+  .vitals-charts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .vitals-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}

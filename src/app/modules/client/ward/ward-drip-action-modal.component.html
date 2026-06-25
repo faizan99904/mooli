@@ -1,0 +1,40 @@
+<div class="ward-modal-backdrop" *ngIf="open" (click)="close()">
+  <div class="ward-modal" (click)="$event.stopPropagation()">
+    <div class="ward-modal__head">
+      <div>
+        <h3>{{ title }}</h3>
+        <p>{{ description }}</p>
+      </div>
+      <button type="button" class="ward-modal__close" (click)="close()"><i class="fa fa-times"></i></button>
+    </div>
+
+    <div class="ward-modal__body">
+      <div class="ward-drip-action-summary" *ngIf="patientName || fluidName">
+        <div *ngIf="patientName"><span>Patient</span><strong>{{ patientName }}</strong></div>
+        <div *ngIf="fluidName"><span>Fluid</span><strong>{{ fluidName }}</strong></div>
+      </div>
+      <label>
+        <span>{{ reasonLabel }}</span>
+        <textarea
+          [(ngModel)]="reason"
+          rows="3"
+          [placeholder]="action === 'stop' ? 'e.g. Patient discomfort, line issue...' : 'e.g. Bag finished, treatment completed...'"
+        ></textarea>
+      </label>
+    </div>
+
+    <div class="ward-modal__foot">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="close()">Cancel</button>
+      <button
+        type="button"
+        class="btn btn-sm"
+        [class.btn-warning]="action === 'stop'"
+        [class.btn-success]="action === 'complete'"
+        (click)="confirm()"
+      >
+        <i class="fa" [ngClass]="action === 'stop' ? 'fa-pause' : 'fa-check'"></i>
+        {{ confirmLabel }}
+      </button>
+    </div>
+  </div>
+</div>

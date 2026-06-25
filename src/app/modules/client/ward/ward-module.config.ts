@@ -135,8 +135,10 @@ export const WARD_MODULE_PAGE_CONFIGS: Record<string, WardModulePageConfig> = {
     columns: [
       { key: 'patient', label: 'Patient', type: 'link' },
       { key: 'bed', label: 'Bed' },
+      { key: 'recordedAt', label: 'Recorded' },
       { key: 'bp', label: 'BP' },
       { key: 'temp', label: 'Temp' },
+      { key: 'pulse', label: 'Pulse' },
       { key: 'spo2', label: 'SpO2' },
       { key: 'status', label: 'Status', type: 'badge' },
     ],

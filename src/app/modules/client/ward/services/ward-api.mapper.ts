@@ -19,8 +19,66 @@ import {
   WardSection,
   WardTaskRow,
 } from '../ward-dashboard.models';
-import { WardModuleRow } from '../ward-module.models';
+import { WardModuleFilters, WardModuleRow, WardModuleRowMeta } from '../ward-module.models';
 import { PatientStatus, WardPatient } from '../ward-patient-list.models';
+
+function withModuleMeta(
+  row: WardModuleRow,
+  patientId?: string | null,
+  admissionId?: string | null,
+  extra?: WardModuleRowMeta
+): WardModuleRow {
+  return {
+    ...row,
+    meta: {
+      patientId: normalizeEntityId(patientId) || undefined,
+      admissionId: normalizeEntityId(admissionId) || undefined,
+      ...extra,
+    },
+  };
+}
+
+export function normalizeWardVitalsRecord(vitals: Record<string, string>): Record<string, string> {
+  return {
+    ...vitals,
+    bp: vitals['bp'] || vitals['bloodPressure'] || '',
+    pulse: vitals['pulse'] || '',
+    weight: vitals['weight'] || '',
+    temperature: vitals['temperature'] || vitals['temp'] || '',
+    spo2: vitals['spo2'] || vitals['SpO2'] || '',
+    height: vitals['height'] || '',
+    respiratoryRate: vitals['respiratoryRate'] || vitals['respiratory_rate'] || '',
+  };
+}
+
+export interface WardVitalTimelineEntry {
+  createdAt?: string;
+  vitals: Record<string, string>;
+}
+
+export function normalizeEntityId(value: unknown): string {
+  if (value == null || value === '') {
+    return '';
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value).trim();
+  }
+
+  if (typeof value === 'object') {
+    return readRecordId(value as Record<string, unknown>);
+  }
+
+  return '';
+}
+
+export function resolvePrescriptionPatientId(prescription: Prescription): string {
+  return normalizeEntityId(prescription.patientId || prescription.patient?._id);
+}
+
+function resolveAllotmentPatientId(allotment: RoomAllotment): string {
+  return normalizeEntityId(allotment.patientId || allotment.patient?._id);
+}
 
 export const ROOM_TYPE_WARD_LABELS: Record<string, string> = {
   general: 'General Ward',
@@ -446,7 +504,7 @@ export function buildDashboardSections(
     beds.push({
       ...mapRoomToDashboardBed(room, allotment, context),
       roomId: room._id,
-      patientId: allotment?.patientId || allotment?.patient?._id,
+      patientId: allotment ? resolveAllotmentPatientId(allotment) : undefined,
       wardName,
       galleryName: gallery,
     });
@@ -754,149 +812,316 @@ export function normalizeWardFloorRecords(raw: unknown, fallbackWardId = ''): Wa
 }
 
 export function mapAdmissionRows(allotments: RoomAllotment[], doctors: Doctor[] = []): WardModuleRow[] {
-  return allotments.map((item) => ({
-    id: item._id,
-    cells: {
-      patient: patientFullName(item.patient),
-      mrn: item.patient?.patientNo || '—',
-      bed: item.bedLabel || item.room?.roomNo || '—',
-      doctor: doctorName(item.consultantDoctorId, doctors),
-      admittedOn: formatDisplayDate(item.admittedAt),
-      status: item.status === 'admitted' ? 'Active' : 'Discharged',
-      _tab: item.status === 'admitted' ? 'active' : item.dischargedAt ? 'discharge' : 'pending',
-    },
-    badgeTone: {
-      status: item.status === 'admitted' ? 'active' : 'completed',
-    },
-    linkRoute: `/ward/patient-detail/${item._id}`,
-  }));
+  return allotments.map((item) =>
+    withModuleMeta(
+      {
+        id: item._id,
+        cells: {
+          patient: patientFullName(item.patient),
+          mrn: item.patient?.patientNo || '—',
+          bed: item.bedLabel || item.room?.roomNo || '—',
+          doctor: doctorName(item.consultantDoctorId, doctors),
+          admittedOn: formatDisplayDate(item.admittedAt),
+          status: item.status === 'admitted' ? 'Active' : 'Discharged',
+          _tab: item.status === 'admitted' ? 'active' : item.dischargedAt ? 'discharge' : 'pending',
+        },
+        badgeTone: {
+          status: item.status === 'admitted' ? 'active' : 'completed',
+        },
+        linkRoute: `/ward/patient-detail/${item._id}`,
+      },
+      item.patientId,
+      item._id
+    )
+  );
 }
 
 export function mapNursingRows(history: PatientHistory[]): WardModuleRow[] {
-  return history.map((item) => ({
-    id: item._id,
-    cells: {
-      patient: patientFullName(item.patient),
-      task: item.title || 'Ward Note',
-      priority: /critical|urgent/i.test(item.notes || '') ? 'High' : 'Medium',
-      nurse: item.doctor?.name || '—',
-      dueAt: formatDisplayDate(item.createdAt),
-      status: item.notes ? 'Completed' : 'Due',
-      _tab: item.notes ? 'completed' : 'due',
-    },
-    badgeTone: {
-      priority: /critical|urgent/i.test(item.notes || '') ? 'critical' : 'medium',
-      status: item.notes ? 'completed' : 'pending',
-    },
-    linkRoute: item.patientId ? `/ward/patient-detail/${item.patientId}` : undefined,
-  }));
+  return history.map((item) =>
+    withModuleMeta(
+      {
+        id: item._id,
+        cells: {
+          patient: patientFullName(item.patient),
+          task: item.title || 'Ward Note',
+          priority: /critical|urgent/i.test(item.notes || '') ? 'High' : 'Medium',
+          nurse: item.doctor?.name || '—',
+          dueAt: formatDisplayDate(item.createdAt),
+          status: item.notes ? 'Completed' : 'Due',
+          _tab: item.notes ? 'completed' : 'due',
+        },
+        badgeTone: {
+          priority: /critical|urgent/i.test(item.notes || '') ? 'critical' : 'medium',
+          status: item.notes ? 'completed' : 'pending',
+        },
+        linkRoute: item.patientId ? `/ward/patient-detail/${item.patientId}` : undefined,
+      },
+      item.patientId
+    )
+  );
 }
 
 export function mapMarRows(prescriptions: Prescription[]): WardModuleRow[] {
   const rows: WardModuleRow[] = [];
   prescriptions.forEach((prescription) => {
+    const patientId = resolvePrescriptionPatientId(prescription);
     (prescription.medicines || []).forEach((medicine, index) => {
-      rows.push({
-        id: `${prescription._id}-${index}`,
-        cells: {
-          patient: patientFullName(prescription.patient),
-          medicine: medicine.name,
-          dose: medicine.dosage || medicine.frequency || '—',
-          route: 'PO',
-          dueTime: medicine.morning ? '08:00' : medicine.noon ? '13:00' : medicine.evening ? '18:00' : '21:00',
-          status: 'Due',
-          _tab: 'due',
-        },
-        badgeTone: { status: 'pending' },
-        linkRoute: `/ward/patient-detail/${prescription.patientId}`,
-      });
+      rows.push(
+        withModuleMeta(
+          {
+            id: `${prescription._id}-${index}`,
+            cells: {
+              patient: patientFullName(prescription.patient),
+              medicine: medicine.name,
+              dose: medicine.dosage || medicine.frequency || '—',
+              route: 'PO',
+              dueTime: medicine.morning ? '08:00' : medicine.noon ? '13:00' : medicine.evening ? '18:00' : '21:00',
+              status: 'Due',
+              _tab: 'due',
+            },
+            badgeTone: { status: 'pending' },
+            linkRoute: patientId ? `/ward/patient-detail/${patientId}` : undefined,
+          },
+          patientId
+        )
+      );
     });
   });
   return rows;
+}
+
+export function normalizeDripFluidStatus(status?: string | null): 'planned' | 'running' | 'completed' {
+  const value = String(status || 'planned').trim().toLowerCase();
+  if (value === 'running') {
+    return 'running';
+  }
+  if (value === 'completed') {
+    return 'completed';
+  }
+  return 'planned';
 }
 
 export function mapDripRows(prescriptions: Prescription[]): WardModuleRow[] {
   const rows: WardModuleRow[] = [];
   prescriptions.forEach((prescription) => {
+    const patientId = resolvePrescriptionPatientId(prescription);
     (prescription.ivFluids || []).forEach((fluid, index) => {
-      rows.push({
-        id: `${prescription._id}-iv-${index}`,
-        cells: {
-          patient: patientFullName(prescription.patient),
-          fluid: fluid.name,
-          rate: fluid.rate || '—',
-          startedAt: formatDisplayDate(fluid.startDateTime),
-          nurse: prescription.doctor?.name || '—',
-          status: fluid.status === 'running' ? 'Running' : fluid.status === 'completed' ? 'Completed' : 'Planned',
-          _tab: fluid.status === 'running' ? 'running' : fluid.status === 'completed' ? 'completed' : 'all',
-        },
-        badgeTone: {
-          status: fluid.status === 'running' ? 'running' : fluid.status === 'completed' ? 'completed' : 'pending',
-        },
-        linkRoute: `/ward/patient-detail/${prescription.patientId}`,
-      });
+      const fluidStatus = normalizeDripFluidStatus(fluid.status);
+      rows.push(
+        withModuleMeta(
+          {
+            id: `${prescription._id}-iv-${index}`,
+            cells: {
+              patient: patientFullName(prescription.patient),
+              fluid: fluid.name,
+              rate: fluid.rate || '—',
+              startedAt: formatDisplayDate(fluid.startDateTime),
+              nurse: prescription.doctor?.name || '—',
+              status: fluidStatus === 'running' ? 'Running' : fluidStatus === 'completed' ? 'Completed' : 'Planned',
+              _tab: fluidStatus === 'running' ? 'running' : fluidStatus === 'completed' ? 'completed' : 'all',
+            },
+            badgeTone: {
+              status: fluidStatus === 'running' ? 'running' : fluidStatus === 'completed' ? 'completed' : 'pending',
+            },
+            linkRoute: patientId ? `/ward/patient-detail/${patientId}` : undefined,
+          },
+          patientId,
+          undefined,
+          {
+            prescriptionId: normalizeEntityId(prescription._id),
+            fluidIndex: index,
+            fluidName: fluid.name,
+            fluidStatus,
+          }
+        )
+      );
     });
   });
   return rows;
 }
 
-export function mapVitalsRows(history: PatientHistory[]): WardModuleRow[] {
-  return history
-    .filter((item) => item.vitals && Object.keys(item.vitals).length)
-    .map((item) => ({
-      id: item._id,
-      cells: {
-        patient: patientFullName(item.patient),
-        bed: '—',
-        bp: item.vitals?.['bloodPressure'] || '—',
-        temp: item.vitals?.['temperature'] || '—',
-        spo2: item.vitals?.['pulse'] || '—',
-        status: 'Recorded',
-        _tab: 'recorded',
-      },
-      badgeTone: { status: 'completed' },
-      linkRoute: `/ward/patient-detail/${item.patientId}`,
-    }));
+export function mapVitalsRows(
+  history: PatientHistory[],
+  prescriptions: Prescription[] = [],
+  allotments: RoomAllotment[] = []
+): WardModuleRow[] {
+  const bedByPatient = new Map<string, string>();
+  const admissionByPatient = new Map<string, string>();
+
+  allotments
+    .filter((item) => item.status === 'admitted')
+    .forEach((item) => {
+      const patientId = normalizeEntityId(item.patientId);
+      if (!patientId) {
+        return;
+      }
+      bedByPatient.set(patientId, item.bedLabel || item.room?.roomNo || '—');
+      admissionByPatient.set(patientId, normalizeEntityId(item._id));
+    });
+
+  const entries: Array<{
+    id: string;
+    createdAt?: string;
+    patientId: string;
+    patientName: string;
+    vitals: Record<string, string>;
+  }> = [];
+
+  history
+    .filter((item) => item.vitals && Object.values(item.vitals).some((value) => String(value || '').trim()))
+    .forEach((item) => {
+      entries.push({
+        id: item._id,
+        createdAt: item.createdAt,
+        patientId: normalizeEntityId(item.patientId),
+        patientName: patientFullName(item.patient),
+        vitals: normalizeWardVitalsRecord(item.vitals || {}),
+      });
+    });
+
+  prescriptions
+    .filter((prescription) => prescription.vitals && Object.values(prescription.vitals).some((value) => String(value || '').trim()))
+    .forEach((prescription) => {
+      entries.push({
+        id: `rx-vitals-${prescription._id}`,
+        createdAt: prescription.createdAt,
+        patientId: resolvePrescriptionPatientId(prescription),
+        patientName: patientFullName(prescription.patient),
+        vitals: normalizeWardVitalsRecord(prescription.vitals || {}),
+      });
+    });
+
+  return entries
+    .sort((first, second) => new Date(second.createdAt || 0).getTime() - new Date(first.createdAt || 0).getTime())
+    .map((entry) =>
+      withModuleMeta(
+        {
+          id: entry.id,
+          cells: {
+            patient: entry.patientName,
+            bed: bedByPatient.get(entry.patientId) || '—',
+            recordedAt: formatDisplayDate(entry.createdAt),
+            bp: entry.vitals['bp'] || '—',
+            temp: entry.vitals['temperature'] || '—',
+            spo2: entry.vitals['spo2'] || '—',
+            pulse: entry.vitals['pulse'] || '—',
+            status: 'Recorded',
+            _tab: 'recorded',
+          },
+          badgeTone: { status: 'completed' },
+          linkRoute: entry.patientId ? `/ward/patient-detail/${entry.patientId}` : undefined,
+        },
+        entry.patientId,
+        admissionByPatient.get(entry.patientId)
+      )
+    );
 }
 
 export function mapOrderRows(labOrders: LabOrder[], prescriptions: Prescription[]): WardModuleRow[] {
-  const labRows = labOrders.map((order) => ({
-    id: order._id,
-    cells: {
-      patient: patientFullName(order.patient),
-      order: order.items?.map((test) => test.testName).join(', ') || 'Lab Order',
-      type: 'Lab',
-      doctor: order.doctor?.name || '—',
-      time: formatDisplayDate(order.createdAt),
-      status: order.status || 'Pending',
-      _tab: ['verified', 'result_entered'].includes(order.status) ? 'completed' : ['processing', 'sample_collected'].includes(order.status) ? 'progress' : 'pending',
-    },
-    badgeTone: {
-      status: ['verified', 'result_entered'].includes(order.status) ? 'completed' : ['processing', 'sample_collected'].includes(order.status) ? 'running' : 'pending',
-    },
-    linkRoute: `/ward/patient-detail/${order.patientId}`,
-  }));
+  const labRows = labOrders.map((order) =>
+    withModuleMeta(
+      {
+        id: order._id,
+        cells: {
+          patient: patientFullName(order.patient),
+          order: order.items?.map((test) => test.testName).join(', ') || 'Lab Order',
+          type: 'Lab',
+          doctor: order.doctor?.name || '—',
+          time: formatDisplayDate(order.createdAt),
+          status: order.status || 'Pending',
+          _tab: ['verified', 'result_entered'].includes(order.status) ? 'completed' : ['processing', 'sample_collected'].includes(order.status) ? 'progress' : 'pending',
+        },
+        badgeTone: {
+          status: ['verified', 'result_entered'].includes(order.status) ? 'completed' : ['processing', 'sample_collected'].includes(order.status) ? 'running' : 'pending',
+        },
+        linkRoute: `/ward/patient-detail/${order.patientId}`,
+      },
+      order.patientId
+    )
+  );
 
   const admissionRows = prescriptions.flatMap((prescription) =>
-    (prescription.admissionOrderItems || []).map((order, index) => ({
-      id: `${prescription._id}-order-${index}`,
-      cells: {
-        patient: patientFullName(prescription.patient),
-        order: order.order,
-        type: order.category || 'Service',
-        doctor: prescription.doctor?.name || '—',
-        time: formatDisplayDate(order.orderedOn),
-        status: order.status === 'completed' ? 'Completed' : 'Pending',
-        _tab: order.status === 'completed' ? 'completed' : 'pending',
-      },
-      badgeTone: {
-        status: order.status === 'completed' ? 'completed' : 'pending',
-      },
-      linkRoute: `/ward/patient-detail/${prescription.patientId}`,
-    }))
+    (prescription.admissionOrderItems || []).map((order, index) =>
+      withModuleMeta(
+        {
+          id: `${prescription._id}-order-${index}`,
+          cells: {
+            patient: patientFullName(prescription.patient),
+            order: order.order,
+            type: order.category || 'Service',
+            doctor: prescription.doctor?.name || '—',
+            time: formatDisplayDate(order.orderedOn),
+            status: order.status === 'completed' ? 'Completed' : 'Pending',
+            _tab: order.status === 'completed' ? 'completed' : 'pending',
+          },
+          badgeTone: {
+            status: order.status === 'completed' ? 'completed' : 'pending',
+          },
+          linkRoute: `/ward/patient-detail/${prescription.patientId}`,
+        },
+        prescription.patientId
+      )
+    )
   );
 
   return [...labRows, ...admissionRows];
+}
+
+export function filterModuleRows(
+  rows: WardModuleRow[],
+  allotments: RoomAllotment[],
+  filters?: WardModuleFilters
+): WardModuleRow[] {
+  if (!filters?.patientId && !filters?.admissionId && !filters?.wardName && !filters?.patientName) {
+    return rows;
+  }
+
+  let result = rows;
+  const admissionId = normalizeEntityId(filters?.admissionId);
+  const patientId =
+    normalizeEntityId(filters?.patientId) ||
+    (admissionId
+      ? resolveAllotmentPatientId(
+          allotments.find((item) => normalizeEntityId(item._id) === admissionId) || ({} as RoomAllotment)
+        )
+      : '');
+
+  if (patientId || admissionId) {
+    const scoped = result.filter((row) => {
+      const rowPatientId = normalizeEntityId(row.meta?.patientId);
+      const rowAdmissionId = normalizeEntityId(row.meta?.admissionId);
+      if (admissionId && rowAdmissionId === admissionId) {
+        return true;
+      }
+      return patientId ? rowPatientId === patientId : false;
+    });
+    result = scoped.length ? scoped : result;
+  }
+
+  if (filters?.patientName) {
+    const name = filters.patientName.trim().toLowerCase();
+    const named = result.filter((row) =>
+      Object.values(row.cells).join(' ').toLowerCase().includes(name)
+    );
+    if (named.length) {
+      result = named;
+    }
+  }
+
+  if (filters?.wardName && !patientId && !admissionId) {
+    const wardPatientIds = new Set(
+      allotments
+        .filter((item) => item.status === 'admitted' && matchesWardFilter(item.room, filters.wardName!, []))
+        .map((item) => resolveAllotmentPatientId(item))
+        .filter(Boolean)
+    );
+    result = result.filter((row) => {
+      const rowPatientId = normalizeEntityId(row.meta?.patientId);
+      return rowPatientId && wardPatientIds.has(rowPatientId);
+    });
+  }
+
+  return result;
 }
 
 export function mapWardActivityRows(activities: WardActivityRecord[], type?: string): WardModuleRow[] {
@@ -921,122 +1146,150 @@ export function mapWardActivityRows(activities: WardActivityRecord[], type?: str
             : status;
 
       if (item.activityType === 'io_entry') {
-        return {
-          id: item._id,
-          cells: {
-            patient: patientName,
-            intake: String(item.metadata?.['intake'] || '—'),
-            output: String(item.metadata?.['output'] || '—'),
-            balance: String(item.metadata?.['balance'] || '—'),
-            shift: item.shift || 'day',
-            status: status === 'completed' ? 'Recorded' : 'Pending',
-            _tab: item.shift || 'day',
+        return withModuleMeta(
+          {
+            id: item._id,
+            cells: {
+              patient: patientName,
+              intake: String(item.metadata?.['intake'] || '—'),
+              output: String(item.metadata?.['output'] || '—'),
+              balance: String(item.metadata?.['balance'] || '—'),
+              shift: item.shift || 'day',
+              status: status === 'completed' ? 'Recorded' : 'Pending',
+              _tab: item.shift || 'day',
+            },
+            badgeTone: { status: status === 'completed' ? 'completed' : 'pending' },
+            linkRoute: item.admissionId ? `/ward/patient-detail/${item.admissionId}` : undefined,
           },
-          badgeTone: { status: status === 'completed' ? 'completed' : 'pending' },
-          linkRoute: item.admissionId ? `/ward/patient-detail/${item.admissionId}` : undefined,
-        };
+          item.patientId,
+          item.admissionId
+        );
       }
 
       if (item.activityType === 'handover') {
-        return {
-          id: item._id,
-          cells: {
-            shift: item.shift === 'night' ? 'Night Shift' : item.shift === 'evening' ? 'Evening Shift' : 'Day Shift',
-            nurse: String(item.metadata?.['nurseName'] || '—'),
-            patients: String(item.metadata?.['patients'] || '—'),
-            pending: String(item.metadata?.['pending'] || '0'),
-            updatedAt: item.createdAt ? new Date(item.createdAt).toLocaleString() : '—',
-            status: status === 'completed' ? 'Completed' : 'Pending',
-            _tab: item.shift || 'day',
+        return withModuleMeta(
+          {
+            id: item._id,
+            cells: {
+              shift: item.shift === 'night' ? 'Night Shift' : item.shift === 'evening' ? 'Evening Shift' : 'Day Shift',
+              nurse: String(item.metadata?.['nurseName'] || '—'),
+              patients: String(item.metadata?.['patients'] || '—'),
+              pending: String(item.metadata?.['pending'] || '0'),
+              updatedAt: item.createdAt ? new Date(item.createdAt).toLocaleString() : '—',
+              status: status === 'completed' ? 'Completed' : 'Pending',
+              _tab: item.shift || 'day',
+            },
+            badgeTone: { status: status === 'completed' ? 'completed' : 'pending' },
           },
-          badgeTone: { status: status === 'completed' ? 'completed' : 'pending' },
-        };
+          item.patientId,
+          item.admissionId
+        );
       }
 
       if (item.activityType === 'inventory') {
-        return {
-          id: item._id,
-          cells: {
-            item: item.title || '—',
-            category: String(item.metadata?.['category'] || 'Consumable'),
-            stock: String(item.metadata?.['quantity'] || '0'),
-            reorder: String(item.metadata?.['reorderLevel'] || '—'),
-            location: String(item.metadata?.['location'] || 'Ward Store'),
-            status: status === 'completed' ? 'Available' : 'Low',
-            _tab: status === 'completed' ? 'available' : 'low',
+        return withModuleMeta(
+          {
+            id: item._id,
+            cells: {
+              item: item.title || '—',
+              category: String(item.metadata?.['category'] || 'Consumable'),
+              stock: String(item.metadata?.['quantity'] || '0'),
+              reorder: String(item.metadata?.['reorderLevel'] || '—'),
+              location: String(item.metadata?.['location'] || 'Ward Store'),
+              status: status === 'completed' ? 'Available' : 'Low',
+              _tab: status === 'completed' ? 'available' : 'low',
+            },
+            badgeTone: { status: status === 'completed' ? 'completed' : 'critical' },
           },
-          badgeTone: { status: status === 'completed' ? 'completed' : 'critical' },
-        };
+          item.patientId,
+          item.admissionId
+        );
       }
 
       if (item.activityType === 'mar_dose') {
-        return {
-          id: item._id,
-          cells: {
-            patient: patientName,
-            medicine: String(item.metadata?.['medicineName'] || item.title || '—'),
-            dose: String(item.metadata?.['dose'] || '—'),
-            route: String(item.metadata?.['route'] || 'PO'),
-            dueTime: item.createdAt ? new Date(item.createdAt).toLocaleTimeString() : '—',
-            status: 'Given',
-            _tab: 'given',
+        return withModuleMeta(
+          {
+            id: item._id,
+            cells: {
+              patient: patientName,
+              medicine: String(item.metadata?.['medicineName'] || item.title || '—'),
+              dose: String(item.metadata?.['dose'] || '—'),
+              route: String(item.metadata?.['route'] || 'PO'),
+              dueTime: item.createdAt ? new Date(item.createdAt).toLocaleTimeString() : '—',
+              status: 'Given',
+              _tab: 'given',
+            },
+            badgeTone: { status: 'completed' },
+            linkRoute: item.admissionId ? `/ward/patient-detail/${item.admissionId}` : undefined,
           },
-          badgeTone: { status: 'completed' },
-          linkRoute: item.admissionId ? `/ward/patient-detail/${item.admissionId}` : undefined,
-        };
+          item.patientId,
+          item.admissionId
+        );
       }
 
       if (item.activityType === 'nursing_task') {
-        return {
-          id: item._id,
-          cells: {
-            patient: patientName,
-            task: item.title || 'Nursing Task',
-            priority: item.priority === 'high' || item.priority === 'critical' ? 'High' : 'Medium',
-            nurse: String(item.metadata?.['nurseName'] || '—'),
-            dueAt: item.createdAt ? formatDisplayDate(item.createdAt) : '—',
-            status: status === 'completed' ? 'Completed' : 'Due',
-            _tab: status === 'completed' ? 'completed' : 'due',
+        return withModuleMeta(
+          {
+            id: item._id,
+            cells: {
+              patient: patientName,
+              task: item.title || 'Nursing Task',
+              priority: item.priority === 'high' || item.priority === 'critical' ? 'High' : 'Medium',
+              nurse: String(item.metadata?.['nurseName'] || '—'),
+              dueAt: item.createdAt ? formatDisplayDate(item.createdAt) : '—',
+              status: status === 'completed' ? 'Completed' : 'Due',
+              _tab: status === 'completed' ? 'completed' : 'due',
+            },
+            badgeTone: {
+              priority: item.priority === 'critical' ? 'critical' : item.priority === 'high' ? 'critical' : 'medium',
+              status: status === 'completed' ? 'completed' : 'pending',
+            },
+            linkRoute: item.admissionId ? `/ward/patient-detail/${item.admissionId}` : undefined,
           },
-          badgeTone: {
-            priority: item.priority === 'critical' ? 'critical' : item.priority === 'high' ? 'critical' : 'medium',
-            status: status === 'completed' ? 'completed' : 'pending',
-          },
-          linkRoute: item.admissionId ? `/ward/patient-detail/${item.admissionId}` : undefined,
-        };
+          item.patientId,
+          item.admissionId
+        );
       }
 
       if (item.activityType === 'admission_request') {
-        return {
+        return withModuleMeta(
+          {
+            id: item._id,
+            cells: {
+              patient: patientName,
+              mrn: String(item.metadata?.['mrn'] || '—'),
+              bed: String(item.metadata?.['bedLabel'] || '—'),
+              doctor: String(item.metadata?.['doctorName'] || '—'),
+              admittedOn: '—',
+              status: 'Pending',
+              _tab: 'pending',
+            },
+            badgeTone: { status: 'pending' },
+          },
+          item.patientId,
+          item.admissionId
+        );
+      }
+
+      return withModuleMeta(
+        {
           id: item._id,
           cells: {
             patient: patientName,
-            mrn: String(item.metadata?.['mrn'] || '—'),
-            bed: String(item.metadata?.['bedLabel'] || '—'),
-            doctor: String(item.metadata?.['doctorName'] || '—'),
-            admittedOn: '—',
-            status: 'Pending',
-            _tab: 'pending',
+            task: item.title || item.activityType,
+            priority: item.priority || 'normal',
+            nurse: '—',
+            dueAt: formatDisplayDate(item.createdAt),
+            status: status,
+            _tab: tab,
           },
-          badgeTone: { status: 'pending' },
-        };
-      }
-
-      return {
-        id: item._id,
-        cells: {
-          patient: patientName,
-          task: item.title || item.activityType,
-          priority: item.priority || 'normal',
-          nurse: '—',
-          dueAt: formatDisplayDate(item.createdAt),
-          status: status,
-          _tab: tab,
+          badgeTone: { status: status === 'completed' ? 'completed' : 'pending' },
+          linkRoute: item.admissionId ? `/ward/patient-detail/${item.admissionId}` : undefined,
         },
-        badgeTone: { status: status === 'completed' ? 'completed' : 'pending' },
-        linkRoute: item.admissionId ? `/ward/patient-detail/${item.admissionId}` : undefined,
-      };
-    }) as unknown as WardModuleRow[];
+        item.patientId,
+        item.admissionId
+      );
+    });
 }
 
 export function mapWardApiBedToRecord(

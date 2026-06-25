@@ -15,6 +15,7 @@ export class WardActionModalComponent implements OnChanges {
   @Input() open = false;
   @Input() moduleKey!: WardModuleKey;
   @Input() title = 'Action';
+  @Input() preset: Record<string, string | number> = {};
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<void>();
 
@@ -68,6 +69,11 @@ export class WardActionModalComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open']?.currentValue) {
       this.resetForm();
+      Object.entries(this.preset).forEach(([key, value]) => {
+        if (key in this.form) {
+          this.form[key] = value;
+        }
+      });
       this.loadOptions();
     }
   }

@@ -16,3 +16,152 @@
 .ward-link-btn-inline:hover {
   text-decoration: underline;
 }
+
+.ward-patient-context {
+  align-items: center;
+  background: rgba(1, 156, 157, 0.08);
+  border: 1px solid rgba(1, 156, 157, 0.18);
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  width: 100%;
+}
+
+.ward-patient-context--page {
+  margin-bottom: 12px;
+}
+
+.ward-patient-context__info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ward-patient-context__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ward-patient-context span {
+  color: var(--ward-muted);
+  font-size: 12px;
+}
+
+.ward-patient-context strong {
+  color: var(--ward-ink);
+}
+
+.ward-vitals-hint {
+  align-items: center;
+  background: #eff6ff;
+  border: 1px dashed #93c5fd;
+  border-radius: 10px;
+  color: #1d4ed8;
+  display: flex;
+  font-size: 12px;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+
+.table-actions__dropdown--fixed {
+  margin: 0;
+  position: fixed;
+  z-index: 2000;
+}
+
+.ward-row-menu-backdrop {
+  background: transparent;
+  inset: 0;
+  position: fixed;
+  z-index: 1990;
+}
+
+.table-actions__menu > button.is-active {
+  background: var(--ward-blue-soft);
+  box-shadow: 0 0 0 2px var(--ward-blue);
+  color: var(--ward-blue);
+}
+
+.table-actions__label-btn {
+  align-items: center;
+  border: 0;
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 700;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.table-actions__label-btn--start {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.table-actions__label-btn--start:hover {
+  background: #d1fae5;
+}
+
+.table-actions__label-btn--stop {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.table-actions__label-btn--stop:hover {
+  background: #ffedd5;
+}
+
+.table-actions__label-btn--complete {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.table-actions__label-btn--complete:hover {
+  background: #bfdbfe;
+}
+
+.table-actions--wide {
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.table-actions--wide > .table-actions__label-btn {
+  flex: 0 0 auto;
+  height: 30px;
+  justify-content: center;
+  min-width: 78px;
+  padding: 0 10px;
+  width: auto;
+}
+
+.table-actions--wide > button:not(.table-actions__label-btn),
+.table-actions--wide .table-actions__menu > button {
+  flex: 0 0 30px;
+  height: 30px;
+  width: 30px;
+}
+
+.table-actions--wide .table-actions__menu {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1200px) {
+  .table-actions--wide {
+    gap: 4px;
+  }
+
+  .table-actions--wide > .table-actions__label-btn {
+    min-width: 70px;
+    padding: 0 8px;
+  }
+}

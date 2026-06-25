@@ -28,11 +28,34 @@ export interface WardModuleColumn {
   type?: 'text' | 'badge' | 'link';
 }
 
+export interface WardModuleRowMeta {
+  patientId?: string;
+  admissionId?: string;
+  prescriptionId?: string;
+  fluidIndex?: number;
+  fluidName?: string;
+  fluidStatus?: 'planned' | 'running' | 'completed';
+}
+
 export interface WardModuleRow {
   id: string;
   cells: Record<string, string>;
   badgeTone?: Record<string, string>;
   linkRoute?: string;
+  meta?: WardModuleRowMeta;
+}
+
+export interface WardRowMenuItem {
+  id: string;
+  label: string;
+  danger?: boolean;
+}
+
+export interface WardModuleFilters {
+  patientId?: string;
+  admissionId?: string;
+  wardName?: string;
+  patientName?: string;
 }
 
 export interface WardModuleReportCard {

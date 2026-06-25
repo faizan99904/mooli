@@ -311,7 +311,14 @@ export class WardPatientListComponent implements OnInit, OnDestroy {
 
   navigateWithAdmission(path: string, patient: WardPatient): void {
     this.openMenuAdmissionId = null;
-    void this.router.navigate([path], { queryParams: { admissionId: patient.admissionId } });
+    void this.router.navigate([path], {
+      queryParams: {
+        admissionId: patient.admissionId,
+        patientId: patient.patientId,
+        patientName: patient.patientName,
+        wardName: patient.wardName,
+      },
+    });
   }
 
   exportCsv(): void {

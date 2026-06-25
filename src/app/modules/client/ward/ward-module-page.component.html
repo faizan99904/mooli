@@ -35,7 +35,7 @@
     </div>
 
     <section class="ward-kpi-grid">
-      <article class="ward-kpi-card" *ngFor="let kpi of config.kpis" [ngClass]="'ward-kpi-card--' + kpi.tone">
+      <article class="ward-kpi-card" *ngFor="let kpi of displayKpis" [ngClass]="'ward-kpi-card--' + kpi.tone">
         <span class="ward-kpi-card__icon"><i class="fa" [ngClass]="kpi.icon"></i></span>
         <span class="ward-kpi-card__copy">
           <strong>{{ kpi.value }}</strong>
@@ -44,7 +44,36 @@
       </article>
     </section>
 
-    <section class="ward-panel">
+    <div class="ward-patient-context ward-patient-context--page" *ngIf="hasPatientContext">
+      <div class="ward-patient-context__info">
+        <span>Patient: <strong>{{ patientContextLabel }}</strong></span>
+        <span *ngIf="contextBedNo">Bed: <strong>{{ contextBedNo }}</strong></span>
+      </div>
+      <div class="ward-patient-context__actions">
+        <button type="button" class="btn btn-sm btn-outline-primary" *ngIf="contextAdmissionId" (click)="transferCurrentPatient()">
+          <i class="fa fa-random"></i> Transfer Bed
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger" *ngIf="contextAdmissionId" (click)="dischargeCurrentPatient()">
+          <i class="fa fa-sign-out"></i> Discharge
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="clearPatientContext()">Show All</button>
+      </div>
+    </div>
+
+    <app-ward-vitals-trends
+      *ngIf="config.key === 'vitals' && contextPatientId"
+      [patientId]="contextPatientId"
+      [patientName]="patientContextLabel"
+      [refreshToken]="vitalsTrendsRefreshToken"
+      (recordVitals)="primaryAction()"
+    ></app-ward-vitals-trends>
+
+    <div class="ward-vitals-hint" *ngIf="config.key === 'vitals' && !contextPatientId">
+      <i class="fa fa-line-chart"></i>
+      <span>Open a patient from Ward Dashboard to view vitals graphs and trends here.</span>
+    </div>
+
+    <section class="ward-panel" *ngIf="!hideVitalsListTable">
       <div class="ward-panel__head ward-panel__head--stack">
         <div>
           <h2>{{ config.title }} in {{ ward }}</h2>
@@ -117,9 +146,45 @@
                     </ng-template>
                   </td>
                   <td>
-                    <div class="table-actions">
+                    <div class="table-actions table-actions--wide">
                       <button type="button" title="View" (click)="openRow(row)" *ngIf="row.linkRoute"><i class="fa fa-eye"></i></button>
-                      <button type="button" title="More"><i class="fa fa-ellipsis-v"></i></button>
+                      <button
+                        type="button"
+                        class="table-actions__label-btn table-actions__label-btn--start"
+                        title="Start Drip"
+                        *ngIf="config.key === 'drips-iv' && dripFluidStatus(row) === 'planned'"
+                        (click)="runDripAction(row, 'start')"
+                      >
+                        <i class="fa fa-play"></i> Start
+                      </button>
+                      <button
+                        type="button"
+                        class="table-actions__label-btn table-actions__label-btn--stop"
+                        title="Stop Drip"
+                        *ngIf="config.key === 'drips-iv' && dripFluidStatus(row) === 'running'"
+                        (click)="runDripAction(row, 'stop')"
+                      >
+                        <i class="fa fa-pause"></i> Stop
+                      </button>
+                      <button
+                        type="button"
+                        class="table-actions__label-btn table-actions__label-btn--complete"
+                        title="Complete Drip"
+                        *ngIf="config.key === 'drips-iv' && dripFluidStatus(row) === 'running'"
+                        (click)="runDripAction(row, 'complete')"
+                      >
+                        <i class="fa fa-check"></i> Complete
+                      </button>
+                      <div class="table-actions__menu">
+                        <button
+                          type="button"
+                          title="More"
+                          [class.is-active]="isRowMenuOpen(row.id)"
+                          (click)="toggleRowMenu(row, $event)"
+                        >
+                          <i class="fa fa-ellipsis-v"></i>
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -133,8 +198,13 @@
         <div class="ward-empty-state">
           <div class="ward-empty-state__icon"><i class="fa fa-search"></i></div>
           <h3>No records found</h3>
-          <p>Try changing filters or search with another keyword.</p>
-          <button type="button" class="btn btn-sm btn-primary" (click)="search = ''; activeTab = 'all'; onFilterChange()">Reset Filters</button>
+          <p *ngIf="hasPatientContext; else genericEmpty">
+            No {{ config.title | lowercase }} records found for <strong>{{ patientContextLabel }}</strong>.
+          </p>
+          <ng-template #genericEmpty>
+            <p>Try changing filters or search with another keyword.</p>
+          </ng-template>
+          <button type="button" class="btn btn-sm btn-primary" (click)="resetFilters()">Reset Filters</button>
         </div>
       </ng-template>
 
@@ -150,11 +220,38 @@
   </div>
 </div>
 
+<div class="ward-row-menu-backdrop" *ngIf="activeMenuRow" (click)="closeRowMenu()"></div>
+<div
+  class="table-actions__dropdown table-actions__dropdown--fixed"
+  *ngIf="activeMenuRow"
+  [ngStyle]="menuPosition"
+  (click)="$event.stopPropagation()"
+>
+  <button
+    type="button"
+    *ngFor="let item of rowMenuItems(activeMenuRow)"
+    [class.is-danger]="item.danger"
+    (click)="handleRowMenuAction(activeMenuRow, item.id)"
+  >
+    {{ item.label }}
+  </button>
+</div>
+
+<app-ward-drip-action-modal
+  [open]="dripActionModalOpen"
+  [action]="dripActionType"
+  [patientName]="dripActionPatientName"
+  [fluidName]="dripActionFluidName"
+  (closed)="closeDripActionModal()"
+  (confirmed)="confirmDripAction($event)"
+></app-ward-drip-action-modal>
+
 <app-ward-action-modal
   *ngIf="config"
   [open]="actionModalOpen"
   [moduleKey]="config.key"
   [title]="config.primaryActionLabel || config.title"
+  [preset]="actionPreset"
   (closed)="closeActionModal()"
   (saved)="onActionSaved()"
 ></app-ward-action-modal>

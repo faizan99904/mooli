@@ -284,6 +284,7 @@ export class WardDashboardComponent implements OnInit {
     const query = {
       admissionId: bed.admissionId || undefined,
       patientId: bed.patientId || undefined,
+      patientName: bed.patientName || undefined,
       roomId: bed.roomId || undefined,
       bedNo: bed.bedNo,
       wardName: bed.wardName || undefined,

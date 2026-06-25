@@ -25,7 +25,7 @@ import {
   WardSection,
   WardTaskRow,
 } from '../ward-dashboard.models';
-import { WardModuleKey, WardModuleReportCard, WardModuleRow } from '../ward-module.models';
+import { WardModuleKey, WardModuleReportCard, WardModuleRow, WardModuleFilters } from '../ward-module.models';
 import { WardPatient } from '../ward-patient-list.models';
 import {
   buildFloorOptions,
@@ -46,13 +46,18 @@ import {
   mapVitalsRows,
   mapWardActivityRows,
   mapWardApiBedToRecord,
+  filterModuleRows,
   WardActivityRecord,
   matchesWardFilter,
   normalizeHospitalWardRecord,
   normalizeHospitalWardRecords,
   normalizeWardFloorRecord,
   normalizeWardFloorRecords,
+  normalizeWardVitalsRecord,
+  normalizeEntityId,
+  resolvePrescriptionPatientId,
   wardRoomPayloadFromForm,
+  WardVitalTimelineEntry,
 } from './ward-api.mapper';
 
 export interface WardBedManagementData {
@@ -365,7 +370,12 @@ export class WardDataService {
     );
   }
 
-  loadModuleRows(moduleKey: WardModuleKey, tab: string, search: string): Observable<WardModuleRow[]> {
+  loadModuleRows(
+    moduleKey: WardModuleKey,
+    tab: string,
+    search: string,
+    filters: WardModuleFilters = {}
+  ): Observable<WardModuleRow[]> {
     return this.loadClinicalBundle().pipe(
       map((bundle) => {
         let rows: WardModuleRow[] = [];
@@ -405,7 +415,7 @@ export class WardDataService {
             rows = mapDripRows(bundle.prescriptions);
             break;
           case 'vitals':
-            rows = mapVitalsRows(bundle.history);
+            rows = mapVitalsRows(bundle.history, bundle.prescriptions, bundle.allotments);
             break;
           case 'io-chart':
             rows = mapWardActivityRows(
@@ -431,6 +441,8 @@ export class WardDataService {
           default:
             rows = [];
         }
+
+        rows = filterModuleRows(rows, bundle.allotments, filters);
 
         const normalizedSearch = search.trim().toLowerCase();
         return rows.filter((row) => {
@@ -475,6 +487,52 @@ export class WardDataService {
 
   loadActionOptions(): Observable<WardClinicalBundle> {
     return this.loadClinicalBundle();
+  }
+
+  loadPatientVitalsTimeline(patientId: string): Observable<WardVitalTimelineEntry[]> {
+    const normalizedPatientId = normalizeEntityId(patientId);
+    if (!normalizedPatientId) {
+      return of([]);
+    }
+
+    return this.loadClinicalBundle().pipe(
+      map((bundle) => {
+        const fromHistory = bundle.history
+          .filter(
+            (item) =>
+              normalizeEntityId(item.patientId) === normalizedPatientId &&
+              item.vitals &&
+              Object.values(item.vitals).some((value) => String(value || '').trim())
+          )
+          .map((item) => ({
+            createdAt: item.createdAt,
+            vitals: normalizeWardVitalsRecord(item.vitals || {}),
+          }));
+
+        const fromPrescriptions = bundle.prescriptions
+          .filter(
+            (prescription) =>
+              resolvePrescriptionPatientId(prescription) === normalizedPatientId &&
+              prescription.vitals &&
+              Object.values(prescription.vitals).some((value) => String(value || '').trim())
+          )
+          .map((prescription) => ({
+            createdAt: prescription.createdAt,
+            vitals: normalizeWardVitalsRecord(prescription.vitals || {}),
+          }));
+
+        return [...fromHistory, ...fromPrescriptions].sort(
+          (first, second) => new Date(second.createdAt || 0).getTime() - new Date(first.createdAt || 0).getTime()
+        );
+      })
+    );
+  }
+
+  findPatient(patientId: string): Observable<Patient | null> {
+    const normalizedPatientId = normalizeEntityId(patientId);
+    return this.loadClinicalBundle().pipe(
+      map((bundle) => bundle.patients.find((patient) => normalizeEntityId(patient._id) === normalizedPatientId) || null)
+    );
   }
 
   submitModuleAction(moduleKey: WardModuleKey, payload: Record<string, unknown>): Observable<unknown> {
@@ -569,6 +627,21 @@ export class WardDataService {
 
   dischargeAllotment(id: string, payload: Record<string, unknown> = {}) {
     return this.backend.dischargeRoomAllotment(id, payload);
+  }
+
+  updateDripStatus(payload: {
+    action: 'start' | 'stop' | 'complete';
+    prescriptionId: string;
+    fluidIndex?: number;
+    fluidName?: string;
+    patientId?: string;
+    admissionId?: string;
+    notes?: string;
+  }) {
+    return this.backend.wardDripAction({
+      ...payload,
+      fluidIndex: payload.fluidIndex ?? undefined,
+    }).pipe(map((response) => (response.data || {}) as Record<string, unknown>));
   }
 
   buildRoomPayload(value: {

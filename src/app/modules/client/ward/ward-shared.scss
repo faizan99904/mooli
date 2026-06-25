@@ -226,8 +226,14 @@
 }
 
 .ward-data-table-wrap {
-  overflow-x: auto;
+  overflow: visible;
   padding: 0 4px 4px;
+}
+
+@media (max-width: 991px) {
+  .ward-data-table-wrap {
+    overflow-x: auto;
+  }
 }
 
 .ward-data-table {
@@ -297,9 +303,11 @@
   display: flex;
   gap: 4px;
   justify-content: flex-end;
+  position: relative;
 }
 
-.table-actions button {
+.table-actions > button,
+.table-actions__menu > button {
   align-items: center;
   background: #f1f5f9;
   border: 0;
@@ -312,9 +320,65 @@
   width: 26px;
 }
 
-.table-actions button:hover {
+.table-actions > button:hover,
+.table-actions__menu > button:hover {
   background: var(--ward-blue-soft);
   color: var(--ward-blue);
+}
+
+.table-actions__menu {
+  position: relative;
+}
+
+.table-actions__dropdown {
+  background: #fff;
+  border: 1px solid var(--ward-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+}
+
+.table-actions__dropdown button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ward-ink);
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  height: auto;
+  justify-content: flex-start;
+  padding: 7px 10px;
+  text-align: left;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.table-actions__dropdown button:hover {
+  background: #f8fafc;
+  color: var(--ward-ink);
+}
+
+.table-actions__dropdown button.is-danger {
+  color: #b91c1c;
+}
+
+.table-actions__dropdown button.is-danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.ward-data-table tbody td:last-child {
+  overflow: visible;
 }
 
 .ward-table-footer {
