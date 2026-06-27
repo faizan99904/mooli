@@ -70,12 +70,19 @@
       </ng-container>
 
       <ng-container *ngSwitchCase="'shift-handover'">
+        <label><span>Patient</span><select [(ngModel)]="form['patientId']"><option value="">Select patient</option><option *ngFor="let patient of patients" [value]="patient._id">{{ patientLabel(patient) }}</option></select></label>
         <label><span>Shift</span><select [(ngModel)]="form['shift']"><option *ngFor="let shift of shiftOptions" [value]="shift.value">{{ shift.label }}</option></select></label>
         <label><span>Nurse Name</span><input [(ngModel)]="form['nurseName']" /></label>
+        <label><span>Patient Condition</span><input [(ngModel)]="form['patientCondition']" placeholder="Stable, observation, critical..." /></label>
         <div class="ward-modal__grid">
-          <label><span>Patients</span><input type="number" [(ngModel)]="form['patientsCount']" /></label>
           <label><span>Pending Items</span><input type="number" [(ngModel)]="form['pendingCount']" /></label>
+          <label><span>Doctor Informed</span><select [(ngModel)]="form['doctorInformed']"><option value="no">No</option><option value="yes">Yes</option></select></label>
         </div>
+        <label><span>Pending Medicines</span><textarea [(ngModel)]="form['pendingMedicines']" rows="2"></textarea></label>
+        <label><span>Pending Labs</span><textarea [(ngModel)]="form['pendingLabs']" rows="2"></textarea></label>
+        <label><span>Running Drips</span><textarea [(ngModel)]="form['runningDrips']" rows="2"></textarea></label>
+        <label><span>Special Instructions</span><textarea [(ngModel)]="form['specialInstructions']" rows="2"></textarea></label>
+        <label><span>Risk Alerts</span><textarea [(ngModel)]="form['riskAlerts']" rows="2"></textarea></label>
         <label><span>Handover Notes</span><textarea [(ngModel)]="form['description']" rows="4"></textarea></label>
       </ng-container>
 

@@ -613,8 +613,14 @@ export class WardDataService {
           ...payload,
           metadata: {
             nurseName: payload['nurseName'],
-            patients: payload['patients'],
             pending: payload['pending'],
+            patientCondition: payload['patientCondition'],
+            pendingMedicines: payload['pendingMedicines'],
+            pendingLabs: payload['pendingLabs'],
+            runningDrips: payload['runningDrips'],
+            specialInstructions: payload['specialInstructions'],
+            riskAlerts: payload['riskAlerts'],
+            doctorInformed: payload['doctorInformed'],
           },
         });
       case 'inventory':

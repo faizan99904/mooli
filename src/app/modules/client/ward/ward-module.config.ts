@@ -221,8 +221,10 @@ export const WARD_MODULE_PAGE_CONFIGS: Record<string, WardModulePageConfig> = {
     columns: [
       { key: 'shift', label: 'Shift' },
       { key: 'nurse', label: 'Nurse' },
-      { key: 'patients', label: 'Patients' },
+      { key: 'patient', label: 'Patient', type: 'link' },
+      { key: 'condition', label: 'Condition' },
       { key: 'pending', label: 'Pending Items' },
+      { key: 'risk', label: 'Risk Alerts' },
       { key: 'updatedAt', label: 'Updated' },
       { key: 'status', label: 'Status', type: 'badge' },
     ],

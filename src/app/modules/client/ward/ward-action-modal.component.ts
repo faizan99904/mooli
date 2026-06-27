@@ -62,6 +62,13 @@ export class WardActionModalComponent implements OnChanges {
     nurseName: '',
     patientsCount: 1,
     pendingCount: 0,
+    patientCondition: '',
+    pendingMedicines: '',
+    pendingLabs: '',
+    runningDrips: '',
+    specialInstructions: '',
+    riskAlerts: '',
+    doctorInformed: 'no',
   };
 
   constructor(private wardData: WardDataService) {}
@@ -129,7 +136,10 @@ export class WardActionModalComponent implements OnChanges {
     this.loading = true;
     this.wardData.loadActionOptions().subscribe({
       next: (bundle) => {
-        this.patients = bundle.patients;
+        const admittedPatients = bundle.allotments
+          .filter((allotment) => allotment.status === 'admitted' && allotment.patient)
+          .map((allotment) => allotment.patient as Patient);
+        this.patients = admittedPatients.length ? admittedPatients : bundle.patients;
         this.rooms = bundle.rooms.filter((room) => room.status === 'available' || room.status === 'occupied');
         this.doctors = bundle.doctors;
         this.prescriptions = bundle.prescriptions;
@@ -236,13 +246,21 @@ export class WardActionModalComponent implements OnChanges {
           priority: this.form['priority'],
         };
       case 'shift-handover':
+        if (!this.form['patientId'] || !this.form['patientCondition']) return null;
         return {
+          patientId: this.form['patientId'],
           title: `Handover - ${this.form['shift']}`,
           description: this.form['description'],
           shift: this.form['shift'],
           nurseName: this.form['nurseName'],
-          patients: this.form['patientsCount'],
           pending: this.form['pendingCount'],
+          patientCondition: this.form['patientCondition'],
+          pendingMedicines: this.form['pendingMedicines'],
+          pendingLabs: this.form['pendingLabs'],
+          runningDrips: this.form['runningDrips'],
+          specialInstructions: this.form['specialInstructions'],
+          riskAlerts: this.form['riskAlerts'],
+          doctorInformed: this.form['doctorInformed'],
         };
       case 'inventory':
         if (!this.form['title']) return null;

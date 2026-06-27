@@ -1257,13 +1257,16 @@ export function mapWardActivityRows(activities: WardActivityRecord[], type?: str
             cells: {
               shift: item.shift === 'night' ? 'Night Shift' : item.shift === 'evening' ? 'Evening Shift' : 'Day Shift',
               nurse: String(item.metadata?.['nurseName'] || '—'),
-              patients: String(item.metadata?.['patients'] || '—'),
+              patient: patientName,
+              condition: String(item.metadata?.['patientCondition'] || item.description || '—'),
               pending: String(item.metadata?.['pending'] || '0'),
+              risk: String(item.metadata?.['riskAlerts'] || '—'),
               updatedAt: item.createdAt ? new Date(item.createdAt).toLocaleString() : '—',
               status: status === 'completed' ? 'Completed' : 'Pending',
               _tab: item.shift || 'day',
             },
             badgeTone: { status: status === 'completed' ? 'completed' : 'pending' },
+            linkRoute: item.admissionId ? `/ward/patient-detail/${item.admissionId}` : undefined,
           },
           item.patientId,
           item.admissionId
