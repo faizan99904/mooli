@@ -100,6 +100,7 @@ export const WARD_MODULE_PAGE_CONFIGS: Record<string, WardModulePageConfig> = {
     ],
     tabs: [
       { key: 'all', label: 'All' },
+      { key: 'planned', label: 'Planned' },
       { key: 'running', label: 'Running' },
       { key: 'completed', label: 'Completed' },
       { key: 'alerts', label: 'Alerts' },

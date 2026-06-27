@@ -83,6 +83,7 @@ export interface WardDashboardData {
 export interface WardClinicalBundle {
   allotments: RoomAllotment[];
   rooms: Room[];
+  hospitalWards: HospitalWard[];
   doctors: Doctor[];
   patients: Patient[];
   history: PatientHistory[];
@@ -112,6 +113,7 @@ export class WardDataService {
     return forkJoin({
       allotments: this.backend.getRoomAllotments({ limit: 100 }),
       rooms: this.backend.getRooms({ limit: 100 }),
+      hospitalWards: this.safeList(this.backend.getHospitalWards({ limit: 100 })),
       doctors: this.backend.getDoctors({ limit: 100 }),
       patients: this.backend.getPatients({ limit: 100 }),
       history: this.backend.getPatientHistoryRecords({ recordType: 'ward', limit: 100 }),
@@ -124,6 +126,7 @@ export class WardDataService {
       map((result) => ({
         allotments: result.allotments.items,
         rooms: result.rooms.items,
+        hospitalWards: normalizeHospitalWardRecords(result.hospitalWards.items),
         doctors: result.doctors.items,
         patients: result.patients.items,
         history: result.history.items,
@@ -137,6 +140,7 @@ export class WardDataService {
         of({
           allotments: [],
           rooms: [],
+          hospitalWards: [],
           doctors: [],
           patients: [],
           history: [],
@@ -161,7 +165,8 @@ export class WardDataService {
               bundle.doctors,
               bundle.history,
               bundle.prescriptions,
-              bundle.encounters
+              bundle.encounters,
+              bundle.hospitalWards
             )
           )
       )
@@ -406,11 +411,16 @@ export class WardDataService {
     return this.loadClinicalBundle().pipe(
       map((bundle) => {
         let rows: WardModuleRow[] = [];
+        const roomById = new Map(bundle.rooms.map((room) => [String(room._id), room]));
+        const enrichedAllotments = bundle.allotments.map((allotment) => ({
+          ...allotment,
+          room: roomById.get(String(allotment.roomId)) || allotment.room || null,
+        }));
 
         switch (moduleKey) {
           case 'admissions': {
             const admitted = mapAdmissionRows(
-              bundle.allotments.filter((item) => item.status === 'admitted'),
+              enrichedAllotments.filter((item) => item.status === 'admitted'),
               bundle.doctors
             );
             const pending = mapWardActivityRows(
@@ -442,7 +452,7 @@ export class WardDataService {
             rows = mapDripRows(bundle.prescriptions);
             break;
           case 'vitals':
-            rows = mapVitalsRows(bundle.history, bundle.prescriptions, bundle.allotments);
+            rows = mapVitalsRows(bundle.history, bundle.prescriptions, enrichedAllotments);
             break;
           case 'io-chart':
             rows = mapWardActivityRows(
@@ -469,7 +479,7 @@ export class WardDataService {
             rows = [];
         }
 
-        rows = filterModuleRows(rows, bundle.allotments, filters);
+        rows = filterModuleRows(rows, enrichedAllotments, filters);
 
         const normalizedSearch = search.trim().toLowerCase();
         return rows.filter((row) => {

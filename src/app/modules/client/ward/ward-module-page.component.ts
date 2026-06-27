@@ -354,6 +354,9 @@ export class WardModulePageComponent implements OnInit {
         next: (result) => {
           const nextStatus = this.resolveDripStatusFromResult(row, action, result);
           this.pendingDripPatch = { rowId: row.id, status: nextStatus };
+          if (this.activeTab !== 'all') {
+            this.activeTab = nextStatus;
+          }
           const label = action === 'start' ? 'started' : action === 'stop' ? 'stopped' : 'completed';
           this.toastr.success(`Drip ${label} successfully.`);
           this.refreshRows();
@@ -394,7 +397,7 @@ export class WardModulePageComponent implements OnInit {
     const { rowId, status } = this.pendingDripPatch;
     this.pendingDripPatch = null;
     const statusLabel = status === 'running' ? 'Running' : status === 'completed' ? 'Completed' : 'Planned';
-    const tab = status === 'running' ? 'running' : status === 'completed' ? 'completed' : 'all';
+    const tab = status === 'running' ? 'running' : status === 'completed' ? 'completed' : 'planned';
     const badgeStatus = status === 'running' ? 'running' : status === 'completed' ? 'completed' : 'pending';
 
     return rows.map((row) => {
@@ -439,6 +442,10 @@ export class WardModulePageComponent implements OnInit {
 
   get patientContextLabel(): string {
     return this.contextPatientName || 'Selected patient';
+  }
+
+  get selectedWardLabel(): string {
+    return this.ward || 'All Wards';
   }
 
   clearPatientContext(): void {
@@ -624,10 +631,7 @@ export class WardModulePageComponent implements OnInit {
     this.wardData.loadBedManagement().subscribe({
       next: (data) => {
         this.wardOptions = data.wardOptions;
-        if (!this.ward && this.wardOptions.length) {
-          this.ward = this.wardOptions[0];
-          this.cdr.markForCheck();
-        }
+        this.cdr.markForCheck();
       },
     });
   }

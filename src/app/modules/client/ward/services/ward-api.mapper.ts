@@ -232,11 +232,16 @@ export function mapAllotmentToWardPatient(
   doctors: Doctor[] = [],
   history: PatientHistory[] = [],
   prescriptions: Prescription[] = [],
-  encounters: Encounter[] = []
+  encounters: Encounter[] = [],
+  wards: HospitalWard[] = []
 ): WardPatient {
   const patient = allotment.patient;
   const room = allotment.room;
   const encounter = encounters.find((item) => item._id === allotment.encounterId);
+  const wardFromCatalog = room?.wardId
+    ? wards.find((ward) => String(ward._id) === String(room.wardId))
+    : undefined;
+  const wardName = room?.ward?.name || wardFromCatalog?.name || wardNameFromRoom(room);
 
   return {
     admissionId: allotment._id,
@@ -244,7 +249,7 @@ export function mapAllotmentToWardPatient(
     patientName: patientFullName(patient),
     mrn: patient?.patientNo || '—',
     bedNo: allotment.bedLabel || room?.roomNo || '—',
-    wardName: wardNameFromRoom(room),
+    wardName,
     roomName: room?.roomNo ? `Room ${room.roomNo}` : '—',
     galleryName: galleryLabelFromRoom(room),
     age: patientAge(patient),
@@ -996,7 +1001,7 @@ export function mapDripRows(prescriptions: Prescription[]): WardModuleRow[] {
               startedAt: formatDisplayDate(fluid.startDateTime),
               nurse: prescription.doctor?.name || '—',
               status: fluidStatus === 'running' ? 'Running' : fluidStatus === 'completed' ? 'Completed' : 'Planned',
-              _tab: fluidStatus === 'running' ? 'running' : fluidStatus === 'completed' ? 'completed' : 'all',
+              _tab: fluidStatus === 'running' ? 'running' : fluidStatus === 'completed' ? 'completed' : 'planned',
             },
             badgeTone: {
               status: fluidStatus === 'running' ? 'running' : fluidStatus === 'completed' ? 'completed' : 'pending',

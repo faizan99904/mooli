@@ -120,20 +120,26 @@ export class WardPatientListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.wardData.loadClinicalBundle().subscribe({
       next: (bundle) => {
-        this.wardOptions = getWardOptionsFromRooms(bundle.rooms);
-        if (!this.filters.ward && this.wardOptions.length) {
-          this.filters.ward = this.wardOptions[0];
-        }
+        this.wardOptions = getWardOptionsFromRooms(bundle.rooms, bundle.hospitalWards);
+        const roomById = new Map(bundle.rooms.map((room) => [String(room._id), room]));
 
         this.patients = bundle.allotments
           .filter((allotment) => allotment.status === 'admitted')
+          .map((allotment) => {
+            const room = roomById.get(String(allotment.roomId)) || allotment.room || null;
+            return {
+              ...allotment,
+              room,
+            };
+          })
           .map((allotment) =>
             mapAllotmentToWardPatient(
               allotment,
               bundle.doctors,
               bundle.history,
               bundle.prescriptions,
-              bundle.encounters
+              bundle.encounters,
+              bundle.hospitalWards
             )
           );
         this.currentPage = 1;
@@ -167,6 +173,10 @@ export class WardPatientListComponent implements OnInit, OnDestroy {
 
   get paginationEnd(): number {
     return Math.min(this.currentPage * this.pageSize, this.filteredPatientsList.length);
+  }
+
+  get selectedWardLabel(): string {
+    return this.filters.ward || 'All Wards';
   }
 
   statusTabCount(tab: PatientStatusTab): number {
@@ -203,7 +213,7 @@ export class WardPatientListComponent implements OnInit, OnDestroy {
 
   resetFilters(): void {
     this.filters = {
-      ward: this.wardOptions[0] || '',
+      ward: '',
       date: new Date().toISOString().slice(0, 10),
       shift: 'Day Shift',
       statusTab: 'all',
@@ -356,7 +366,7 @@ export class WardPatientListComponent implements OnInit, OnDestroy {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `ward-patients-${this.filters.ward.toLowerCase().replace(/\s+/g, '-')}-${this.filters.date}.csv`;
+    link.download = `ward-patients-${this.selectedWardLabel.toLowerCase().replace(/\s+/g, '-')}-${this.filters.date}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     this.toastr.success('Patient list exported.', 'Export');
@@ -368,7 +378,10 @@ export class WardPatientListComponent implements OnInit, OnDestroy {
   }
 
   private recomputeViewState(): void {
-    this.wardPatientsList = this.patients.filter((patient) => patient.wardName === this.filters.ward);
+    const selectedWard = this.filters.ward.trim().toLowerCase();
+    this.wardPatientsList = selectedWard
+      ? this.patients.filter((patient) => patient.wardName.trim().toLowerCase() === selectedWard)
+      : [...this.patients];
 
     const search = this.filters.search.trim().toLowerCase();
     this.filteredPatientsList = this.wardPatientsList.filter((patient) => {

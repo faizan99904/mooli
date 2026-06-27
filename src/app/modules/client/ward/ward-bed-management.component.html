@@ -496,14 +496,22 @@
   </div>
   <div class="ward-modal__body">
     <dl class="room-details-grid room-details-grid--modal">
+      <ng-container *ngIf="roomForBed(bed) as room">
+        <div><dt>Ward</dt><dd>{{ room.wardName }}</dd></div>
+        <div><dt>Room</dt><dd>{{ room.roomName }}</dd></div>
+        <div><dt>Floor</dt><dd>{{ room.galleryName }}</dd></div>
+      </ng-container>
       <div><dt>Status</dt><dd>{{ bedStatusLabel(bed.status) }}</dd></div>
       <div><dt>Type</dt><dd>{{ bed.bedType | titlecase }}</dd></div>
       <div><dt>Charge</dt><dd>{{ formatCurrency(bed.dailyCharge) }}</dd></div>
+      <div *ngIf="bed.patientName"><dt>Patient</dt><dd>{{ bed.patientName }}</dd></div>
+      <div *ngIf="bed.nurseName"><dt>Nurse</dt><dd>{{ bed.nurseName }}</dd></div>
       <div class="ward-modal__full"><dt>Notes</dt><dd>{{ displayValue(bed.notes) }}</dd></div>
     </dl>
     <div class="ward-modal__actions">
       <button type="button" class="btn btn-sm btn-default" (click)="closeModal()">Close</button>
       <button type="button" class="btn btn-sm btn-primary" *ngIf="bed.status === 'available'" (click)="assignPatient(bed)">Assign Patient</button>
+      <button type="button" class="btn btn-sm btn-primary" *ngIf="bed.admissionId" (click)="viewBedPatient(bed)">Patient Chart</button>
     </div>
   </div>
 </div>

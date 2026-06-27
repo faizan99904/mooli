@@ -32,6 +32,12 @@ interface TransferContext {
   currentBedId: string;
 }
 
+interface BedDetailContext {
+  bedId: string;
+  roomId: string;
+  bedNo: string;
+}
+
 @Component({
   selector: 'app-ward-bed-management',
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
@@ -75,6 +81,7 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
   private bedFormWardSub?: Subscription;
   private routeSub?: Subscription;
   private pendingTransferContext: TransferContext | null = null;
+  private pendingBedDetailContext: BedDetailContext | null = null;
   readonly roomTypeOptions: Array<{ value: string; label: string }> = [
     { value: '', label: 'All Room Types' },
     { value: 'general', label: 'General Ward' },
@@ -168,8 +175,18 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParamMap.subscribe((params) => {
+      const action = params.get('action') || '';
       const admissionId = params.get('admissionId') || '';
       const transferBedId = params.get('transferBedId') || '';
+      const bedId = params.get('bedId') || '';
+      const roomId = params.get('roomId') || '';
+      const bedNo = params.get('bedNo') || '';
+
+      if (action === 'details' || (!admissionId && !transferBedId && (bedId || roomId || bedNo))) {
+        this.pendingBedDetailContext = { bedId, roomId, bedNo };
+        this.openPendingBedDetail();
+      }
+
       if (!admissionId && !transferBedId) {
         return;
       }
@@ -401,6 +418,37 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
     if (context.admissionId) {
       this.openTransferModal(context);
     }
+  }
+
+  private openPendingBedDetail(): void {
+    if (!this.pendingBedDetailContext || this.loading || (!this.rooms.length && !this.beds.length)) {
+      return;
+    }
+
+    const context = this.pendingBedDetailContext;
+    this.pendingBedDetailContext = null;
+    const bed =
+      (context.bedId && this.beds.find((item) => item.id === context.bedId)) ||
+      (context.roomId && context.bedNo
+        ? this.beds.find((item) => item.roomId === context.roomId && item.bedNo === context.bedNo)
+        : null) ||
+      (context.roomId ? this.beds.find((item) => item.roomId === context.roomId) : null) ||
+      (context.bedNo ? this.beds.find((item) => item.bedNo === context.bedNo) : null);
+
+    if (!bed) {
+      this.toastr.warning('Bed detail not found.');
+      return;
+    }
+
+    this.selectedRoomId = bed.roomId;
+    const room = this.rooms.find((item) => item.id === bed.roomId);
+    if (room?.wardName) {
+      this.filters.ward = room.wardName;
+    }
+    if (room?.galleryId) {
+      this.filters.gallery = room.galleryId;
+    }
+    this.openViewBed(bed, true);
   }
 
   private openTransferForBed(bed: WardBedRecord, overrides: Partial<TransferContext> = {}): void {
@@ -658,6 +706,7 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
             this.selectedRoomId = this.filteredRooms[0]?.id || '';
             this.loading = false;
             this.openPendingTransfer();
+            this.openPendingBedDetail();
           });
           return;
         }
@@ -667,6 +716,7 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
         this.selectedRoomId = this.filteredRooms[0]?.id || '';
         this.loading = false;
         this.openPendingTransfer();
+        this.openPendingBedDetail();
       },
       error: () => {
         this.rooms = [];
@@ -1085,8 +1135,8 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
     this.activeModal = 'status';
   }
 
-  openViewBed(bed: WardBedRecord): void {
-    if (bed.status === 'occupied' && bed.admissionId) {
+  openViewBed(bed: WardBedRecord, forceDetails = false): void {
+    if (!forceDetails && bed.status === 'occupied' && bed.admissionId) {
       void this.router.navigate(['/ward/patient-detail', bed.admissionId]);
       return;
     }
@@ -1095,8 +1145,20 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
     this.activeModal = 'viewBed';
   }
 
+  roomForBed(bed: WardBedRecord): WardRoomRecord | null {
+    return this.rooms.find((room) => room.id === bed.roomId) || null;
+  }
+
+  viewBedPatient(bed: WardBedRecord): void {
+    if (!bed.admissionId) {
+      return;
+    }
+    void this.router.navigate(['/ward/patient-detail', bed.admissionId]);
+  }
+
   closeModal(): void {
     const closingTransfer = this.activeModal === 'transfer';
+    const closingBedDetail = this.activeModal === 'viewBed';
     this.unbindRoomFormWardListener();
     this.unbindBedFormWardListener();
     this.activeModal = null;
@@ -1116,6 +1178,9 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
     };
     if (closingTransfer) {
       this.clearTransferQuery();
+    }
+    if (closingBedDetail) {
+      this.clearBedDetailQuery();
     }
   }
 
@@ -1463,6 +1528,23 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
         bedNo: null,
         wardName: null,
         transferBedId: null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  private clearBedDetailQuery(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        action: null,
+        bedId: null,
+        roomId: null,
+        bedNo: null,
+        patientId: null,
+        patientName: null,
+        wardName: null,
       },
       queryParamsHandling: 'merge',
       replaceUrl: true,

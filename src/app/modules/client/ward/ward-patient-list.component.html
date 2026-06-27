@@ -9,6 +9,7 @@
         <label class="ward-header-filter">
           <span>Ward</span>
           <select [(ngModel)]="filters.ward" (ngModelChange)="onFilterChange()">
+            <option value="">All Wards</option>
             <option *ngFor="let ward of wardOptions" [value]="ward">{{ ward }}</option>
           </select>
         </label>
@@ -50,7 +51,7 @@
     <section class="ward-panel ward-patient-panel">
       <div class="ward-panel__head ward-panel__head--stack">
         <div>
-          <h2>Patients in {{ filters.ward }}</h2>
+          <h2>Patients in {{ selectedWardLabel }}</h2>
           <p>{{ filteredPatientsList.length }} patients shown</p>
         </div>
         <div class="ward-status-tabs">

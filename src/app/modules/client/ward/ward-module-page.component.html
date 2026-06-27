@@ -9,6 +9,7 @@
         <label class="ward-header-filter">
           <span>Ward</span>
           <select [(ngModel)]="ward" (ngModelChange)="onFilterChange()">
+            <option value="">All Wards</option>
             <option *ngFor="let option of wardOptions" [value]="option">{{ option }}</option>
           </select>
         </label>
@@ -76,7 +77,7 @@
     <section class="ward-panel" *ngIf="!hideVitalsListTable">
       <div class="ward-panel__head ward-panel__head--stack">
         <div>
-          <h2>{{ config.title }} in {{ ward }}</h2>
+          <h2>{{ config.title }} in {{ selectedWardLabel }}</h2>
           <p>{{ config.layout === 'reports' ? reportCards.length : rows.length }} records shown</p>
         </div>
         <div class="ward-status-tabs" *ngIf="config.tabs.length">

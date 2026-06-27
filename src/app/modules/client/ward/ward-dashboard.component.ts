@@ -313,7 +313,7 @@ export class WardDashboardComponent implements OnInit {
         return;
       case 'bed_details':
         void this.router.navigate(['/ward/bed-management'], {
-          queryParams: query,
+          queryParams: { ...query, action: 'details' },
         });
         return;
       case 'view_chart':
