@@ -235,7 +235,7 @@ export const clientRoutes: Routes = [
       {
         path: 'payments',
         component: PaymentsComponent,
-        data: { title: 'Mooli | Payments' },
+        data: { title: 'Mooli | Patient Payments' },
         canActivate: [roleGuard(BILL_READ_ACCESS)],
       },
       {

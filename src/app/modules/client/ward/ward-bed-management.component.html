@@ -38,7 +38,7 @@
       </label>
       <label class="ward-filter ward-filter--compact">
         <span>Room Type</span>
-        <select [(ngModel)]="filters.roomType" (ngModelChange)="selectedRoomId = filteredRooms[0]?.id || ''">
+        <select [(ngModel)]="filters.roomType" (ngModelChange)="onRoomTypeFilterChange()">
           <option *ngFor="let type of roomTypeOptions" [value]="type.value">{{ type.label }}</option>
         </select>
       </label>

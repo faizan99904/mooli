@@ -752,6 +752,12 @@ export class WardBedManagementComponent implements OnInit, OnDestroy {
     this.selectedRoomId = roomId;
   }
 
+  onRoomTypeFilterChange(): void {
+    const firstRoom = this.filteredRooms[0];
+    this.selectedRoomId = firstRoom ? firstRoom.id : '';
+    this.refreshActionState();
+  }
+
   openAddWard(): void {
     this.wardForm.reset({ name: '', code: '', description: '' });
     this.activeModal = 'ward';

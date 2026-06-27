@@ -1,4 +1,229 @@
-.card .body {
-  background: white;
-  margin-bottom: 1rem;
+.patient-payments-page {
+  .header-actions {
+    margin-top: 8px;
+  }
+
+  .payments-card .body {
+    background: #fff;
+  }
+
+  .filters-row {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr auto auto;
+    margin-bottom: 20px;
+
+    @media (max-width: 991px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .filter-search label,
+  .toggle-label {
+    color: #64748b;
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .toggle-label {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 0;
+    margin-top: 24px;
+    text-transform: none;
+  }
+
+  .filter-action {
+    align-self: end;
+  }
+
+  .payments-table {
+    th {
+      border-top: 0;
+      color: #64748b;
+      font-size: 12px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    td {
+      vertical-align: middle;
+    }
+
+    tr.is-expanded td {
+      border-bottom: 0;
+    }
+  }
+
+  .amount-due {
+    color: #dc2626;
+    font-weight: 700;
+  }
+
+  .text-warning {
+    color: #b45309;
+    font-weight: 700;
+  }
+
+  .status-pill {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    text-transform: uppercase;
+  }
+
+  .status-paid {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .status-partial {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .status-unpaid {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .breakdown-row td {
+    background: #f8fafc;
+    padding-top: 0;
+  }
+
+  .breakdown-panel {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .breakdown-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 1fr 1fr;
+
+    @media (max-width: 991px) {
+      grid-template-columns: 1fr;
+    }
+
+    h5 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+  }
+
+  .source-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .source-chip {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 120px;
+    padding: 10px 12px;
+
+    &__label {
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    strong {
+      color: #0f172a;
+      font-size: 16px;
+    }
+
+    small {
+      color: #94a3b8;
+      font-size: 11px;
+    }
+  }
+
+  .mini-table {
+    background: #fff;
+    border-radius: 8px;
+
+    th,
+    td {
+      font-size: 13px;
+    }
+  }
+
+  .breakdown-meta {
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    margin-top: 14px;
+    padding-top: 12px;
+
+    a {
+      font-weight: 600;
+    }
+  }
+
+  .payment-cards {
+    display: grid;
+    gap: 12px;
+  }
+
+  .payment-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+
+    &__head {
+      align-items: flex-start;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    &__amounts {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, 1fr);
+      margin-bottom: 12px;
+
+      span {
+        color: #64748b;
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      strong {
+        font-size: 16px;
+      }
+    }
+
+    &__actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+  }
+
+  .ledger-pagination {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 18px;
+  }
 }

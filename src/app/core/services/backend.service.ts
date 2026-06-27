@@ -34,6 +34,8 @@ import {
   Hospital,
   ListResult,
   Patient,
+  PatientPaymentDetail,
+  PatientPaymentSummary,
   PatientHistory,
   PatientLastVisit,
   Payment,
@@ -1045,6 +1047,22 @@ export class BackendService {
     return this.get<PaginatedResponse<Encounter>>(CONFIG.encounters, params).pipe(
       map((response) => this.unwrapData(response))
     );
+  }
+
+  getPatientPaymentSummaries(params?: Record<string, unknown>): Observable<ListResult<PatientPaymentSummary>> {
+    return this.get<PaginatedResponse<PatientPaymentSummary>>(`${CONFIG.encounters}/patient-payments`, params).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  getPatientPaymentDetail(patientId: string): Observable<PatientPaymentDetail> {
+    return this.get<PatientPaymentDetail>(`${CONFIG.encounters}/patient-payments/${patientId}/detail`).pipe(
+      map((response) => this.unwrapData(response))
+    );
+  }
+
+  applyEncounterDiscount(encounterId: string, payload: Record<string, unknown>): Observable<ApiResponse<LedgerItem>> {
+    return this.post<LedgerItem>(`${CONFIG.encounters}/${encounterId}/apply-discount`, payload);
   }
 
   getEncounter(id: string): Observable<Encounter> {

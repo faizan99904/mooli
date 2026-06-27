@@ -20,6 +20,7 @@ const DEFAULT_ROUTE_ACCESS: RouteAccess[] = [
     access: ['patients.create', 'patients.update'],
   },
   { path: '/payments/invoices', access: ['bills.read', 'encounters.read'] },
+  { path: '/payments', access: ['bills.read', 'encounters.read'] },
   { path: '/payments/ledger', access: ['encounters.read', 'bills.read'] },
   {
     path: '/payments/addpayment',
@@ -112,6 +113,9 @@ export const isDoctorRole = (role: string): boolean =>
 export const isWardAdminRole = (role: string): boolean =>
   normalizeAccessKey(role) === 'wardadmin';
 
+export const isNurseRole = (role: string): boolean =>
+  normalizeAccessKey(role) === 'nurse';
+
 export const isReceptionRole = (role: string): boolean => {
   const normalized = normalizeAccessKey(role);
   return normalized === 'receptionist' || normalized === 'reception';
@@ -171,6 +175,10 @@ export const resolveDefaultRoute = (
   }
 
   if (isWardAdminRole(role)) {
+    return '/ward/dashboard';
+  }
+
+  if (isNurseRole(role)) {
     return '/ward/dashboard';
   }
 

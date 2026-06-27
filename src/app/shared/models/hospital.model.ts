@@ -731,6 +731,71 @@ export interface EncounterLedger {
   payments: LedgerPayment[];
 }
 
+export interface PatientPaymentSourceSummary {
+  sourceType: string;
+  label: string;
+  amount: number;
+  count: number;
+  remaining?: number;
+}
+
+export interface PatientPaymentSummary {
+  patient: Patient;
+  totalCharges?: number;
+  totalDiscount?: number;
+  netPayable: number;
+  totalPaid: number;
+  balance: number;
+  encounterCount: number;
+  latestEncounterId?: string | null;
+  chargesBySource: Record<string, PatientPaymentSourceSummary>;
+  remainingBySource: Record<string, PatientPaymentSourceSummary>;
+}
+
+export interface PatientPaymentDetailItem {
+  _id: string;
+  encounterId: string;
+  sourceType: string;
+  sourceLabel: string;
+  title: string;
+  description?: string;
+  qty: number;
+  rate: number;
+  amount: number;
+  discount: number;
+  netAmount: number;
+  createdAt?: string;
+}
+
+export interface PatientPaymentDetailPayment {
+  _id: string;
+  encounterId: string;
+  paymentNo: string;
+  amount: number;
+  method: string;
+  type: string;
+  note?: string;
+  createdAt?: string;
+}
+
+export interface PatientPaymentDetail {
+  patient: Patient;
+  totals: {
+    totalCharges: number;
+    totalDiscount: number;
+    netPayable: number;
+    totalPaid: number;
+    totalRefunded: number;
+    balance: number;
+  };
+  chargesBySource: Record<string, PatientPaymentSourceSummary>;
+  remainingBySource: Record<string, PatientPaymentSourceSummary>;
+  encounters: Encounter[];
+  items: PatientPaymentDetailItem[];
+  payments: PatientPaymentDetailPayment[];
+  primaryEncounterId?: string | null;
+}
+
 export interface ChargeCatalogItem {
   _id: string;
   name: string;
