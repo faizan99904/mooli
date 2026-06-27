@@ -111,17 +111,17 @@ export class WardDataService {
 
   loadClinicalBundle(): Observable<WardClinicalBundle> {
     return forkJoin({
-      allotments: this.backend.getRoomAllotments({ limit: 100 }),
-      rooms: this.backend.getRooms({ limit: 100 }),
+      allotments: this.safeList(this.backend.getRoomAllotments({ limit: 100 })),
+      rooms: this.safeList(this.backend.getRooms({ limit: 100 })),
       hospitalWards: this.safeList(this.backend.getHospitalWards({ limit: 100 })),
-      doctors: this.backend.getDoctors({ limit: 100 }),
-      patients: this.backend.getPatients({ limit: 100 }),
-      history: this.backend.getPatientHistoryRecords({ recordType: 'ward', limit: 100 }),
-      prescriptions: this.backend.getPrescriptions({ limit: 100 }),
-      encounters: this.backend.getEncounters({ type: 'admission', limit: 100 }),
-      labOrders: this.backend.getLabOrders({ limit: 100 }),
-      activities: this.backend.getWardActivities({ limit: 100 }),
-      wardBeds: this.backend.getWardBeds({ limit: 100 }),
+      doctors: this.safeList(this.backend.getDoctors({ limit: 100 })),
+      patients: this.safeList(this.backend.getPatients({ limit: 100 })),
+      history: this.safeList(this.backend.getPatientHistoryRecords({ recordType: 'ward', limit: 100 })),
+      prescriptions: this.safeList(this.backend.getPrescriptions({ limit: 100 })),
+      encounters: this.safeList(this.backend.getEncounters({ type: 'admission', limit: 100 })),
+      labOrders: this.safeList(this.backend.getLabOrders({ limit: 100 })),
+      activities: this.safeList(this.backend.getWardActivities({ limit: 100 })),
+      wardBeds: this.safeList(this.backend.getWardBeds({ limit: 100 })),
     }).pipe(
       map((result) => ({
         allotments: result.allotments.items,
@@ -156,8 +156,13 @@ export class WardDataService {
 
   loadAdmittedPatients(wardFilter = ''): Observable<WardPatient[]> {
     return this.loadClinicalBundle().pipe(
-      map((bundle) =>
-        bundle.allotments
+      map((bundle) => {
+        const roomById = new Map(bundle.rooms.map((room) => [String(room._id), room]));
+        return bundle.allotments
+          .map((allotment) => ({
+            ...allotment,
+            room: roomById.get(String(allotment.roomId)) || allotment.room || null,
+          }))
           .filter((allotment) => matchesWardFilter(allotment.room, wardFilter))
           .map((allotment) =>
             mapAllotmentToWardPatient(
@@ -168,8 +173,8 @@ export class WardDataService {
               bundle.encounters,
               bundle.hospitalWards
             )
-          )
-      )
+          );
+      })
     );
   }
 

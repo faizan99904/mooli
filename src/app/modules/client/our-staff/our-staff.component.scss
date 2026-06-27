@@ -1,4 +1,134 @@
-.body {
-  background: white;
-  margin-bottom: 1rem;
+@import '../ward/ward-shared.scss';
+
+:host {
+  display: block;
+}
+
+.ward-staff-page {
+  min-height: 100%;
+}
+
+.ward-kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ward-staff-assignment {
+  margin-bottom: 10px;
+}
+
+.ward-staff-assignment .ward-panel__head {
+  align-items: center;
+  flex-direction: row;
+}
+
+.ward-staff-patient {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ward-staff-patient__avatar,
+.ward-staff-avatar {
+  align-items: center;
+  background: #dbeafe;
+  border-radius: 10px;
+  color: #1d4ed8;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.ward-staff-patient__copy,
+.ward-staff-name {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ward-staff-patient__copy strong,
+.ward-staff-name strong {
+  color: var(--ward-text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.ward-staff-patient__copy span,
+.ward-staff-name span {
+  color: var(--ward-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ward-staff-table-wrap {
+  overflow-x: auto;
+  padding: 0 4px 4px;
+}
+
+.ward-staff-table tbody tr {
+  cursor: pointer;
+}
+
+.ward-staff-table tbody tr.is-selected {
+  background: #eff6ff;
+  box-shadow: inset 3px 0 0 var(--ward-blue);
+}
+
+.ward-staff-table tbody tr.is-selected:hover {
+  background: #eff6ff;
+}
+
+.ward-staff-primary-cell {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.ward-staff-avatar {
+  background: #ccfbf1;
+  color: #0f766e;
+  height: 30px;
+  width: 30px;
+}
+
+.ward-staff-email,
+.ward-staff-phone {
+  color: #475569;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ward-staff-role {
+  color: var(--ward-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ward-staff-select-btn {
+  min-width: 76px;
+}
+
+@media (max-width: 991px) {
+  .ward-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ward-staff-assignment .ward-panel__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 575px) {
+  .ward-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }

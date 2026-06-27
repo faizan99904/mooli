@@ -624,6 +624,7 @@ export interface RoomAllotment {
   status: 'admitted' | 'discharged';
   notes?: string | null;
   assignedNurseId?: string | null;
+  assignedNurse?: Pick<User, '_id' | 'name' | 'email' | 'phone'> | null;
 }
 
 export interface BillItem {
