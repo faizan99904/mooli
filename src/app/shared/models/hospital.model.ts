@@ -337,6 +337,8 @@ export interface AdmissionOrderItem {
 export interface PatientDocumentItem {
   name: string;
   type?: string;
+  category?: string;
+  notes?: string;
   uploadedOn?: string;
   uploadedBy?: string;
   url?: string;

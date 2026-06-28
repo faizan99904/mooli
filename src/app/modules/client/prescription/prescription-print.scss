@@ -1545,11 +1545,86 @@
   -webkit-print-color-adjust: exact;
 }
 
+.prescription-print-host {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+.prescription-print-host > .prescription-print-sheet.prescription-template-clinical-blue {
+  flex: 0 0 auto;
+}
+
+.prescription-template-clinical-blue.clinical-rx-continuation-sheet {
+  padding-top: 4mm;
+}
+
+.clinical-rx-continuation-header {
+  align-items: center;
+  background: var(--clinical-soft);
+  border: 1px solid #aebdcb;
+  border-radius: 1.8mm;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4mm;
+  justify-content: space-between;
+  margin-bottom: 3mm;
+  padding: 2.5mm 4mm;
+}
+
+.clinical-rx-continuation-header strong {
+  color: var(--clinical-blue);
+  display: block;
+  font-size: 3.6mm;
+}
+
+.clinical-rx-continuation-header span {
+  color: #334155;
+  display: block;
+  font-size: 2.7mm;
+  margin-top: 0.8mm;
+}
+
+.clinical-rx-continuation-header em {
+  color: var(--clinical-ink);
+  font-size: 2.8mm;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.clinical-rx-main-continuation {
+  grid-template-columns: minmax(0, 1fr) !important;
+  max-height: none !important;
+}
+
+.clinical-rx-continuation-page {
+  .clinical-rx-medicines {
+    min-height: 0;
+  }
+
+  .clinical-rx-content {
+    grid-template-rows: auto auto;
+  }
+}
+
 .clinical-rx-page {
   display: flex;
   flex-direction: column;
   height: 100%;
+  justify-content: flex-start;
   min-height: 0;
+  overflow: visible;
+}
+
+.clinical-rx-page--split {
+  height: auto;
+  min-height: 100%;
+}
+
+.clinical-rx-page--details {
+  gap: 3mm;
 }
 
 .clinical-rx-header {
@@ -1769,20 +1844,37 @@
 }
 
 .clinical-rx-main {
+  align-items: start;
   display: grid;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   gap: 5.5mm;
   grid-template-columns: 40mm minmax(0, 1fr);
   margin-top: 3mm;
-  max-height: 116mm;
   min-height: 0;
+  overflow: visible;
+}
+
+.clinical-rx-main.clinical-rx-main-gynae {
+  grid-template-columns: 48mm minmax(0, 1fr);
+}
+
+.clinical-rx-page--split .clinical-rx-main,
+.clinical-rx-page--split .clinical-rx-main.clinical-rx-main-gynae {
+  max-height: none;
 }
 
 .clinical-rx-sidebar {
+  align-self: start;
   display: flex;
   flex-direction: column;
   gap: 3mm;
+  min-height: 0;
   min-width: 0;
+  overflow: visible;
+}
+
+.clinical-rx-page--split .clinical-rx-sidebar {
+  max-height: none;
 }
 
 .clinical-rx-card {
@@ -1804,7 +1896,7 @@
   min-height: 7mm;
 }
 
-.clinical-rx-card > div {
+.clinical-rx-card > div:not(.clinical-rx-specialty-scroll) {
   align-items: center;
   border-top: 1px solid #d4dce5;
   display: grid;
@@ -1814,28 +1906,28 @@
   padding: 0 2mm;
 }
 
-.clinical-rx-card > div i {
+.clinical-rx-card > div:not(.clinical-rx-specialty-scroll) i {
   color: var(--clinical-blue);
   font-size: 3.5mm;
 }
 
-.clinical-rx-card > div strong {
+.clinical-rx-card > div:not(.clinical-rx-specialty-scroll) strong {
   color: #111827;
   font-weight: 700;
 }
 
-.clinical-rx-card > div span {
+.clinical-rx-card > div:not(.clinical-rx-specialty-scroll) span {
   text-align: center;
 }
 
-.clinical-rx-specialty > div {
+.clinical-rx-specialty > div:not(.clinical-rx-specialty-scroll) {
   align-items: flex-start;
   grid-template-columns: 5mm minmax(0, 1fr) 0;
   padding-bottom: 1.2mm;
   padding-top: 1.2mm;
 }
 
-.clinical-rx-specialty > div span {
+.clinical-rx-specialty > div:not(.clinical-rx-specialty-scroll) span {
   grid-column: 2 / -1;
   margin-top: 0.8mm;
   text-align: left;
@@ -1843,8 +1935,303 @@
   word-break: break-word;
 }
 
+.clinical-rx-specialty-gynae {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.clinical-rx-specialty-scroll {
+  display: block;
+  max-height: 24mm;
+  overflow: hidden;
+}
+
+.clinical-rx-specialty-scroll > div {
+  align-items: flex-start;
+  border-top: 1px solid #d4dce5;
+  display: grid;
+  font-size: 2.45mm;
+  gap: 0.3mm 1.2mm;
+  grid-template-columns: 3.5mm minmax(0, 1fr);
+  min-height: auto;
+  padding: 1mm 2mm;
+}
+
+.clinical-rx-specialty-scroll > div i {
+  align-self: start;
+  color: var(--clinical-blue);
+  font-size: 2.8mm;
+  grid-row: 1 / span 2;
+  margin-top: 0.2mm;
+}
+
+.clinical-rx-specialty-gynae .clinical-rx-specialty-scroll > div strong {
+  display: block;
+  font-size: 2.4mm;
+  grid-column: 2;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.clinical-rx-specialty-gynae .clinical-rx-specialty-scroll > div span {
+  display: block;
+  font-size: 2.35mm;
+  grid-column: 2;
+  line-height: 1.25;
+  margin-top: 0;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.clinical-rx-drips {
+  flex: 0 0 auto;
+}
+
+.clinical-rx-drips-panel {
+  border: 1px solid #aebdcb;
+  border-radius: 1.8mm;
+  break-inside: avoid;
+  flex: 0 0 auto;
+  overflow: visible;
+  page-break-inside: avoid;
+}
+
+.clinical-rx-drips-panel h3 {
+  align-items: center;
+  background: var(--clinical-blue);
+  color: #fff;
+  display: flex;
+  font-size: 3.2mm;
+  font-weight: 800;
+  justify-content: center;
+  letter-spacing: 0.55mm;
+  margin: 0;
+  min-height: 7mm;
+}
+
+.clinical-rx-drips-list {
+  display: grid;
+  gap: 0;
+}
+
+.clinical-rx-drips-list > div {
+  align-items: center;
+  border-top: 1px solid #d4dce5;
+  display: grid;
+  font-size: 2.8mm;
+  grid-template-columns: 6mm minmax(0, 1fr) auto;
+  min-height: 7mm;
+  padding: 1.2mm 3mm;
+}
+
+.clinical-rx-drips-list > div i {
+  color: var(--clinical-blue);
+  font-size: 3.2mm;
+}
+
+.clinical-rx-drips-list > div strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+.clinical-rx-drips-list > div span {
+  color: #111827;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.clinical-rx-gynae-consultation {
+  border: 1px solid #aebdcb;
+  border-radius: 2.2mm;
+  display: grid;
+  gap: 2mm;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 2.5mm;
+  padding: 2.5mm 3mm;
+}
+
+.clinical-rx-gynae-consultation-item strong {
+  color: var(--clinical-ink);
+  display: block;
+  font-size: 2.8mm;
+  font-weight: 800;
+  margin-bottom: 0.8mm;
+}
+
+.clinical-rx-gynae-consultation-item p {
+  color: #111827;
+  font-size: 2.7mm;
+  line-height: 1.35;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.clinical-rx-gynae-extended {
+  border: 1px solid #aebdcb;
+  border-radius: 2mm;
+  flex: 0 1 auto;
+  margin-top: 3mm;
+  overflow: visible;
+}
+
+.clinical-rx-page--details .clinical-rx-gynae-extended {
+  margin-top: 0;
+}
+
+.clinical-rx-gynae-extended h3 {
+  background: var(--clinical-blue);
+  color: #fff;
+  font-size: 3.2mm;
+  font-weight: 800;
+  margin: 0;
+  padding: 2mm 3mm;
+  text-align: center;
+}
+
+.clinical-rx-gynae-extended-grid {
+  display: grid;
+  gap: 2mm;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 2.5mm 3mm;
+}
+
+.clinical-rx-gynae-extended-grid article {
+  border: 1px solid #d4dce5;
+  border-radius: 1.5mm;
+  break-inside: avoid;
+  min-height: 12mm;
+  page-break-inside: avoid;
+  padding: 2mm;
+}
+
+.clinical-rx-gynae-extended-grid article.wide {
+  grid-column: 1 / -1;
+}
+
+.clinical-rx-gynae-extended,
+.clinical-rx-gynae-extended-grid,
+.clinical-rx-note {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.clinical-rx-gynae-extended-grid strong {
+  color: var(--clinical-ink);
+  display: block;
+  font-size: 2.7mm;
+  margin-bottom: 0.8mm;
+}
+
+.clinical-rx-gynae-extended-grid p {
+  color: #111827;
+  font-size: 2.6mm;
+  line-height: 1.35;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.print-gynae-extended {
+  border: 1px solid #aebdcb;
+  margin-top: 4mm;
+}
+
+.print-gynae-extended h4 {
+  background: #003e86;
+  color: #fff;
+  font-size: 11px;
+  margin: 0;
+  padding: 6px 10px;
+}
+
+.print-gynae-extended-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.print-gynae-extended-table th,
+.print-gynae-extended-table td {
+  border: 1px solid #d4dce5;
+  font-size: 10px;
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+  white-space: pre-wrap;
+}
+
+.print-gynae-extended-table th {
+  background: #f8fafc;
+  width: 28%;
+}
+
+@media print {
+  .clinical-rx-specialty-scroll {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .prescription-print-host {
+    display: block;
+    gap: 0;
+  }
+
+  .prescription-template-clinical-blue {
+    box-sizing: border-box;
+    height: 251.8mm;
+    overflow: hidden;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+
+  .prescription-template-clinical-blue.clinical-rx-print-page-last {
+    page-break-after: auto;
+  }
+
+  .clinical-rx-continuation-sheet {
+    page-break-before: always;
+  }
+
+  .clinical-rx-drips-panel {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .clinical-rx-gynae-extended {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .clinical-rx-gynae-extended-grid article {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .clinical-rx-header,
+  .clinical-rx-meta,
+  .clinical-rx-patient-card,
+  .clinical-rx-gynae-consultation,
+  .clinical-rx-lower,
+  .clinical-rx-footer,
+  .clinical-rx-continuation-header {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .clinical-rx-medicines thead {
+    display: table-header-group;
+  }
+
+  .clinical-rx-medicines tbody tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
 .clinical-rx-observation {
-  flex: 0 0 41mm;
+  flex: 0 0 auto;
 }
 
 .clinical-rx-labs {
@@ -1875,6 +2262,22 @@
   gap: 3mm;
   grid-template-rows: auto 25mm;
   min-width: 0;
+  overflow: visible;
+}
+
+.clinical-rx-content-gynae {
+  grid-template-rows: auto;
+}
+
+.clinical-rx-page--split .clinical-rx-medicines,
+.clinical-rx-page--details .clinical-rx-medicines {
+  min-height: 0;
+  overflow: visible;
+}
+
+.clinical-rx-page--split .clinical-rx-medicines-body,
+.clinical-rx-page--details .clinical-rx-medicines-body {
+  overflow: visible;
 }
 
 .clinical-rx-medicines {
@@ -2086,10 +2489,14 @@
 .clinical-rx-lower {
   align-items: end;
   display: grid;
-  flex: 0 0 18mm;
+  flex: 0 0 auto;
   gap: 8mm;
   grid-template-columns: minmax(0, 1.55fr) minmax(42mm, 1fr);
   margin-top: 3mm;
+}
+
+.clinical-rx-page--details .clinical-rx-lower {
+  margin-top: 4mm;
 }
 
 .clinical-rx-note {
@@ -2171,10 +2578,24 @@
 }
 
 /* Medicine density scaling for themed prescription layouts */
-.clinical-rx-page.medicine-density-compact .clinical-rx-main,
 .stacked-rx-page.medicine-density-compact .stacked-rx-medicines,
 .sectioned-rx-page.medicine-density-compact .sectioned-rx-medicines {
   max-height: none;
+}
+
+.clinical-rx-page:not(.clinical-rx-page--split) .clinical-rx-main {
+  flex: 1 1 auto;
+  max-height: 116mm;
+}
+
+.clinical-rx-page:not(.clinical-rx-page--split) .clinical-rx-main.clinical-rx-main-gynae {
+  max-height: 108mm;
+}
+
+.clinical-rx-page--split.medicine-density-compact .clinical-rx-main,
+.clinical-rx-page--split.medicine-density-dense .clinical-rx-main,
+.clinical-rx-page--split.medicine-density-ultra .clinical-rx-main {
+  max-height: none !important;
 }
 
 .clinical-rx-page.medicine-density-compact .clinical-rx-main {

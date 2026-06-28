@@ -17,11 +17,24 @@ import {
 } from '../../../shared/models/hospital.model';
 import { legacyAdmissionOrdersToItems } from './admission-order-data';
 import {
+  GYNAE_ULTRASOUND_STUDIES,
+  resolveGynaeConsultationStripRows,
+  resolveGynaePatientNote,
+  resolvePrescriptionConsultationPrintRows,
+  normalizeGynaeConsultMode,
+  splitGynaePrintRows,
+} from './gynae-prescription-data';
+import {
   resolvePrescriptionRouteForPrescription,
   resolvePrintSpecialtyRows,
   resolvePrintSpecialtyTemplate,
   SpecialtyTemplateKey,
 } from './prescription-specialty-print';
+import { resolvePrintSlotDose } from './medicine-instruction-formatter';
+import {
+  buildClinicalRxPrintPages,
+  ClinicalRxPrintPage,
+} from './clinical-rx-print-pages';
 import {
   formatEnglishAddress,
   formatEnglishDoctorName,
@@ -82,10 +95,17 @@ type CreatedPrescriptionPreviewData = {
   specialtyTitle: string;
   specialtySection: SpecialtyTemplateKey | '';
   specialtyRows: Array<{ label: string; value: string; wide?: boolean }>;
+  consultationRows: Array<{ label: string; value: string; wide?: boolean }>;
+  gynaeConsultationRows: Array<{ label: string; value: string }>;
+  gynaeSidebarRows: Array<{ label: string; value: string; wide?: boolean }>;
+  gynaeExtendedRows: Array<{ label: string; value: string; wide?: boolean }>;
+  gynaeSummaryRows: Array<{ label: string; value: string }>;
+  ultrasoundRows: Array<{ label: string; value: string }>;
   followUpDate: string;
   patientNote: string;
   consultation: string;
   admissionOrderLines: string[];
+  clinicalPages: ClinicalRxPrintPage[];
 };
 
 type DoseSlot = 'morning' | 'noon' | 'evening' | 'night';
@@ -448,13 +468,7 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
     medicine: Record<string, unknown> | null | undefined,
     slot: DoseSlot
   ): string {
-    const doseKey = `${slot}Dose` as 'morningDose' | 'noonDose' | 'eveningDose' | 'nightDose';
-    const dose = String(medicine?.[doseKey] || '').trim();
-    if (dose) {
-      return dose;
-    }
-
-    return medicine?.[slot] ? '1' : '';
+    return resolvePrintSlotDose(medicine, slot);
   }
 
   printMedicineDensityClass(medicineCount: number): string {
@@ -600,6 +614,25 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
       (doctor?.specialization && !/consultant|physician/i.test(doctor.specialization)
         ? doctor.specialization
         : 'M.B.B.S., F.C.P.S.');
+    const specialtyPreview = this.resolveViewSpecialtyPreview(prescription, doctor);
+    const medicines = (prescription.medicines || []).map((medicine) => ({ ...medicine }));
+    const patientNote =
+      prescription.specialtySection === 'gynae'
+        ? resolveGynaePatientNote(
+            {
+              advice: prescription.advice,
+            },
+            (prescription.specialtyData || {}) as Record<string, unknown>
+          )
+        : String(prescription.advice || '').trim();
+    const gynaeConsultationRows =
+      prescription.specialtySection === 'gynae'
+        ? resolveGynaeConsultationStripRows({
+            chiefComplaint: prescription.chiefComplaint,
+            history: prescription.history,
+            examination: prescription.examination,
+          })
+        : [];
 
     return {
       template: this.resolvePrescriptionTemplate(prescription, fallbackTemplate),
@@ -632,12 +665,14 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
       disease: prescription.diagnosis || prescription.chiefComplaint || prescription.history || '-',
       vitals,
       vitalRows: this.vitalEntries(vitals),
-      labTests: (prescription.labTests || [])
-        .filter((test) => String(test.name || '').trim())
-        .map((test) => ({
-          name: String(test.name || '').trim(),
-          category: String(test.category || '').trim(),
-        })),
+      labTests: this.dedupePrintLabTests(
+        (prescription.labTests || [])
+          .filter((test) => String(test.name || '').trim())
+          .map((test) => ({
+            name: String(test.name || '').trim(),
+            category: String(test.category || '').trim(),
+          }))
+      ),
       ivFluids: (prescription.ivFluids || [])
         .filter((fluid) => String(fluid.name || '').trim())
         .map((fluid) => ({
@@ -646,30 +681,89 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
           quantity: String(fluid.duration || '').trim() || '-',
           route: String(fluid.route || 'IV').trim() || 'IV',
         })),
-      medicines: (prescription.medicines || []).map((medicine) => ({ ...medicine })),
-      ...this.resolveViewSpecialtyPreview(prescription, doctor),
+      medicines,
+      ...specialtyPreview,
+      consultationRows: resolvePrescriptionConsultationPrintRows({
+        chiefComplaint: prescription.chiefComplaint,
+        history: prescription.history,
+        examination: prescription.examination,
+        diagnosis: prescription.diagnosis,
+        advice: prescription.advice,
+      }),
+      gynaeConsultationRows,
       followUpDate: prescription.followUpDate ? this.shortDate(prescription.followUpDate) : '-',
-      patientNote: String(prescription.advice || '').trim(),
+      patientNote,
       consultation: String(prescription.admissionOrders?.consultation || '').trim(),
       admissionOrderLines: this.resolvePrintAdmissionOrderLines(prescription),
+      clinicalPages: buildClinicalRxPrintPages({
+        medicines,
+        specialtySection: specialtyPreview.specialtySection,
+        gynaeConsultationRows,
+        gynaeSidebarRows: specialtyPreview.gynaeSidebarRows,
+        gynaeExtendedRows: specialtyPreview.gynaeExtendedRows,
+        ivFluids: (prescription.ivFluids || []).filter((fluid) => String(fluid.name || '').trim()),
+        labTests: (prescription.labTests || []).filter((test) => String(test.name || '').trim()),
+        patientNote,
+      }),
     };
   }
 
   private resolveViewSpecialtyPreview(
     prescription: Prescription,
     doctor: Doctor | null
-  ): Pick<CreatedPrescriptionPreviewData, 'specialtyTitle' | 'specialtySection' | 'specialtyRows'> {
+  ): Pick<
+    CreatedPrescriptionPreviewData,
+    | 'specialtyTitle'
+    | 'specialtySection'
+    | 'specialtyRows'
+    | 'gynaeSidebarRows'
+    | 'gynaeExtendedRows'
+    | 'gynaeSummaryRows'
+    | 'ultrasoundRows'
+  > {
     const source = {
       specialtySection: prescription.specialtySection,
       specialtyData: prescription.specialtyData,
     };
     const specialtyTemplate = resolvePrintSpecialtyTemplate(source, doctor);
+    const specialtyRows = resolvePrintSpecialtyRows(source, specialtyTemplate);
+    const specialtyData = (prescription.specialtyData || {}) as Record<string, unknown>;
+    const isGynaePrint = specialtyTemplate.key === 'gynae';
+    const gynaeMode = normalizeGynaeConsultMode(specialtyData['gynaeMode']);
+    const gynaeSplit = isGynaePrint ? splitGynaePrintRows(specialtyRows, gynaeMode) : { sidebar: [], extended: [] };
 
     return {
       specialtyTitle: specialtyTemplate.title,
       specialtySection: specialtyTemplate.key,
-      specialtyRows: resolvePrintSpecialtyRows(source, specialtyTemplate),
+      specialtyRows: isGynaePrint ? gynaeSplit.sidebar : specialtyRows,
+      gynaeSidebarRows: gynaeSplit.sidebar,
+      gynaeExtendedRows: gynaeSplit.extended,
+      gynaeSummaryRows: isGynaePrint
+        ? gynaeSplit.sidebar.map((row) => ({ label: row.label, value: row.value }))
+        : [],
+      ultrasoundRows: GYNAE_ULTRASOUND_STUDIES.filter(
+        (study) => String(specialtyData[study.key] || '').trim() === 'Yes'
+      ).map((study) => ({
+        label: study.label,
+        value: String(specialtyData['ultrasoundNotes'] || '').trim() || 'Ordered',
+      })),
     };
+  }
+
+  private dedupePrintLabTests(
+    tests: Array<{ name: string; category: string }>
+  ): Array<{ name: string; category: string }> {
+    const seen = new Set<string>();
+
+    return tests.filter((test) => {
+      const key = test.name.trim().toLowerCase();
+      if (!key || seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
   }
 
   private resolveViewPatient(prescription: Prescription): Patient {

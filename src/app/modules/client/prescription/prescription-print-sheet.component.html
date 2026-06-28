@@ -88,7 +88,7 @@
 
                   <div class="clinical-rx-card clinical-rx-labs">
                     <h3>LAB'S</h3>
-                    <div *ngFor="let test of preview.labTests | slice:0:3">
+                    <div *ngFor="let test of preview.labTests">
                       <i class="fa fa-check-square-o"></i>
                       <strong>{{ test.name }}</strong>
                       <span>✓</span>
@@ -142,10 +142,10 @@
                           </td>
                           <td>{{ medicine['dosage'] || '-' }}</td>
                           <td>{{ medicine['duration'] || '-' }}</td>
-                          <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'noon') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'evening') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'night') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'morning') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'noon') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'evening') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'night') || '-' }}</td>
                           <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
                           <td>{{ medicine['instructions'] || '-' }}</td>
                         </tr>
@@ -265,7 +265,7 @@
                 <section class="stacked-rx-strip stacked-rx-labs-strip">
                   <h3>LAB TESTS</h3>
                   <div class="stacked-rx-strip-grid labs">
-                    <div *ngFor="let test of preview.labTests | slice:0:4">
+                    <div *ngFor="let test of preview.labTests">
                       <i class="fa fa-check-square"></i><strong>{{ test.name }}</strong><span>✓</span>
                     </div>
                     <div *ngIf="preview.labTests.length === 0"><i class="fa fa-square-o"></i><strong>CBC</strong><span>-</span></div>
@@ -297,10 +297,10 @@
                         <td class="stacked-rx-med-name"><strong>{{ medicine['name'] || 'Medicine' }}</strong></td>
                         <td>{{ medicine['dosage'] || '-' }}</td>
                         <td>{{ medicine['duration'] || '-' }}</td>
-                        <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
-                        <td>{{ slotDose(medicine, 'noon') || '0' }}</td>
-                        <td>{{ slotDose(medicine, 'evening') || '0' }}</td>
-                        <td>{{ slotDose(medicine, 'night') || '0' }}</td>
+                        <td>{{ slotDose(medicine, 'morning') || '-' }}</td>
+                        <td>{{ slotDose(medicine, 'noon') || '-' }}</td>
+                        <td>{{ slotDose(medicine, 'evening') || '-' }}</td>
+                        <td>{{ slotDose(medicine, 'night') || '-' }}</td>
                         <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
                         <td>{{ medicine['instructions'] || '-' }}</td>
                       </tr>
@@ -397,7 +397,7 @@
                     <div class="sectioned-rx-block">
                       <h3>LAB TESTS</h3>
                       <div class="sectioned-rx-list">
-                        <div *ngFor="let test of preview.labTests | slice:0:4"><strong>{{ test.name }}</strong><span>✓</span></div>
+                        <div *ngFor="let test of preview.labTests"><strong>{{ test.name }}</strong><span>✓</span></div>
                         <div *ngIf="preview.labTests.length === 0"><strong>CBC</strong><span>-</span></div>
                         <div *ngIf="preview.labTests.length === 0"><strong>CRP</strong><span>-</span></div>
                       </div>
@@ -428,10 +428,10 @@
                           <td class="sectioned-rx-med-name"><strong>{{ medicine['name'] || 'Medicine' }}</strong></td>
                           <td>{{ medicine['dosage'] || '-' }}</td>
                           <td>{{ medicine['duration'] || '-' }}</td>
-                          <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'noon') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'evening') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'night') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'morning') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'noon') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'evening') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'night') || '-' }}</td>
                           <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
                           <td>{{ medicine['instructions'] || '-' }}</td>
                         </tr>

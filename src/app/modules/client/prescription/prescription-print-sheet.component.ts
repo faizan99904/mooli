@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { PrescriptionTemplate } from '../../../shared/models/hospital.model';
+import { resolvePrintSlotDose } from './medicine-instruction-formatter';
 import {
   PrescriptionPrintDoseSlot,
   PrescriptionPrintPreviewData,
@@ -22,13 +23,7 @@ export class PrescriptionPrintSheetComponent {
     medicine: Record<string, unknown> | null | undefined,
     slot: PrescriptionPrintDoseSlot
   ): string {
-    const doseKey = `${slot}Dose` as 'morningDose' | 'noonDose' | 'eveningDose' | 'nightDose';
-    const dose = String(medicine?.[doseKey] || '').trim();
-    if (dose) {
-      return dose;
-    }
-
-    return medicine?.[slot] ? '1' : '';
+    return resolvePrintSlotDose(medicine, slot);
   }
 
   printMedicineDensityClass(medicineCount: number): string {

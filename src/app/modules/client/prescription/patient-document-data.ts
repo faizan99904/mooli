@@ -1,6 +1,8 @@
 export interface PatientDocumentItem {
   name: string;
   type?: string;
+  category?: string;
+  notes?: string;
   uploadedOn?: string;
   uploadedBy?: string;
   url?: string;
@@ -16,6 +18,8 @@ export interface PatientDocumentDisplayRow {
   id: string;
   name: string;
   type: string;
+  category: string;
+  notes: string;
   uploadedOn: string;
   uploadedBy: string;
   url: string;
@@ -74,6 +78,8 @@ const buildDocumentRow = (
   id,
   name: String(item.name || '').trim(),
   type: String(item.type || 'Other').trim() || 'Other',
+  category: String(item.category || '').trim(),
+  notes: String(item.notes || '').trim(),
   uploadedOn: formatUploadedOn(item.uploadedOn || extras?.fallbackUploadedOn),
   uploadedBy: String(item.uploadedBy || extras?.fallbackUploadedBy || '—').trim() || '—',
   url: String(item.url || '').trim(),

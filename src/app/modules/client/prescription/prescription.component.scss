@@ -2598,6 +2598,21 @@ dd {
   z-index: 1040;
 }
 
+.document-modal-backdrop {
+  z-index: 100010;
+}
+
+.sr-only-file-input {
+  display: none;
+}
+
+.document-file-picker small {
+  color: #64748b;
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
 .medicine-library-dialog {
   background: #fff;
   border: 1px solid var(--rx-line);
@@ -2906,5 +2921,745 @@ dd {
 
   .specialty-notes-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.gynae-ultrasound-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.gynae-ultrasound-panel label.wide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gynae-mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.gynae-mode-switch button {
+  background: #f4f8fb;
+  border: 1px solid var(--rx-line);
+  border-radius: 999px;
+  color: var(--rx-ink);
+  cursor: pointer;
+  font-weight: 600;
+  padding: 8px 14px;
+}
+
+.gynae-mode-switch button.active {
+  background: var(--rx-accent, #003e86);
+  border-color: var(--rx-accent, #003e86);
+  color: #fff;
+}
+
+.gynae-mode-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.gynae-mode-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.gynae-mode-grid-7 {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.gynae-mode-grid-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.gynae-mode-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gynae-mode-grid label,
+.gynae-mode-notes-grid label,
+.gynae-mode-note {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gynae-mode-grid input,
+.gynae-mode-grid select,
+.gynae-mode-grid textarea,
+.gynae-mode-notes-grid textarea,
+.gynae-mode-note textarea {
+  border: 1px solid var(--rx-line);
+  border-radius: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.gynae-mode-notes-grid textarea,
+.gynae-mode-note textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.gynae-mode-notes-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gynae-mode-notes-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gynae-mode-note.wide {
+  width: 100%;
+}
+
+.gynae-mode-section h4 {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.gynae-mode-danger-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.gynae-mode-danger-grid label {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--rx-line);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.gynae-mode-red-flags {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gynae-mode-toggle-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.gynae-toggle-field {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--rx-line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.gynae-toggle-field span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gynae-toggle-field small {
+  color: #64748b;
+  font-size: 11px;
+  min-width: 24px;
+}
+
+.gynae-toggle {
+  background: #cbd5e1;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  height: 24px;
+  padding: 0;
+  position: relative;
+  width: 44px;
+}
+
+.gynae-toggle i {
+  background: #fff;
+  border-radius: 50%;
+  display: block;
+  height: 18px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  transition: transform 0.15s ease;
+  width: 18px;
+}
+
+.gynae-toggle.on {
+  background: var(--rx-accent, #2563eb);
+}
+
+.gynae-toggle.on i {
+  transform: translateX(20px);
+}
+
+.gynae-complaint-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gynae-complaint-chips .gynae-chip.active {
+  background: var(--rx-accent, #2563eb);
+  border-color: var(--rx-accent, #2563eb);
+  color: #fff;
+}
+
+@media (max-width: 1200px) {
+  .gynae-mode-grid-7,
+  .gynae-mode-grid-6,
+  .gynae-mode-danger-grid,
+  .gynae-mode-red-flags,
+  .gynae-mode-toggle-row,
+  .gynae-mode-notes-grid,
+  .gynae-mode-notes-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .gynae-mode-grid-7,
+  .gynae-mode-grid-6,
+  .gynae-mode-grid-3,
+  .gynae-mode-danger-grid,
+  .gynae-mode-red-flags,
+  .gynae-mode-toggle-row,
+  .gynae-mode-notes-grid,
+  .gynae-mode-notes-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gynae-advice-templates,
+.gynae-lab-filters,
+.gynae-consent-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.gynae-chip,
+.gynae-lab-filters button {
+  background: #eef7f7;
+  border: 1px solid #b9dedf;
+  border-radius: 999px;
+  color: #0b5d5e;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.gynae-lab-filters button.active,
+.gynae-chip:hover {
+  background: #019c9d;
+  border-color: #019c9d;
+  color: #fff;
+}
+
+.gynae-consent-row label {
+  align-items: center;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.gynae-ultrasound-panel {
+  background: #fff;
+  border: 1px solid var(--rx-line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.gynae-ultrasound-grid label {
+  align-items: center;
+  background: #f8fbff;
+  border: 1px solid var(--rx-line);
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.gynae-ultrasound-panel textarea {
+  border: 1px solid var(--rx-line);
+  border-radius: 8px;
+  min-height: 120px;
+  padding: 10px;
+  width: 100%;
+}
+
+.medicine-pregnancy-warning {
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+@media (max-width: 1100px) {
+  .gynae-ultrasound-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.gynae-postnatal-layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+}
+
+.gynae-postnatal-main {
+  display: grid;
+  gap: 16px;
+}
+
+.gynae-postnatal-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.gynae-postnatal-grid label,
+.gynae-postnatal-reminder-list label,
+.gynae-postnatal-notes-grid label,
+.gynae-postnatal-plan-grid label,
+.gynae-postnatal-note {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gynae-postnatal-grid label.wide,
+.gynae-postnatal-note.wide {
+  grid-column: 1 / -1;
+}
+
+.gynae-postnatal-grid input,
+.gynae-postnatal-grid select,
+.gynae-postnatal-grid textarea,
+.gynae-postnatal-reminder-list input,
+.gynae-postnatal-notes-grid textarea,
+.gynae-postnatal-plan-grid textarea,
+.gynae-postnatal-note textarea,
+.gynae-postnatal-card textarea {
+  border: 1px solid var(--rx-line);
+  border-radius: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.gynae-postnatal-grid textarea,
+.gynae-postnatal-notes-grid textarea,
+.gynae-postnatal-plan-grid textarea,
+.gynae-postnatal-note textarea,
+.gynae-postnatal-card textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.gynae-postnatal-section h4,
+.gynae-postnatal-card-head h4 {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.gynae-postnatal-notes-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gynae-postnatal-plan-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gynae-postnatal-danger-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gynae-postnatal-danger-grid label {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--rx-line);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.gynae-postnatal-sidebar {
+  display: grid;
+  gap: 14px;
+}
+
+.gynae-postnatal-card {
+  background: #fff;
+  border: 1px solid var(--rx-line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.gynae-postnatal-card-head {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.gynae-postnatal-card-head h4 i {
+  color: #2563eb;
+  margin-right: 6px;
+}
+
+.gynae-postnatal-lab-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.gynae-postnatal-lab-row {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--rx-soft-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto 1fr auto;
+  padding: 8px 10px;
+}
+
+.gynae-postnatal-lab-row strong {
+  font-size: 12px;
+}
+
+.gynae-postnatal-lab-row small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.gynae-postnatal-reminder-list {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 1200px) {
+  .gynae-postnatal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .gynae-postnatal-grid,
+  .gynae-postnatal-notes-grid,
+  .gynae-postnatal-plan-grid,
+  .gynae-postnatal-danger-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .gynae-postnatal-grid,
+  .gynae-postnatal-notes-grid,
+  .gynae-postnatal-plan-grid,
+  .gynae-postnatal-danger-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gynae-documents-panel {
+  background: var(--rx-panel);
+  border: 1px solid var(--rx-line);
+  border-top: 0;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.gynae-documents-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.gynae-documents-head h3 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.gynae-documents-head p {
+  color: #64748b;
+  margin: 0;
+}
+
+.gynae-documents-upload-btn i {
+  margin-right: 8px;
+}
+
+.gynae-documents-empty {
+  background: #f8fafc;
+  border: 1px dashed var(--rx-line);
+  border-radius: 12px;
+  color: #64748b;
+  padding: 24px;
+  text-align: center;
+}
+
+.gynae-doc-category-list {
+  display: grid;
+  gap: 14px;
+}
+
+.gynae-doc-category {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--rx-line);
+  border-radius: 14px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(180px, 0.9fr) minmax(260px, 1.2fr);
+  padding: 16px 18px;
+}
+
+.gynae-doc-category-info {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+}
+
+.gynae-doc-category-icon {
+  align-items: center;
+  background: #eef4ff;
+  border-radius: 12px;
+  color: #2563eb;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 18px;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.gynae-doc-category-info strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.gynae-doc-category-info p {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0 0 8px;
+}
+
+.gynae-doc-count {
+  background: #f1f5f9;
+  border-radius: 999px;
+  color: #475569;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+}
+
+.gynae-doc-thumbs {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.gynae-doc-thumb,
+.gynae-doc-upload-drop {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--rx-line);
+  border-radius: 10px;
+  display: inline-flex;
+  height: 72px;
+  justify-content: center;
+  overflow: hidden;
+  width: 72px;
+}
+
+.gynae-doc-thumb {
+  cursor: pointer;
+  padding: 0;
+}
+
+.gynae-doc-thumb img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.gynae-doc-thumb-badge {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.gynae-doc-thumb-more {
+  align-items: center;
+  background: #eef4ff;
+  border-radius: 999px;
+  color: #2563eb;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  height: 32px;
+  justify-content: center;
+  min-width: 32px;
+  padding: 0 8px;
+}
+
+.gynae-doc-upload-drop {
+  cursor: pointer;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 92px;
+  min-width: 140px;
+  padding: 10px;
+  text-align: center;
+}
+
+.gynae-doc-upload-drop i {
+  color: #2563eb;
+  font-size: 18px;
+}
+
+.gynae-doc-upload-drop span {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.gynae-doc-latest {
+  min-width: 0;
+}
+
+.gynae-doc-latest-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.gynae-doc-latest-title {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gynae-doc-latest-title strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gynae-doc-latest-title i {
+  color: #2563eb;
+}
+
+.gynae-doc-meta {
+  color: #64748b;
+  display: block;
+  font-size: 11px;
+  margin: 6px 0;
+}
+
+.gynae-doc-note {
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.gynae-doc-latest-empty {
+  display: grid;
+  gap: 10px;
+}
+
+.gynae-doc-latest-empty strong {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.gynae-doc-menu-wrap {
+  position: relative;
+}
+
+.gynae-doc-menu-btn {
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+}
+
+.gynae-doc-menu {
+  background: #fff;
+  border: 1px solid var(--rx-line);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 0.12);
+  display: grid;
+  min-width: 150px;
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 5;
+}
+
+.gynae-doc-menu button {
+  background: #fff;
+  border: 0;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.gynae-doc-menu button:hover {
+  background: #f8fafc;
+}
+
+.document-modal-form .wide textarea {
+  min-height: 90px;
+}
+
+@media (max-width: 1100px) {
+  .gynae-doc-category {
+    grid-template-columns: 1fr;
+  }
+
+  .gynae-doc-thumbs {
+    justify-content: flex-start;
   }
 }

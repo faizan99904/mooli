@@ -39,4 +39,10 @@ export interface PrescriptionPrintPreviewData {
   patientNote: string;
   consultation: string;
   admissionOrderLines: string[];
+  consultationRows?: Array<{ label: string; value: string; wide?: boolean }>;
+  specialtyTitle?: string;
+  specialtySection?: string;
+  specialtyRows?: Array<{ label: string; value: string; wide?: boolean }>;
+  gynaeSummaryRows?: Array<{ label: string; value: string }>;
+  ultrasoundRows?: Array<{ label: string; value: string }>;
 }

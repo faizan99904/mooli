@@ -173,10 +173,11 @@
           </div>
         </div>
 
-        <div class="consultation-grid">
+        <div class="consultation-grid" [class.consultation-grid-gynae]="isGynaeDoctor()">
           <label>
             <span>Chief Complaint</span>
-            <input formControlName="chiefComplaint" placeholder="Dry cough, mild fever, weakness" />
+            <input formControlName="chiefComplaint"
+              [placeholder]="isGynaeDoctor() ? gynaeChiefComplaintPlaceholder() : 'Dry cough, mild fever, weakness'" />
           </label>
           <label>
             <span>Diagnosis</span>
@@ -184,16 +185,34 @@
           </label>
           <label>
             <span>History</span>
-            <input formControlName="history" placeholder="Cough for 3 days, no breathlessness..." />
+            <input formControlName="history"
+              [placeholder]="isGynaeDoctor() ? gynaeHistoryPlaceholder() : 'Cough for 3 days, no breathlessness...'" />
           </label>
           <label>
             <span>Advice / Notes</span>
             <textarea formControlName="advice"
               placeholder="Rest, plenty of fluids, take medication as prescribed."></textarea>
+            <div class="gynae-advice-templates" *ngIf="isGynaeDoctor()">
+              <button type="button" class="gynae-chip" *ngFor="let template of gynaeAdviceTemplates"
+                (click)="applyGynaeAdviceTemplate(template.text)">
+                {{ template.label }}
+              </button>
+            </div>
           </label>
           <label>
             <span>Examination</span>
             <input formControlName="examination" placeholder="Chest clear, CVS normal..." />
+            <div class="gynae-consent-row" *ngIf="isGynaeDoctor()" formGroupName="specialtyData">
+              <label><input type="checkbox" [checked]="specialtyDataGroup.get('chaperonePresent')?.value === 'Yes'"
+                  (change)="specialtyDataGroup.patchValue({ chaperonePresent: $any($event.target).checked ? 'Yes' : 'No' }); refreshGynaeExaminationConsent()" />
+                Chaperone present</label>
+              <label><input type="checkbox" [checked]="specialtyDataGroup.get('patientConsentTaken')?.value === 'Yes'"
+                  (change)="specialtyDataGroup.patchValue({ patientConsentTaken: $any($event.target).checked ? 'Yes' : 'No' }); refreshGynaeExaminationConsent()" />
+                Consent taken</label>
+              <label><input type="checkbox" [checked]="specialtyDataGroup.get('pelvicExamDone')?.value === 'Done'"
+                  (change)="specialtyDataGroup.patchValue({ pelvicExamDone: $any($event.target).checked ? 'Done' : 'Not Done' }); refreshGynaeExaminationConsent()" />
+                Pelvic exam done</label>
+            </div>
           </label>
           <label>
             <span>Follow Up Date</span>
@@ -207,7 +226,9 @@
           <button type="button" [class.active]="activeTab === 'vitals'" (click)="activeTab = 'vitals'">Vitals</button>
           <button type="button" [class.active]="activeTab === 'lab'" (click)="activeTab = 'lab'">Lab Tests</button>
           <button type="button" [class.active]="activeTab === 'specialty'"
-            (click)="activeTab = 'specialty'">Specialty Notes</button>
+            (click)="activeTab = 'specialty'">{{ specialtyTabLabel() }}</button>
+          <button type="button" *ngIf="isGynaeDoctor()" [class.active]="activeTab === 'ultrasound'"
+            (click)="activeTab = 'ultrasound'">Ultrasound</button>
           <button type="button" [class.active]="activeTab === 'iv'" (click)="activeTab = 'iv'">Drips / IV
             Fluids</button>
           <button type="button" [class.active]="activeTab === 'admission'" (click)="activeTab = 'admission'">Admission
@@ -219,10 +240,10 @@
         <section class="specialty-notes-panel" *ngIf="activeTab === 'specialty' && activeSpecialtyTemplate() as template">
           <div class="specialty-notes-head">
             <div>
-              <h3>{{ template.title }}</h3>
-              <p>{{ template.description }}</p>
+              <h3>{{ isGynaeDoctor() ? 'Gynae / OBS' : template.title }}</h3>
+              <p>{{ isGynaeDoctor() ? 'Antenatal, gynae problem and postnatal visit details.' : template.description }}</p>
             </div>
-            <label>
+            <label *ngIf="!isGynaeDoctor()">
               <span>Template</span>
               <select [ngModel]="template.key" [ngModelOptions]="{ standalone: true }"
                 (ngModelChange)="applySpecialtySection($event)">
@@ -231,11 +252,498 @@
             </label>
           </div>
 
-          <div class="specialty-notes-grid" formGroupName="specialtyData">
+          <div class="gynae-mode-switch" *ngIf="isGynaeDoctor()">
+            <button type="button" *ngFor="let mode of gynaeConsultModes"
+              [class.active]="gynaeConsultMode() === mode.key" (click)="setGynaeConsultMode(mode.key)">
+              {{ mode.label }}
+            </button>
+          </div>
+
+          <ng-container *ngIf="isGynaeDoctor() && gynaeConsultMode() === 'postnatal'">
+            <div class="gynae-postnatal-layout">
+              <div class="gynae-postnatal-main" formGroupName="specialtyData">
+                <div class="gynae-postnatal-grid">
+                  <label><span>Delivery Date</span><input type="date" formControlName="deliveryDate" /></label>
+                  <label><span>Mode of Delivery</span>
+                    <select formControlName="deliveryType">
+                      <option value="">Select</option>
+                      <option value="Normal Vaginal">Normal Vaginal</option>
+                      <option value="LSCS">LSCS</option>
+                      <option value="Assisted Vaginal">Assisted Vaginal</option>
+                      <option value="Forceps / Vacuum">Forceps / Vacuum</option>
+                    </select>
+                  </label>
+                  <label><span>Weeks Postpartum</span><input formControlName="weeksPostpartum" placeholder="1 Week 4 Days" /></label>
+                  <label><span>Baby Status</span>
+                    <select formControlName="babyStatus">
+                      <option value="">Select</option>
+                      <option value="Healthy (Male)">Healthy (Male)</option>
+                      <option value="Healthy (Female)">Healthy (Female)</option>
+                      <option value="NICU">NICU</option>
+                      <option value="IUGR">IUGR</option>
+                      <option value="Stillbirth">Stillbirth</option>
+                    </select>
+                  </label>
+                  <label><span>Birth Weight</span><input formControlName="birthWeight" placeholder="3.2 Kg" /></label>
+
+                  <label><span>Breastfeeding Status</span>
+                    <select formControlName="breastfeeding">
+                      <option value="">Select</option>
+                      <option value="Breastfeeding Well">Breastfeeding Well</option>
+                      <option value="Partial Breastfeeding">Partial Breastfeeding</option>
+                      <option value="Not Breastfeeding">Not Breastfeeding</option>
+                      <option value="Difficulty Latching">Difficulty Latching</option>
+                    </select>
+                  </label>
+                  <label><span>Lochia / Bleeding</span>
+                    <select formControlName="bleedingStatus">
+                      <option value="">Select</option>
+                      <option value="Scanty (Normal)">Scanty (Normal)</option>
+                      <option value="Moderate">Moderate</option>
+                      <option value="Heavy">Heavy</option>
+                      <option value="Foul Smelling">Foul Smelling</option>
+                    </select>
+                  </label>
+                  <label><span>Wound / Episiotomy Status</span>
+                    <select formControlName="stitchesStatus">
+                      <option value="">Select</option>
+                      <option value="Healing Well">Healing Well</option>
+                      <option value="Painful">Painful</option>
+                      <option value="Infected">Infected</option>
+                      <option value="Not Applicable">Not Applicable</option>
+                    </select>
+                  </label>
+                  <label><span>Postpartum Pain</span>
+                    <select formControlName="postpartumPain">
+                      <option value="">Select</option>
+                      <option value="None">None</option>
+                      <option value="Mild">Mild</option>
+                      <option value="Moderate">Moderate</option>
+                      <option value="Severe">Severe</option>
+                    </select>
+                  </label>
+                  <label><span>Fever</span>
+                    <select formControlName="postpartumFever">
+                      <option value="">Select</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </label>
+
+                  <label><span>Urinary Complaints</span>
+                    <select formControlName="urinaryComplaints">
+                      <option value="">Select</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </label>
+                  <label><span>Bowel Status</span>
+                    <select formControlName="bowelStatus">
+                      <option value="">Select</option>
+                      <option value="Normal">Normal</option>
+                      <option value="Constipation">Constipation</option>
+                      <option value="Diarrhea">Diarrhea</option>
+                    </select>
+                  </label>
+                  <label><span>Uterine Involution</span>
+                    <select formControlName="uterineInvolution">
+                      <option value="">Select</option>
+                      <option value="Uterus well contracted">Uterus well contracted</option>
+                      <option value="Subinvolution">Subinvolution</option>
+                      <option value="Tender uterus">Tender uterus</option>
+                    </select>
+                  </label>
+                  <label><span>Postpartum BP</span><input formControlName="postpartumBp" placeholder="112/72 mmHg" /></label>
+                  <label><span>Weight</span><input formControlName="postpartumWeight" placeholder="64 Kg" /></label>
+
+                  <label class="wide"><span>Mood / Depression Screening (EPDS)</span>
+                    <select formControlName="epdsScore">
+                      <option value="">Select</option>
+                      <option value="0 (Normal)">0 (Normal)</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3 (Normal)">3 (Normal)</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                      <option value="6">6</option>
+                      <option value="7">7</option>
+                      <option value="8">8</option>
+                      <option value="9">9</option>
+                      <option value="10+ (Refer)">10+ (Refer)</option>
+                    </select>
+                  </label>
+                  <label class="wide"><span>Remarks</span><textarea formControlName="postnatalRemarks" placeholder="General postnatal remarks"></textarea></label>
+                </div>
+
+                <div class="gynae-postnatal-section">
+                  <h4>Clinical Notes</h4>
+                  <div class="gynae-postnatal-notes-grid">
+                    <label><span>Postpartum Examination Notes</span><textarea formControlName="postpartumExamNotes" placeholder="Per abdomen soft, uterus well contracted..."></textarea></label>
+                    <label><span>Medications</span><textarea formControlName="postnatalMedications" placeholder="Tab. Iron, Calcium, Analgesics..."></textarea></label>
+                    <label><span>Advice to Mother</span><textarea formControlName="adviceToMother" placeholder="Rest, nutrition, wound care..."></textarea></label>
+                  </div>
+                </div>
+
+                <div class="gynae-postnatal-section">
+                  <h4>Planning</h4>
+                  <div class="gynae-postnatal-plan-grid">
+                    <label><span>Family Planning / Contraception Counseling</span><textarea formControlName="familyPlanningCounseling" placeholder="Counselled on spacing and contraception options"></textarea></label>
+                    <label><span>Follow-up Plan</span><textarea formControlName="postnatalFollowUpPlan" placeholder="Review after 2 weeks"></textarea></label>
+                  </div>
+                </div>
+
+                <div class="gynae-postnatal-section">
+                  <h4>Danger Signs (Counselled)</h4>
+                  <div class="gynae-postnatal-danger-grid">
+                    <label *ngFor="let sign of postnatalDangerSigns">
+                      <input type="checkbox" [checked]="isPostnatalDangerSignCounselled(sign.key)"
+                        (change)="togglePostnatalDangerSignCounselled(sign.key, $any($event.target).checked)" />
+                      <span>{{ sign.label }}</span>
+                    </label>
+                  </div>
+                </div>
+
+                <label class="gynae-postnatal-note wide">
+                  <span>Note to Patient</span>
+                  <textarea formControlName="gynaeNoteToPatient" placeholder="Take medicines as advised. Follow up after 2 weeks. Visit emergency if bleeding, fever, severe pain or depression symptoms."></textarea>
+                </label>
+              </div>
+
+              <aside class="gynae-postnatal-sidebar">
+                <section class="gynae-postnatal-card">
+                  <div class="gynae-postnatal-card-head">
+                    <h4>Postnatal Quick Actions / Tests</h4>
+                    <button type="button" class="btn-light" (click)="openLabTestModal()">+ Add Test</button>
+                  </div>
+                  <div formArrayName="labTests" class="gynae-postnatal-lab-list">
+                    <ng-container *ngFor="let test of postnatalLabTests">
+                      <label class="gynae-postnatal-lab-row" *ngIf="postnatalLabTestIndex(test.name) >= 0"
+                        [formGroupName]="postnatalLabTestIndex(test.name)">
+                        <input type="checkbox" formControlName="selected" />
+                        <strong>{{ test.name }}</strong>
+                        <small>{{ test.category }}</small>
+                      </label>
+                    </ng-container>
+                  </div>
+                  <div class="custom-test">
+                    <span>Others</span>
+                    <input formControlName="customLabTest" placeholder="Type test name" />
+                    <button type="button" (click)="addCustomLabTest()"><i class="fa fa-plus-circle"></i></button>
+                  </div>
+                </section>
+
+                <section class="gynae-postnatal-card" formGroupName="specialtyData">
+                  <div class="gynae-postnatal-card-head">
+                    <h4><i class="fa fa-female"></i> Lactation &amp; Breastfeeding</h4>
+                  </div>
+                  <textarea formControlName="lactationAdvice" rows="5"></textarea>
+                </section>
+
+                <section class="gynae-postnatal-card" formGroupName="specialtyData">
+                  <div class="gynae-postnatal-card-head">
+                    <h4><i class="fa fa-child"></i> Newborn Follow-up Reminders</h4>
+                  </div>
+                  <div class="gynae-postnatal-reminder-list">
+                    <label><span>Next Pediatric Visit</span><input formControlName="newbornPediatricVisit" placeholder="10 Jul 2026" /></label>
+                    <label><span>BCG / OPV</span><input formControlName="newbornBcgOpv" placeholder="Due at 6 weeks" /></label>
+                    <label><span>Vitamin D Drops</span><input formControlName="newbornVitaminD" placeholder="Daily" /></label>
+                    <label><span>Weight Monitoring</span><input formControlName="newbornWeightMonitoring" placeholder="Weekly" /></label>
+                  </div>
+                </section>
+
+                <section class="gynae-postnatal-card" formGroupName="specialtyData">
+                  <div class="gynae-postnatal-card-head">
+                    <h4><i class="fa fa-comments-o"></i> Postnatal Counselling Notes</h4>
+                  </div>
+                  <textarea formControlName="postnatalCounsellingNotes" rows="5"></textarea>
+                </section>
+              </aside>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="isGynaeDoctor() && gynaeConsultMode() === 'antenatal'">
+            <div class="gynae-mode-panel" formGroupName="specialtyData">
+              <div class="gynae-mode-grid gynae-mode-grid-7">
+                <label><span>LMP</span><input type="date" formControlName="lmp" (change)="onGynaeLmpChange()" /></label>
+                <label><span>EDD (by LMP)</span><input type="date" formControlName="edd" readonly /></label>
+                <label><span>Gestational Age</span><input formControlName="gestationalAge" readonly placeholder="22w 3d" /></label>
+                <label><span>Gravida (G)</span><input formControlName="gravida" placeholder="2" /></label>
+                <label><span>Para (P)</span><input formControlName="para" placeholder="1" /></label>
+                <label><span>Abortion (A)</span><input formControlName="abortion" placeholder="0" /></label>
+                <label><span>Living (L)</span><input formControlName="living" placeholder="1" /></label>
+              </div>
+
+              <div class="gynae-mode-toggle-row">
+                <label class="gynae-toggle-field">
+                  <span>Previous C-section</span>
+                  <button type="button" class="gynae-toggle" [class.on]="isGynaeYesField('previousCSection')"
+                    (click)="toggleGynaeYesField('previousCSection', !isGynaeYesField('previousCSection'))">
+                    <i></i>
+                  </button>
+                  <small>{{ isGynaeYesField('previousCSection') ? 'Yes' : 'No' }}</small>
+                </label>
+                <label class="gynae-toggle-field">
+                  <span>Fetal Movement</span>
+                  <button type="button" class="gynae-toggle" [class.on]="isGynaeFetalMovementYes()"
+                    (click)="toggleGynaeFetalMovement(!isGynaeFetalMovementYes())">
+                    <i></i>
+                  </button>
+                  <small>{{ isGynaeFetalMovementYes() ? 'Yes' : 'No' }}</small>
+                </label>
+                <label class="gynae-toggle-field">
+                  <span>PV Bleeding</span>
+                  <button type="button" class="gynae-toggle" [class.on]="isGynaeYesField('pvBleeding')"
+                    (click)="toggleGynaeYesField('pvBleeding', !isGynaeYesField('pvBleeding'))">
+                    <i></i>
+                  </button>
+                  <small>{{ isGynaeYesField('pvBleeding') ? 'Yes' : 'No' }}</small>
+                </label>
+                <label class="gynae-toggle-field">
+                  <span>Pain Abdomen</span>
+                  <button type="button" class="gynae-toggle" [class.on]="isGynaeYesField('painAbdomen')"
+                    (click)="toggleGynaeYesField('painAbdomen', !isGynaeYesField('painAbdomen'))">
+                    <i></i>
+                  </button>
+                  <small>{{ isGynaeYesField('painAbdomen') ? 'Yes' : 'No' }}</small>
+                </label>
+              </div>
+
+              <div class="gynae-mode-grid gynae-mode-grid-6">
+                <label><span>Urine Albumin</span>
+                  <select formControlName="urineAlbumin">
+                    <option value="">Select</option>
+                    <option value="Negative">Negative</option>
+                    <option value="Trace">Trace</option>
+                    <option value="+">+</option>
+                    <option value="++">++</option>
+                    <option value="+++">+++</option>
+                  </select>
+                </label>
+                <label><span>Urine Sugar</span>
+                  <select formControlName="urineSugar">
+                    <option value="">Select</option>
+                    <option value="Negative">Negative</option>
+                    <option value="Trace">Trace</option>
+                    <option value="+">+</option>
+                    <option value="++">++</option>
+                    <option value="+++">+++</option>
+                  </select>
+                </label>
+                <label><span>Edema</span>
+                  <select formControlName="edema">
+                    <option value="">Select</option>
+                    <option value="None">None</option>
+                    <option value="Mild">Mild</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Severe">Severe</option>
+                  </select>
+                </label>
+                <label><span>Fundal Height (cm)</span><input formControlName="fundalHeight" placeholder="21" /></label>
+                <label><span>Fetal Heart Rate</span><input formControlName="fetalHeartRate" placeholder="152 /min" /></label>
+                <label><span>Presentation</span>
+                  <select formControlName="presentation">
+                    <option value="">Select</option>
+                    <option value="Cephalic">Cephalic</option>
+                    <option value="Breech">Breech</option>
+                    <option value="Transverse">Transverse</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="gynae-mode-notes-grid">
+                <label><span>Pelvic Exam / Findings</span><textarea formControlName="pvExamination" placeholder="Not indicated (22 weeks)."></textarea></label>
+                <label><span>Other Notes</span><textarea formControlName="antenatalOtherNotes" placeholder="Routine ANC. Next anomaly scan advised at 24 weeks."></textarea></label>
+              </div>
+
+              <div class="gynae-mode-section">
+                <h4>Danger Signs (Counselled)</h4>
+                <div class="gynae-mode-danger-grid">
+                  <label *ngFor="let sign of antenatalDangerSigns">
+                    <input type="checkbox" [checked]="isGynaeCounselledField(sign.key)"
+                      (change)="toggleGynaeCounselledField(sign.key, $any($event.target).checked)" />
+                    <span>{{ sign.label }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <label class="gynae-mode-note wide">
+                <span>Note to Patient</span>
+                <textarea formControlName="gynaeNoteToPatient" placeholder="Take iron and folic acid daily..."></textarea>
+              </label>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="isGynaeDoctor() && gynaeConsultMode() === 'gynae_problem'">
+            <div class="gynae-mode-panel" formGroupName="specialtyData">
+              <div class="gynae-mode-grid gynae-mode-grid-6">
+                <label><span>LMP</span><input type="date" formControlName="lmp" (change)="onGynaeLmpChange()" /></label>
+                <label><span>Cycle Regularity</span>
+                  <select formControlName="cycleRegularity">
+                    <option value="">Select</option>
+                    <option value="Regular">Regular</option>
+                    <option value="Irregular">Irregular</option>
+                  </select>
+                </label>
+                <label><span>Cycle Length</span>
+                  <select formControlName="cycleLength">
+                    <option value="">Select</option>
+                    <option value="21-28 days">21-28 days</option>
+                    <option value="28-35 days">28-35 days</option>
+                    <option value="35-45 days">35-45 days</option>
+                    <option value="> 45 days">&gt; 45 days</option>
+                    <option value="Variable">Variable</option>
+                  </select>
+                </label>
+                <label><span>Duration of Flow</span>
+                  <select formControlName="durationOfFlow">
+                    <option value="">Select</option>
+                    <option value="2-3 days">2-3 days</option>
+                    <option value="4-5 days">4-5 days</option>
+                    <option value="5 days">5 days</option>
+                    <option value="6-7 days">6-7 days</option>
+                    <option value="> 7 days">&gt; 7 days</option>
+                  </select>
+                </label>
+                <label><span>Amount of Bleeding</span>
+                  <select formControlName="amountOfBleeding">
+                    <option value="">Select</option>
+                    <option value="Scanty">Scanty</option>
+                    <option value="Light">Light</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Heavy">Heavy</option>
+                    <option value="Very Heavy">Very Heavy</option>
+                  </select>
+                </label>
+                <label><span>Dysmenorrhea</span>
+                  <select formControlName="dysmenorrhea">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="gynae-mode-grid gynae-mode-grid-6">
+                <label><span>Marital Status</span>
+                  <select formControlName="married">
+                    <option value="">Select</option>
+                    <option value="Married">Married</option>
+                    <option value="Unmarried">Unmarried</option>
+                    <option value="Widowed">Widowed</option>
+                    <option value="Divorced">Divorced</option>
+                  </select>
+                </label>
+                <label><span>Contraception History</span>
+                  <select formControlName="contraceptionHistory">
+                    <option value="">Select</option>
+                    <option value="None">None</option>
+                    <option value="Condom (Occasional)">Condom (Occasional)</option>
+                    <option value="OCP">OCP</option>
+                    <option value="IUCD">IUCD</option>
+                    <option value="Injectable">Injectable</option>
+                    <option value="Implant">Implant</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+                <label><span>Infertility Duration</span>
+                  <select formControlName="infertilityDuration">
+                    <option value="">Select</option>
+                    <option value="--">--</option>
+                    <option value="< 6 months">&lt; 6 months</option>
+                    <option value="6-12 months">6-12 months</option>
+                    <option value="1-2 years">1-2 years</option>
+                    <option value="> 2 years">&gt; 2 years</option>
+                  </select>
+                </label>
+                <label><span>Lower Abdominal Pain</span>
+                  <select formControlName="lowerAbdominalPain">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </label>
+                <label><span>White Discharge</span>
+                  <select formControlName="whiteDischarge">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="Present">Present</option>
+                    <option value="No">No</option>
+                  </select>
+                </label>
+                <label><span>Postcoital Bleeding</span>
+                  <select formControlName="postcoitalBleeding">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="gynae-mode-grid gynae-mode-grid-3">
+                <label><span>Urinary Symptoms</span>
+                  <select formControlName="urinarySymptoms">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </label>
+                <label><span>Dyspareunia</span>
+                  <select formControlName="dyspareunia">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </label>
+                <label><span>Menopause Status</span>
+                  <select formControlName="menopauseStatus">
+                    <option value="">Select</option>
+                    <option value="Pre-menopausal">Pre-menopausal</option>
+                    <option value="Peri-menopausal">Peri-menopausal</option>
+                    <option value="Post-menopausal">Post-menopausal</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="gynae-mode-section">
+                <h4>Common Complaints / Symptoms</h4>
+                <div class="gynae-complaint-chips">
+                  <button type="button" class="gynae-chip" *ngFor="let complaint of gynaeProblemComplaints"
+                    [class.active]="isGynaeComplaintSelected(complaint.key)"
+                    (click)="toggleGynaeComplaint(complaint.key, !isGynaeComplaintSelected(complaint.key))">
+                    {{ complaint.label }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="gynae-mode-section">
+                <h4>Red Flag Checklist</h4>
+                <div class="gynae-mode-danger-grid gynae-mode-red-flags">
+                  <label *ngFor="let flag of gynaeProblemRedFlags">
+                    <input type="checkbox" [checked]="isGynaeCounselledField(flag.key)"
+                      (change)="toggleGynaeCounselledField(flag.key, $any($event.target).checked)" />
+                    <span>{{ flag.label }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="gynae-mode-notes-grid gynae-mode-notes-grid-3">
+                <label><span>Examination / Pelvic Findings</span><textarea formControlName="pelvicFindings" placeholder="Per speculum: Cervix healthy..."></textarea></label>
+                <label><span>Provisional Diagnosis</span><textarea formControlName="provisionalDiagnosis" placeholder="Ovulatory dysfunction (AUB-O)."></textarea></label>
+                <label><span>Treatment Plan</span><textarea formControlName="treatmentPlan" placeholder="Tab. Tranexamic Acid 500 mg TDS for 5 days..."></textarea></label>
+              </div>
+
+              <label class="gynae-mode-note wide">
+                <span>Gynecology Notes</span>
+                <textarea formControlName="gynecologyNotes" placeholder="Counselled regarding cycle tracking and follow-up..."></textarea>
+              </label>
+            </div>
+          </ng-container>
+
+          <div class="specialty-notes-grid" formGroupName="specialtyData" *ngIf="!isGynaeDoctor()">
             <label *ngFor="let field of template.fields" [class.wide]="field.wide">
               <span>{{ field.label }}</span>
               <select *ngIf="field.type === 'select'; else specialtyTextField"
-                [formControlName]="specialtyFieldControl(field)" (change)="loadImagingTemplate()">
+                [formControlName]="specialtyFieldControl(field)" (change)="field.key === 'lmp' ? onGynaeLmpChange() : loadImagingTemplate()">
                 <option value="">Select</option>
                 <option *ngFor="let option of field.options || []" [value]="option">{{ option }}</option>
               </select>
@@ -244,11 +752,34 @@
                   [formControlName]="specialtyFieldControl(field)" [placeholder]="field.placeholder || field.label"></textarea>
                 <ng-template #specialtyInputField>
                   <input [type]="field.type === 'date' ? 'date' : 'text'"
-                    [formControlName]="specialtyFieldControl(field)" [placeholder]="field.placeholder || field.label" />
+                    [formControlName]="specialtyFieldControl(field)"
+                    [placeholder]="field.placeholder || field.label"
+                    [readonly]="field.key === 'edd' || field.key === 'gestationalAge'"
+                    (change)="field.key === 'lmp' ? onGynaeLmpChange() : null" />
                 </ng-template>
               </ng-template>
             </label>
           </div>
+        </section>
+
+        <section class="gynae-ultrasound-panel" *ngIf="activeTab === 'ultrasound' && isGynaeDoctor()" formGroupName="specialtyData">
+          <div class="specialty-notes-head">
+            <div>
+              <h3>Ultrasound</h3>
+              <p>Select studies and add notes. Ultrasound is kept separate from routine lab tests.</p>
+            </div>
+          </div>
+          <div class="gynae-ultrasound-grid">
+            <label *ngFor="let study of gynaeUltrasoundStudies">
+              <input type="checkbox" [checked]="isUltrasoundStudySelected(study.key)"
+                (change)="toggleUltrasoundStudy(study.key, $any($event.target).checked)" />
+              <span>{{ study.label }}</span>
+            </label>
+          </div>
+          <label class="wide">
+            <span>Ultrasound Notes</span>
+            <textarea formControlName="ultrasoundNotes" placeholder="Findings, impression or instructions"></textarea>
+          </label>
         </section>
 
         <section class="vitals-dashboard-panel" *ngIf="activeTab === 'vitals'">
@@ -643,7 +1174,7 @@
           </div>
         </section>
 
-        <section class="documents-dashboard-panel" *ngIf="activeTab === 'documents'">
+        <section class="documents-dashboard-panel" *ngIf="activeTab === 'documents' && !isGynaeDoctor()">
           <div class="documents-dashboard-head">
             <div>
               <h3>Documents</h3>
@@ -654,8 +1185,8 @@
                 Assign a patient appointment to view documents.
               </p>
             </div>
-            <button type="button" class="btn-light documents-upload-btn" [disabled]="!hasAssignedPatient()"
-              (click)="openDocumentModal()">
+            <button type="button" class="btn-light documents-upload-btn"
+              (click)="triggerDocumentUpload()">
               <i class="fa fa-upload"></i>
               Upload Document
             </button>
@@ -701,6 +1232,91 @@
 
           <div class="documents-summary">
             <strong>Total Documents: {{ totalPatientDocuments() }}</strong>
+          </div>
+        </section>
+
+        <section class="gynae-documents-panel" *ngIf="activeTab === 'documents' && isGynaeDoctor()">
+          <div class="gynae-documents-head">
+            <div>
+              <h3>Documents &amp; Records</h3>
+              <p>Upload and manage patient documents securely.</p>
+            </div>
+            <button type="button" class="btn-primary gynae-documents-upload-btn"
+              (click)="triggerDocumentUpload()">
+              <i class="fa fa-cloud-upload"></i>
+              Upload Document
+            </button>
+          </div>
+
+          <div class="gynae-documents-empty" *ngIf="!hasAssignedPatient()">
+            Select an assigned patient to upload and view documents.
+          </div>
+
+          <div class="gynae-doc-category-list" *ngIf="hasAssignedPatient()">
+            <article class="gynae-doc-category" *ngFor="let group of gynaeDocumentCategoryViews()">
+              <div class="gynae-doc-category-info">
+                <div class="gynae-doc-category-icon">
+                  <i class="fa" [ngClass]="group.category.icon"></i>
+                </div>
+                <div>
+                  <strong>{{ group.category.title }}</strong>
+                  <p>{{ group.category.description }}</p>
+                  <span class="gynae-doc-count">{{ group.fileCount }} file(s)</span>
+                </div>
+              </div>
+
+              <div class="gynae-doc-thumbs">
+                <ng-container *ngIf="group.previewDocuments.length > 0; else gynaeDocEmptyUpload">
+                  <button type="button" class="gynae-doc-thumb" *ngFor="let preview of group.previewDocuments"
+                    (click)="downloadDocument(preview)">
+                    <img *ngIf="isGynaeDocumentImage(preview.url)" [src]="preview.url" [alt]="preview.name" />
+                    <span *ngIf="!isGynaeDocumentImage(preview.url)" class="gynae-doc-thumb-badge">
+                      {{ gynaeDocumentPreviewLabel(preview.name) }}
+                    </span>
+                  </button>
+                  <span class="gynae-doc-thumb-more" *ngIf="group.extraPreviewCount > 0">+{{ group.extraPreviewCount }}</span>
+                </ng-container>
+
+                <ng-template #gynaeDocEmptyUpload>
+                  <label class="gynae-doc-upload-drop">
+                    <input type="file" hidden (change)="onGynaeCategoryFileSelected(group.category.key, $event)" />
+                    <i class="fa fa-cloud-upload"></i>
+                    <span>Upload file or drag and drop</span>
+                  </label>
+                </ng-template>
+              </div>
+
+              <div class="gynae-doc-latest">
+                <ng-container *ngIf="group.latestDocument as latest; else gynaeDocLatestEmpty">
+                  <div class="gynae-doc-latest-head">
+                    <div class="gynae-doc-latest-title">
+                      <i class="fa" [ngClass]="isGynaeDocumentImage(latest.url) ? 'fa-file-image-o' : 'fa-file-pdf-o'"></i>
+                      <strong>{{ latest.name }}</strong>
+                    </div>
+                    <div class="gynae-doc-menu-wrap">
+                      <button type="button" class="gynae-doc-menu-btn" (click)="toggleDocumentMenu(latest.id)">
+                        <i class="fa fa-ellipsis-v"></i>
+                      </button>
+                      <div class="gynae-doc-menu" *ngIf="activeDocumentMenuId === latest.id">
+                        <button type="button" (click)="downloadDocument(latest)">View / Download</button>
+                        <button type="button" *ngIf="latest.source === 'form'" (click)="editDocumentRow(latest)">Edit</button>
+                        <button type="button" *ngIf="latest.source === 'form'" (click)="deleteDocumentRow(latest); activeDocumentMenuId = null">Delete</button>
+                        <button type="button" (click)="openGynaeDocumentUpload(group.category.key)">Upload New</button>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="gynae-doc-meta">{{ gynaeDocumentTimestamp(latest.uploadedOn) }} • {{ latest.uploadedBy }}</span>
+                  <p class="gynae-doc-note">{{ latest.notes || 'No summary note added.' }}</p>
+                </ng-container>
+
+                <ng-template #gynaeDocLatestEmpty>
+                  <div class="gynae-doc-latest-empty">
+                    <strong>No documents uploaded yet</strong>
+                    <button type="button" class="btn-light" (click)="openGynaeDocumentUpload(group.category.key)">Upload Document</button>
+                  </div>
+                </ng-template>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -795,6 +1411,9 @@
                           <option *ngFor="let item of medicineRowSuggestions[i] || []"
                             [value]="item.value">{{ item.meta }}</option>
                         </datalist>
+                        <div class="medicine-pregnancy-warning" *ngIf="medicinePregnancyWarning(i) as warning">
+                          <i class="fa fa-exclamation-triangle"></i> {{ warning }}
+                        </div>
                       </div>
                     </td>
                     <td><input class="medicine-dose-input" formControlName="dosage" placeholder="Dose"
@@ -881,9 +1500,15 @@
                 <h3>Lab Tests</h3>
                 <button type="button" (click)="openLabTestModal()">+ Add Test</button>
               </div>
+              <div class="gynae-lab-filters" *ngIf="isGynaeDoctor()">
+                <button type="button" *ngFor="let filter of gynaeLabCategories"
+                  [class.active]="gynaeLabCategoryFilter === filter.key"
+                  (click)="gynaeLabCategoryFilter = filter.key">{{ filter.label }}</button>
+              </div>
               <div formArrayName="labTests">
                 <div class="lab-row lab-head"><span></span><strong>Test</strong><strong>Category</strong></div>
-                <label class="lab-row" *ngFor="let test of labTests.controls; let i = index" [formGroupName]="i">
+                <label class="lab-row" *ngFor="let test of labTests.controls; let i = index" [formGroupName]="i"
+                  [hidden]="!shouldShowSidebarLabTest(i)">
                   <input type="checkbox" formControlName="selected" />
                   <input formControlName="name" />
                   <input formControlName="category" />
@@ -913,7 +1538,7 @@
             <section class="order-card" formArrayName="patientDocuments">
               <div class="section-heading">
                 <h3>Documents</h3>
-                <button type="button" (click)="openDocumentModal()">+ Add Document</button>
+                <button type="button" (click)="triggerDocumentUpload()">+ Add Document</button>
               </div>
               <div class="document-sidebar-row" *ngFor="let document of patientDocuments.controls; let i = index" [formGroupName]="i">
                 <strong>{{ document.get('name')?.value || 'Document' }}</strong>
@@ -1049,6 +1674,11 @@
       <button type="button" class="btn-light" (click)="changePatientHistoryPage(patientHistoryPage + 1)" [disabled]="patientHistoryPage >= patientHistoryTotalPages">Next</button>
     </div>
   </section>
+</div>
+
+  <input #documentFileInput type="file" class="sr-only-file-input" hidden
+    accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.doc,.docx"
+    (change)="onDocumentFileInputChange($event)" />
 
   <div class="medicine-library-backdrop" *ngIf="medicineLibraryOpen">
     <form class="medicine-library-dialog" [formGroup]="doctorMedicineForm" (ngSubmit)="saveDoctorMedicine(true)">
@@ -1205,12 +1835,28 @@
 
       <div class="print-preview-scroll">
         <div class="print-preview-loading" *ngIf="printPreviewLoading">Loading prescription preview...</div>
-        <section class="prescription-print-sheet" #printContent
-          [ngClass]="'prescription-template-' + printPreviewTemplate"
+        <div class="prescription-print-host" #printContent
           [class.prescription-eye-sheet]="preview.specialtySection === 'eye'"
           *ngIf="!printPreviewLoading && printPreviewData as preview">
-          <ng-container *ngIf="printPreviewTemplate === 'clinical-blue'; else themedPrescriptionLayout">
-            <div class="clinical-rx-page" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
+          <ng-container *ngIf="printPreviewTemplate === 'clinical-blue'; else wrappedThemedPrint">
+            <section class="prescription-print-sheet prescription-template-clinical-blue"
+              *ngFor="let page of preview.clinicalPages; let last = last"
+              [class.clinical-rx-continuation-sheet]="!page.isFirstPage"
+              [class.clinical-rx-print-page-last]="last">
+            <div class="clinical-rx-page"
+              [class.clinical-rx-continuation-page]="!page.isFirstPage"
+              [class.clinical-rx-page--split]="page.totalPages > 1"
+              [class.clinical-rx-page--details]="page.gynaeExtendedRows.length > 0"
+              [ngClass]="printMedicineDensityClass(preview.medicines.length)">
+              <header class="clinical-rx-continuation-header" *ngIf="!page.isFirstPage">
+                <div>
+                  <strong>{{ preview.doctorName }}</strong>
+                  <span>{{ preview.prescriptionNo }} · {{ preview.patientName }} · {{ preview.date }}</span>
+                </div>
+                <em>Page {{ page.pageNumber }} of {{ page.totalPages }}</em>
+              </header>
+
+              <ng-container *ngIf="page.isFirstPage">
               <header class="clinical-rx-header">
                 <div class="clinical-rx-doctor clinical-rx-doctor-en">
                   <h1>{{ preview.doctorName }}</h1>
@@ -1283,8 +1929,19 @@
                 </div>
               </section>
 
-              <section class="clinical-rx-main">
-                <aside class="clinical-rx-sidebar">
+              <section class="clinical-rx-gynae-consultation" *ngIf="preview.specialtySection === 'gynae' && preview.gynaeConsultationRows.length > 0">
+                <div class="clinical-rx-gynae-consultation-item" *ngFor="let row of preview.gynaeConsultationRows">
+                  <strong>{{ row.label }}</strong>
+                  <p>{{ row.value }}</p>
+                </div>
+              </section>
+              </ng-container>
+
+              <section class="clinical-rx-main"
+                *ngIf="page.medicines.length > 0 || page.isFirstPage"
+                [class.clinical-rx-main-gynae]="preview.specialtySection === 'gynae'"
+                [class.clinical-rx-main-continuation]="!page.isFirstPage">
+                <aside class="clinical-rx-sidebar" *ngIf="page.isFirstPage">
                   <div class="clinical-rx-card clinical-rx-observation">
                     <h3>O / E</h3>
                     <div><i class="fa fa-dot-circle-o"></i><strong>BP</strong><span>{{ preview.vitals['bp'] || preview.vitals['bloodPressure'] || '-' }}</span></div>
@@ -1296,7 +1953,7 @@
 
                   <div class="clinical-rx-card clinical-rx-labs">
                     <h3>LAB'S</h3>
-                    <div *ngFor="let test of preview.labTests | slice:0:3">
+                    <div *ngFor="let test of preview.labTests">
                       <i class="fa fa-check-square-o"></i>
                       <strong>{{ test.name }}</strong>
                       <span>✓</span>
@@ -1308,22 +1965,33 @@
                     </div>
                   </div>
 
-                  <div class="clinical-rx-card clinical-rx-specialty" *ngIf="preview.specialtyRows.length > 0">
+                  <div class="clinical-rx-card clinical-rx-specialty clinical-rx-specialty-gynae" *ngIf="preview.specialtySection === 'gynae' && preview.gynaeSidebarRows.length > 0">
                     <h3>{{ preview.specialtyTitle }}</h3>
-                    <div *ngFor="let row of preview.specialtyRows | slice:0:5">
+                    <div class="clinical-rx-specialty-scroll">
+                      <div *ngFor="let row of preview.gynaeSidebarRows">
+                        <i class="fa fa-file-text-o"></i>
+                        <strong>{{ row.label }}</strong>
+                        <span>{{ row.value }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="clinical-rx-card clinical-rx-specialty" *ngIf="preview.specialtySection !== 'gynae' && preview.specialtyRows.length > 0">
+                    <h3>{{ preview.specialtyTitle }}</h3>
+                    <div *ngFor="let row of preview.specialtyRows">
                       <i class="fa fa-file-text-o"></i>
                       <strong>{{ row.label }}</strong>
                       <span>{{ row.value }}</span>
                     </div>
                   </div>
 
-                  <div class="clinical-rx-card clinical-rx-follow-up">
+                  <div class="clinical-rx-card clinical-rx-follow-up" *ngIf="preview.specialtySection !== 'gynae'">
                     <h3><i class="fa fa-calendar-plus-o"></i> FOLLOW UP</h3>
                     <span>{{ preview.followUpDate }}</span>
                   </div>
                 </aside>
 
-                <div class="clinical-rx-content">
+                <div class="clinical-rx-content" [class.clinical-rx-content-gynae]="preview.specialtySection === 'gynae'">
                   <section class="clinical-rx-medicines" [ngClass]="printMedicineDensityClass(preview.medicines.length)">
                     <header>
                       <strong>MEDICINES</strong>
@@ -1350,8 +2018,8 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr *ngFor="let medicine of preview.medicines; let medicineIndex = index">
-                          <td>{{ medicineIndex + 1 }}</td>
+                        <tr *ngFor="let medicine of page.medicines; let medicineIndex = index">
+                          <td>{{ page.medicineOffset + medicineIndex + 1 }}</td>
                           <td class="clinical-rx-med-name">
                             <strong>{{ medicine['name'] || 'Medicine' }}</strong>
                             <span>{{ medicine['dosage'] || '' }}</span>
@@ -1359,14 +2027,14 @@
                           </td>
                           <td>{{ medicine['dosage'] || '-' }}</td>
                           <td>{{ medicine['duration'] || '-' }}</td>
-                          <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'noon') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'evening') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'night') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'morning') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'noon') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'evening') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'night') || '-' }}</td>
                           <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
                           <td>{{ medicine['instructions'] || '-' }}</td>
                         </tr>
-                        <tr *ngIf="preview.medicines.length === 0" class="clinical-rx-no-medicine-row">
+                        <tr *ngIf="page.medicines.length === 0 && page.isFirstPage" class="clinical-rx-no-medicine-row">
                           <td colspan="10">No medicine prescribed</td>
                         </tr>
                       </tbody>
@@ -1374,7 +2042,18 @@
                     </div>
                   </section>
 
-                  <section class="clinical-rx-instructions">
+                  <section class="clinical-rx-drips-panel" *ngIf="page.isFirstPage && preview.ivFluids.length > 0">
+                    <h3>DRIP'S</h3>
+                    <div class="clinical-rx-drips-list">
+                      <div *ngFor="let drip of preview.ivFluids">
+                        <i class="fa fa-tint"></i>
+                        <strong>{{ drip.name }}</strong>
+                        <span>{{ drip.rate }}</span>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="clinical-rx-instructions" *ngIf="page.isLastPage && preview.specialtySection !== 'gynae'">
                     <h3>
                       <span><i class="fa fa-info-circle"></i> IMPORTANT INSTRUCTIONS</span>
                       <span class="print-urdu-block">ضروری ہدایات</span>
@@ -1395,7 +2074,18 @@
                 </div>
               </section>
 
-              <section class="clinical-rx-lower">
+              <section class="clinical-rx-gynae-extended"
+                *ngIf="page.gynaeExtendedRows.length > 0">
+                <h3>{{ page.showGynaeExtendedTitle ? 'Gynae / OBS Details' : 'Gynae / OBS Details (Continued)' }}</h3>
+                <div class="clinical-rx-gynae-extended-grid">
+                  <article *ngFor="let row of page.gynaeExtendedRows" [class.wide]="row.wide">
+                    <strong>{{ row.label }}</strong>
+                    <p>{{ row.value }}</p>
+                  </article>
+                </div>
+              </section>
+
+              <section class="clinical-rx-lower" *ngIf="page.isLastPage">
                 <div class="clinical-rx-note">
                   <strong><i class="fa fa-file-text-o"></i>NOTE TO PATIENT</strong>
                   <p>{{ preview.patientNote || '-' }}</p>
@@ -1407,7 +2097,7 @@
                 </div>
               </section>
 
-              <footer class="clinical-rx-footer">
+              <footer class="clinical-rx-footer" *ngIf="page.isLastPage">
                 <strong *ngIf="preview.prescriptionRevisionNote">
                   <i class="fa fa-asterisk"></i> {{ preview.prescriptionRevisionNote }}
                 </strong>
@@ -1419,7 +2109,16 @@
                 </p>
               </footer>
             </div>
+            </section>
           </ng-container>
+
+          <ng-template #wrappedThemedPrint>
+            <section class="prescription-print-sheet"
+              [ngClass]="'prescription-template-' + printPreviewTemplate"
+              [class.prescription-eye-sheet]="preview.specialtySection === 'eye'">
+              <ng-container *ngTemplateOutlet="themedPrescriptionLayout"></ng-container>
+            </section>
+          </ng-template>
 
           <ng-template #themedPrescriptionLayout>
             <ng-container *ngIf="printPreviewTemplate === 'minimal-teal'; else purplePrescriptionLayout">
@@ -1482,7 +2181,7 @@
                 <section class="stacked-rx-strip stacked-rx-labs-strip">
                   <h3>LAB TESTS</h3>
                   <div class="stacked-rx-strip-grid labs">
-                    <div *ngFor="let test of preview.labTests | slice:0:4">
+                    <div *ngFor="let test of preview.labTests">
                       <i class="fa fa-check-square"></i><strong>{{ test.name }}</strong><span>✓</span>
                     </div>
                     <div *ngIf="preview.labTests.length === 0"><i class="fa fa-square-o"></i><strong>CBC</strong><span>-</span></div>
@@ -1526,10 +2225,10 @@
                         </td>
                         <td>{{ medicine['dosage'] || '-' }}</td>
                         <td>{{ medicine['duration'] || '-' }}</td>
-                        <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
-                        <td>{{ slotDose(medicine, 'noon') || '0' }}</td>
-                        <td>{{ slotDose(medicine, 'evening') || '0' }}</td>
-                        <td>{{ slotDose(medicine, 'night') || '0' }}</td>
+                        <td>{{ slotDose(medicine, 'morning') || '-' }}</td>
+                        <td>{{ slotDose(medicine, 'noon') || '-' }}</td>
+                        <td>{{ slotDose(medicine, 'evening') || '-' }}</td>
+                        <td>{{ slotDose(medicine, 'night') || '-' }}</td>
                         <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
                         <td>{{ medicine['instructions'] || '-' }}</td>
                       </tr>
@@ -1628,7 +2327,7 @@
                     <div class="sectioned-rx-block">
                       <h3>LAB TESTS</h3>
                       <div class="sectioned-rx-list">
-                        <div *ngFor="let test of preview.labTests | slice:0:4"><strong>{{ test.name }}</strong><span>✓</span></div>
+                        <div *ngFor="let test of preview.labTests"><strong>{{ test.name }}</strong><span>✓</span></div>
                         <div *ngIf="preview.labTests.length === 0"><strong>CBC</strong><span>-</span></div>
                         <div *ngIf="preview.labTests.length === 0"><strong>CRP</strong><span>-</span></div>
                       </div>
@@ -1672,10 +2371,10 @@
                           </td>
                           <td>{{ medicine['dosage'] || '-' }}</td>
                           <td>{{ medicine['duration'] || '-' }}</td>
-                          <td>{{ slotDose(medicine, 'morning') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'noon') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'evening') || '0' }}</td>
-                          <td>{{ slotDose(medicine, 'night') || '0' }}</td>
+                          <td>{{ slotDose(medicine, 'morning') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'noon') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'evening') || '-' }}</td>
+                          <td>{{ slotDose(medicine, 'night') || '-' }}</td>
                           <td>{{ medicine['beforeMeal'] ? 'Before Food' : medicine['afterMeal'] ? 'After Food' : '-' }}</td>
                           <td>{{ medicine['instructions'] || '-' }}</td>
                         </tr>
@@ -1785,6 +2484,12 @@
               <th>Disease</th>
               <td colspan="7">{{ preview.disease }}</td>
             </tr>
+            <ng-container *ngIf="preview.specialtySection === 'gynae'">
+              <tr *ngFor="let row of preview.gynaeConsultationRows || []">
+                <th>{{ row.label }}</th>
+                <td colspan="7">{{ row.value }}</td>
+              </tr>
+            </ng-container>
           </table>
 
           <div class="print-body-grid">
@@ -1825,7 +2530,17 @@
                 </tr>
               </table>
 
-              <ng-container *ngIf="preview.specialtyRows.length > 0">
+              <ng-container *ngIf="preview.specialtySection === 'gynae' && preview.gynaeSidebarRows.length > 0">
+                <div class="print-mini-title specialty-title">{{ preview.specialtyTitle }}</div>
+                <table class="print-specialty-table">
+                  <tr *ngFor="let row of preview.gynaeSidebarRows">
+                    <th>{{ row.label }}</th>
+                    <td>{{ row.value }}</td>
+                  </tr>
+                </table>
+              </ng-container>
+
+              <ng-container *ngIf="preview.specialtySection !== 'gynae' && preview.specialtyRows.length > 0">
                 <div class="print-mini-title specialty-title">{{ preview.specialtyTitle }}</div>
                 <table class="print-specialty-table">
                   <tr *ngFor="let row of preview.specialtyRows">
@@ -1937,6 +2652,16 @@
             </aside>
           </div>
 
+          <section class="print-gynae-extended" *ngIf="preview.specialtySection === 'gynae' && preview.gynaeExtendedRows.length > 0">
+            <h4>Gynae / OBS Details</h4>
+            <table class="print-gynae-extended-table">
+              <tr *ngFor="let row of preview.gynaeExtendedRows">
+                <th>{{ row.label }}</th>
+                <td>{{ row.value }}</td>
+              </tr>
+            </table>
+          </section>
+
           <section class="print-important-instructions" *ngIf="printPreviewTemplate !== 'classic'">
             <strong>
               <span>IMPORTANT INSTRUCTIONS</span>
@@ -1983,7 +2708,7 @@
             <p *ngFor="let line of preview.prescriptionFooterLines">{{ line }}</p>
           </footer>
           </ng-template>
-        </section>
+        </div>
       </div>
     </div>
   </div>
@@ -2007,6 +2732,13 @@
         <label><span>SpO2</span><input formControlName="spo2" placeholder="98%" /></label>
         <label><span>Respiratory Rate</span><input formControlName="respiratoryRate" placeholder="18 /min" /></label>
         <label><span>Blood Sugar</span><input formControlName="bloodSugar" placeholder="90 mg/dL" /></label>
+        <ng-container *ngIf="isGynaeDoctor()">
+          <label *ngFor="let field of gynaeVitalFields"><span>{{ field.label }}</span>
+            <input [placeholder]="field.placeholder"
+              [value]="specialtyDataGroup.get(field.key)?.value || ''"
+              (input)="patchGynaeVitalField(field.key, $any($event.target).value)" />
+          </label>
+        </ng-container>
         <label class="wide"><span>Notes</span><textarea formControlName="notes" placeholder="Vitals notes"></textarea></label>
       </div>
 
@@ -2186,8 +2918,8 @@
     </div>
   </div>
 
-  <div class="medicine-library-backdrop" *ngIf="documentModalOpen">
-    <div class="document-modal-dialog">
+  <div class="medicine-library-backdrop document-modal-backdrop" *ngIf="documentModalOpen" (click)="closeDocumentModal()">
+    <div class="document-modal-dialog" (click)="$event.stopPropagation()">
       <div class="medicine-library-header">
         <div>
           <h3>{{ editingDocumentIndex !== null ? 'Edit Document' : 'Upload Document' }}</h3>
@@ -2199,12 +2931,22 @@
       <form class="document-modal-form" [formGroup]="documentModalForm" (ngSubmit)="saveDocumentModal()">
         <label class="document-file-picker">
           <span>Select File</span>
-          <input type="file" (change)="onDocumentFileSelected($event)" />
+          <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.doc,.docx"
+            (change)="onDocumentFileSelected($event)" />
+          <small>PDF, image, or Word file</small>
         </label>
 
         <label>
           <span>Document Name</span>
           <input formControlName="name" placeholder="Previous Prescription.pdf" />
+        </label>
+
+        <label *ngIf="isGynaeDoctor()">
+          <span>Category</span>
+          <select formControlName="category">
+            <option value="">Select category</option>
+            <option *ngFor="let category of gynaeDocumentCategories" [value]="category.key">{{ category.title }}</option>
+          </select>
         </label>
 
         <label>
@@ -2214,9 +2956,14 @@
           </select>
         </label>
 
+        <label *ngIf="isGynaeDoctor()" class="wide">
+          <span>Summary Note</span>
+          <textarea formControlName="notes" placeholder="Single live intrauterine pregnancy, 8 weeks 3 days."></textarea>
+        </label>
+
         <label>
           <span>File URL (optional)</span>
-          <input formControlName="url" placeholder="https://..." />
+          <input formControlName="url" placeholder="Auto-filled after file select" readonly />
         </label>
 
         <div class="document-modal-actions">
@@ -2379,5 +3126,4 @@
       </div>
     </div>
   </div>
-</div>
 <!-- changes -->

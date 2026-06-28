@@ -100,12 +100,54 @@ import {
   SpecialtyTemplateKey,
 } from './prescription-specialty-print';
 import {
+  buildGynaeEditSamplePatch,
+  buildGynaeConsentSummary,
+  buildGynaeHistorySummary,
+  calculateEddFromLmp,
+  calculateGestationalAgeFromLmp,
+  GYNAE_ADVICE_TEMPLATES,
+  GYNAE_CONSULT_MODES,
+  GYNAE_LAB_CATALOG,
+  GYNAE_LAB_CATEGORIES,
+  GYNAE_ULTRASOUND_STUDIES,
+  GYNAE_VITAL_FIELDS,
+  GynaeConsultMode,
+  GynaeLabCategory,
+  isPregnancyRiskyMedicine,
+  ANTEPARTUM_DANGER_SIGNS,
+  ANTEPARTUM_DEFAULT_NOTE_TO_PATIENT,
+  GYNAE_PROBLEM_COMPLAINTS,
+  GYNAE_PROBLEM_RED_FLAGS,
+  mergeGynaeLabCatalog,
+  POSTNATAL_DANGER_SIGNS,
+  POSTNATAL_DEFAULT_COUNSELLING,
+  POSTNATAL_DEFAULT_LACTATION,
+  POSTNATAL_LAB_TESTS,
+  resolveGynaeConsultationStripRows,
+  normalizeGynaeConsultMode,
+  resolveGynaePatientNote,
+  splitGynaePrintRows,
+  resolvePrescriptionConsultationPrintRows,
+  visibleGynaeFieldKeys,
+} from './gynae-prescription-data';
+import {
   buildPatientDocumentDisplayRows,
   countPatientDocuments,
   DOCUMENT_TYPES,
   PatientDocumentDisplayRow,
   PatientDocumentRecord,
 } from './patient-document-data';
+import {
+  buildGynaeDocumentCategoryViews,
+  documentPreviewLabel,
+  findGynaeDocumentCategory,
+  formatGynaeDocumentTimestamp,
+  GYNAE_DOCUMENT_CATEGORIES,
+  GynaeDocumentCategoryKey,
+  GynaeDocumentCategoryView,
+  isImageDocumentUrl,
+  normalizeGynaeDocumentPayload,
+} from './gynae-document-data';
 import {
   formatEnglishDoctorName,
   formatEnglishDoctorTitle,
@@ -125,8 +167,13 @@ import {
   detectFrequencyKey,
   getFrequencySchedule,
   mapFrequencyToTimings as resolveFrequencyTimings,
+  resolvePrintSlotDose,
   stripFrequencyPatterns,
 } from './medicine-instruction-formatter';
+import {
+  buildClinicalRxPrintPages,
+  ClinicalRxPrintPage,
+} from './clinical-rx-print-pages';
 
 interface PrintPreviewData {
   template: PrescriptionTemplate;
@@ -164,10 +211,17 @@ interface PrintPreviewData {
   specialtyTitle: string;
   specialtySection: SpecialtyTemplateKey | '';
   specialtyRows: Array<{ label: string; value: string; wide?: boolean }>;
+  consultationRows: Array<{ label: string; value: string; wide?: boolean }>;
+  gynaeConsultationRows: Array<{ label: string; value: string }>;
+  gynaeSidebarRows: Array<{ label: string; value: string; wide?: boolean }>;
+  gynaeExtendedRows: Array<{ label: string; value: string; wide?: boolean }>;
+  gynaeSummaryRows: Array<{ label: string; value: string }>;
+  ultrasoundRows: Array<{ label: string; value: string }>;
   followUpDate: string;
   patientNote: string;
   consultation: string;
   admissionOrderLines: string[];
+  clinicalPages: ClinicalRxPrintPage[];
 }
 
 type PrescriptionDateGroup = {
@@ -214,6 +268,7 @@ interface MedicineSuggestionOption {
 })
 export class PrescriptionComponent implements OnInit, OnDestroy {
   @ViewChild('printContent', { static: false }) printContent!: ElementRef;
+  @ViewChild('documentFileInput', { static: false }) documentFileInput?: ElementRef<HTMLInputElement>;
   @ViewChild('smartMedicineInputRef', { static: false }) smartMedicineInputRef?: ElementRef<HTMLInputElement>;
   @ViewChildren('medicineNameInput') medicineNameInputs?: QueryList<ElementRef<HTMLInputElement>>;
 
@@ -355,14 +410,29 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     'Continue',
   ];
 
-  readonly labTestCatalog = [
+  readonly labTestCatalog = mergeGynaeLabCatalog([
     { name: 'CBC', category: 'Hematology' },
     { name: 'ESR', category: 'Hematology' },
     { name: 'CRP', category: 'Serology' },
     { name: 'Blood Sugar Fasting', category: 'Biochemistry' },
     { name: 'Chest X-Ray', category: 'Radiology' },
     { name: 'Sputum Culture', category: 'Microbiology' },
-  ];
+    ...POSTNATAL_LAB_TESTS,
+  ]);
+  readonly gynaeConsultModes = GYNAE_CONSULT_MODES;
+  readonly gynaeLabCategories = GYNAE_LAB_CATEGORIES;
+  readonly gynaeUltrasoundStudies = GYNAE_ULTRASOUND_STUDIES;
+  readonly gynaeVitalFields = GYNAE_VITAL_FIELDS;
+  readonly gynaeAdviceTemplates = GYNAE_ADVICE_TEMPLATES;
+  readonly postnatalDangerSigns = POSTNATAL_DANGER_SIGNS;
+  readonly antenatalDangerSigns = ANTEPARTUM_DANGER_SIGNS;
+  readonly gynaeProblemComplaints = GYNAE_PROBLEM_COMPLAINTS;
+  readonly gynaeProblemRedFlags = GYNAE_PROBLEM_RED_FLAGS;
+  readonly antenatalDefaultNote = ANTEPARTUM_DEFAULT_NOTE_TO_PATIENT;
+  readonly postnatalLabTests = POSTNATAL_LAB_TESTS;
+  readonly postnatalDefaultLactation = POSTNATAL_DEFAULT_LACTATION;
+  readonly postnatalDefaultCounselling = POSTNATAL_DEFAULT_COUNSELLING;
+  gynaeLabCategoryFilter: GynaeLabCategory | 'all' = 'all';
   readonly labCatalogItems = LAB_TEST_CATALOG;
   labTestFilter: LabTestFilter = 'all';
   labTestRows: LabTestDisplayRow[] = [];
@@ -392,8 +462,11 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   patientHistoryRecords: PatientHistory[] = [];
   documentModalOpen = false;
   editingDocumentIndex: number | null = null;
+  pendingDocumentCategory: GynaeDocumentCategoryKey | null = null;
+  activeDocumentMenuId: string | null = null;
   documentModalForm: FormGroup;
   readonly documentTypes = DOCUMENT_TYPES;
+  readonly gynaeDocumentCategories = GYNAE_DOCUMENT_CATEGORIES;
   currentUserName = '';
   readonly defaultVitalKeys = new Set(['bp', 'pulse', 'weight', 'temperature', 'spo2']);
   readonly defaultVitalLabels: Record<string, string> = {
@@ -489,6 +562,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.documentModalForm = this.fb.group({
       name: ['', Validators.required],
       type: ['Other'],
+      category: [''],
+      notes: [''],
       url: [''],
     });
   }
@@ -535,6 +610,24 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.refreshIvFluidRows();
     this.refreshAdmissionOrderRows();
     this.refreshPatientDocumentRows();
+    this.prescriptionForm.get('doctorId')?.valueChanges.subscribe(() => this.applyGynaeDoctorDefaults());
+    this.specialtyDataGroup.get('lmp')?.valueChanges.pipe(debounceTime(120)).subscribe(() => this.onGynaeLmpChange());
+    [
+      'gravida',
+      'para',
+      'abortion',
+      'living',
+      'cycleRegularity',
+      'pregnancyStatus',
+      'patientConsentTaken',
+      'chaperonePresent',
+      'pelvicExamDone',
+    ].forEach((key) => {
+      this.specialtyDataGroup.get(key)?.valueChanges.pipe(debounceTime(120)).subscribe(() => {
+        this.refreshGynaeHistoryField();
+        this.refreshGynaeExaminationConsent();
+      });
+    });
     window.setTimeout(() => this.initializePrescriptionTheme(), 0);
   }
 
@@ -689,6 +782,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     return this.fb.group({
       name: [item?.name || ''],
       type: [item?.type || 'Other'],
+      category: [item?.category || ''],
+      notes: [item?.notes || ''],
       uploadedOn: [item?.uploadedOn || this.currentDateTimeLocalValue()],
       uploadedBy: [item?.uploadedBy || this.currentUploaderName()],
       url: [item?.url || ''],
@@ -757,16 +852,17 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   openVitalsModal(): void {
     const vitals = this.vitalsGroup.getRawValue() as Record<string, string>;
     const customMap = this.customVitalsToMap();
+    const gynaeData = this.specialtyDataGroup.getRawValue() as Record<string, string>;
 
     this.vitalsModalForm.reset({
-      bp: vitals['bp'] || '',
+      bp: vitals['bp'] || gynaeData['gynaeBp'] || '',
       pulse: vitals['pulse'] || '',
-      weight: vitals['weight'] || '',
+      weight: vitals['weight'] || gynaeData['gynaeWeight'] || '',
       height: customMap['height'] || '',
       temperature: vitals['temperature'] || '',
       spo2: vitals['spo2'] || '',
       respiratoryRate: customMap['respiratoryRate'] || customMap['respiratory_rate'] || '',
-      bloodSugar: customMap['bloodSugar'] || customMap['blood_sugar'] || '',
+      bloodSugar: customMap['bloodSugar'] || customMap['blood_sugar'] || customMap['urineSugar'] || gynaeData['urineSugar'] || '',
       notes: customMap['notes'] || '',
     });
     this.loadVitalsModalCustomRows();
@@ -819,6 +915,21 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     });
 
     this.rebuildCustomVitalsFromModal(value);
+
+    if (this.isGynaeDoctor()) {
+      this.specialtyDataGroup.patchValue(
+        {
+          gynaeBp: value['bp'] || '',
+          gynaeWeight: value['weight'] || '',
+          urineSugar: this.customVitalsToMap()['urineSugar'] || this.customVitalsToMap()['urine_sugar'] || '',
+          urineAlbumin: this.customVitalsToMap()['urineAlbumin'] || this.customVitalsToMap()['urine_albumin'] || '',
+          hemoglobin: this.customVitalsToMap()['hemoglobin'] || this.customVitalsToMap()['hb'] || '',
+          fundalHeight: this.customVitalsToMap()['fundalHeight'] || this.customVitalsToMap()['fundal_height'] || '',
+          fetalHeartRate: this.customVitalsToMap()['fetalHeartRate'] || this.customVitalsToMap()['fetal_heart_rate'] || '',
+        },
+        { emitEvent: false }
+      );
+    }
 
     this.vitalsModalOpen = false;
     this.refreshVitalAnalytics();
@@ -1582,12 +1693,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   slotDose(medicine: Record<string, unknown> | null | undefined, slot: DoseSlot): string {
-    const dose = String(medicine?.[`${slot}Dose`] || '').trim();
-    if (dose) {
-      return dose;
-    }
-
-    return medicine?.[slot] ? '1' : '';
+    return resolvePrintSlotDose(medicine, slot);
   }
 
   printMedicineDensityClass(medicineCount: number): string {
@@ -2173,20 +2279,32 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     return row.id;
   }
 
-  openDocumentModal(formIndex: number | null = null): void {
+  openDocumentModal(formIndex: number | null = null, categoryKey: GynaeDocumentCategoryKey | null = null): void {
+    if (!this.hasAssignedPatient()) {
+      this.toastr.warning('Select a patient appointment from the left panel first.');
+      return;
+    }
+
     this.editingDocumentIndex = formIndex;
+    this.pendingDocumentCategory = categoryKey;
+    this.activeDocumentMenuId = null;
+    const categoryMeta = findGynaeDocumentCategory(categoryKey);
 
     if (formIndex !== null && this.patientDocuments.at(formIndex)) {
       const document = this.patientDocuments.at(formIndex).getRawValue() as PatientDocumentItem;
       this.documentModalForm.reset({
         name: document.name || '',
-        type: document.type || 'Other',
+        type: document.type || categoryMeta?.defaultType || 'Other',
+        category: document.category || categoryKey || '',
+        notes: document.notes || '',
         url: document.url || '',
       });
     } else {
       this.documentModalForm.reset({
         name: '',
-        type: 'Other',
+        type: categoryMeta?.defaultType || 'Other',
+        category: categoryKey || '',
+        notes: '',
         url: '',
       });
     }
@@ -2194,9 +2312,44 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.documentModalOpen = true;
   }
 
+  triggerDocumentUpload(categoryKey: GynaeDocumentCategoryKey | null = null): void {
+    if (!this.hasAssignedPatient()) {
+      this.toastr.warning('Select a patient appointment from the left panel first.');
+      return;
+    }
+
+    this.pendingDocumentCategory = categoryKey;
+    this.documentFileInput?.nativeElement.click();
+  }
+
+  async onDocumentFileInputChange(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    if (this.isGynaeDoctor() && this.pendingDocumentCategory) {
+      await this.uploadGynaeCategoryDocument(this.pendingDocumentCategory, file);
+      this.pendingDocumentCategory = null;
+      return;
+    }
+
+    const dataUrl = await this.readDocumentFileAsDataUrl(file);
+    this.openDocumentModal(null, this.pendingDocumentCategory);
+    this.documentModalForm.patchValue({
+      name: file.name,
+      url: dataUrl,
+    });
+    this.pendingDocumentCategory = null;
+  }
+
   closeDocumentModal(): void {
     this.documentModalOpen = false;
     this.editingDocumentIndex = null;
+    this.pendingDocumentCategory = null;
   }
 
   onDocumentFileSelected(event: Event): void {
@@ -2206,9 +2359,27 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.documentModalForm.patchValue({
-      name: file.name,
-      url: URL.createObjectURL(file),
+    void this.readDocumentFileAsDataUrl(file).then((dataUrl) => {
+      this.documentModalForm.patchValue({
+        name: file.name,
+        url: dataUrl,
+      });
+    });
+  }
+
+  private readDocumentFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        resolve(String(reader.result || ''));
+      };
+
+      reader.onerror = () => {
+        reject(reader.error || new Error('Unable to read file'));
+      };
+
+      reader.readAsDataURL(file);
     });
   }
 
@@ -2219,15 +2390,25 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     }
 
     const value = this.documentModalForm.getRawValue() as PatientDocumentItem;
-    const payload = {
-      name: String(value.name || '').trim(),
-      type: String(value.type || 'Other').trim(),
-      uploadedOn: this.currentDateTimeLocalValue(),
-      uploadedBy: this.currentUploaderName(),
-      url: String(value.url || '').trim(),
-    };
+    const payload = normalizeGynaeDocumentPayload(
+      {
+        name: String(value.name || '').trim(),
+        type: String(value.type || 'Other').trim(),
+        category: String(value.category || this.pendingDocumentCategory || '').trim(),
+        notes: String(value.notes || '').trim(),
+        uploadedOn: this.currentDateTimeLocalValue(),
+        uploadedBy: this.currentUploaderName(),
+        url: String(value.url || '').trim(),
+      },
+      (String(value.category || this.pendingDocumentCategory || '').trim() as GynaeDocumentCategoryKey) || null
+    );
 
     if (!payload.name) {
+      return;
+    }
+
+    if (this.isGynaeDoctor() && !payload.category) {
+      this.toastr.warning('Please select a document category.');
       return;
     }
 
@@ -2239,6 +2420,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
     this.closeDocumentModal();
     this.refreshPatientDocumentRows();
+    this.toastr.success('Document added. Save Draft or Save & Print to keep it.');
   }
 
   deleteDocumentRow(row: PatientDocumentDisplayRow): void {
@@ -2276,6 +2458,79 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     return row.id;
   }
 
+  gynaeDocumentCategoryViews(): GynaeDocumentCategoryView[] {
+    return buildGynaeDocumentCategoryViews(this.patientDocumentRows);
+  }
+
+  gynaeDocumentTimestamp(value: string): string {
+    return formatGynaeDocumentTimestamp(value);
+  }
+
+  gynaeDocumentPreviewLabel(name: string): string {
+    return documentPreviewLabel(name);
+  }
+
+  isGynaeDocumentImage(url: string): boolean {
+    return isImageDocumentUrl(url);
+  }
+
+  openGynaeDocumentUpload(categoryKey: GynaeDocumentCategoryKey): void {
+    this.triggerDocumentUpload(categoryKey);
+  }
+
+  onGynaeCategoryFileSelected(categoryKey: GynaeDocumentCategoryKey, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    void this.uploadGynaeCategoryDocument(categoryKey, file);
+    input.value = '';
+  }
+
+  async uploadGynaeCategoryDocument(categoryKey: GynaeDocumentCategoryKey, file: File): Promise<void> {
+    if (!this.hasAssignedPatient()) {
+      this.toastr.warning('Select a patient appointment from the left panel first.');
+      return;
+    }
+
+    try {
+      const dataUrl = await this.readDocumentFileAsDataUrl(file);
+      const categoryMeta = findGynaeDocumentCategory(categoryKey);
+      const payload = normalizeGynaeDocumentPayload(
+        {
+          name: file.name,
+          type: categoryMeta?.defaultType || 'Other',
+          category: categoryKey,
+          uploadedOn: this.currentDateTimeLocalValue(),
+          uploadedBy: this.currentUploaderName(),
+          url: dataUrl,
+          notes: '',
+        },
+        categoryKey
+      );
+
+      this.patientDocuments.push(this.createPatientDocumentGroup(payload));
+      this.refreshPatientDocumentRows();
+      this.toastr.success(`${categoryMeta?.title || 'Document'} uploaded. Save the prescription to keep it.`);
+    } catch {
+      this.toastr.error('File upload failed. Please try again.');
+    }
+  }
+
+  toggleDocumentMenu(rowId: string): void {
+    this.activeDocumentMenuId = this.activeDocumentMenuId === rowId ? null : rowId;
+  }
+
+  editDocumentRow(row: PatientDocumentDisplayRow): void {
+    if (row.source !== 'form' || row.formIndex === undefined) {
+      return;
+    }
+
+    this.openDocumentModal(row.formIndex, (row.category as GynaeDocumentCategoryKey) || null);
+  }
+
   private currentDateTimeLocalValue(): string {
     const now = new Date();
     const offset = now.getTimezoneOffset();
@@ -2307,6 +2562,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
         void this.offline.cacheValue(this.doctorsCacheKey(), this.doctors);
         this.initializePrescriptionTheme();
         this.refreshOpenPreviewData();
+        this.applyGynaeDoctorDefaults();
         this.maybeRedirectToPhysiotherapyRoute();
       },
       error: () => {
@@ -3154,6 +3410,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
     this.ensureEditAppointmentLoaded(prescription.appointmentId || '');
     this.syncEditModeVitals(prescription);
+    this.ensureGynaeEditDefaults();
     this.loadDoctorMedicines();
     this.loadPatientHistoryRecords();
     this.loadPatientLabHistory(prescription.patientId);
@@ -3321,6 +3578,268 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     }
 
     return SPECIALTY_TEMPLATES[inferSpecialtyTemplateKey(this.selectedDoctorProfile())];
+  }
+
+  isGynaeDoctor(): boolean {
+    return this.activeSpecialtyTemplate().key === 'gynae';
+  }
+
+  specialtyTabLabel(): string {
+    return this.isGynaeDoctor() ? 'Gynae / OBS' : 'Specialty Notes';
+  }
+
+  gynaeConsultMode(): GynaeConsultMode {
+    const mode = String(this.specialtyDataGroup.get('gynaeMode')?.value || 'antenatal').trim();
+    if (mode === 'gynae_problem' || mode === 'postnatal') {
+      return mode;
+    }
+
+    return 'antenatal';
+  }
+
+  setGynaeConsultMode(mode: GynaeConsultMode): void {
+    this.specialtyDataGroup.patchValue({ gynaeMode: mode });
+    if (mode === 'postnatal') {
+      this.ensurePostnatalDefaults();
+    } else if (mode === 'antenatal') {
+      this.ensureAntenatalDefaults();
+    }
+  }
+
+  ensureAntenatalDefaults(): void {
+    this.ensureGynaeEditDefaults();
+  }
+
+  ensurePostnatalDefaults(): void {
+    this.ensureGynaeEditDefaults();
+  }
+
+  ensureGynaeEditDefaults(): void {
+    if (!this.isGynaeDoctor()) {
+      return;
+    }
+
+    const data = this.specialtyDataGroup.getRawValue() as Record<string, unknown>;
+    const patch = buildGynaeEditSamplePatch(this.gynaeConsultMode(), data);
+
+    if (Object.keys(patch).length > 0) {
+      this.specialtyDataGroup.patchValue(patch, { emitEvent: false });
+    }
+
+    const formPatch: Record<string, string> = {};
+    const raw = this.prescriptionForm.getRawValue();
+
+    if (!String(raw.chiefComplaint || '').trim()) {
+      formPatch['chiefComplaint'] = 'Postpartum follow-up / routine antenatal visit / gynae complaint';
+    }
+
+    if (!String(raw.history || '').trim()) {
+      formPatch['history'] = buildGynaeHistorySummary(data) || 'Obstetric and gynaecological history as documented.';
+    }
+
+    if (!String(raw.examination || '').trim()) {
+      formPatch['examination'] = buildGynaeConsentSummary(data) || 'General and systemic examination documented.';
+    }
+
+    if (!String(raw.diagnosis || '').trim()) {
+      formPatch['diagnosis'] =
+        this.gynaeConsultMode() === 'postnatal'
+          ? 'Postnatal follow-up'
+          : this.gynaeConsultMode() === 'gynae_problem'
+            ? 'Gynaecological problem under evaluation'
+            : 'Intrauterine pregnancy';
+    }
+
+    if (!String(raw.advice || '').trim()) {
+      formPatch['advice'] = 'Take medicines as prescribed. Follow diet and rest advice. Return if symptoms worsen.';
+    }
+
+    if (!String(raw.followUpDate || '').trim()) {
+      const followUp = new Date();
+      followUp.setDate(followUp.getDate() + 14);
+      formPatch['followUpDate'] = followUp.toISOString().slice(0, 10);
+    }
+
+    if (Object.keys(formPatch).length > 0) {
+      this.prescriptionForm.patchValue(formPatch, { emitEvent: false });
+    }
+
+    this.refreshGynaeHistoryField();
+    this.refreshGynaeExaminationConsent();
+  }
+
+  isPostnatalDangerSignCounselled(key: string): boolean {
+    return this.isGynaeCounselledField(key);
+  }
+
+  togglePostnatalDangerSignCounselled(key: string, checked: boolean): void {
+    this.toggleGynaeCounselledField(key, checked);
+  }
+
+  isGynaeCounselledField(key: string): boolean {
+    return String(this.specialtyDataGroup.get(key)?.value || '').trim() === 'Yes';
+  }
+
+  toggleGynaeCounselledField(key: string, checked: boolean): void {
+    this.specialtyDataGroup.patchValue({ [key]: checked ? 'Yes' : 'No' });
+  }
+
+  isGynaeYesField(key: string): boolean {
+    return String(this.specialtyDataGroup.get(key)?.value || '').trim() === 'Yes';
+  }
+
+  toggleGynaeYesField(key: string, checked: boolean): void {
+    this.specialtyDataGroup.patchValue({ [key]: checked ? 'Yes' : 'No' });
+  }
+
+  isGynaeFetalMovementYes(): boolean {
+    const value = String(this.specialtyDataGroup.get('fetalMovement')?.value || '').trim();
+    return value === 'Present' || value === 'Yes';
+  }
+
+  toggleGynaeFetalMovement(checked: boolean): void {
+    this.specialtyDataGroup.patchValue({ fetalMovement: checked ? 'Present' : 'No' });
+  }
+
+  isGynaeComplaintSelected(key: string): boolean {
+    return this.isGynaeYesField(key);
+  }
+
+  toggleGynaeComplaint(key: string, selected: boolean): void {
+    this.toggleGynaeYesField(key, selected);
+  }
+
+  shouldShowPostnatalLabTest(index: number): boolean {
+    const name = String(this.labTests.at(index)?.get('name')?.value || '').trim();
+    return this.postnatalLabTests.some((test) => test.name.toLowerCase() === name.toLowerCase());
+  }
+
+  postnatalLabTestIndex(name: string): number {
+    return this.labTests.controls.findIndex(
+      (control) => String(control.get('name')?.value || '').trim().toLowerCase() === name.trim().toLowerCase()
+    );
+  }
+
+  visibleGynaeFields(): SpecialtyField[] {
+    const keys = visibleGynaeFieldKeys(this.gynaeConsultMode());
+    return this.activeSpecialtyTemplate().fields.filter((field) => keys.has(field.key));
+  }
+
+  gynaeChiefComplaintPlaceholder(): string {
+    return 'Lower abdominal pain / missed periods / bleeding / pregnancy follow-up / discharge';
+  }
+
+  gynaeHistoryPlaceholder(): string {
+    return 'LMP, cycle, pregnancy status and obstetric history summary';
+  }
+
+  onGynaeLmpChange(): void {
+    if (!this.isGynaeDoctor()) {
+      return;
+    }
+
+    const lmp = String(this.specialtyDataGroup.get('lmp')?.value || '').trim();
+    this.specialtyDataGroup.patchValue(
+      {
+        edd: calculateEddFromLmp(lmp),
+        gestationalAge: calculateGestationalAgeFromLmp(lmp),
+      },
+      { emitEvent: false }
+    );
+    this.refreshGynaeHistoryField();
+  }
+
+  refreshGynaeHistoryField(): void {
+    if (!this.isGynaeDoctor()) {
+      return;
+    }
+
+    const summary = buildGynaeHistorySummary(this.specialtyDataGroup.getRawValue() as Record<string, unknown>);
+    if (summary) {
+      this.prescriptionForm.patchValue({ history: summary }, { emitEvent: false });
+    }
+  }
+
+  refreshGynaeExaminationConsent(): void {
+    if (!this.isGynaeDoctor()) {
+      return;
+    }
+
+    const consent = buildGynaeConsentSummary(this.specialtyDataGroup.getRawValue() as Record<string, unknown>);
+    if (consent) {
+      this.prescriptionForm.patchValue({ examination: consent }, { emitEvent: false });
+    }
+  }
+
+  applyGynaeAdviceTemplate(text: string): void {
+    const current = String(this.prescriptionForm.get('advice')?.value || '').trim();
+    this.prescriptionForm.patchValue({
+      advice: current ? `${current}\n${text}` : text,
+    });
+  }
+
+  shouldShowSidebarLabTest(index: number): boolean {
+    if (!this.isGynaeDoctor() || this.gynaeLabCategoryFilter === 'all') {
+      return true;
+    }
+
+    const name = String(this.labTests.at(index)?.get('name')?.value || '').trim();
+    const item = GYNAE_LAB_CATALOG.find((test) => test.name.toLowerCase() === name.toLowerCase());
+
+    if (!item) {
+      return this.gynaeLabCategoryFilter === 'common';
+    }
+
+    return item.gynaeGroup === this.gynaeLabCategoryFilter;
+  }
+
+  medicinePregnancyWarning(index: number): string | null {
+    if (!this.isGynaeDoctor() || this.gynaeConsultMode() !== 'antenatal') {
+      return null;
+    }
+
+    const medicine = this.medicines.at(index)?.getRawValue() as Record<string, unknown> | undefined;
+    const name = String(medicine?.['name'] || '').trim();
+    const instructions = String(medicine?.['instructions'] || '').trim();
+
+    if (!name || !isPregnancyRiskyMedicine(name, instructions)) {
+      return null;
+    }
+
+    return 'Review medicine safety in pregnancy';
+  }
+
+  patchGynaeVitalField(key: string, value: string): void {
+    this.specialtyDataGroup.patchValue({ [key]: value });
+  }
+
+  toggleUltrasoundStudy(key: string, checked: boolean): void {
+    this.specialtyDataGroup.patchValue({ [key]: checked ? 'Yes' : 'No' });
+  }
+
+  isUltrasoundStudySelected(key: string): boolean {
+    return String(this.specialtyDataGroup.get(key)?.value || '').trim() === 'Yes';
+  }
+
+  private applyGynaeDoctorDefaults(): void {
+    if (!this.isGynaeDoctor()) {
+      return;
+    }
+
+    const section = String(this.prescriptionForm.getRawValue().specialtySection || '').trim();
+    if (!section) {
+      this.prescriptionForm.patchValue({ specialtySection: 'gynae' }, { emitEvent: false });
+    }
+
+    if (!String(this.specialtyDataGroup.get('gynaeMode')?.value || '').trim()) {
+      this.specialtyDataGroup.patchValue({ gynaeMode: 'antenatal' }, { emitEvent: false });
+    }
+
+    if (this.gynaeConsultMode() === 'postnatal') {
+      this.ensurePostnatalDefaults();
+    } else if (this.gynaeConsultMode() === 'antenatal') {
+      this.ensureAntenatalDefaults();
+    }
   }
 
   specialtyFieldControl(field: SpecialtyField): string {
@@ -4893,16 +5412,18 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     const createdAt = source['createdAt'] || new Date();
     const followUpDate = source['followUpDate'];
     const vitals = this.safeStringRecord(source['vitals']);
-    const labTests = this.safeArray(source['labTests'])
-      .map((test) => this.normalizePrintLabTest(test))
-      .filter((test): test is { name: string; category: string; selected?: boolean } =>
-        Boolean(test?.name) && Boolean(prescription || test?.selected)
-      )
-      .slice(0, 80)
-      .map((test) => ({
-        name: test.name,
-        category: test.category,
-      }));
+    const labTests = this.dedupePrintLabTests(
+      this.safeArray(source['labTests'])
+        .map((test) => this.normalizePrintLabTest(test))
+        .filter((test): test is { name: string; category: string; selected?: boolean } =>
+          Boolean(test?.name) && Boolean(prescription || test?.selected)
+        )
+        .slice(0, 80)
+        .map((test) => ({
+          name: test.name,
+          category: test.category,
+        }))
+    );
     const medicines = this.safeArray(source['medicines'])
       .map((medicine) => this.normalizePrintMedicine(medicine))
       .filter((medicine): medicine is Record<string, unknown> => Boolean(medicine))
@@ -4926,6 +5447,21 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       .slice(0, 20);
     const specialtyTemplate = resolvePrintSpecialtyTemplate(source, doctor);
     const specialtyRows = resolvePrintSpecialtyRows(source, specialtyTemplate);
+    const consultationRows = resolvePrescriptionConsultationPrintRows(source);
+    const specialtyData = (source['specialtyData'] || {}) as Record<string, unknown>;
+    const isGynaePrint = specialtyTemplate.key === 'gynae';
+    const gynaeMode = normalizeGynaeConsultMode(specialtyData['gynaeMode']);
+    const gynaeSplit = isGynaePrint ? splitGynaePrintRows(specialtyRows, gynaeMode) : { sidebar: [], extended: [] };
+    const gynaeConsultationRows = isGynaePrint ? resolveGynaeConsultationStripRows(source) : [];
+    const gynaeSummaryRows = isGynaePrint
+      ? gynaeSplit.sidebar.map((row) => ({ label: row.label, value: row.value }))
+      : [];
+    const ultrasoundRows = GYNAE_ULTRASOUND_STUDIES.filter(
+      (study) => String(specialtyData[study.key] || '').trim() === 'Yes'
+    ).map((study) => ({
+      label: study.label,
+      value: String(specialtyData['ultrasoundNotes'] || '').trim() || 'Ordered',
+    }));
 
     return {
       template: this.resolvePrescriptionTemplate(source, doctor),
@@ -4963,11 +5499,31 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       medicines,
       specialtyTitle: specialtyTemplate.title,
       specialtySection: specialtyTemplate.key,
-      specialtyRows,
+      specialtyRows: isGynaePrint ? gynaeSplit.sidebar : specialtyRows,
+      consultationRows,
+      gynaeConsultationRows,
+      gynaeSidebarRows: gynaeSplit.sidebar,
+      gynaeExtendedRows: gynaeSplit.extended,
+      gynaeSummaryRows,
+      ultrasoundRows,
       followUpDate: followUpDate ? this.shortDate(followUpDate) : '-',
-      patientNote: String(source['advice'] || '').trim(),
+      patientNote: isGynaePrint
+        ? resolveGynaePatientNote(source, specialtyData)
+        : String(source['advice'] || '').trim(),
       consultation: String(source['admissionOrders']?.consultation || '').trim(),
       admissionOrderLines: this.resolvePrintAdmissionOrderLines(source),
+      clinicalPages: buildClinicalRxPrintPages({
+        medicines,
+        specialtySection: specialtyTemplate.key,
+        gynaeConsultationRows,
+        gynaeSidebarRows: gynaeSplit.sidebar,
+        gynaeExtendedRows: gynaeSplit.extended,
+        ivFluids,
+        labTests,
+        patientNote: isGynaePrint
+          ? resolveGynaePatientNote(source, specialtyData)
+          : String(source['advice'] || '').trim(),
+      }),
     };
   }
 
@@ -5071,6 +5627,22 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       category: String(record['category'] ?? '').trim(),
       selected: record['selected'] === undefined ? true : this.toBoolean(record['selected']),
     };
+  }
+
+  private dedupePrintLabTests(
+    tests: Array<{ name: string; category: string }>
+  ): Array<{ name: string; category: string }> {
+    const seen = new Set<string>();
+
+    return tests.filter((test) => {
+      const key = test.name.trim().toLowerCase();
+      if (!key || seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
   }
 
   private normalizePrintMedicine(medicine: unknown): Record<string, unknown> | null {

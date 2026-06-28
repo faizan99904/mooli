@@ -427,6 +427,28 @@ export const buildMedicineInstructions = (input: MedicineInstructionInput): Form
   };
 };
 
+export const resolvePrintSlotDose = (
+  medicine: Record<string, unknown> | null | undefined,
+  slot: DoseSlot
+): string => {
+  const dose = String(medicine?.[`${slot}Dose`] || '').trim();
+  if (dose) {
+    return dose;
+  }
+
+  if (medicine?.[slot]) {
+    return '1';
+  }
+
+  const frequency = String(
+    medicine?.['frequency'] || medicine?.['dosageFrequency'] || medicine?.['name'] || ''
+  ).trim();
+  const instructions = String(medicine?.['instructions'] || '').trim();
+  const timings = mapFrequencyToTimings(frequency || instructions);
+
+  return timings[slot] ? '1' : '';
+};
+
 export const mapFrequencyToTimings = (shortcut = ''): {
   label: string;
   instruction: string;
