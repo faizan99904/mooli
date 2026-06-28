@@ -1,39 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { ClinicalRxPrintPage } from './clinical-rx-print-pages';
 import { resolvePrintSlotDose } from './medicine-instruction-formatter';
-
-type GynaePrintPreview = {
-  doctorName: string;
-  doctorNamePlain: string;
-  doctorQualification: string;
-  hospitalName: string;
-  hospitalAddress: string;
-  hospitalLogoUrl: string;
-  showHospitalLogo: boolean;
-  prescriptionNo: string;
-  patientNo: string;
-  date: string;
-  patientName: string;
-  patientAge: string;
-  patientGender: string;
-  patientPhone: string;
-  patientAddress: string;
-  disease: string;
-  vitals: Record<string, string>;
-  labTests: Array<{ name: string; category: string }>;
-  ivFluids: Array<{ name: string; rate: string; quantity: string; route: string }>;
-  medicines: Array<Record<string, unknown>>;
-  specialtyTitle: string;
-  gynaeConsultationRows: Array<{ label: string; value: string }>;
-  consultationRows?: Array<{ label: string; value: string; wide?: boolean }>;
-  gynaeSidebarRows: Array<{ label: string; value: string; wide?: boolean }>;
-  patientNote: string;
-  prescriptionRevisionNote: string;
-  prescriptionFollowUpLine: string;
-  prescriptionFooterLines: string[];
-  followUpDate: string;
-};
+import {
+  ClinicalRxPrintPage,
+  GynaePrintPreview,
+  resolveGynaePrintContactEmail,
+  resolveGynaePrintContactPhone,
+} from './gynae-print-preview.model';
 
 type DoseSlot = 'morning' | 'noon' | 'evening' | 'night';
 
@@ -75,26 +48,10 @@ export class GynaeClinicalPrintPageComponent {
   }
 
   contactPhone(): string {
-    const combined = this.preview.prescriptionFooterLines.join(' | ');
-    const phoneMatch = combined.match(/Phone:\s*([^|]+)/i);
-    if (phoneMatch?.[1]?.trim()) {
-      return phoneMatch[1].trim();
-    }
-
-    const line = this.preview.prescriptionFooterLines.find(
-      (item) => !/@/.test(item) && /phone|tel|cell|mobile|call/i.test(item)
-    );
-    return line?.replace(/^[^:]+:\s*/, '').trim() || '-';
+    return resolveGynaePrintContactPhone(this.preview.prescriptionFooterLines);
   }
 
   contactEmail(): string {
-    const combined = this.preview.prescriptionFooterLines.join(' | ');
-    const emailMatch = combined.match(/Email:\s*([^|]+)/i);
-    if (emailMatch?.[1]?.trim()) {
-      return emailMatch[1].trim();
-    }
-
-    const line = this.preview.prescriptionFooterLines.find((item) => /@/.test(item));
-    return line?.replace(/^[^:]+:\s*/, '').trim() || '-';
+    return resolveGynaePrintContactEmail(this.preview.prescriptionFooterLines);
   }
 }

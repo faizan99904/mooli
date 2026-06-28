@@ -87,6 +87,16 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
       description: 'Detailed blue hospital layout based on the reference design.',
     },
     {
+      id: 'gynae-clinical',
+      name: "Gynae Theme 1 · Clinical Teal",
+      description: 'Professional teal gynae prescription layout.',
+    },
+    {
+      id: 'gynae-womens-health',
+      name: "Gynae Theme 2 · Women's Health",
+      description: 'Bilingual women\'s health clinic layout.',
+    },
+    {
       id: 'minimal-teal',
       name: 'Minimal Teal',
       description: 'Clean modern layout with light teal accents.',

@@ -11,6 +11,16 @@ export type GynaeConsultMode = 'antenatal' | 'gynae_problem' | 'postnatal';
 
 export type GynaeLabCategory = 'common' | 'pregnancy' | 'infertility' | 'infection' | 'ultrasound';
 
+export const GYNAE_CONSULT_MODE_TABS: Array<{
+  key: GynaeConsultMode;
+  labelEn: string;
+  labelUr: string;
+}> = [
+  { key: 'antenatal', labelEn: 'Antenatal', labelUr: 'حمل کے دوران دیکھ بھال' },
+  { key: 'gynae_problem', labelEn: 'Gynae Problem', labelUr: 'نسوانی مسائل' },
+  { key: 'postnatal', labelEn: 'Postnatal', labelUr: 'زچگی کے بعد دیکھ بھال' },
+];
+
 export const GYNAE_CONSULT_MODES: Array<{ key: GynaeConsultMode; label: string }> = [
   { key: 'antenatal', label: 'Antenatal / Pregnancy' },
   { key: 'gynae_problem', label: 'Gynae Problem' },

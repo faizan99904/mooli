@@ -1741,7 +1741,7 @@
 
       <div class="prescription-theme-grid">
         <button type="button" class="prescription-theme-card"
-          *ngFor="let template of prescriptionTemplates"
+          *ngFor="let template of availablePrescriptionTemplates"
           [class.is-active]="selectedPrescriptionTemplate === template.id"
           (click)="selectPrescriptionTemplate(template.id)">
           <span class="prescription-theme-card-badge" *ngIf="selectedPrescriptionTemplate === template.id">Selected</span>
@@ -1786,15 +1786,19 @@
   <div class="print-preview-backdrop" *ngIf="printPreviewOpen">
     <div class="print-preview-dialog">
       <div class="print-preview-toolbar">
-        <div>
+        <div class="print-preview-toolbar-copy">
           <h3>Prescription View</h3>
           <p *ngIf="!isPrintPreviewViewOnly">Review prescription details. Use Print if you need a hard copy.</p>
           <p *ngIf="isPrintPreviewViewOnly">Saved prescription · Theme: <strong>{{ printPreviewTemplateLabel }}</strong></p>
         </div>
-        <div>
-          <button type="button" class="btn-light" (click)="closePrintPreview()">Close</button>
-          <button type="button" class="btn-primary" [disabled]="printPreviewLoading || !printPreviewData" (click)="printPrescription()">
-            <i class="fa fa-print"></i>
+        <div class="prescription-modal-actions">
+          <button type="button" class="prescription-modal-btn prescription-modal-btn--close" (click)="closePrintPreview()">
+            <i class="fa fa-times" aria-hidden="true"></i>
+            Close
+          </button>
+          <button type="button" class="prescription-modal-btn prescription-modal-btn--print"
+            [disabled]="printPreviewLoading || !printPreviewData" (click)="printPrescription()">
+            <i class="fa fa-print" aria-hidden="true"></i>
             Print
           </button>
         </div>
@@ -1808,7 +1812,7 @@
 
         <div class="print-template-options">
           <button type="button" class="print-template-option"
-            *ngFor="let template of prescriptionTemplates"
+            *ngFor="let template of availablePrescriptionTemplates"
             [class.active]="selectedPrescriptionTemplate === template.id"
             (click)="selectPrescriptionTemplate(template.id)">
             <span class="print-template-thumb" [ngClass]="'thumb-' + template.id">
@@ -1838,16 +1842,24 @@
         <div class="prescription-print-host" #printContent
           [class.prescription-eye-sheet]="preview.specialtySection === 'eye'"
           *ngIf="!printPreviewLoading && printPreviewData as preview">
-          <ng-container *ngIf="preview.specialtySection === 'gynae'; else standardClinicalOrThemedPrint">
+          <ng-container *ngIf="usesGynaeWomensHealthPrint(preview)">
+            <app-gynae-womens-health-print-page
+              *ngFor="let page of preview.clinicalPages; trackBy: trackClinicalPage"
+              [preview]="preview"
+              [page]="page">
+            </app-gynae-womens-health-print-page>
+          </ng-container>
+
+          <ng-container *ngIf="usesGynaeClinicalPrint(preview)">
             <app-gynae-clinical-print-page
-              *ngFor="let page of preview.clinicalPages"
+              *ngFor="let page of preview.clinicalPages; trackBy: trackClinicalPage"
               [preview]="preview"
               [page]="page"
               [medicineDensityClass]="printMedicineDensityClass(preview.medicines.length)">
             </app-gynae-clinical-print-page>
           </ng-container>
 
-          <ng-template #standardClinicalOrThemedPrint>
+          <ng-container *ngIf="!usesGynaeWomensHealthPrint(preview) && !usesGynaeClinicalPrint(preview)">
           <ng-container *ngIf="printPreviewTemplate === 'clinical-blue'; else wrappedThemedPrint">
             <section class="prescription-print-sheet prescription-template-clinical-blue"
               *ngFor="let page of preview.clinicalPages; let last = last"
@@ -2121,7 +2133,6 @@
             </div>
             </section>
           </ng-container>
-          </ng-template>
 
           <ng-template #wrappedThemedPrint>
             <section class="prescription-print-sheet"
@@ -2130,6 +2141,7 @@
               <ng-container *ngTemplateOutlet="themedPrescriptionLayout"></ng-container>
             </section>
           </ng-template>
+          </ng-container>
 
           <ng-template #themedPrescriptionLayout>
             <ng-container *ngIf="printPreviewTemplate === 'minimal-teal'; else purplePrescriptionLayout">

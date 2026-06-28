@@ -1,3 +1,7 @@
+import { resolveGynaePrintLayout } from './gynae-print-routing';
+import { PrescriptionTemplate } from '../../../shared/models/hospital.model';
+import { SpecialtyTemplateKey } from './prescription-specialty-print';
+
 export interface ClinicalRxPrintPage {
   isFirstPage: boolean;
   isLastPage: boolean;
@@ -12,12 +16,37 @@ export interface ClinicalRxPrintPage {
 export interface ClinicalRxPrintLayoutInput {
   medicines: Array<Record<string, unknown>>;
   specialtySection: string;
+  prescriptionTemplate?: string;
   gynaeConsultationRows: Array<{ label: string; value: string }>;
   gynaeSidebarRows: Array<{ label: string; value: string; wide?: boolean }>;
   gynaeExtendedRows: Array<{ label: string; value: string; wide?: boolean }>;
   ivFluids: Array<unknown>;
   labTests: Array<unknown>;
   patientNote: string;
+}
+
+function usesGynaeWomensHealthPagination(
+  specialtySection: string,
+  prescriptionTemplate?: string
+): boolean {
+  return (
+    resolveGynaePrintLayout(
+      specialtySection as SpecialtyTemplateKey,
+      prescriptionTemplate as PrescriptionTemplate
+    ) === 'gynae-womens-health'
+  );
+}
+
+function usesGynaeClinicalPagination(
+  specialtySection: string,
+  prescriptionTemplate?: string
+): boolean {
+  return (
+    resolveGynaePrintLayout(
+      specialtySection as SpecialtyTemplateKey,
+      prescriptionTemplate as PrescriptionTemplate
+    ) === 'gynae-clinical'
+  );
 }
 
 type GynaeExtendedChunk = {
@@ -331,11 +360,13 @@ function appendExtendedPages(
   return pages;
 }
 
-function buildGynaePrintPages(
+function buildGynaeCompactPreviewPrintPages(
   medicines: Array<Record<string, unknown>>,
   extendedRows: Array<{ label: string; value: string; wide?: boolean }>
 ): ClinicalRxPrintPage[] {
-  if (medicines.length <= 10) {
+  const medicineCap = 12;
+
+  if (medicines.length <= medicineCap) {
     return finalizePages([
       {
         isFirstPage: true,
@@ -350,13 +381,89 @@ function buildGynaePrintPages(
     ]);
   }
 
-  const pages = buildMedicinePages(medicines, 8, 10, 12);
-  if (pages.length > 0) {
-    pages[pages.length - 1].gynaeExtendedRows = extendedRows;
-    pages[pages.length - 1].showGynaeExtendedTitle = extendedRows.length > 0;
-  }
+  const medicineChunks = chunkMedicines(medicines, medicineCap, 10, 12);
+  const pages: ClinicalRxPrintPage[] = medicineChunks.map((chunk, index) => ({
+    isFirstPage: index === 0,
+    isLastPage: false,
+    pageNumber: index + 1,
+    totalPages: 0,
+    medicines: chunk,
+    medicineOffset: medicineOffsetForChunk(medicineChunks, index),
+    gynaeExtendedRows: index === 0 ? extendedRows : [],
+    showGynaeExtendedTitle: index === 0 && extendedRows.length > 0,
+  }));
 
   return finalizePages(pages);
+}
+
+function buildGynaeWomensHealthPrintPages(
+  medicines: Array<Record<string, unknown>>,
+  extendedRows: Array<{ label: string; value: string; wide?: boolean }>
+): ClinicalRxPrintPage[] {
+  return buildGynaeCompactPreviewPrintPages(medicines, extendedRows);
+}
+
+function buildGynaeClinicalPrintPages(
+  medicines: Array<Record<string, unknown>>,
+  extendedRows: Array<{ label: string; value: string; wide?: boolean }>
+): ClinicalRxPrintPage[] {
+  return buildGynaeCompactPreviewPrintPages(medicines, extendedRows);
+}
+
+function buildGynaePrintPages(
+  medicines: Array<Record<string, unknown>>,
+  extendedRows: Array<{ label: string; value: string; wide?: boolean }>
+): ClinicalRxPrintPage[] {
+  const firstMedicineCap = 5;
+  const extendedWeight = extendedRows.reduce((total, row) => total + extendedRowWeight(row), 0);
+  const fitsSinglePage =
+    medicines.length <= 6 && extendedRows.length <= 16 && extendedWeight <= 20;
+
+  if (fitsSinglePage) {
+    return finalizePages([
+      {
+        isFirstPage: true,
+        isLastPage: true,
+        pageNumber: 1,
+        totalPages: 1,
+        medicines,
+        medicineOffset: 0,
+        gynaeExtendedRows: extendedRows,
+        showGynaeExtendedTitle: extendedRows.length > 0,
+      },
+    ]);
+  }
+
+  const medicineChunks =
+    medicines.length > firstMedicineCap
+      ? chunkMedicines(medicines, firstMedicineCap, 8, 10)
+      : [medicines];
+
+  const pages: ClinicalRxPrintPage[] = medicineChunks.map((chunk, index) => ({
+    isFirstPage: index === 0,
+    isLastPage: false,
+    pageNumber: index + 1,
+    totalPages: 0,
+    medicines: chunk,
+    medicineOffset: medicineOffsetForChunk(medicineChunks, index),
+    gynaeExtendedRows: [],
+    showGynaeExtendedTitle: false,
+  }));
+
+  if (!pages.length) {
+    pages.push({
+      isFirstPage: true,
+      isLastPage: false,
+      pageNumber: 1,
+      totalPages: 0,
+      medicines: [],
+      medicineOffset: 0,
+      gynaeExtendedRows: [],
+      showGynaeExtendedTitle: false,
+    });
+  }
+
+  return finalizePages(distributeGynaeExtendedRows(pages, extendedRows, medicines.length));
 }
 
 export function buildClinicalRxPrintPages(input: ClinicalRxPrintLayoutInput): ClinicalRxPrintPage[] {
@@ -365,6 +472,14 @@ export function buildClinicalRxPrintPages(input: ClinicalRxPrintLayoutInput): Cl
   const isGynae = input.specialtySection === 'gynae';
 
   if (isGynae) {
+    if (usesGynaeWomensHealthPagination(input.specialtySection, input.prescriptionTemplate)) {
+      return buildGynaeWomensHealthPrintPages(medicines, extendedRows);
+    }
+
+    if (usesGynaeClinicalPagination(input.specialtySection, input.prescriptionTemplate)) {
+      return buildGynaeClinicalPrintPages(medicines, extendedRows);
+    }
+
     return buildGynaePrintPages(medicines, extendedRows);
   }
 

@@ -23,10 +23,12 @@
 
 .print-preview-toolbar {
   align-items: center;
+  background: #fff;
   border-bottom: 1px solid var(--rx-line);
   display: flex;
-  justify-content: space-between;
+  flex-shrink: 0;
   gap: 16px;
+  justify-content: space-between;
   padding: 14px 18px;
 }
 
@@ -43,13 +45,72 @@
   margin: 4px 0 0;
 }
 
-.print-preview-toolbar > div:last-child {
+.print-preview-toolbar-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.prescription-modal-actions {
+  align-items: center;
   display: flex;
+  flex: 0 0 auto;
   gap: 10px;
 }
 
+.prescription-modal-btn {
+  align-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  line-height: 1;
+  min-height: 38px;
+  min-width: 104px;
+  padding: 0 16px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.prescription-modal-btn i {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.prescription-modal-btn--close {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.prescription-modal-btn--close:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.prescription-modal-btn--print {
+  background: #0f4c8c;
+  border: 1px solid #0f4c8c;
+  box-shadow: 0 1px 2px rgba(15, 76, 140, 0.18);
+  color: #fff;
+}
+
+.prescription-modal-btn--print:hover:not(:disabled) {
+  background: #0d3f75;
+  border-color: #0d3f75;
+}
+
+.prescription-modal-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
 .print-preview-scroll {
-  background: #eef2f7;
+  background: #fff;
   display: flex;
   justify-content: center;
   overflow: auto;
@@ -74,13 +135,22 @@
     padding: 8px;
   }
 
-  .print-preview-toolbar {
-    align-items: stretch;
+  .print-preview-toolbar,
+  .created-view-toolbar {
+    align-items: flex-start;
     flex-direction: column;
+    gap: 12px;
+    padding: 12px 14px;
   }
 
-  .print-preview-toolbar > div:last-child {
-    flex-direction: column;
+  .prescription-modal-actions {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .prescription-modal-btn {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .print-preview-scroll {
@@ -1553,7 +1623,33 @@
 }
 
 .prescription-print-host > .prescription-print-sheet.prescription-template-gynae-clinical {
+  background: #fff;
   flex: 0 0 auto;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  height: auto;
+  line-height: 1.35;
+  min-height: auto;
+  width: min(210mm, 100%);
+}
+
+.prescription-print-host > .prescription-print-sheet.prescription-template-gynae-womens-health {
+  background: #fff;
+  flex: 0 0 auto;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  height: auto;
+  line-height: 1.35;
+  min-height: auto;
+  width: min(210mm, 100%);
+}
+
+.prescription-print-host > .prescription-print-sheet.prescription-template-gynae-womens-health:not(:last-child) {
+  break-after: auto;
+  page-break-after: auto;
+}
+
+.prescription-print-host > .prescription-print-sheet.prescription-template-gynae-womens-health + .prescription-print-sheet.prescription-template-gynae-womens-health {
+  break-before: page;
+  page-break-before: always;
 }
 
 .prescription-print-host > .prescription-print-sheet.prescription-template-clinical-blue {
@@ -2177,9 +2273,65 @@
     overflow: visible;
   }
 
+  @page {
+    margin: 8mm;
+    size: A4 portrait;
+  }
+
+  body {
+    background: #fff !important;
+    height: auto !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    padding: 0 !important;
+  }
+
+  .no-print,
+  .print-preview-backdrop,
+  .print-preview-toolbar,
+  .print-template-picker,
+  .created-view-backdrop,
+  .created-view-toolbar {
+    display: none !important;
+  }
+
   .prescription-print-host {
-    display: block;
-    gap: 0;
+    display: block !important;
+    gap: 0 !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    max-width: 210mm !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .prescription-print-sheet.prescription-template-gynae-womens-health {
+    background: #fff !important;
+    box-sizing: border-box !important;
+    color-adjust: exact;
+    font-family: 'Segoe UI', Arial, sans-serif !important;
+    height: auto !important;
+    line-height: 1.35 !important;
+    margin: 0 auto !important;
+    max-height: none !important;
+    max-width: 210mm !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    print-color-adjust: exact;
+    width: 100% !important;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .prescription-print-host > .prescription-print-sheet.prescription-template-gynae-womens-health:not(:last-child) {
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+
+  .prescription-print-host > .prescription-print-sheet.prescription-template-gynae-womens-health + .prescription-print-sheet.prescription-template-gynae-womens-health {
+    break-before: page !important;
+    page-break-before: always !important;
   }
 
   .prescription-template-clinical-blue {

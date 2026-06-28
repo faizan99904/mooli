@@ -78,8 +78,8 @@
 
   <div class="created-view-backdrop" *ngIf="viewModalOpen">
     <div class="created-view-dialog" role="dialog" aria-labelledby="created-view-title">
-      <div class="created-view-toolbar">
-        <div>
+      <div class="created-view-toolbar print-preview-toolbar">
+        <div class="print-preview-toolbar-copy">
           <h3 id="created-view-title">{{ isPhysioView ? 'Physiotherapy Treatment Plan' : 'Prescription View' }}</h3>
           <p>
             {{
@@ -91,11 +91,15 @@
             }}
           </p>
         </div>
-        <div class="created-view-actions">
-          <button type="button" class="btn-light" (click)="closeViewModal()">Close</button>
-          <button type="button" class="btn-primary" [disabled]="viewLoading || (!viewPreviewData && !viewPhysioHtml)"
+        <div class="prescription-modal-actions">
+          <button type="button" class="prescription-modal-btn prescription-modal-btn--close" (click)="closeViewModal()">
+            <i class="fa fa-times" aria-hidden="true"></i>
+            Close
+          </button>
+          <button type="button" class="prescription-modal-btn prescription-modal-btn--print"
+            [disabled]="viewLoading || (!viewPreviewData && !viewPhysioHtml)"
             (click)="printCreatedPrescription()">
-            <i class="fa fa-print"></i>
+            <i class="fa fa-print" aria-hidden="true"></i>
             Print
           </button>
         </div>
@@ -116,16 +120,24 @@
         <div class="prescription-print-host" #printContent
           [class.prescription-eye-sheet]="preview.specialtySection === 'eye'"
           *ngIf="!viewPhysioPreviewUrl && printPreviewData as preview">
-          <ng-container *ngIf="preview.specialtySection === 'gynae'; else standardClinicalOrThemedPrint">
+          <ng-container *ngIf="usesGynaeWomensHealthPrint(preview)">
+            <app-gynae-womens-health-print-page
+              *ngFor="let page of preview.clinicalPages; trackBy: trackClinicalPage"
+              [preview]="preview"
+              [page]="page">
+            </app-gynae-womens-health-print-page>
+          </ng-container>
+
+          <ng-container *ngIf="usesGynaeClinicalPrint(preview)">
             <app-gynae-clinical-print-page
-              *ngFor="let page of preview.clinicalPages"
+              *ngFor="let page of preview.clinicalPages; trackBy: trackClinicalPage"
               [preview]="preview"
               [page]="page"
               [medicineDensityClass]="printMedicineDensityClass(preview.medicines.length)">
             </app-gynae-clinical-print-page>
           </ng-container>
 
-          <ng-template #standardClinicalOrThemedPrint>
+          <ng-container *ngIf="!usesGynaeWomensHealthPrint(preview) && !usesGynaeClinicalPrint(preview)">
           <ng-container *ngIf="printPreviewTemplate === 'clinical-blue'; else wrappedThemedPrint">
             <section class="prescription-print-sheet prescription-template-clinical-blue"
               *ngFor="let page of preview.clinicalPages; let last = last"
@@ -399,7 +411,6 @@
             </div>
             </section>
           </ng-container>
-          </ng-template>
 
           <ng-template #wrappedThemedPrint>
             <section class="prescription-print-sheet"
@@ -408,6 +419,7 @@
               <ng-container *ngTemplateOutlet="themedPrescriptionLayout"></ng-container>
             </section>
           </ng-template>
+          </ng-container>
 
           <ng-template #themedPrescriptionLayout>
             <ng-container *ngIf="printPreviewTemplate === 'minimal-teal'; else purplePrescriptionLayout">

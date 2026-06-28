@@ -4,6 +4,8 @@ export type Status = 'active' | 'inactive';
 export type PrescriptionTemplate =
   | 'classic'
   | 'clinical-blue'
+  | 'gynae-clinical'
+  | 'gynae-womens-health'
   | 'minimal-teal'
   | 'compact-mono';
 

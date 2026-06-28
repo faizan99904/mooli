@@ -1,0 +1,971 @@
+:host {
+  display: block;
+  height: auto;
+  min-height: auto;
+}
+
+@media screen {
+  :host.prescription-print-sheet {
+    background: #fff;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+}
+
+$wh-navy: #0f2f5c;
+$wh-blue: #1f4f8f;
+$wh-border: #c8d4e3;
+$wh-muted: #5f6f82;
+$wh-bg: #f4f7fb;
+$wh-danger: #b42318;
+
+.prescription-template-gynae-womens-health {
+  --wh-navy: #{$wh-navy};
+  --wh-blue: #{$wh-blue};
+  --wh-border: #{$wh-border};
+  --wh-muted: #{$wh-muted};
+  --wh-bg: #{$wh-bg};
+  color: #1a2433;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 8.5pt;
+  line-height: 1.35;
+}
+
+.gynae-wh-page {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2.2mm;
+  margin: 0 auto;
+  max-width: 100%;
+  padding: 5mm 6mm 4mm;
+  width: min(210mm, 100%);
+}
+
+.gynae-wh-mini-header {
+  align-items: center;
+  border: 1px solid var(--wh-border);
+  border-radius: 2mm;
+  display: flex;
+  font-size: 7.5pt;
+  justify-content: space-between;
+  padding: 1.5mm 2.5mm;
+
+  strong {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 8.5pt;
+  }
+
+  span {
+    color: var(--wh-muted);
+  }
+
+  em {
+    color: var(--wh-blue);
+    font-style: normal;
+    font-weight: 700;
+  }
+}
+
+.gynae-wh-header {
+  align-items: stretch;
+  border: 1px solid var(--wh-border);
+  border-radius: 2.5mm;
+  display: grid;
+  gap: 2mm;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.2fr) minmax(0, 0.95fr);
+  padding: 2.5mm;
+}
+
+.gynae-wh-brand {
+  align-items: center;
+  display: flex;
+  gap: 2mm;
+  min-width: 0;
+
+  .gynae-wh-clinic-name {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 12pt;
+    font-weight: 800;
+    letter-spacing: 0.2mm;
+    line-height: 1.1;
+  }
+
+  .gynae-wh-brand-ur {
+    color: var(--wh-blue);
+    display: block;
+    font-size: 8pt;
+    margin-top: 0.4mm;
+  }
+
+  small {
+    color: var(--wh-muted);
+    display: block;
+    font-size: 7pt;
+    margin-top: 0.5mm;
+  }
+}
+
+.gynae-wh-logo {
+  align-items: center;
+  background: var(--wh-navy);
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  flex: 0 0 11mm;
+  height: 11mm;
+  justify-content: center;
+  overflow: hidden;
+  width: 11mm;
+
+  img {
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  i {
+    font-size: 5.5mm;
+  }
+}
+
+.gynae-wh-contact {
+  border-left: 1px solid var(--wh-border);
+  border-right: 1px solid var(--wh-border);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2mm;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 2mm;
+
+  span {
+    align-items: flex-start;
+    color: var(--wh-muted);
+    display: flex;
+    font-size: 7.2pt;
+    gap: 1.2mm;
+    word-break: break-word;
+  }
+
+  i {
+    color: var(--wh-blue);
+    flex: 0 0 auto;
+    margin-top: 0.3mm;
+    width: 3mm;
+  }
+}
+
+.gynae-wh-doctor {
+  align-items: center;
+  background: var(--wh-bg);
+  border: 1px solid #d7e3f2;
+  border-radius: 2mm;
+  display: flex;
+  gap: 1.8mm;
+  min-width: 0;
+  padding: 1.5mm;
+
+  strong {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 8.5pt;
+  }
+
+  span,
+  small {
+    color: var(--wh-muted);
+    display: block;
+    font-size: 6.8pt;
+    line-height: 1.25;
+  }
+}
+
+.gynae-wh-doctor-icon {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--wh-border);
+  border-radius: 50%;
+  color: var(--wh-blue);
+  display: flex;
+  flex: 0 0 8mm;
+  height: 8mm;
+  justify-content: center;
+  width: 8mm;
+}
+
+.gynae-wh-tabs {
+  background: var(--wh-navy);
+  border-radius: 2mm;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.gynae-wh-tab {
+  color: rgba(255, 255, 255, 0.78);
+  padding: 1.8mm 1mm;
+  text-align: center;
+
+  &.is-active {
+    background: var(--wh-blue);
+    color: #fff;
+    font-weight: 700;
+  }
+}
+
+.gynae-wh-tab-en {
+  display: block;
+  font-size: 8pt;
+  font-weight: 700;
+}
+
+.gynae-wh-tab-ur {
+  display: block;
+  font-size: 7pt;
+  margin-top: 0.3mm;
+}
+
+.gynae-wh-patient {
+  border: 1px solid var(--wh-border);
+  border-radius: 2mm;
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.gynae-wh-field {
+  align-items: flex-start;
+  border-bottom: 1px solid #e3eaf2;
+  border-right: 1px solid #e3eaf2;
+  display: flex;
+  gap: 1.2mm;
+  min-height: 10mm;
+  padding: 1.2mm 1.5mm;
+
+  &:nth-child(4n) {
+    border-right: 0;
+  }
+
+  &:nth-last-child(-n + 4) {
+    border-bottom: 0;
+  }
+
+  i {
+    color: var(--wh-blue);
+    flex: 0 0 auto;
+    font-size: 7pt;
+    margin-top: 0.5mm;
+  }
+
+  strong {
+    color: var(--wh-muted);
+    display: block;
+    font-size: 6.2pt;
+    font-weight: 700;
+    letter-spacing: 0.05mm;
+    line-height: 1.2;
+    text-transform: uppercase;
+
+    em {
+      color: #7b8ea6;
+      display: block;
+      font-size: 6pt;
+      font-style: normal;
+      font-weight: 600;
+      margin-top: 0.2mm;
+      text-transform: none;
+    }
+  }
+
+  span {
+    color: #111827;
+    display: block;
+    font-size: 7.8pt;
+    font-weight: 700;
+    margin-top: 0.4mm;
+    word-break: break-word;
+  }
+}
+
+.gynae-wh-metrics {
+  display: grid;
+  gap: 1.5mm;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+
+  > div {
+    border: 1px solid var(--wh-border);
+    border-radius: 1.8mm;
+    padding: 1.2mm 1mm;
+    text-align: center;
+  }
+
+  strong {
+    color: var(--wh-muted);
+    display: block;
+    font-size: 6pt;
+    font-weight: 700;
+    letter-spacing: 0.04mm;
+    text-transform: uppercase;
+  }
+
+  span {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 7.5pt;
+    font-weight: 700;
+    margin-top: 0.6mm;
+    word-break: break-word;
+  }
+}
+
+.gynae-wh-vitals {
+  display: grid;
+  gap: 1.5mm;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  > div {
+    border: 1px solid var(--wh-border);
+    border-radius: 1.8mm;
+    padding: 1mm;
+    text-align: center;
+  }
+
+  strong {
+    color: var(--wh-muted);
+    display: block;
+    font-size: 6pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  span {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 7.5pt;
+    font-weight: 700;
+    margin-top: 0.4mm;
+  }
+}
+
+.gynae-wh-diagnosis {
+  display: grid;
+  gap: 2mm;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  > div {
+    border: 1px solid var(--wh-border);
+    border-radius: 2mm;
+    min-height: 12mm;
+    padding: 1.5mm 2mm;
+  }
+
+  strong {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 7.5pt;
+    font-weight: 800;
+  }
+
+  p {
+    color: #243247;
+    font-size: 7.5pt;
+    margin: 1mm 0 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+.gynae-wh-overview {
+  display: grid;
+  gap: 1.5mm;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  article {
+    border: 1px solid var(--wh-border);
+    border-radius: 1.8mm;
+    min-height: 11mm;
+    padding: 1.2mm 1.5mm;
+  }
+
+  strong {
+    color: var(--wh-blue);
+    display: block;
+    font-size: 6.8pt;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  p {
+    font-size: 7.2pt;
+    margin: 0.8mm 0 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+.gynae-wh-obs {
+  border: 1px solid var(--wh-border);
+  border-radius: 2mm;
+  overflow: hidden;
+
+  > header {
+    background: var(--wh-bg);
+    border-bottom: 1px solid var(--wh-border);
+    color: var(--wh-navy);
+    font-size: 7pt;
+    font-weight: 800;
+    letter-spacing: 0.2mm;
+    padding: 1.2mm 2mm;
+    text-transform: uppercase;
+  }
+}
+
+.gynae-wh-obs-grid {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  > div {
+    border-bottom: 1px solid #e6edf5;
+    border-right: 1px solid #e6edf5;
+    min-height: 9mm;
+    padding: 1mm 1.5mm;
+
+    &:nth-child(3n) {
+      border-right: 0;
+    }
+
+    &.span-full {
+      grid-column: 1 / -1;
+    }
+
+    &.is-danger {
+      background: #fff5f5;
+      border-color: #f2c7c7;
+
+      strong {
+        color: $wh-danger;
+      }
+    }
+  }
+
+  strong {
+    color: var(--wh-muted);
+    display: block;
+    font-size: 6.2pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  p {
+    font-size: 7.2pt;
+    margin: 0.5mm 0 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+.gynae-wh-medicines {
+  border: 1px solid var(--wh-border);
+  border-radius: 2mm;
+  overflow: hidden;
+
+  > header {
+    background: var(--wh-navy);
+    color: #fff;
+    font-size: 7.5pt;
+    font-weight: 800;
+    letter-spacing: 0.2mm;
+    padding: 1.4mm 2mm;
+    text-transform: uppercase;
+  }
+
+  table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .col-num {
+    width: 6%;
+  }
+
+  .col-med {
+    width: 24%;
+  }
+
+  .col-dose,
+  .col-freq,
+  .col-dur {
+    width: 12%;
+  }
+
+  .col-inst {
+    width: 34%;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid #e3eaf2;
+    border-right: 1px solid #e3eaf2;
+    font-size: 7pt;
+    padding: 1.2mm 1.4mm;
+    vertical-align: top;
+    word-break: break-word;
+  }
+
+  th:last-child,
+  td:last-child {
+    border-right: 0;
+  }
+
+  thead th {
+    background: #e8eef7;
+    color: var(--wh-navy);
+    font-size: 6.5pt;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  tbody tr:nth-child(even) td {
+    background: #fafbfd;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.gynae-wh-med {
+  strong {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 7.5pt;
+  }
+
+  small {
+    color: var(--wh-muted);
+    display: block;
+    font-size: 6.5pt;
+    margin-top: 0.3mm;
+  }
+}
+
+.gynae-wh-inst {
+  white-space: pre-wrap;
+}
+
+.gynae-wh-drips {
+  border: 1px solid var(--wh-border);
+  border-radius: 2mm;
+  overflow: hidden;
+
+  > header {
+    background: var(--wh-bg);
+    border-bottom: 1px solid var(--wh-border);
+    color: var(--wh-navy);
+    font-size: 7pt;
+    font-weight: 800;
+    padding: 1mm 2mm;
+  }
+
+  > div {
+    align-items: center;
+    display: flex;
+    font-size: 7.2pt;
+    gap: 2mm;
+    justify-content: space-between;
+    padding: 1mm 2mm;
+  }
+}
+
+.gynae-wh-triple {
+  display: grid;
+  gap: 1.5mm;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gynae-wh-panel {
+  border: 1px solid var(--wh-border);
+  border-radius: 2mm;
+  min-height: 24mm;
+  padding: 1.5mm;
+
+  h4 {
+    color: var(--wh-navy);
+    font-size: 7pt;
+    font-weight: 800;
+    margin: 0 0 1mm;
+    text-transform: uppercase;
+  }
+
+  ul,
+  p {
+    font-size: 7pt;
+    margin: 0;
+    padding-left: 3.5mm;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  li {
+    margin-bottom: 0.6mm;
+  }
+}
+
+.gynae-wh-checklist {
+  list-style: none;
+  padding-left: 0 !important;
+
+  li {
+    align-items: flex-start;
+    display: flex;
+    gap: 1mm;
+  }
+
+  i {
+    color: var(--wh-blue);
+    margin-top: 0.2mm;
+  }
+}
+
+.gynae-wh-danger {
+  background: #fff8f8;
+  border-color: #efc7c7;
+
+  h4 {
+    color: $wh-danger;
+  }
+
+  p {
+    color: #7a1f1f;
+    padding-left: 0;
+  }
+}
+
+.gynae-wh-next-visit {
+  border-top: 1px dashed #efc7c7;
+  margin-top: 1.5mm;
+  padding-top: 1mm;
+
+  strong {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 6.5pt;
+  }
+
+  span {
+    color: #243247;
+    display: block;
+    font-size: 7pt;
+    font-weight: 700;
+    margin-top: 0.4mm;
+  }
+}
+
+.gynae-wh-footer {
+  display: grid;
+  gap: 1.5mm;
+  grid-template-columns: minmax(0, 1.2fr) 24mm minmax(0, 0.9fr);
+}
+
+.gynae-wh-urdu-advice {
+  border: 1px solid var(--wh-border);
+  border-radius: 2mm;
+  min-height: 18mm;
+  padding: 1.5mm;
+
+  h4 {
+    color: var(--wh-navy);
+    font-size: 7pt;
+    font-weight: 800;
+    margin: 0 0 1mm;
+  }
+
+  ul {
+    font-size: 7pt;
+    margin: 0;
+    padding-left: 3.5mm;
+
+    li {
+      margin-bottom: 0.5mm;
+    }
+  }
+}
+
+.gynae-wh-brand {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+
+  strong {
+    color: var(--wh-blue);
+    font-size: 6.5pt;
+    line-height: 1.25;
+    margin-top: 1mm;
+  }
+}
+
+.gynae-wh-brand-icon {
+  align-items: center;
+  background: var(--wh-bg);
+  border: 1px solid var(--wh-border);
+  border-radius: 50%;
+  color: var(--wh-blue);
+  display: flex;
+  height: 10mm;
+  justify-content: center;
+  width: 10mm;
+}
+
+.gynae-wh-signature {
+  border: 1px solid var(--wh-border);
+  border-radius: 2mm;
+  padding: 1.5mm;
+  text-align: center;
+
+  strong {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 6.8pt;
+    font-weight: 800;
+  }
+
+  span {
+    color: var(--wh-navy);
+    display: block;
+    font-size: 7.5pt;
+    font-weight: 700;
+    margin-top: 1mm;
+  }
+
+  small {
+    color: var(--wh-muted);
+    display: block;
+    font-size: 6.5pt;
+    margin-top: 0.3mm;
+  }
+}
+
+.gynae-wh-sign-box {
+  border: 1px dashed #b8c7da;
+  border-radius: 1.5mm;
+  height: 14mm;
+  margin: 1.2mm 0 0.8mm;
+  width: 100%;
+}
+
+.gynae-wh-bottom-bar {
+  align-items: center;
+  background: var(--wh-navy);
+  border-radius: 1.5mm;
+  color: #fff;
+  display: flex;
+  font-size: 6.8pt;
+  gap: 3mm;
+  justify-content: center;
+  padding: 1.2mm 2mm;
+
+  i {
+    margin-right: 0.8mm;
+  }
+}
+
+.gynae-wh-disclaimer {
+  align-items: center;
+  color: var(--wh-muted);
+  display: flex;
+  font-size: 6.5pt;
+  gap: 1mm;
+  justify-content: center;
+  padding-bottom: 0.5mm;
+
+  i {
+    color: var(--wh-blue);
+  }
+}
+
+@media print {
+  @page {
+    margin: 8mm;
+    size: A4 portrait;
+  }
+
+  .prescription-template-gynae-womens-health {
+    background: #fff !important;
+    box-sizing: border-box;
+    color-adjust: exact;
+    height: auto !important;
+    margin: 0 auto !important;
+    max-height: none !important;
+    max-width: 210mm !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    print-color-adjust: exact;
+    width: 100% !important;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .gynae-wh-page {
+    display: block;
+    gap: 0;
+    height: auto !important;
+    margin: 0 auto !important;
+    max-width: 210mm !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .gynae-wh-page > * {
+    margin-bottom: 2mm;
+  }
+
+  .gynae-wh-page > *:last-child {
+    margin-bottom: 0;
+  }
+
+  .gynae-wh-header,
+  .gynae-wh-tabs,
+  .gynae-wh-patient,
+  .gynae-wh-metrics,
+  .gynae-wh-vitals,
+  .gynae-wh-diagnosis,
+  .gynae-wh-overview,
+  .gynae-wh-drips,
+  .gynae-wh-footer,
+  .gynae-wh-bottom-bar,
+  .gynae-wh-disclaimer,
+  .gynae-wh-mini-header {
+    break-inside: avoid;
+    overflow: visible !important;
+    page-break-inside: avoid;
+  }
+
+  .gynae-wh-obs,
+  .gynae-wh-medicines,
+  .gynae-wh-triple {
+    break-inside: auto;
+    overflow: visible !important;
+    page-break-inside: auto;
+  }
+
+  .gynae-wh-obs-grid > div,
+  .gynae-wh-panel,
+  .gynae-wh-urdu-advice,
+  .gynae-wh-signature,
+  .gynae-wh-field,
+  .gynae-wh-diagnosis > div,
+  .gynae-wh-overview article,
+  .gynae-wh-metrics > div,
+  .gynae-wh-vitals > div {
+    break-inside: avoid;
+    overflow: visible !important;
+    page-break-inside: avoid;
+  }
+
+  .gynae-wh-header,
+  .gynae-wh-patient,
+  .gynae-wh-metrics,
+  .gynae-wh-vitals,
+  .gynae-wh-diagnosis,
+  .gynae-wh-overview,
+  .gynae-wh-tabs {
+    display: grid !important;
+  }
+
+  .gynae-wh-footer {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.2fr) 24mm minmax(0, 0.9fr) !important;
+  }
+
+  .gynae-wh-triple {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .gynae-wh-obs-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .gynae-wh-medicines {
+    overflow: visible !important;
+  }
+
+  .gynae-wh-medicines table {
+    border-collapse: collapse !important;
+    table-layout: fixed;
+    width: 100% !important;
+  }
+
+  .gynae-wh-medicines thead {
+    display: table-header-group;
+  }
+
+  .gynae-wh-medicines tbody tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .gynae-wh-medicines th,
+  .gynae-wh-medicines td,
+  .gynae-wh-field span,
+  .gynae-wh-field strong,
+  .gynae-wh-obs-grid p,
+  .gynae-wh-obs-grid strong,
+  .gynae-wh-panel p,
+  .gynae-wh-panel li,
+  .gynae-wh-panel h4,
+  .gynae-wh-urdu-advice li,
+  .gynae-wh-contact span,
+  .gynae-wh-metrics span,
+  .gynae-wh-diagnosis p,
+  .gynae-wh-overview p {
+    hyphens: auto;
+    letter-spacing: normal !important;
+    overflow-wrap: break-word;
+    white-space: normal !important;
+    word-break: normal !important;
+    writing-mode: horizontal-tb !important;
+  }
+
+  .gynae-wh-field strong em,
+  .gynae-wh-tab-ur {
+    direction: rtl;
+    display: block;
+    unicode-bidi: isolate;
+    word-break: normal !important;
+  }
+
+  .gynae-wh-bottom-bar,
+  .gynae-wh-medicines > header,
+  .gynae-wh-tabs,
+  .gynae-wh-obs > header {
+    color-adjust: exact;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .gynae-wh-page-last {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  :host {
+    display: block;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+}

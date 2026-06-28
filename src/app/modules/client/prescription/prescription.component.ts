@@ -131,6 +131,14 @@ import {
   visibleGynaeFieldKeys,
 } from './gynae-prescription-data';
 import { GynaeClinicalPrintPageComponent } from './gynae-clinical-print-page.component';
+import { GynaeWomensHealthPrintPageComponent } from './gynae-womens-health-print-page.component';
+import {
+  normalizeGynaePrescriptionTemplate,
+  usesGynaeClinicalBluePrint,
+  usesGynaeClinicalPrint,
+  usesGynaeWomensHealthPrint,
+} from './gynae-print-routing';
+import { formatApiValidationError, sanitizePrescriptionPayload } from './prescription-payload';
 import {
   buildPatientDocumentDisplayRows,
   countPatientDocuments,
@@ -223,6 +231,8 @@ interface PrintPreviewData {
   consultation: string;
   admissionOrderLines: string[];
   clinicalPages: ClinicalRxPrintPage[];
+  gynaeMode: GynaeConsultMode;
+  patientBloodGroup: string;
 }
 
 type PrescriptionDateGroup = {
@@ -263,7 +273,7 @@ interface MedicineSuggestionOption {
 
 @Component({
   selector: 'app-prescription',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgApexchartsModule, RouterLink, GynaeClinicalPrintPageComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgApexchartsModule, RouterLink, GynaeClinicalPrintPageComponent, GynaeWomensHealthPrintPageComponent],
   templateUrl: './prescription.component.html',
   styleUrl: './prescription.component.scss',
 })
@@ -336,6 +346,16 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       id: 'clinical-blue',
       name: 'Clinical Blue',
       description: 'Detailed hospital style',
+    },
+    {
+      id: 'gynae-clinical',
+      name: "Gynae Theme 1 · Clinical Teal",
+      description: 'Professional teal gynae prescription layout',
+    },
+    {
+      id: 'gynae-womens-health',
+      name: "Gynae Theme 2 · Women's Health",
+      description: 'Bilingual women\'s health clinic layout',
     },
     {
       id: 'minimal-teal',
@@ -692,8 +712,38 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     );
   }
 
+  get availablePrescriptionTemplates(): Array<{
+    id: PrescriptionTemplate;
+    name: string;
+    description: string;
+  }> {
+    if (this.isGynaeDoctor()) {
+      return this.prescriptionTemplates.filter((template) =>
+        ['gynae-clinical', 'gynae-womens-health', 'clinical-blue'].includes(template.id)
+      );
+    }
+
+    return this.prescriptionTemplates.filter(
+      (template) => !['gynae-clinical', 'gynae-womens-health'].includes(template.id)
+    );
+  }
+
   get printPreviewTemplate(): PrescriptionTemplate {
-    return this.printPreviewData?.template || this.getActivePrescriptionTheme();
+    const template = this.printPreviewData?.template || this.getActivePrescriptionTheme();
+    const specialtySection = this.printPreviewData?.specialtySection || this.activeSpecialtyTemplate().key;
+    return normalizeGynaePrescriptionTemplate(template, specialtySection);
+  }
+
+  usesGynaeClinicalPrint(preview: PrintPreviewData): boolean {
+    return usesGynaeClinicalPrint(preview.specialtySection, preview.template);
+  }
+
+  usesGynaeWomensHealthPrint(preview: PrintPreviewData): boolean {
+    return usesGynaeWomensHealthPrint(preview.specialtySection, preview.template);
+  }
+
+  usesGynaeClinicalBluePrint(preview: PrintPreviewData): boolean {
+    return usesGynaeClinicalBluePrint(preview.specialtySection, preview.template);
   }
 
   get printPreviewTemplateLabel(): string {
@@ -1695,6 +1745,10 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   slotDose(medicine: Record<string, unknown> | null | undefined, slot: DoseSlot): string {
     return resolvePrintSlotDose(medicine, slot);
+  }
+
+  trackClinicalPage(_index: number, page: ClinicalRxPrintPage): number {
+    return page.pageNumber;
   }
 
   printMedicineDensityClass(medicineCount: number): string {
@@ -3117,16 +3171,18 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       payload['hospitalId'] = this.currentHospitalId || undefined;
     }
 
+    const apiPayload = sanitizePrescriptionPayload(payload, { includeHospitalId: !this.editingId });
+
     if (!this.offline.online() && !this.editingId) {
-      void this.queuePrescription(payload, printAfterSave);
+      void this.queuePrescription(apiPayload, printAfterSave);
       return;
     }
 
     const isCreate = !this.editingId;
     this.saving = true;
     const request$ = this.editingId
-      ? this.backend.updatePrescription(this.editingId, payload)
-      : this.backend.createPrescription(payload);
+      ? this.backend.updatePrescription(this.editingId, apiPayload)
+      : this.backend.createPrescription(apiPayload);
 
     request$.pipe(finalize(() => (this.saving = false))).subscribe({
       next: (response) => {
@@ -3156,11 +3212,11 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         if (!this.editingId && this.offline.shouldQueue(err)) {
-          void this.queuePrescription(payload, printAfterSave);
+          void this.queuePrescription(apiPayload, printAfterSave);
           return;
         }
 
-        this.toastr.error(err?.error?.message || 'Something went wrong');
+        this.toastr.error(formatApiValidationError(err) || 'Something went wrong');
       },
     });
   }
@@ -4006,7 +4062,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     if (this.printPreviewData) {
       this.printPreviewData = {
         ...this.printPreviewData,
-        template,
+        template: normalizeGynaePrescriptionTemplate(template, this.printPreviewData.specialtySection),
       };
     }
   }
@@ -4025,6 +4081,16 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     this.prescriptionThemeConfirmed = true;
     this.themeModalOpen = false;
     this.persistDraftPrescriptionTheme();
+
+    if (this.printPreviewData) {
+      this.printPreviewData = {
+        ...this.printPreviewData,
+        template: normalizeGynaePrescriptionTemplate(
+          this.selectedPrescriptionTemplate,
+          this.printPreviewData.specialtySection
+        ),
+      };
+    }
   }
 
   closePrescriptionThemeModal(): void {
@@ -5289,7 +5355,21 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   private resolveDefaultPrescriptionTemplate(): PrescriptionTemplate {
     const doctor = this.resolvePrescriptionDoctor({ doctorId: this.activeDoctorId() });
-    return doctor?.prescriptionTemplate || 'classic';
+    const template = doctor?.prescriptionTemplate || 'classic';
+
+    if (this.isGynaeDoctor()) {
+      if (['gynae-clinical', 'gynae-womens-health', 'clinical-blue'].includes(template)) {
+        return template;
+      }
+
+      return 'gynae-womens-health';
+    }
+
+    if (['gynae-clinical', 'gynae-womens-health'].includes(template)) {
+      return 'clinical-blue';
+    }
+
+    return template;
   }
 
   private applyDoctorPrescriptionTheme(): void {
@@ -5358,35 +5438,59 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
     if (!isSavedPrescription || isEditingCurrentPrescription) {
       if (this.isPrescriptionTemplate(activeTheme)) {
-        return activeTheme;
+        return normalizeGynaePrescriptionTemplate(
+          activeTheme,
+          String(source?.['specialtySection'] || '') as SpecialtyTemplateKey | ''
+        );
       }
     }
 
     if (isSavedPrescription) {
-      if (this.isPrescriptionTemplate(doctorTemplate) && doctorTemplate !== 'classic') {
-        return doctorTemplate;
+      if (this.isPrescriptionTemplate(savedTemplate)) {
+        return normalizeGynaePrescriptionTemplate(
+          savedTemplate,
+          String(source?.['specialtySection'] || '') as SpecialtyTemplateKey | ''
+        );
       }
 
-      if (this.isPrescriptionTemplate(savedTemplate)) {
-        return savedTemplate;
+      if (this.isPrescriptionTemplate(doctorTemplate) && doctorTemplate !== 'classic') {
+        return normalizeGynaePrescriptionTemplate(
+          doctorTemplate,
+          String(source?.['specialtySection'] || '') as SpecialtyTemplateKey | ''
+        );
       }
 
       if (this.isPrescriptionTemplate(this.routePrescriptionTemplate)) {
-        return this.routePrescriptionTemplate;
+        return normalizeGynaePrescriptionTemplate(
+          this.routePrescriptionTemplate,
+          String(source?.['specialtySection'] || '') as SpecialtyTemplateKey | ''
+        );
       }
 
-      return 'classic';
+      return normalizeGynaePrescriptionTemplate(
+        'classic',
+        String(source?.['specialtySection'] || '') as SpecialtyTemplateKey | ''
+      );
     }
 
     if (this.isPrescriptionTemplate(doctorTemplate)) {
-      return doctorTemplate;
+      return normalizeGynaePrescriptionTemplate(
+        doctorTemplate,
+        String(source?.['specialtySection'] || '') as SpecialtyTemplateKey | ''
+      );
     }
 
     if (this.isPrescriptionTemplate(savedTemplate)) {
-      return savedTemplate;
+      return normalizeGynaePrescriptionTemplate(
+        savedTemplate,
+        String(source?.['specialtySection'] || '') as SpecialtyTemplateKey | ''
+      );
     }
 
-    return 'classic';
+    return normalizeGynaePrescriptionTemplate(
+      'classic',
+      String(source?.['specialtySection'] || '') as SpecialtyTemplateKey | ''
+    );
   }
 
   private buildPrintPreviewData(prescription: Prescription | null = null): PrintPreviewData | null {
@@ -5513,9 +5617,12 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
         : String(source['advice'] || '').trim(),
       consultation: String(source['admissionOrders']?.consultation || '').trim(),
       admissionOrderLines: this.resolvePrintAdmissionOrderLines(source),
+      gynaeMode,
+      patientBloodGroup: patient.bloodGroup || '-',
       clinicalPages: buildClinicalRxPrintPages({
         medicines,
         specialtySection: specialtyTemplate.key,
+        prescriptionTemplate: this.resolvePrescriptionTemplate(source, doctor),
         gynaeConsultationRows,
         gynaeSidebarRows: gynaeSplit.sidebar,
         gynaeExtendedRows: gynaeSplit.extended,
@@ -5904,13 +6011,49 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
           <style>
             body {
               background: #ffffff;
+              height: auto;
               margin: 0;
+              min-height: auto;
               padding: 0;
             }
 
             @page {
-              margin: 0;
-              size: A4;
+              margin: 8mm;
+              size: A4 portrait;
+            }
+
+            @media print {
+              html,
+              body {
+                height: auto !important;
+                min-height: auto !important;
+                overflow: visible !important;
+              }
+
+              .prescription-print-host {
+                display: block !important;
+                height: auto !important;
+                margin: 0 auto !important;
+                max-width: 210mm !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                width: 100% !important;
+              }
+
+              .prescription-print-sheet.prescription-template-gynae-womens-health {
+                height: auto !important;
+                margin: 0 auto !important;
+                max-width: 210mm !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                width: 100% !important;
+              }
+
+              .prescription-print-sheet {
+                height: auto !important;
+                min-height: auto !important;
+              }
             }
           </style>
         </head>

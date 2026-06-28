@@ -6,7 +6,7 @@
       <div class="gynae-clinical-header-left">
         <div class="gynae-clinical-doctor-mark">
           <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl" [alt]="preview.hospitalName">
-          <i *ngIf="!preview.showHospitalLogo" class="fa fa-user-md"></i>
+          <i *ngIf="!preview.showHospitalLogo" class="fa fa-female"></i>
         </div>
         <div class="gynae-clinical-doctor-copy">
           <h1>{{ preview.doctorName }}</h1>
@@ -21,9 +21,11 @@
       </div>
 
       <div class="gynae-clinical-header-center">
+        <div class="gynae-clinical-watermark" aria-hidden="true"><i class="fa fa-female"></i></div>
         <div class="gynae-clinical-rx-title">
           <h2>PRESCRIPTION</h2>
           <p>OBSTETRICS &amp; GYNAECOLOGY</p>
+          <i class="fa fa-heart"></i>
         </div>
       </div>
 
@@ -70,7 +72,7 @@
           <i class="fa fa-map-marker"></i>
           <div><strong>Address</strong><span>{{ preview.patientAddress }}</span></div>
         </div>
-        <div class="gynae-clinical-field span-2">
+        <div class="gynae-clinical-field span-2 diagnosis">
           <i class="fa fa-stethoscope"></i>
           <div><strong>Diagnosis / Disease</strong><span>{{ preview.disease }}</span></div>
         </div>
@@ -97,44 +99,38 @@
 
     <section class="gynae-clinical-main">
       <aside class="gynae-clinical-sidebar">
-        <div class="gynae-clinical-panel">
+        <div class="gynae-clinical-panel gynae-clinical-vitals">
           <h4>VITALS (O / E)</h4>
-          <div class="gynae-clinical-panel-row">
-            <strong>BP</strong><span>{{ preview.vitals['bp'] || preview.vitals['bloodPressure'] || '-' }}</span>
-          </div>
-          <div class="gynae-clinical-panel-row">
-            <strong>WT (kg)</strong><span>{{ preview.vitals['weight'] || '-' }}</span>
-          </div>
-          <div class="gynae-clinical-panel-row">
-            <strong>PR / min</strong><span>{{ preview.vitals['pulse'] || '-' }}</span>
-          </div>
-          <div class="gynae-clinical-panel-row">
-            <strong>TEMP</strong><span>{{ preview.vitals['temperature'] || '-' }}</span>
-          </div>
-          <div class="gynae-clinical-panel-row">
-            <strong>SPO2</strong><span>{{ preview.vitals['spo2'] || '-' }}</span>
-          </div>
+          <div><i class="fa fa-heartbeat"></i><strong>BP</strong><span>{{ preview.vitals['bp'] || preview.vitals['bloodPressure'] || '-' }}</span></div>
+          <div><i class="fa fa-balance-scale"></i><strong>WT (kg)</strong><span>{{ preview.vitals['weight'] || '-' }}</span></div>
+          <div><i class="fa fa-heart-o"></i><strong>PR / min</strong><span>{{ preview.vitals['pulse'] || '-' }}</span></div>
+          <div><i class="fa fa-thermometer-half"></i><strong>TEMP</strong><span>{{ preview.vitals['temperature'] || '-' }}</span></div>
+          <div><i class="fa fa-tint"></i><strong>SPO2</strong><span>{{ preview.vitals['spo2'] || '-' }}</span></div>
         </div>
 
-        <div class="gynae-clinical-panel">
+        <div class="gynae-clinical-panel gynae-clinical-labs">
           <h4>LAB'S</h4>
-          <div class="gynae-clinical-panel-row gynae-clinical-lab-row" *ngFor="let test of preview.labTests">
-            <i class="fa fa-check-square-o"></i><strong>{{ test.name }}</strong>
+          <div *ngFor="let test of preview.labTests">
+            <i class="fa fa-check-square-o"></i><strong>{{ test.name }}</strong><span>✓</span>
           </div>
-          <div class="gynae-clinical-panel-row gynae-clinical-lab-row" *ngIf="preview.labTests.length === 0">
-            <i class="fa fa-square-o"></i><strong>—</strong>
+          <div *ngIf="preview.labTests.length === 0">
+            <i class="fa fa-square-o"></i><strong>Others</strong><span>-</span>
           </div>
         </div>
 
-        <div class="gynae-clinical-panel" *ngIf="preview.gynaeSidebarRows.length > 0">
+        <div class="gynae-clinical-panel gynae-clinical-sidebar-gynae" *ngIf="preview.gynaeSidebarRows.length > 0">
           <h4>GYNAE / OBS DETAILS</h4>
-          <div class="gynae-clinical-panel-row gynae-clinical-gynae-row" *ngFor="let row of preview.gynaeSidebarRows">
-            <strong>{{ row.label }}</strong><span>{{ row.value }}</span>
+          <div *ngFor="let row of preview.gynaeSidebarRows">
+            <i class="fa fa-file-text-o"></i>
+            <div>
+              <strong>{{ row.label }}</strong>
+              <span>{{ row.value }}</span>
+            </div>
           </div>
         </div>
       </aside>
 
-      <div class="gynae-clinical-content">
+      <div class="gynae-clinical-medicines-col">
         <section class="gynae-clinical-medicines">
           <header>
             <span><i class="fa fa-medkit"></i> MEDICINES</span>
@@ -223,20 +219,20 @@
             <strong>{{ drip.name }}</strong><span>{{ drip.rate }}</span>
           </div>
         </section>
-
-        <section class="gynae-clinical-extended" *ngIf="page.gynaeExtendedRows.length > 0">
-          <h4>GYNAE / OBS DETAILS (CONTINUED)</h4>
-          <div class="gynae-clinical-extended-grid">
-            <div class="gynae-clinical-ext-field"
-              *ngFor="let row of page.gynaeExtendedRows"
-              [class.span-full]="row.wide || isDangerRow(row.label)"
-              [class.is-danger]="isDangerRow(row.label)">
-              <strong>{{ row.label }}</strong>
-              <p>{{ row.value }}</p>
-            </div>
-          </div>
-        </section>
       </div>
+
+      <section class="gynae-clinical-extended" *ngIf="page.gynaeExtendedRows.length > 0">
+        <h4>GYNAE / OBS DETAILS (CONTINUED)</h4>
+        <div class="gynae-clinical-extended-grid">
+          <div class="gynae-clinical-ext-field"
+            *ngFor="let row of page.gynaeExtendedRows"
+            [class.span-full]="row.wide || isDangerRow(row.label)"
+            [class.is-danger]="isDangerRow(row.label)">
+            <strong>{{ row.label }}</strong>
+            <p>{{ row.value }}</p>
+          </div>
+        </div>
+      </section>
     </section>
 
     <footer class="gynae-clinical-footer">
@@ -256,9 +252,9 @@
       </div>
 
       <div class="gynae-clinical-signature">
-        <div class="gynae-clinical-sign-script">{{ preview.doctorNamePlain || preview.doctorName }}</div>
-        <span class="gynae-clinical-sign-line"></span>
-        <strong>{{ preview.doctorName }}</strong>
+        <strong>Doctor Stamp / Signature</strong>
+        <div class="gynae-clinical-sign-box" aria-label="Doctor signature area"></div>
+        <span class="gynae-clinical-sign-name">{{ preview.doctorName }}</span>
         <small>{{ preview.doctorQualification }}</small>
       </div>
     </footer>

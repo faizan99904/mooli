@@ -1,3 +1,28 @@
+:host {
+  background: #fff;
+  display: block;
+  height: auto;
+  min-height: auto;
+}
+
+@media screen {
+  :host.prescription-print-sheet {
+    background: #fff;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  .prescription-template-gynae-clinical,
+  .gynae-clinical-page,
+  .gynae-clinical-main,
+  .gynae-clinical-medicines-col {
+    background: #fff;
+    min-height: auto;
+  }
+}
+
 .prescription-template-gynae-clinical {
   --gynae-teal: #0f766e;
   --gynae-teal-dark: #0c3d6e;
@@ -39,15 +64,14 @@
 
 .gynae-clinical-doctor-mark {
   align-items: center;
-  background: var(--gynae-teal-soft);
-  border: 1px solid var(--gynae-line);
+  border: 1.2mm solid var(--gynae-teal);
   border-radius: 50%;
   color: var(--gynae-teal);
   display: flex;
-  height: 17mm;
+  height: 20mm;
   justify-content: center;
   overflow: hidden;
-  width: 17mm;
+  width: 20mm;
 }
 
 .gynae-clinical-doctor-mark img {
@@ -57,7 +81,7 @@
 }
 
 .gynae-clinical-doctor-mark i {
-  font-size: 8mm;
+  font-size: 10mm;
 }
 
 .gynae-clinical-doctor-copy h1 {
@@ -111,8 +135,31 @@
   align-items: center;
   display: flex;
   justify-content: center;
+  min-height: 22mm;
   padding-top: 1mm;
+  position: relative;
   text-align: center;
+}
+
+.gynae-clinical-watermark {
+  align-items: center;
+  color: var(--gynae-teal);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  opacity: 0.06;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.gynae-clinical-watermark i {
+  font-size: 28mm;
+}
+
+.gynae-clinical-rx-title {
+  position: relative;
+  z-index: 1;
 }
 
 .gynae-clinical-rx-title h2 {
@@ -130,6 +177,12 @@
   font-weight: 700;
   letter-spacing: 0.15mm;
   margin: 1mm 0 0;
+}
+
+.gynae-clinical-rx-title .fa-heart {
+  color: #ef4444;
+  font-size: 3mm;
+  margin-top: 0.8mm;
 }
 
 .gynae-clinical-header-right {
@@ -294,16 +347,83 @@
 }
 
 /* ── Main body: 25% sidebar + 75% content ── */
+.gynae-clinical-field.span-2.diagnosis {
+  grid-column: 1 / -1;
+}
+
+.gynae-clinical-panel > div {
+  align-items: center;
+  border-top: 1px solid #dbe7e5;
+  display: grid;
+  font-size: 2.3mm;
+  gap: 1.5mm;
+  grid-template-columns: 4.5mm minmax(0, 1fr) auto;
+  min-height: 6mm;
+  padding: 0.7mm 1.5mm;
+}
+
+.gynae-clinical-panel > div i {
+  color: var(--gynae-teal);
+  font-size: 2.8mm;
+}
+
+.gynae-clinical-panel > div strong {
+  font-weight: 700;
+}
+
+.gynae-clinical-panel > div span {
+  font-weight: 600;
+  text-align: right;
+}
+
+.gynae-clinical-sidebar-gynae > div {
+  align-items: flex-start;
+  grid-template-columns: 4.5mm minmax(0, 1fr);
+}
+
+.gynae-clinical-sidebar-gynae strong {
+  color: var(--gynae-teal-dark);
+  display: block;
+  font-size: 2.1mm;
+  line-height: 1.2;
+}
+
+.gynae-clinical-sidebar-gynae span {
+  color: #111827;
+  display: block;
+  font-size: 2.3mm;
+  line-height: 1.25;
+  margin-top: 0.3mm;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .gynae-clinical-main {
   align-items: start;
+  background: #fff;
   display: grid;
-  gap: 3mm;
+  gap: 1.8mm 3mm;
   grid-template-columns: 25% minmax(0, 75%);
+  grid-template-rows: auto auto;
+  width: 100%;
 }
 
 .gynae-clinical-sidebar {
+  align-self: start;
   display: grid;
   gap: 1.8mm;
+  grid-column: 1;
+  grid-row: 1 / -1;
+}
+
+.gynae-clinical-medicines-col {
+  background: #fff;
+  display: grid;
+  gap: 1.8mm;
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
 }
 
 .gynae-clinical-panel {
@@ -373,11 +493,6 @@
   text-align: left;
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-.gynae-clinical-content {
-  display: grid;
-  gap: 1.8mm;
 }
 
 /* ── Medicines table ── */
@@ -539,6 +654,8 @@
 .gynae-clinical-extended {
   border: 1px solid var(--gynae-line);
   border-radius: 1.4mm;
+  grid-column: 2;
+  grid-row: 2;
   overflow: hidden;
 }
 
@@ -666,24 +783,31 @@
   text-align: center;
 }
 
-.gynae-clinical-sign-script {
-  color: var(--gynae-teal);
-  font-family: 'Brush Script MT', cursive;
-  font-size: 5mm;
-  line-height: 1;
-  margin-bottom: 0.8mm;
+.gynae-clinical-signature {
+  text-align: center;
 }
 
-.gynae-clinical-sign-line {
-  border-bottom: 1px dashed #94a3b8;
+.gynae-clinical-signature > strong {
+  color: var(--gynae-teal-dark);
   display: block;
-  margin: 0 auto 1mm;
-  width: 75%;
+  font-size: 2.3mm;
+  font-weight: 700;
+  margin-bottom: 1mm;
 }
 
-.gynae-clinical-signature strong {
+.gynae-clinical-sign-box {
+  border: 1px dashed #94a3b8;
+  border-radius: 1.2mm;
+  height: 14mm;
+  margin: 0 auto 1mm;
+  width: 100%;
+}
+
+.gynae-clinical-sign-name {
+  color: var(--gynae-teal-dark);
   display: block;
   font-size: 2.5mm;
+  font-weight: 700;
 }
 
 .gynae-clinical-signature small {

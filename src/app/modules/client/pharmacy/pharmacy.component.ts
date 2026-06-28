@@ -91,6 +91,8 @@ export class PharmacyComponent implements OnInit {
   readonly prescriptionTemplates: Array<{ id: PrescriptionTemplate; name: string }> = [
     { id: 'classic', name: 'Classic' },
     { id: 'clinical-blue', name: 'Clinical Blue' },
+    { id: 'gynae-clinical', name: "Gynae Theme 1 · Clinical Teal" },
+    { id: 'gynae-womens-health', name: "Gynae Theme 2 · Women's Health" },
     { id: 'minimal-teal', name: 'Structure B · Green' },
     { id: 'compact-mono', name: 'Structure C · Purple' },
   ];

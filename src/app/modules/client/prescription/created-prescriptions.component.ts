@@ -18,6 +18,7 @@ import {
 import { legacyAdmissionOrdersToItems } from './admission-order-data';
 import {
   GYNAE_ULTRASOUND_STUDIES,
+  GynaeConsultMode,
   resolveGynaeConsultationStripRows,
   resolveGynaePatientNote,
   resolvePrescriptionConsultationPrintRows,
@@ -36,6 +37,13 @@ import {
   ClinicalRxPrintPage,
 } from './clinical-rx-print-pages';
 import { GynaeClinicalPrintPageComponent } from './gynae-clinical-print-page.component';
+import { GynaeWomensHealthPrintPageComponent } from './gynae-womens-health-print-page.component';
+import {
+  normalizeGynaePrescriptionTemplate,
+  usesGynaeClinicalBluePrint,
+  usesGynaeClinicalPrint,
+  usesGynaeWomensHealthPrint,
+} from './gynae-print-routing';
 import {
   formatEnglishAddress,
   formatEnglishDoctorName,
@@ -107,13 +115,15 @@ type CreatedPrescriptionPreviewData = {
   consultation: string;
   admissionOrderLines: string[];
   clinicalPages: ClinicalRxPrintPage[];
+  gynaeMode: GynaeConsultMode;
+  patientBloodGroup: string;
 };
 
 type DoseSlot = 'morning' | 'noon' | 'evening' | 'night';
 
 @Component({
   selector: 'app-created-prescriptions',
-  imports: [CommonModule, FormsModule, RouterLink, GynaeClinicalPrintPageComponent],
+  imports: [CommonModule, FormsModule, RouterLink, GynaeClinicalPrintPageComponent, GynaeWomensHealthPrintPageComponent],
   templateUrl: './created-prescriptions.component.html',
   styleUrl: './created-prescriptions.component.scss',
 })
@@ -147,6 +157,8 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
   readonly prescriptionTemplates: Array<{ id: PrescriptionTemplate; name: string }> = [
     { id: 'classic', name: 'Classic' },
     { id: 'clinical-blue', name: 'Clinical Blue' },
+    { id: 'gynae-clinical', name: "Gynae Theme 1 · Clinical Teal" },
+    { id: 'gynae-womens-health', name: "Gynae Theme 2 · Women's Health" },
     { id: 'minimal-teal', name: 'Structure B · Green' },
     { id: 'compact-mono', name: 'Structure C · Purple' },
   ];
@@ -212,7 +224,20 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
   }
 
   get printPreviewTemplate(): PrescriptionTemplate {
-    return this.viewPreviewData?.template || 'classic';
+    const template = this.viewPreviewData?.template || 'classic';
+    return normalizeGynaePrescriptionTemplate(template, this.viewPreviewData?.specialtySection || '');
+  }
+
+  usesGynaeClinicalPrint(preview: CreatedPrescriptionPreviewData): boolean {
+    return usesGynaeClinicalPrint(preview.specialtySection, preview.template);
+  }
+
+  usesGynaeWomensHealthPrint(preview: CreatedPrescriptionPreviewData): boolean {
+    return usesGynaeWomensHealthPrint(preview.specialtySection, preview.template);
+  }
+
+  usesGynaeClinicalBluePrint(preview: CreatedPrescriptionPreviewData): boolean {
+    return usesGynaeClinicalBluePrint(preview.specialtySection, preview.template);
   }
 
   get isPhysioView(): boolean {
@@ -384,14 +409,13 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
     this.viewModalOpen = true;
     this.viewLoading = true;
     this.clearPhysioPreviewUrl();
+    this.viewPreviewData = null;
     this.viewPrescription = {
       ...prescription,
       prescriptionTemplate: fallbackTemplate,
     };
-    this.viewPreviewData = isPhysio ? null : this.buildViewPreviewData(this.viewPrescription, fallbackTemplate);
-    if (isPhysio) {
-      this.schedulePhysioPreview(this.viewPrescription, requestId);
-    }
+
+    this.scheduleViewPreviewBuild(requestId, fallbackTemplate, isPhysio);
 
     this.backend
       .getPrescription(prescription._id)
@@ -420,7 +444,7 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
             this.schedulePhysioPreview(resolvedPrescription, requestId);
           } else {
             this.clearPhysioPreviewUrl();
-            this.viewPreviewData = this.buildViewPreviewData(resolvedPrescription, resolvedTemplate);
+            this.scheduleViewPreviewBuild(requestId, resolvedTemplate, false);
           }
           this.prescriptions = this.prescriptions.map((item) =>
             item._id === resolvedPrescription._id ? resolvedPrescription : item
@@ -470,6 +494,10 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
     slot: DoseSlot
   ): string {
     return resolvePrintSlotDose(medicine, slot);
+  }
+
+  trackClinicalPage(_index: number, page: ClinicalRxPrintPage): number {
+    return page.pageNumber;
   }
 
   printMedicineDensityClass(medicineCount: number): string {
@@ -696,9 +724,12 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
       patientNote,
       consultation: String(prescription.admissionOrders?.consultation || '').trim(),
       admissionOrderLines: this.resolvePrintAdmissionOrderLines(prescription),
+      gynaeMode: normalizeGynaeConsultMode((prescription.specialtyData || {})['gynaeMode']),
+      patientBloodGroup: patient.bloodGroup || '-',
       clinicalPages: buildClinicalRxPrintPages({
         medicines,
         specialtySection: specialtyPreview.specialtySection,
+        prescriptionTemplate: this.resolvePrescriptionTemplate(prescription, fallbackTemplate),
         gynaeConsultationRows,
         gynaeSidebarRows: specialtyPreview.gynaeSidebarRows,
         gynaeExtendedRows: specialtyPreview.gynaeExtendedRows,
@@ -803,20 +834,21 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
     const savedTemplate = prescription?.prescriptionTemplate;
     const doctor = this.resolveViewDoctor(prescription);
     const doctorTemplate = doctor?.prescriptionTemplate;
-
-    if (this.isPrescriptionTemplate(doctorTemplate) && doctorTemplate !== 'classic') {
-      return doctorTemplate;
-    }
+    const specialtySection = (prescription?.specialtySection || '') as SpecialtyTemplateKey | '';
 
     if (this.isPrescriptionTemplate(savedTemplate)) {
-      return savedTemplate;
+      return normalizeGynaePrescriptionTemplate(savedTemplate, specialtySection);
+    }
+
+    if (this.isPrescriptionTemplate(doctorTemplate) && doctorTemplate !== 'classic') {
+      return normalizeGynaePrescriptionTemplate(doctorTemplate, specialtySection);
     }
 
     if (this.isPrescriptionTemplate(fallbackTemplate)) {
-      return fallbackTemplate;
+      return normalizeGynaePrescriptionTemplate(fallbackTemplate, specialtySection);
     }
 
-    return 'classic';
+    return normalizeGynaePrescriptionTemplate('classic', specialtySection);
   }
 
   private resolveViewDoctor(prescription: Prescription | null | undefined): Doctor | null {
@@ -881,7 +913,31 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
       ...this.viewPrescription,
       prescriptionTemplate: template,
     };
-    this.viewPreviewData = this.buildViewPreviewData(this.viewPrescription, template);
+    this.scheduleViewPreviewBuild(this.viewRequestId, template, false);
+  }
+
+  private scheduleViewPreviewBuild(
+    requestId: number,
+    template: PrescriptionTemplate,
+    isPhysio: boolean
+  ): void {
+    window.setTimeout(() => {
+      if (requestId !== this.viewRequestId || !this.viewModalOpen || !this.viewPrescription) {
+        return;
+      }
+
+      if (isPhysio) {
+        this.schedulePhysioPreview(this.viewPrescription, requestId);
+        return;
+      }
+
+      try {
+        this.viewPreviewData = this.buildViewPreviewData(this.viewPrescription, template);
+      } catch (error) {
+        console.error('Unable to build prescription view preview', error);
+        this.toastr.error('Unable to build prescription preview.');
+      }
+    }, 0);
   }
 
   private schedulePhysioPreview(prescription: Prescription, requestId: number): void {
@@ -1170,8 +1226,30 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
           <title>Prescription Print</title>
           ${styles}
           <style>
-            body { background: #ffffff; margin: 0; padding: 0; }
-            @page { margin: 0; size: A4; }
+            body { background: #ffffff; height: auto; margin: 0; min-height: auto; padding: 0; }
+            @page { margin: 8mm; size: A4 portrait; }
+            @media print {
+              html, body { height: auto !important; min-height: auto !important; overflow: visible !important; }
+              .prescription-print-host {
+                display: block !important;
+                height: auto !important;
+                margin: 0 auto !important;
+                max-width: 210mm !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                width: 100% !important;
+              }
+              .prescription-print-sheet.prescription-template-gynae-womens-health,
+              .prescription-print-sheet {
+                height: auto !important;
+                margin: 0 auto !important;
+                max-width: 210mm !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                width: 100% !important;
+              }
+            }
           </style>
         </head>
         <body>${content}</body>

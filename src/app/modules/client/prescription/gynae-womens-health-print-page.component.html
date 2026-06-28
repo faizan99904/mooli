@@ -1,0 +1,251 @@
+<section class="prescription-print-sheet prescription-template-gynae-womens-health"
+  [class.gynae-wh-page-last]="page.isLastPage">
+  <div class="gynae-wh-page">
+
+    <header class="gynae-wh-mini-header" *ngIf="!page.isFirstPage">
+      <div>
+        <strong>{{ preview.hospitalName }}</strong>
+        <span>{{ preview.prescriptionNo }} · {{ preview.patientName }} · {{ preview.date }}</span>
+      </div>
+      <em>Page {{ page.pageNumber }} of {{ page.totalPages }}</em>
+    </header>
+
+    <ng-container *ngIf="page.isFirstPage">
+      <header class="gynae-wh-header">
+        <div class="gynae-wh-brand">
+          <div class="gynae-wh-logo">
+            <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl" [alt]="preview.hospitalName">
+            <i *ngIf="!preview.showHospitalLogo" class="fa fa-heartbeat"></i>
+          </div>
+          <div>
+            <strong class="gynae-wh-clinic-name">{{ preview.hospitalName }}</strong>
+            <span class="gynae-wh-brand-ur" dir="rtl">{{ preview.hospitalNameUrdu || preview.hospitalName }}</span>
+            <small>Women's Health Clinic</small>
+          </div>
+        </div>
+
+        <div class="gynae-wh-contact">
+          <span><i class="fa fa-map-marker"></i>{{ preview.hospitalAddress || preview.hospitalName }}</span>
+          <span><i class="fa fa-phone"></i>{{ contactPhoneValue }}</span>
+          <span><i class="fa fa-envelope-o"></i>{{ contactEmailValue }}</span>
+        </div>
+
+        <div class="gynae-wh-doctor">
+          <div class="gynae-wh-doctor-icon"><i class="fa fa-user-md"></i></div>
+          <div>
+            <strong>{{ preview.doctorName }}</strong>
+            <span>Consultant Gynaecologist &amp; Obstetrician</span>
+            <small>{{ preview.doctorQualification }}</small>
+          </div>
+        </div>
+      </header>
+
+      <nav class="gynae-wh-tabs" aria-label="Consultation mode">
+        <div class="gynae-wh-tab" *ngFor="let tab of consultTabs" [class.is-active]="isActiveTab(tab.key)">
+          <span class="gynae-wh-tab-en">{{ tab.labelEn }}</span>
+          <span class="gynae-wh-tab-ur" dir="rtl">{{ tab.labelUr }}</span>
+        </div>
+      </nav>
+
+      <section class="gynae-wh-patient">
+        <div class="gynae-wh-field">
+          <i class="fa fa-user"></i>
+          <div><strong>Patient Name <em dir="rtl">مریض کا نام</em></strong><span>{{ preview.patientName }}</span></div>
+        </div>
+        <div class="gynae-wh-field">
+          <i class="fa fa-birthday-cake"></i>
+          <div><strong>Age <em dir="rtl">عمر</em></strong><span>{{ preview.patientAge }}</span></div>
+        </div>
+        <div class="gynae-wh-field">
+          <i class="fa fa-venus"></i>
+          <div><strong>Gender <em dir="rtl">جنس</em></strong><span>{{ preview.patientGender }}</span></div>
+        </div>
+        <div class="gynae-wh-field">
+          <i class="fa fa-stethoscope"></i>
+          <div><strong>Visit Type <em dir="rtl">وزٹ کی قسم</em></strong><span>OPD</span></div>
+        </div>
+        <div class="gynae-wh-field">
+          <i class="fa fa-phone"></i>
+          <div><strong>Phone <em dir="rtl">فون</em></strong><span>{{ preview.patientPhone }}</span></div>
+        </div>
+        <div class="gynae-wh-field">
+          <i class="fa fa-calendar"></i>
+          <div><strong>Date <em dir="rtl">تاریخ</em></strong><span>{{ preview.date }}</span></div>
+        </div>
+        <div class="gynae-wh-field">
+          <i class="fa fa-folder-open-o"></i>
+          <div><strong>UHID / MR No. <em dir="rtl">فائل نمبر</em></strong><span>{{ preview.patientNo }}</span></div>
+        </div>
+        <div class="gynae-wh-field">
+          <i class="fa fa-calendar-check-o"></i>
+          <div><strong>Follow-up Date <em dir="rtl">دوبارہ ملاقات</em></strong><span>{{ preview.followUpDate }}</span></div>
+        </div>
+      </section>
+
+      <section class="gynae-wh-metrics">
+        <div><strong>LMP</strong><span>{{ lmpValue }}</span></div>
+        <div><strong>EDD</strong><span>{{ eddValue }}</span></div>
+        <div><strong>Gestational Age</strong><span>{{ gestationalValue }}</span></div>
+        <div><strong>Gravida / Para</strong><span>{{ gravidaParaValue }}</span></div>
+        <div><strong>Blood Group</strong><span>{{ preview.patientBloodGroup || '-' }}</span></div>
+        <div><strong>Weight</strong><span>{{ preview.vitals['weight'] || '-' }} Kg</span></div>
+        <div><strong>BP</strong><span>{{ preview.vitals['bp'] || preview.vitals['bloodPressure'] || '-' }} mmHg</span></div>
+      </section>
+
+      <section class="gynae-wh-vitals" *ngIf="showExtraVitals">
+        <div><strong>Pulse</strong><span>{{ preview.vitals['pulse'] || '-' }} /min</span></div>
+        <div><strong>Temperature</strong><span>{{ preview.vitals['temperature'] || '-' }}</span></div>
+        <div><strong>SpO2</strong><span>{{ preview.vitals['spo2'] || '-' }}%</span></div>
+      </section>
+
+      <section class="gynae-wh-diagnosis">
+        <div>
+          <strong>Diagnosis / تشخیص</strong>
+          <p>{{ preview.disease }}</p>
+        </div>
+        <div>
+          <strong>Follow-up / دوبارہ چیک اپ</strong>
+          <p>Next visit on: {{ preview.followUpDate }}</p>
+        </div>
+      </section>
+
+      <section class="gynae-wh-overview">
+        <article>
+          <strong>Chief Complaint</strong>
+          <p>{{ chiefComplaint }}</p>
+        </article>
+        <article>
+          <strong>History</strong>
+          <p>{{ historyValue }}</p>
+        </article>
+        <article>
+          <strong>Examination</strong>
+          <p>{{ examinationValue }}</p>
+        </article>
+      </section>
+    </ng-container>
+
+    <section class="gynae-wh-obs" *ngIf="obsRows.length > 0">
+      <header>GYNAE / OBS DETAILS / نسوانی تفصیلات</header>
+      <div class="gynae-wh-obs-grid">
+        <div *ngFor="let row of obsRows; trackBy: trackObsRow"
+          [class.span-full]="row.wide || isDangerRow(row.label)"
+          [class.is-danger]="isDangerRow(row.label)">
+          <strong>{{ row.label }}</strong>
+          <p>{{ row.value }}</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="gynae-wh-medicines" *ngIf="page.medicines.length > 0 || page.isFirstPage">
+      <header>PRESCRIPTION / نسخہ</header>
+      <table>
+        <colgroup>
+          <col class="col-num">
+          <col class="col-med">
+          <col class="col-dose">
+          <col class="col-freq">
+          <col class="col-dur">
+          <col class="col-inst">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Medicine / دوائی</th>
+            <th>Dose / مقدار</th>
+            <th>Frequency / تعدد</th>
+            <th>Duration / مدت</th>
+            <th>Instructions / ہدایات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let medicine of page.medicines; let i = index; trackBy: trackMedicine">
+            <td>{{ page.medicineOffset + i + 1 }}</td>
+            <td class="gynae-wh-med">
+              <strong>{{ medicine['name'] || 'Medicine' }}</strong>
+              <small *ngIf="medicine['frequency']">{{ medicine['frequency'] }}</small>
+            </td>
+            <td>{{ medicine['dosage'] || '-' }}</td>
+            <td>{{ medicine['frequency'] || '-' }}</td>
+            <td>{{ medicine['duration'] || '-' }}</td>
+            <td class="gynae-wh-inst">{{ medicine['instructions'] || '-' }}</td>
+          </tr>
+          <tr *ngIf="page.medicines.length === 0 && page.isFirstPage">
+            <td colspan="6">No medicine prescribed</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="gynae-wh-drips" *ngIf="page.isFirstPage && preview.ivFluids.length > 0">
+      <header><i class="fa fa-tint"></i> IV DRIP / ڈرپ</header>
+      <div *ngFor="let drip of preview.ivFluids; trackBy: trackDrip">
+        <strong>{{ drip.name }}</strong><span>{{ drip.rate }}</span>
+      </div>
+    </section>
+
+    <ng-container *ngIf="page.isLastPage">
+      <section class="gynae-wh-triple">
+        <div class="gynae-wh-panel">
+          <h4>Tests Advised / تجویز کردہ ٹیسٹ</h4>
+          <ul class="gynae-wh-checklist">
+            <li *ngFor="let test of preview.labTests; trackBy: trackLabTest"><i class="fa fa-check-square-o"></i>{{ test.name }}</li>
+            <li *ngIf="preview.labTests.length === 0">—</li>
+          </ul>
+        </div>
+
+        <div class="gynae-wh-panel">
+          <h4>General Instructions / عمومی ہدایات</h4>
+          <ul *ngIf="instructionLines.length > 0; else noInstructions">
+            <li *ngFor="let line of instructionLines; trackBy: trackInstruction">{{ line }}</li>
+          </ul>
+          <ng-template #noInstructions>
+            <p>{{ preview.patientNote || '-' }}</p>
+          </ng-template>
+        </div>
+
+        <div class="gynae-wh-panel gynae-wh-danger">
+          <h4><i class="fa fa-exclamation-triangle"></i> Important Warning Signs / خطرے کی علامات</h4>
+          <p>{{ dangerSigns }}</p>
+          <div class="gynae-wh-next-visit">
+            <strong>Next Visit / اگلی ملاقات</strong>
+            <span>{{ preview.followUpDate }}</span>
+          </div>
+        </div>
+      </section>
+
+      <footer class="gynae-wh-footer">
+        <div class="gynae-wh-urdu-advice">
+          <h4>Urdu Quick Advice / اردو ہدایات</h4>
+          <ul>
+            <li *ngFor="let line of instructionLines; trackBy: trackInstruction">{{ line }}</li>
+            <li *ngIf="instructionLines.length === 0">{{ preview.patientNote || '-' }}</li>
+          </ul>
+        </div>
+
+        <div class="gynae-wh-brand">
+          <div class="gynae-wh-brand-icon"><i class="fa fa-heart"></i></div>
+          <strong>Women's Health<br>Our Priority</strong>
+        </div>
+
+        <div class="gynae-wh-signature">
+          <strong>Doctor Stamp / ڈاکٹر کی مہر</strong>
+          <div class="gynae-wh-sign-box" aria-label="Doctor signature area"></div>
+          <span>{{ preview.doctorName }}</span>
+          <small>{{ preview.doctorQualification }}</small>
+        </div>
+      </footer>
+
+      <div class="gynae-wh-bottom-bar">
+        <span><i class="fa fa-hospital-o"></i>{{ preview.hospitalName }}</span>
+        <span><i class="fa fa-envelope-o"></i>{{ contactEmailValue }}</span>
+        <span><i class="fa fa-phone"></i>{{ contactPhoneValue }}</span>
+      </div>
+
+      <div class="gynae-wh-disclaimer">
+        <i class="fa fa-shield"></i>
+        <span>Not for medico-legal use / عدالتی استعمال کے لیے نہیں</span>
+      </div>
+    </ng-container>
+  </div>
+</section>

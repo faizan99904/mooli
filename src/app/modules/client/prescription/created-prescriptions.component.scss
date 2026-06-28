@@ -233,26 +233,23 @@
   background: #fff;
   border-bottom: 1px solid var(--rx-line);
   display: flex;
-  gap: 12px;
+  flex-shrink: 0;
+  gap: 16px;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: 14px 18px;
 }
 
 .created-view-toolbar h3 {
   color: var(--rx-ink);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   margin: 0;
 }
 
 .created-view-toolbar p {
   color: var(--rx-muted);
-  margin: 3px 0 0;
-}
-
-.created-view-actions {
-  display: flex;
-  gap: 8px;
+  font-size: 12px;
+  margin: 4px 0 0;
 }
 
 .created-view-scroll {
@@ -263,9 +260,16 @@
   padding: 18px;
 }
 
+.created-view-scroll .prescription-print-host {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+}
+
 .created-view-scroll .prescription-print-sheet {
   margin-left: auto;
   margin-right: auto;
+  max-width: 100%;
 }
 
 .created-physio-preview {
@@ -330,14 +334,5 @@
 
   .created-view-dialog {
     max-height: calc(100vh - 16px);
-  }
-
-  .created-view-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .created-view-actions {
-    justify-content: flex-end;
   }
 }
