@@ -1552,6 +1552,10 @@
   width: 100%;
 }
 
+.prescription-print-host > .prescription-print-sheet.prescription-template-gynae-clinical {
+  flex: 0 0 auto;
+}
+
 .prescription-print-host > .prescription-print-sheet.prescription-template-clinical-blue {
   flex: 0 0 auto;
 }

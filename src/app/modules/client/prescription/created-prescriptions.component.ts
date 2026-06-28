@@ -35,6 +35,7 @@ import {
   buildClinicalRxPrintPages,
   ClinicalRxPrintPage,
 } from './clinical-rx-print-pages';
+import { GynaeClinicalPrintPageComponent } from './gynae-clinical-print-page.component';
 import {
   formatEnglishAddress,
   formatEnglishDoctorName,
@@ -112,7 +113,7 @@ type DoseSlot = 'morning' | 'noon' | 'evening' | 'night';
 
 @Component({
   selector: 'app-created-prescriptions',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, GynaeClinicalPrintPageComponent],
   templateUrl: './created-prescriptions.component.html',
   styleUrl: './created-prescriptions.component.scss',
 })

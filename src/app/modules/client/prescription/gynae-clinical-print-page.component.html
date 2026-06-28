@@ -1,0 +1,273 @@
+<section class="prescription-print-sheet prescription-template-gynae-clinical"
+  [class.gynae-clinical-page-last]="page.isLastPage">
+  <div class="gynae-clinical-page" [ngClass]="medicineDensityClass">
+
+    <header class="gynae-clinical-header">
+      <div class="gynae-clinical-header-left">
+        <div class="gynae-clinical-doctor-mark">
+          <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl" [alt]="preview.hospitalName">
+          <i *ngIf="!preview.showHospitalLogo" class="fa fa-user-md"></i>
+        </div>
+        <div class="gynae-clinical-doctor-copy">
+          <h1>{{ preview.doctorName }}</h1>
+          <p class="gynae-clinical-qualification">{{ preview.doctorQualification }}</p>
+          <span class="gynae-clinical-badge">Consultant Gynaecologist &amp; Obstetrician</span>
+          <div class="gynae-clinical-contact">
+            <span><i class="fa fa-map-marker"></i>{{ preview.hospitalAddress || preview.hospitalName }}</span>
+            <span><i class="fa fa-phone"></i>{{ contactPhone() }}</span>
+            <span><i class="fa fa-envelope-o"></i>{{ contactEmail() }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="gynae-clinical-header-center">
+        <div class="gynae-clinical-rx-title">
+          <h2>PRESCRIPTION</h2>
+          <p>OBSTETRICS &amp; GYNAECOLOGY</p>
+        </div>
+      </div>
+
+      <div class="gynae-clinical-header-right">
+        <div class="gynae-clinical-meta-stack">
+          <div class="gynae-clinical-meta-card">
+            <i class="fa fa-clipboard"></i>
+            <div><strong>Prescription No</strong><span>{{ preview.prescriptionNo }}</span></div>
+          </div>
+          <div class="gynae-clinical-meta-card">
+            <i class="fa fa-folder-open-o"></i>
+            <div><strong>File No</strong><span>{{ preview.patientNo }}</span></div>
+          </div>
+          <div class="gynae-clinical-meta-card">
+            <i class="fa fa-calendar"></i>
+            <div><strong>Date</strong><span>{{ preview.date }}</span></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="gynae-clinical-disclaimer">NOT VALID FOR COURT OF LAW.</div>
+
+    <section class="gynae-clinical-patient">
+      <h3><i class="fa fa-user-o"></i> PATIENT INFORMATION</h3>
+      <div class="gynae-clinical-patient-grid">
+        <div class="gynae-clinical-field">
+          <i class="fa fa-user"></i>
+          <div><strong>Patient Name</strong><span>{{ preview.patientName }}</span></div>
+        </div>
+        <div class="gynae-clinical-field">
+          <i class="fa fa-birthday-cake"></i>
+          <div><strong>Age</strong><span>{{ preview.patientAge }}</span></div>
+        </div>
+        <div class="gynae-clinical-field">
+          <i class="fa fa-venus"></i>
+          <div><strong>Sex</strong><span>{{ preview.patientGender }}</span></div>
+        </div>
+        <div class="gynae-clinical-field">
+          <i class="fa fa-phone"></i>
+          <div><strong>Cell No</strong><span>{{ preview.patientPhone }}</span></div>
+        </div>
+        <div class="gynae-clinical-field span-2">
+          <i class="fa fa-map-marker"></i>
+          <div><strong>Address</strong><span>{{ preview.patientAddress }}</span></div>
+        </div>
+        <div class="gynae-clinical-field span-2">
+          <i class="fa fa-stethoscope"></i>
+          <div><strong>Diagnosis / Disease</strong><span>{{ preview.disease }}</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="gynae-clinical-overview">
+      <h3><i class="fa fa-stethoscope"></i> CLINICAL OVERVIEW</h3>
+      <div class="gynae-clinical-overview-grid">
+        <article>
+          <strong>Chief Complaint</strong>
+          <p>{{ consultationValue('Chief Complaint') }}</p>
+        </article>
+        <article>
+          <strong>History</strong>
+          <p>{{ consultationValue('History') }}</p>
+        </article>
+        <article>
+          <strong>Examination</strong>
+          <p>{{ consultationValue('Examination') }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="gynae-clinical-main">
+      <aside class="gynae-clinical-sidebar">
+        <div class="gynae-clinical-panel">
+          <h4>VITALS (O / E)</h4>
+          <div class="gynae-clinical-panel-row">
+            <strong>BP</strong><span>{{ preview.vitals['bp'] || preview.vitals['bloodPressure'] || '-' }}</span>
+          </div>
+          <div class="gynae-clinical-panel-row">
+            <strong>WT (kg)</strong><span>{{ preview.vitals['weight'] || '-' }}</span>
+          </div>
+          <div class="gynae-clinical-panel-row">
+            <strong>PR / min</strong><span>{{ preview.vitals['pulse'] || '-' }}</span>
+          </div>
+          <div class="gynae-clinical-panel-row">
+            <strong>TEMP</strong><span>{{ preview.vitals['temperature'] || '-' }}</span>
+          </div>
+          <div class="gynae-clinical-panel-row">
+            <strong>SPO2</strong><span>{{ preview.vitals['spo2'] || '-' }}</span>
+          </div>
+        </div>
+
+        <div class="gynae-clinical-panel">
+          <h4>LAB'S</h4>
+          <div class="gynae-clinical-panel-row gynae-clinical-lab-row" *ngFor="let test of preview.labTests">
+            <i class="fa fa-check-square-o"></i><strong>{{ test.name }}</strong>
+          </div>
+          <div class="gynae-clinical-panel-row gynae-clinical-lab-row" *ngIf="preview.labTests.length === 0">
+            <i class="fa fa-square-o"></i><strong>—</strong>
+          </div>
+        </div>
+
+        <div class="gynae-clinical-panel" *ngIf="preview.gynaeSidebarRows.length > 0">
+          <h4>GYNAE / OBS DETAILS</h4>
+          <div class="gynae-clinical-panel-row gynae-clinical-gynae-row" *ngFor="let row of preview.gynaeSidebarRows">
+            <strong>{{ row.label }}</strong><span>{{ row.value }}</span>
+          </div>
+        </div>
+      </aside>
+
+      <div class="gynae-clinical-content">
+        <section class="gynae-clinical-medicines">
+          <header>
+            <span><i class="fa fa-medkit"></i> MEDICINES</span>
+            <span class="gynae-urdu-label" dir="rtl">دوائیاں</span>
+          </header>
+          <table>
+            <colgroup>
+              <col class="col-num">
+              <col class="col-med">
+              <col class="col-dose">
+              <col class="col-dur">
+              <col class="col-time">
+              <col class="col-time">
+              <col class="col-time">
+              <col class="col-time">
+              <col class="col-food">
+              <col class="col-inst">
+            </colgroup>
+            <thead>
+              <tr>
+                <th rowspan="2">#</th>
+                <th rowspan="2" class="gynae-th-med">
+                  <span class="gynae-th-en">Medicine</span>
+                  <span class="gynae-th-ur" dir="rtl">دوائی</span>
+                </th>
+                <th rowspan="2">Dose</th>
+                <th rowspan="2">Duration</th>
+                <th colspan="4" class="gynae-th-timing-group">
+                  <span class="gynae-th-en">Timing</span>
+                  <span class="gynae-th-ur" dir="rtl">اوقات</span>
+                </th>
+                <th rowspan="2" class="gynae-th-food">
+                  <span class="gynae-th-en">Food</span>
+                  <span class="gynae-th-ur" dir="rtl">کھانے سے</span>
+                </th>
+                <th rowspan="2" class="gynae-th-inst">
+                  <span class="gynae-th-en">Instructions</span>
+                  <span class="gynae-th-ur" dir="rtl">ہدایات</span>
+                </th>
+              </tr>
+              <tr>
+                <th class="gynae-timing-col">
+                  <span class="gynae-th-en">Morning</span>
+                  <span class="gynae-th-ur" dir="rtl">صبح</span>
+                </th>
+                <th class="gynae-timing-col">
+                  <span class="gynae-th-en">Noon</span>
+                  <span class="gynae-th-ur" dir="rtl">دوپہر</span>
+                </th>
+                <th class="gynae-timing-col">
+                  <span class="gynae-th-en">Evening</span>
+                  <span class="gynae-th-ur" dir="rtl">شام</span>
+                </th>
+                <th class="gynae-timing-col">
+                  <span class="gynae-th-en">Night</span>
+                  <span class="gynae-th-ur" dir="rtl">رات</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let medicine of page.medicines; let medicineIndex = index">
+                <td class="gynae-td-num">{{ page.medicineOffset + medicineIndex + 1 }}</td>
+                <td class="gynae-clinical-med-name">
+                  <strong>{{ medicine['name'] || 'Medicine' }}</strong>
+                  <small *ngIf="medicine['frequency']">{{ medicine['frequency'] }}</small>
+                </td>
+                <td>{{ medicine['dosage'] || '-' }}</td>
+                <td>{{ medicine['duration'] || '-' }}</td>
+                <td class="gynae-td-time">{{ slotDose(medicine, 'morning') || '-' }}</td>
+                <td class="gynae-td-time">{{ slotDose(medicine, 'noon') || '-' }}</td>
+                <td class="gynae-td-time">{{ slotDose(medicine, 'evening') || '-' }}</td>
+                <td class="gynae-td-time">{{ slotDose(medicine, 'night') || '-' }}</td>
+                <td class="gynae-td-food">{{ medicine['beforeMeal'] ? 'Before' : medicine['afterMeal'] ? 'After' : '-' }}</td>
+                <td class="gynae-td-inst">{{ medicine['instructions'] || '-' }}</td>
+              </tr>
+              <tr *ngIf="page.medicines.length === 0">
+                <td colspan="10">No medicine prescribed</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="gynae-clinical-drips" *ngIf="preview.ivFluids.length > 0">
+          <h4><i class="fa fa-tint"></i> DRIP'S</h4>
+          <div class="gynae-clinical-drip-row" *ngFor="let drip of preview.ivFluids">
+            <strong>{{ drip.name }}</strong><span>{{ drip.rate }}</span>
+          </div>
+        </section>
+
+        <section class="gynae-clinical-extended" *ngIf="page.gynaeExtendedRows.length > 0">
+          <h4>GYNAE / OBS DETAILS (CONTINUED)</h4>
+          <div class="gynae-clinical-extended-grid">
+            <div class="gynae-clinical-ext-field"
+              *ngFor="let row of page.gynaeExtendedRows"
+              [class.span-full]="row.wide || isDangerRow(row.label)"
+              [class.is-danger]="isDangerRow(row.label)">
+              <strong>{{ row.label }}</strong>
+              <p>{{ row.value }}</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <footer class="gynae-clinical-footer">
+      <div class="gynae-clinical-note">
+        <h4><i class="fa fa-file-text-o"></i> NOTE TO PATIENT</h4>
+        <ul *ngIf="patientNoteLines(preview.patientNote).length > 0; else plainNote">
+          <li *ngFor="let line of patientNoteLines(preview.patientNote)">{{ line }}</li>
+        </ul>
+        <ng-template #plainNote>
+          <p>{{ preview.patientNote || '-' }}</p>
+        </ng-template>
+      </div>
+
+      <div class="gynae-clinical-brand">
+        <div class="gynae-clinical-brand-icon"><i class="fa fa-heart"></i></div>
+        <strong>Women's Health<br>Our Priority</strong>
+      </div>
+
+      <div class="gynae-clinical-signature">
+        <div class="gynae-clinical-sign-script">{{ preview.doctorNamePlain || preview.doctorName }}</div>
+        <span class="gynae-clinical-sign-line"></span>
+        <strong>{{ preview.doctorName }}</strong>
+        <small>{{ preview.doctorQualification }}</small>
+      </div>
+    </footer>
+
+    <div class="gynae-clinical-bottom-bar">
+      <span><i class="fa fa-hospital-o"></i>{{ preview.hospitalName }}</span>
+      <span><i class="fa fa-envelope-o"></i>{{ contactEmail() }}</span>
+      <span><i class="fa fa-phone"></i>{{ contactPhone() }}</span>
+      <span class="gynae-clinical-qr"><i class="fa fa-qrcode"></i></span>
+    </div>
+  </div>
+</section>

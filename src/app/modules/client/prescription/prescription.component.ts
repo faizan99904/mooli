@@ -130,6 +130,7 @@ import {
   resolvePrescriptionConsultationPrintRows,
   visibleGynaeFieldKeys,
 } from './gynae-prescription-data';
+import { GynaeClinicalPrintPageComponent } from './gynae-clinical-print-page.component';
 import {
   buildPatientDocumentDisplayRows,
   countPatientDocuments,
@@ -262,7 +263,7 @@ interface MedicineSuggestionOption {
 
 @Component({
   selector: 'app-prescription',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgApexchartsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgApexchartsModule, RouterLink, GynaeClinicalPrintPageComponent],
   templateUrl: './prescription.component.html',
   styleUrl: './prescription.component.scss',
 })

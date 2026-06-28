@@ -116,6 +116,16 @@
         <div class="prescription-print-host" #printContent
           [class.prescription-eye-sheet]="preview.specialtySection === 'eye'"
           *ngIf="!viewPhysioPreviewUrl && printPreviewData as preview">
+          <ng-container *ngIf="preview.specialtySection === 'gynae'; else standardClinicalOrThemedPrint">
+            <app-gynae-clinical-print-page
+              *ngFor="let page of preview.clinicalPages"
+              [preview]="preview"
+              [page]="page"
+              [medicineDensityClass]="printMedicineDensityClass(preview.medicines.length)">
+            </app-gynae-clinical-print-page>
+          </ng-container>
+
+          <ng-template #standardClinicalOrThemedPrint>
           <ng-container *ngIf="printPreviewTemplate === 'clinical-blue'; else wrappedThemedPrint">
             <section class="prescription-print-sheet prescription-template-clinical-blue"
               *ngFor="let page of preview.clinicalPages; let last = last"
@@ -389,6 +399,7 @@
             </div>
             </section>
           </ng-container>
+          </ng-template>
 
           <ng-template #wrappedThemedPrint>
             <section class="prescription-print-sheet"

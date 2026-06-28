@@ -249,6 +249,50 @@ function buildMedicinePages(
   }));
 }
 
+function distributeGynaeExtendedRows(
+  pages: ClinicalRxPrintPage[],
+  extendedRows: Array<{ label: string; value: string; wide?: boolean }>,
+  medicineCount: number
+): ClinicalRxPrintPage[] {
+  const extendedChunks = chunkGynaeExtendedRows(extendedRows);
+
+  if (!extendedChunks.length) {
+    return pages;
+  }
+
+  if (!pages.length) {
+    pages.push({
+      isFirstPage: true,
+      isLastPage: false,
+      pageNumber: 1,
+      totalPages: 0,
+      medicines: [],
+      medicineOffset: 0,
+      gynaeExtendedRows: [],
+      showGynaeExtendedTitle: false,
+    });
+  }
+
+  const [firstChunk, ...remainingChunks] = extendedChunks;
+  pages[0].gynaeExtendedRows = firstChunk.rows;
+  pages[0].showGynaeExtendedTitle = firstChunk.showTitle;
+
+  remainingChunks.forEach((chunk) => {
+    pages.push({
+      isFirstPage: false,
+      isLastPage: false,
+      pageNumber: pages.length + 1,
+      totalPages: 0,
+      medicines: [],
+      medicineOffset: medicineCount,
+      gynaeExtendedRows: chunk.rows,
+      showGynaeExtendedTitle: chunk.showTitle,
+    });
+  });
+
+  return pages;
+}
+
 function appendExtendedPages(
   pages: ClinicalRxPrintPage[],
   extendedRows: Array<{ label: string; value: string; wide?: boolean }>,
@@ -287,24 +331,46 @@ function appendExtendedPages(
   return pages;
 }
 
+function buildGynaePrintPages(
+  medicines: Array<Record<string, unknown>>,
+  extendedRows: Array<{ label: string; value: string; wide?: boolean }>
+): ClinicalRxPrintPage[] {
+  if (medicines.length <= 10) {
+    return finalizePages([
+      {
+        isFirstPage: true,
+        isLastPage: true,
+        pageNumber: 1,
+        totalPages: 1,
+        medicines,
+        medicineOffset: 0,
+        gynaeExtendedRows: extendedRows,
+        showGynaeExtendedTitle: extendedRows.length > 0,
+      },
+    ]);
+  }
+
+  const pages = buildMedicinePages(medicines, 8, 10, 12);
+  if (pages.length > 0) {
+    pages[pages.length - 1].gynaeExtendedRows = extendedRows;
+    pages[pages.length - 1].showGynaeExtendedTitle = extendedRows.length > 0;
+  }
+
+  return finalizePages(pages);
+}
+
 export function buildClinicalRxPrintPages(input: ClinicalRxPrintLayoutInput): ClinicalRxPrintPage[] {
   const medicines = input.medicines || [];
   const extendedRows = input.gynaeExtendedRows || [];
   const isGynae = input.specialtySection === 'gynae';
+
+  if (isGynae) {
+    return buildGynaePrintPages(medicines, extendedRows);
+  }
+
   const firstCap = firstPageMedicineCapacity(input);
   const continuationCap = 10;
   const lastCap = lastPageMedicineCapacity(extendedRows.length);
-
-  const gynaeNeedsDetailsPage =
-    isGynae &&
-    (extendedRows.length > 0 || (input.patientNote || '').trim().length > 40);
-
-  if (gynaeNeedsDetailsPage) {
-    const pages = buildMedicinePages(medicines, firstCap, continuationCap, 12);
-    appendExtendedPages(pages, extendedRows, medicines.length);
-    return finalizePages(pages);
-  }
-
   const medicineChunks = chunkMedicines(medicines, firstCap, continuationCap, lastCap);
 
   const extendedOverflow = extendedRows.length > 6;
