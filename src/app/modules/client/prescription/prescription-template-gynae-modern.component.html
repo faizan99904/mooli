@@ -1,0 +1,257 @@
+<section class="prescription-print-sheet gynae-modern-prescription"
+  [class.gynae-modern-page-last]="page.isLastPage">
+  <div class="gynae-modern-page" [ngClass]="medicineDensityClass">
+
+    <header class="gm-header card section">
+      <div class="gm-header-left">
+        <div class="gm-logo" aria-hidden="true">
+          <img *ngIf="preview.showHospitalLogo" [src]="preview.hospitalLogoUrl" [alt]="preview.hospitalName">
+          <i *ngIf="!preview.showHospitalLogo" class="fa fa-female"></i>
+        </div>
+        <div class="gm-doctor-copy">
+          <h1>{{ preview.doctorName }}</h1>
+          <p class="gm-qualification">{{ preview.doctorQualification }}</p>
+          <span class="gm-role-badge">Consultant Gynecologist &amp; Obstetrician</span>
+          <div class="gm-contact">
+            <span><i class="fa fa-map-marker"></i>{{ preview.hospitalAddress || preview.hospitalName }}</span>
+            <span><i class="fa fa-phone"></i>{{ contactPhoneValue }}</span>
+            <span><i class="fa fa-envelope-o"></i>{{ contactEmailValue }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="gm-header-center">
+        <h2>PRESCRIPTION</h2>
+        <i class="fa fa-heart gm-heart" aria-hidden="true"></i>
+      </div>
+
+      <div class="gm-header-right">
+        <div class="gm-meta-stack">
+          <div class="gm-meta-row">
+            <i class="fa fa-clipboard"></i>
+            <div><strong>Prescription No</strong><span>{{ preview.prescriptionNo }}</span></div>
+          </div>
+          <div class="gm-meta-row">
+            <i class="fa fa-folder-open-o"></i>
+            <div><strong>File No</strong><span>{{ preview.patientNo }}</span></div>
+          </div>
+          <div class="gm-meta-row">
+            <i class="fa fa-calendar"></i>
+            <div><strong>Date</strong><span>{{ preview.date }}</span></div>
+          </div>
+        </div>
+        <div class="gm-pregnant-illustration" aria-hidden="true">
+          <i class="fa fa-female"></i>
+        </div>
+      </div>
+    </header>
+
+    <div class="gm-disclaimer-bar">NOT VALID FOR COURT OF LAW.</div>
+
+    <section class="gm-patient card section">
+      <h3 class="gm-section-title"><i class="fa fa-user-o"></i> PATIENT INFORMATION</h3>
+      <div class="gm-patient-grid">
+        <div class="gm-field">
+          <i class="fa fa-user"></i>
+          <div><strong>Patient Name</strong><span>{{ preview.patientName }}</span></div>
+        </div>
+        <div class="gm-field">
+          <i class="fa fa-birthday-cake"></i>
+          <div><strong>Age</strong><span>{{ preview.patientAge }}</span></div>
+        </div>
+        <div class="gm-field">
+          <i class="fa fa-venus"></i>
+          <div><strong>Sex</strong><span>{{ preview.patientGender }}</span></div>
+        </div>
+        <div class="gm-field">
+          <i class="fa fa-phone"></i>
+          <div><strong>Cell No</strong><span>{{ preview.patientPhone }}</span></div>
+        </div>
+        <div class="gm-field span-2">
+          <i class="fa fa-map-marker"></i>
+          <div><strong>Address</strong><span>{{ preview.patientAddress }}</span></div>
+        </div>
+        <div class="gm-field span-2 diagnosis">
+          <i class="fa fa-stethoscope"></i>
+          <div><strong>Diagnosis / Disease</strong><span>{{ preview.disease }}</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="gm-overview card section">
+      <h3 class="gm-section-title"><i class="fa fa-stethoscope"></i> CLINICAL OVERVIEW</h3>
+      <div class="gm-overview-grid">
+        <article>
+          <strong>Chief Complaint</strong>
+          <p>{{ consultationValue('Chief Complaint') }}</p>
+        </article>
+        <article>
+          <strong>History</strong>
+          <p>{{ consultationValue('History') }}</p>
+        </article>
+        <article>
+          <strong>Examination</strong>
+          <p>{{ consultationValue('Examination') }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="gm-main section">
+      <aside class="gm-sidebar">
+        <div class="gm-panel card table-section">
+          <h4>VITALS (O / E)</h4>
+          <div class="gm-panel-row"><i class="fa fa-heartbeat"></i><strong>BP</strong><span>{{ preview.vitals['bp'] || preview.vitals['bloodPressure'] || '-' }}</span></div>
+          <div class="gm-panel-row"><i class="fa fa-balance-scale"></i><strong>WT (kg)</strong><span>{{ preview.vitals['weight'] || '-' }}</span></div>
+          <div class="gm-panel-row"><i class="fa fa-heart-o"></i><strong>PR / min</strong><span>{{ preview.vitals['pulse'] || '-' }}</span></div>
+          <div class="gm-panel-row"><i class="fa fa-thermometer-half"></i><strong>TEMP</strong><span>{{ preview.vitals['temperature'] || '-' }}</span></div>
+          <div class="gm-panel-row"><i class="fa fa-tint"></i><strong>SPO2</strong><span>{{ preview.vitals['spo2'] || '-' }}</span></div>
+        </div>
+
+        <div class="gm-panel card table-section">
+          <h4>LAB'S</h4>
+          <div class="gm-panel-row" *ngFor="let test of preview.labTests">
+            <i class="fa fa-check-square-o"></i><strong>{{ test.name }}</strong><span>✓</span>
+          </div>
+          <div class="gm-panel-row" *ngIf="preview.labTests.length === 0">
+            <i class="fa fa-square-o"></i><strong>Others</strong><span>-</span>
+          </div>
+        </div>
+
+        <div class="gm-panel card table-section" *ngIf="preview.gynaeSidebarRows.length > 0">
+          <h4>GYNAE / OBS DETAILS</h4>
+          <div class="gm-panel-row gm-panel-row-stack" *ngFor="let row of preview.gynaeSidebarRows">
+            <i class="fa fa-file-text-o"></i>
+            <div>
+              <strong>{{ row.label }}</strong>
+              <span>{{ row.value }}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="gm-medicines-col">
+        <section class="gm-medicines table-section card">
+          <header class="gm-medicines-head">
+            <span><i class="fa fa-medkit"></i> MEDICINES</span>
+            <span class="gm-urdu" dir="rtl">دوائیاں</span>
+          </header>
+          <table>
+            <colgroup>
+              <col class="col-num">
+              <col class="col-med">
+              <col class="col-dose">
+              <col class="col-dur">
+              <col class="col-time">
+              <col class="col-time">
+              <col class="col-time">
+              <col class="col-time">
+              <col class="col-food">
+              <col class="col-inst">
+            </colgroup>
+            <thead>
+              <tr>
+                <th rowspan="2">#</th>
+                <th rowspan="2">
+                  <span class="gm-th-en">Medicine</span>
+                  <span class="gm-th-ur" dir="rtl">دوائی</span>
+                </th>
+                <th rowspan="2">Dose</th>
+                <th rowspan="2">Duration</th>
+                <th colspan="4">
+                  <span class="gm-th-en">Timing</span>
+                  <span class="gm-th-ur" dir="rtl">اوقات</span>
+                </th>
+                <th rowspan="2">
+                  <span class="gm-th-en">Food</span>
+                  <span class="gm-th-ur" dir="rtl">کھانے سے</span>
+                </th>
+                <th rowspan="2">
+                  <span class="gm-th-en">Instructions</span>
+                  <span class="gm-th-ur" dir="rtl">ہدایات</span>
+                </th>
+              </tr>
+              <tr>
+                <th><span class="gm-th-en">Morning</span><span class="gm-th-ur" dir="rtl">صبح</span></th>
+                <th><span class="gm-th-en">Noon</span><span class="gm-th-ur" dir="rtl">دوپہر</span></th>
+                <th><span class="gm-th-en">Evening</span><span class="gm-th-ur" dir="rtl">شام</span></th>
+                <th><span class="gm-th-en">Night</span><span class="gm-th-ur" dir="rtl">رات</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let medicine of page.medicines; let medicineIndex = index">
+                <td>{{ page.medicineOffset + medicineIndex + 1 }}</td>
+                <td class="gm-med-name">
+                  <strong>{{ medicine['name'] || 'Medicine' }}</strong>
+                  <small *ngIf="medicine['frequency']">{{ medicine['frequency'] }}</small>
+                </td>
+                <td>{{ medicine['dosage'] || '-' }}</td>
+                <td>{{ medicine['duration'] || '-' }}</td>
+                <td>{{ slotDose(medicine, 'morning') || '-' }}</td>
+                <td>{{ slotDose(medicine, 'noon') || '-' }}</td>
+                <td>{{ slotDose(medicine, 'evening') || '-' }}</td>
+                <td>{{ slotDose(medicine, 'night') || '-' }}</td>
+                <td>{{ foodLabel(medicine) }}</td>
+                <td>{{ medicine['instructions'] || '-' }}</td>
+              </tr>
+              <tr *ngIf="page.medicines.length === 0">
+                <td colspan="10">No medicine prescribed</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="gm-drips card table-section" *ngIf="preview.ivFluids.length > 0">
+          <h4><i class="fa fa-tint"></i> DRIP'S</h4>
+          <div class="gm-drip-row" *ngFor="let drip of preview.ivFluids">
+            <strong>{{ drip.name }}</strong><span>{{ drip.rate || drip.quantity || '-' }}</span>
+          </div>
+        </section>
+      </div>
+
+      <section class="gm-extended card table-section" *ngIf="page.gynaeExtendedRows.length > 0">
+        <h4>GYNAE / OBS DETAILS (CONTINUED)</h4>
+        <div class="gm-extended-grid">
+          <div class="gm-ext-field"
+            *ngFor="let row of page.gynaeExtendedRows"
+            [class.span-full]="row.wide || isDangerRow(row.label)"
+            [class.is-danger]="isDangerRow(row.label)">
+            <strong>{{ row.label }}</strong>
+            <p>{{ row.value }}</p>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <footer class="gm-footer-blocks section">
+      <div class="gm-note card signature-box">
+        <h4><i class="fa fa-file-text-o"></i> NOTE TO PATIENT</h4>
+        <ul *ngIf="patientNoteLinesList.length > 0; else plainNote">
+          <li *ngFor="let line of patientNoteLinesList">{{ line }}</li>
+        </ul>
+        <ng-template #plainNote>
+          <p>{{ preview.patientNote || '-' }}</p>
+        </ng-template>
+      </div>
+
+      <div class="gm-brand card">
+        <div class="gm-brand-icon"><i class="fa fa-heart"></i></div>
+        <strong>Women's Health<br>Our Priority</strong>
+      </div>
+
+      <div class="gm-signature card signature-box">
+        <strong>Doctor Stamp / Signature</strong>
+        <div class="gm-sign-line" aria-label="Doctor signature area"></div>
+        <span class="gm-sign-name">{{ preview.doctorName }}</span>
+        <small>{{ preview.doctorQualification }}</small>
+        <small>Consultant Gynecologist &amp; Obstetrician</small>
+      </div>
+    </footer>
+
+    <div class="gm-bottom-bar footer">
+      <span><i class="fa fa-hospital-o"></i>{{ preview.prescriptionFollowUpLine || preview.hospitalName }}</span>
+      <span><i class="fa fa-envelope-o"></i>{{ contactEmailValue }}</span>
+      <span><i class="fa fa-phone"></i>{{ contactPhoneValue }}</span>
+      <span class="gm-qr"><i class="fa fa-qrcode"></i></span>
+    </div>
+  </div>
+</section>

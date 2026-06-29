@@ -97,6 +97,11 @@ export class AddDoctorsComponent implements OnInit, OnDestroy {
       description: 'Bilingual women\'s health clinic layout.',
     },
     {
+      id: 'gynae-modern',
+      name: 'Gynae Theme 3 · Modern Purple',
+      description: 'Premium pink and purple women\'s health layout.',
+    },
+    {
       id: 'minimal-teal',
       name: 'Minimal Teal',
       description: 'Clean modern layout with light teal accents.',

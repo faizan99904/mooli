@@ -132,13 +132,16 @@ import {
 } from './gynae-prescription-data';
 import { GynaeClinicalPrintPageComponent } from './gynae-clinical-print-page.component';
 import { GynaeWomensHealthPrintPageComponent } from './gynae-womens-health-print-page.component';
+import { PrescriptionTemplateGynaeModernComponent } from './prescription-template-gynae-modern.component';
 import {
   normalizeGynaePrescriptionTemplate,
   usesGynaeClinicalBluePrint,
   usesGynaeClinicalPrint,
+  usesGynaeModernPrint,
   usesGynaeWomensHealthPrint,
 } from './gynae-print-routing';
 import { formatApiValidationError, sanitizePrescriptionPayload } from './prescription-payload';
+import { canEditPrescriptionInPlace, resolvePrescriptionOwnerUserId } from './prescription-edit-policy';
 import {
   buildPatientDocumentDisplayRows,
   countPatientDocuments,
@@ -273,7 +276,7 @@ interface MedicineSuggestionOption {
 
 @Component({
   selector: 'app-prescription',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgApexchartsModule, RouterLink, GynaeClinicalPrintPageComponent, GynaeWomensHealthPrintPageComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgApexchartsModule, RouterLink, GynaeClinicalPrintPageComponent, GynaeWomensHealthPrintPageComponent, PrescriptionTemplateGynaeModernComponent],
   templateUrl: './prescription.component.html',
   styleUrl: './prescription.component.scss',
 })
@@ -311,6 +314,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   selectedPatientId = '';
   selectedAppointmentId = '';
   editingId: string | null = null;
+  private editingInPlace = false;
+  private editingPrescriptionOwnerId: string | null = null;
   currentHospitalId: string | null = null;
   currentHospital: Hospital | null = null;
   currentUserId: string | null = null;
@@ -356,6 +361,11 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       id: 'gynae-womens-health',
       name: "Gynae Theme 2 · Women's Health",
       description: 'Bilingual women\'s health clinic layout',
+    },
+    {
+      id: 'gynae-modern',
+      name: "Gynae Theme 3 · Modern Purple",
+      description: 'Premium pink & purple women\'s health layout',
     },
     {
       id: 'minimal-teal',
@@ -719,12 +729,12 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }> {
     if (this.isGynaeDoctor()) {
       return this.prescriptionTemplates.filter((template) =>
-        ['gynae-clinical', 'gynae-womens-health', 'clinical-blue'].includes(template.id)
+        ['gynae-clinical', 'gynae-womens-health', 'gynae-modern', 'clinical-blue'].includes(template.id)
       );
     }
 
     return this.prescriptionTemplates.filter(
-      (template) => !['gynae-clinical', 'gynae-womens-health'].includes(template.id)
+      (template) => !['gynae-clinical', 'gynae-womens-health', 'gynae-modern'].includes(template.id)
     );
   }
 
@@ -740,6 +750,10 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   usesGynaeWomensHealthPrint(preview: PrintPreviewData): boolean {
     return usesGynaeWomensHealthPrint(preview.specialtySection, preview.template);
+  }
+
+  usesGynaeModernPrint(preview: PrintPreviewData): boolean {
+    return usesGynaeModernPrint(preview.specialtySection, preview.template);
   }
 
   usesGynaeClinicalBluePrint(preview: PrintPreviewData): boolean {
@@ -3088,17 +3102,29 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (mode === 'edit' && this.canUpdatePrescriptions) {
+    if (mode === 'edit' && (this.canUpdatePrescriptions || this.canCreatePrescriptions)) {
       this.editPrescription(prescription);
     }
   }
 
   submitPrescription(printAfterSave = false): void {
-    if (!this.editingId && !this.canCreatePrescriptions) {
+    let shouldUpdate = Boolean(this.editingId && this.editingInPlace);
+    if (
+      shouldUpdate &&
+      this.editingPrescriptionOwnerId &&
+      this.editingPrescriptionOwnerId !== String(this.currentUserId || '').trim()
+    ) {
+      shouldUpdate = false;
+      this.editingInPlace = false;
+      this.editingId = null;
+      this.editingPrescriptionOwnerId = null;
+    }
+
+    if (!shouldUpdate && !this.canCreatePrescriptions) {
       return;
     }
 
-    if (this.editingId && !this.canUpdatePrescriptions) {
+    if (shouldUpdate && !this.canUpdatePrescriptions) {
       return;
     }
 
@@ -3167,21 +3193,21 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
       prescriptionTemplate: this.getActivePrescriptionTheme(),
     };
 
-    if (!this.editingId) {
+    if (!shouldUpdate) {
       payload['hospitalId'] = this.currentHospitalId || undefined;
     }
 
-    const apiPayload = sanitizePrescriptionPayload(payload, { includeHospitalId: !this.editingId });
+    const apiPayload = sanitizePrescriptionPayload(payload, { includeHospitalId: !shouldUpdate });
 
-    if (!this.offline.online() && !this.editingId) {
+    if (!this.offline.online() && !shouldUpdate) {
       void this.queuePrescription(apiPayload, printAfterSave);
       return;
     }
 
-    const isCreate = !this.editingId;
+    const isCreate = !shouldUpdate;
     this.saving = true;
-    const request$ = this.editingId
-      ? this.backend.updatePrescription(this.editingId, apiPayload)
+    const request$ = shouldUpdate
+      ? this.backend.updatePrescription(this.editingId!, apiPayload)
       : this.backend.createPrescription(apiPayload);
 
     request$.pipe(finalize(() => (this.saving = false))).subscribe({
@@ -3196,6 +3222,10 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
           this.selectedPrescriptionTemplate = savedPrescription.prescriptionTemplate;
         }
         this.editingId = savedPrescription?._id || this.editingId;
+        this.editingInPlace = Boolean(this.editingId);
+        this.editingPrescriptionOwnerId = isCreate
+          ? resolvePrescriptionOwnerUserId(savedPrescription)
+          : this.editingPrescriptionOwnerId;
         this.markAppointmentCompleted(
           savedPrescription?.appointmentId || value.appointmentId,
           isCreate,
@@ -3211,7 +3241,7 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
         }
       },
       error: (err) => {
-        if (!this.editingId && this.offline.shouldQueue(err)) {
+        if (!shouldUpdate && this.offline.shouldQueue(err)) {
           void this.queuePrescription(apiPayload, printAfterSave);
           return;
         }
@@ -3382,11 +3412,40 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
   }
 
   editPrescription(prescription: Prescription): void {
+    const editInPlace = canEditPrescriptionInPlace(prescription, this.currentUserId);
+
+    if (!editInPlace) {
+      if (!this.canCreatePrescriptions) {
+        this.toastr.error('Aap kisi aur doctor ki prescription modify nahi kar sakte.');
+        return;
+      }
+
+      this.editingInPlace = false;
+      this.editingId = null;
+      this.editingPrescriptionOwnerId = null;
+      this.populatePrescriptionForm(prescription);
+      if (this.isDoctorUser()) {
+        this.prescriptionForm.patchValue({
+          doctorId: this.currentUserId || '',
+          appointmentId: '',
+        });
+        this.selectedAppointmentId = '';
+      }
+      this.toastr.info('Yeh prescription kisi aur doctor ki hai. Save karne par nayi prescription banegi, purani waisi hi rahegi.');
+      return;
+    }
+
     if (!this.canUpdatePrescriptions) {
       return;
     }
 
+    this.editingInPlace = true;
     this.editingId = prescription._id;
+    this.editingPrescriptionOwnerId = resolvePrescriptionOwnerUserId(prescription);
+    this.populatePrescriptionForm(prescription);
+  }
+
+  private populatePrescriptionForm(prescription: Prescription): void {
     this.selectedPatientId = prescription.patientId;
     this.selectedAppointmentId = prescription.appointmentId || '';
     if (prescription.prescriptionTemplate) {
@@ -3480,6 +3539,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
 
   resetForm(): void {
     this.editingId = null;
+    this.editingInPlace = false;
+    this.editingPrescriptionOwnerId = null;
     this.prescriptionForm.reset({
       visitType: 'opd',
       specialtySection: '',
@@ -5358,14 +5419,14 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
     const template = doctor?.prescriptionTemplate || 'classic';
 
     if (this.isGynaeDoctor()) {
-      if (['gynae-clinical', 'gynae-womens-health', 'clinical-blue'].includes(template)) {
+      if (['gynae-clinical', 'gynae-womens-health', 'gynae-modern', 'clinical-blue'].includes(template)) {
         return template;
       }
 
       return 'gynae-womens-health';
     }
 
-    if (['gynae-clinical', 'gynae-womens-health'].includes(template)) {
+    if (['gynae-clinical', 'gynae-womens-health', 'gynae-modern'].includes(template)) {
       return 'clinical-blue';
     }
 
@@ -6040,7 +6101,8 @@ export class PrescriptionComponent implements OnInit, OnDestroy {
                 width: 100% !important;
               }
 
-              .prescription-print-sheet.prescription-template-gynae-womens-health {
+              .prescription-print-sheet.prescription-template-gynae-womens-health,
+              .prescription-print-sheet.gynae-modern-prescription {
                 height: auto !important;
                 margin: 0 auto !important;
                 max-width: 210mm !important;

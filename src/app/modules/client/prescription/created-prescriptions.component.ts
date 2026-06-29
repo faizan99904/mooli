@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, Renderer2, ViewChild, inject } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -38,10 +38,12 @@ import {
 } from './clinical-rx-print-pages';
 import { GynaeClinicalPrintPageComponent } from './gynae-clinical-print-page.component';
 import { GynaeWomensHealthPrintPageComponent } from './gynae-womens-health-print-page.component';
+import { PrescriptionTemplateGynaeModernComponent } from './prescription-template-gynae-modern.component';
 import {
   normalizeGynaePrescriptionTemplate,
   usesGynaeClinicalBluePrint,
   usesGynaeClinicalPrint,
+  usesGynaeModernPrint,
   usesGynaeWomensHealthPrint,
 } from './gynae-print-routing';
 import {
@@ -123,12 +125,16 @@ type DoseSlot = 'morning' | 'noon' | 'evening' | 'night';
 
 @Component({
   selector: 'app-created-prescriptions',
-  imports: [CommonModule, FormsModule, RouterLink, GynaeClinicalPrintPageComponent, GynaeWomensHealthPrintPageComponent],
+  imports: [CommonModule, FormsModule, RouterLink, GynaeClinicalPrintPageComponent, GynaeWomensHealthPrintPageComponent, PrescriptionTemplateGynaeModernComponent],
   templateUrl: './created-prescriptions.component.html',
   styleUrl: './created-prescriptions.component.scss',
 })
 export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
   @ViewChild('printContent', { static: false }) printContent?: ElementRef<HTMLElement>;
+  @ViewChild('viewBackdrop', { static: false }) viewBackdrop?: ElementRef<HTMLElement>;
+
+  private readonly renderer = inject(Renderer2);
+  private bodyScrollLocked = false;
 
   prescriptions: Prescription[] = [];
   patients: Patient[] = [];
@@ -159,6 +165,7 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
     { id: 'clinical-blue', name: 'Clinical Blue' },
     { id: 'gynae-clinical', name: "Gynae Theme 1 · Clinical Teal" },
     { id: 'gynae-womens-health', name: "Gynae Theme 2 · Women's Health" },
+    { id: 'gynae-modern', name: 'Gynae Theme 3 · Modern Purple' },
     { id: 'minimal-teal', name: 'Structure B · Green' },
     { id: 'compact-mono', name: 'Structure C · Purple' },
   ];
@@ -208,6 +215,10 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
     return this.backend.hasPermission('prescriptions.update');
   }
 
+  get canCreatePrescriptions(): boolean {
+    return this.backend.hasPermission('prescriptions.create');
+  }
+
   get viewTemplateLabel(): string {
     return (
       this.prescriptionTemplates.find((template) => template.id === this.viewPreviewData?.template)?.name ||
@@ -236,6 +247,10 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
     return usesGynaeWomensHealthPrint(preview.specialtySection, preview.template);
   }
 
+  usesGynaeModernPrint(preview: CreatedPrescriptionPreviewData): boolean {
+    return usesGynaeModernPrint(preview.specialtySection, preview.template);
+  }
+
   usesGynaeClinicalBluePrint(preview: CreatedPrescriptionPreviewData): boolean {
     return usesGynaeClinicalBluePrint(preview.specialtySection, preview.template);
   }
@@ -245,6 +260,8 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.unlockBodyScroll();
+    this.viewBackdrop?.nativeElement.remove();
     this.clearPhysioPreviewUrl();
   }
 
@@ -386,7 +403,7 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
   }
 
   openEdit(prescription: Prescription): void {
-    if (!this.canUpdatePrescriptions) {
+    if (!this.canUpdatePrescriptions && !this.canCreatePrescriptions) {
       return;
     }
 
@@ -416,6 +433,7 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
     };
 
     this.scheduleViewPreviewBuild(requestId, fallbackTemplate, isPhysio);
+    setTimeout(() => this.mountViewBackdrop(), 0);
 
     this.backend
       .getPrescription(prescription._id)
@@ -473,6 +491,29 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
     this.viewPrescription = null;
     this.viewPreviewData = null;
     this.clearPhysioPreviewUrl();
+    this.unlockBodyScroll();
+  }
+
+  private mountViewBackdrop(): void {
+    const backdrop = this.viewBackdrop?.nativeElement;
+    if (!backdrop || !this.viewModalOpen || backdrop.parentElement === document.body) {
+      return;
+    }
+
+    this.renderer.appendChild(document.body, backdrop);
+    if (!this.bodyScrollLocked) {
+      document.body.style.overflow = 'hidden';
+      this.bodyScrollLocked = true;
+    }
+  }
+
+  private unlockBodyScroll(): void {
+    if (!this.bodyScrollLocked) {
+      return;
+    }
+
+    document.body.style.overflow = '';
+    this.bodyScrollLocked = false;
   }
 
   printCreatedPrescription(): void {
@@ -933,6 +974,7 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
 
       try {
         this.viewPreviewData = this.buildViewPreviewData(this.viewPrescription, template);
+        this.mountViewBackdrop();
       } catch (error) {
         console.error('Unable to build prescription view preview', error);
         this.toastr.error('Unable to build prescription preview.');
@@ -1240,6 +1282,7 @@ export class CreatedPrescriptionsComponent implements OnInit, OnDestroy {
                 width: 100% !important;
               }
               .prescription-print-sheet.prescription-template-gynae-womens-health,
+              .prescription-print-sheet.gynae-modern-prescription,
               .prescription-print-sheet {
                 height: auto !important;
                 margin: 0 auto !important;

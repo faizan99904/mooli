@@ -1658,7 +1658,7 @@
             <small>{{ prescription.diagnosis || prescription.chiefComplaint || 'No diagnosis added' }}</small>
           </div>
           <div class="history-actions">
-            <button type="button" class="btn-light" *ngIf="canUpdatePrescriptions" (click)="openPatientHistoryEdit(prescription)">Edit</button>
+            <button type="button" class="btn-light" *ngIf="canUpdatePrescriptions || canCreatePrescriptions" (click)="openPatientHistoryEdit(prescription)">Edit</button>
             <button type="button" class="btn-primary" (click)="openPatientHistoryView(prescription)">
               <i class="fa fa-eye"></i>
               View
@@ -1859,7 +1859,16 @@
             </app-gynae-clinical-print-page>
           </ng-container>
 
-          <ng-container *ngIf="!usesGynaeWomensHealthPrint(preview) && !usesGynaeClinicalPrint(preview)">
+          <ng-container *ngIf="usesGynaeModernPrint(preview)">
+            <app-prescription-template-gynae-modern
+              *ngFor="let page of preview.clinicalPages; trackBy: trackClinicalPage"
+              [preview]="preview"
+              [page]="page"
+              [medicineDensityClass]="printMedicineDensityClass(preview.medicines.length)">
+            </app-prescription-template-gynae-modern>
+          </ng-container>
+
+          <ng-container *ngIf="!usesGynaeWomensHealthPrint(preview) && !usesGynaeClinicalPrint(preview) && !usesGynaeModernPrint(preview)">
           <ng-container *ngIf="printPreviewTemplate === 'clinical-blue'; else wrappedThemedPrint">
             <section class="prescription-print-sheet prescription-template-clinical-blue"
               *ngFor="let page of preview.clinicalPages; let last = last"

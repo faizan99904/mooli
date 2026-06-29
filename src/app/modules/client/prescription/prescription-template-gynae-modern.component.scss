@@ -1,0 +1,721 @@
+:host {
+  background: #fff;
+  display: block;
+  height: auto;
+  min-height: auto;
+}
+
+@media screen {
+  :host.prescription-print-sheet {
+    background: #fff;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+}
+
+.gynae-modern-prescription {
+  --gm-purple: #7a5a87;
+  --gm-purple-dark: #5f4569;
+  --gm-purple-soft: #f3eaf6;
+  --gm-pink: #d4849f;
+  --gm-pink-soft: #fdf2f6;
+  --gm-border: #e8d8ec;
+  --gm-ink: #3f2f46;
+  --gm-muted: #6f5f76;
+  background: #fff;
+  box-sizing: border-box;
+  color: var(--gm-ink);
+  font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+  font-size: 8.5pt;
+  line-height: 1.35;
+  margin: 0 auto;
+  max-width: 210mm;
+  padding: 5mm 6mm 4mm;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  width: 210mm;
+}
+
+.gynae-modern-prescription * {
+  box-sizing: border-box;
+}
+
+.gynae-modern-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2mm;
+}
+
+.gynae-modern-prescription .card {
+  background: #fff;
+  border: 1px solid var(--gm-border);
+  border-radius: 2.2mm;
+}
+
+.gynae-modern-prescription .gm-header {
+  align-items: start;
+  display: grid;
+  gap: 2.5mm;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.7fr) minmax(0, 1fr);
+  padding: 2.5mm;
+  position: relative;
+}
+
+.gynae-modern-prescription .gm-header-left {
+  display: grid;
+  gap: 2mm;
+  grid-template-columns: 16mm minmax(0, 1fr);
+}
+
+.gynae-modern-prescription .gm-logo {
+  align-items: center;
+  background: var(--gm-pink-soft);
+  border: 1.2mm solid var(--gm-pink);
+  border-radius: 50%;
+  color: var(--gm-purple);
+  display: flex;
+  height: 18mm;
+  justify-content: center;
+  overflow: hidden;
+  width: 18mm;
+}
+
+.gynae-modern-prescription .gm-logo img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.gynae-modern-prescription .gm-logo i {
+  font-size: 8mm;
+}
+
+.gynae-modern-prescription .gm-doctor-copy h1 {
+  color: var(--gm-purple-dark);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 16pt;
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0 0 0.8mm;
+}
+
+.gynae-modern-prescription .gm-qualification {
+  color: var(--gm-muted);
+  font-size: 8pt;
+  margin: 0 0 1mm;
+}
+
+.gynae-modern-prescription .gm-role-badge {
+  background: var(--gm-purple);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-block;
+  font-size: 7pt;
+  font-weight: 700;
+  margin-bottom: 1.2mm;
+  padding: 0.8mm 2.2mm;
+}
+
+.gynae-modern-prescription .gm-contact {
+  display: grid;
+  gap: 0.6mm;
+}
+
+.gynae-modern-prescription .gm-contact span {
+  align-items: flex-start;
+  color: var(--gm-muted);
+  display: flex;
+  font-size: 7pt;
+  gap: 1.2mm;
+}
+
+.gynae-modern-prescription .gm-contact i {
+  color: var(--gm-pink);
+  margin-top: 0.4mm;
+  width: 3mm;
+}
+
+.gynae-modern-prescription .gm-header-center {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.gynae-modern-prescription .gm-header-center h2 {
+  color: var(--gm-purple-dark);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15pt;
+  font-weight: 700;
+  letter-spacing: 0.6mm;
+  margin: 0;
+}
+
+.gynae-modern-prescription .gm-heart {
+  color: var(--gm-pink);
+  font-size: 5mm;
+  margin-top: 1mm;
+}
+
+.gynae-modern-prescription .gm-header-right {
+  display: grid;
+  gap: 1.5mm;
+  justify-items: end;
+}
+
+.gynae-modern-prescription .gm-meta-stack {
+  display: grid;
+  gap: 1mm;
+  width: 100%;
+}
+
+.gynae-modern-prescription .gm-meta-row {
+  align-items: center;
+  background: var(--gm-purple-soft);
+  border: 1px solid var(--gm-border);
+  border-radius: 1.5mm;
+  display: grid;
+  gap: 1.2mm;
+  grid-template-columns: 4mm minmax(0, 1fr);
+  min-height: 7mm;
+  padding: 0.8mm 1.5mm;
+}
+
+.gynae-modern-prescription .gm-meta-row i {
+  color: var(--gm-pink);
+  font-size: 3mm;
+}
+
+.gynae-modern-prescription .gm-meta-row strong {
+  color: var(--gm-purple-dark);
+  display: block;
+  font-size: 6pt;
+  font-weight: 700;
+}
+
+.gynae-modern-prescription .gm-meta-row span {
+  color: var(--gm-ink);
+  display: block;
+  font-size: 7pt;
+  font-weight: 600;
+}
+
+.gynae-modern-prescription .gm-pregnant-illustration {
+  color: var(--gm-pink);
+  font-size: 16mm;
+  line-height: 1;
+  opacity: 0.22;
+}
+
+.gynae-modern-prescription .gm-disclaimer-bar {
+  background: var(--gm-purple);
+  border-radius: 1.2mm;
+  color: #fff;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.2mm;
+  padding: 1mm 2mm;
+  text-align: center;
+}
+
+.gynae-modern-prescription .gm-section-title {
+  align-items: center;
+  color: var(--gm-purple-dark);
+  display: flex;
+  font-size: 8pt;
+  font-weight: 800;
+  gap: 1.2mm;
+  margin: 0 0 1.5mm;
+}
+
+.gynae-modern-prescription .gm-section-title i {
+  color: var(--gm-pink);
+}
+
+.gynae-modern-prescription .gm-patient,
+.gynae-modern-prescription .gm-overview {
+  padding: 2mm 2.5mm;
+}
+
+.gynae-modern-prescription .gm-patient-grid {
+  display: grid;
+  gap: 1.2mm;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.gynae-modern-prescription .gm-field {
+  align-items: flex-start;
+  background: var(--gm-pink-soft);
+  border: 1px solid var(--gm-border);
+  border-radius: 1.4mm;
+  display: grid;
+  gap: 1mm;
+  grid-template-columns: 4mm minmax(0, 1fr);
+  min-height: 8mm;
+  padding: 1mm 1.4mm;
+}
+
+.gynae-modern-prescription .gm-field.span-2 {
+  grid-column: span 2;
+}
+
+.gynae-modern-prescription .gm-field i {
+  color: var(--gm-pink);
+  margin-top: 0.3mm;
+}
+
+.gynae-modern-prescription .gm-field strong {
+  color: var(--gm-purple-dark);
+  display: block;
+  font-size: 6pt;
+  font-weight: 700;
+}
+
+.gynae-modern-prescription .gm-field span {
+  color: var(--gm-ink);
+  display: block;
+  font-size: 7pt;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.gynae-modern-prescription .gm-overview-grid {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gynae-modern-prescription .gm-overview-grid article {
+  border-right: 1px dashed var(--gm-border);
+  min-height: 11mm;
+  padding: 0 1.8mm;
+}
+
+.gynae-modern-prescription .gm-overview-grid article:last-child {
+  border-right: 0;
+}
+
+.gynae-modern-prescription .gm-overview-grid strong {
+  color: var(--gm-purple-dark);
+  display: block;
+  font-size: 6.5pt;
+  font-weight: 700;
+  margin-bottom: 0.6mm;
+}
+
+.gynae-modern-prescription .gm-overview-grid p {
+  color: var(--gm-ink);
+  font-size: 7pt;
+  line-height: 1.35;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gynae-modern-prescription .gm-main {
+  align-items: start;
+  display: grid;
+  gap: 1.8mm 2.5mm;
+  grid-template-columns: 26% minmax(0, 74%);
+  grid-template-rows: auto auto;
+}
+
+.gynae-modern-prescription .gm-sidebar {
+  align-self: start;
+  display: grid;
+  gap: 1.5mm;
+  grid-column: 1;
+  grid-row: 1 / -1;
+}
+
+.gynae-modern-prescription .gm-medicines-col {
+  display: grid;
+  gap: 1.5mm;
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.gynae-modern-prescription .gm-extended {
+  grid-column: 2;
+  grid-row: 2;
+  overflow: hidden;
+}
+
+.gynae-modern-prescription .gm-panel h4,
+.gynae-modern-prescription .gm-extended h4,
+.gynae-modern-prescription .gm-drips h4 {
+  background: var(--gm-purple);
+  color: #fff;
+  font-size: 7pt;
+  font-weight: 800;
+  margin: 0;
+  padding: 1mm 1.5mm;
+  text-align: center;
+}
+
+.gynae-modern-prescription .gm-panel-row {
+  align-items: center;
+  border-top: 1px solid var(--gm-border);
+  display: flex;
+  font-size: 7pt;
+  gap: 1mm;
+  justify-content: space-between;
+  min-height: 5.5mm;
+  padding: 0.7mm 1.4mm;
+}
+
+.gynae-modern-prescription .gm-panel-row i {
+  color: var(--gm-pink);
+  flex-shrink: 0;
+}
+
+.gynae-modern-prescription .gm-panel-row strong {
+  color: var(--gm-purple-dark);
+  font-weight: 600;
+}
+
+.gynae-modern-prescription .gm-panel-row span {
+  color: var(--gm-ink);
+  font-weight: 600;
+  text-align: right;
+}
+
+.gynae-modern-prescription .gm-panel-row-stack {
+  align-items: flex-start;
+}
+
+.gynae-modern-prescription .gm-panel-row-stack > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.gynae-modern-prescription .gm-panel-row-stack span {
+  display: block;
+  line-height: 1.3;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gynae-modern-prescription .gm-medicines-head {
+  align-items: center;
+  background: var(--gm-purple);
+  color: #fff;
+  display: flex;
+  font-size: 8pt;
+  font-weight: 800;
+  justify-content: space-between;
+  padding: 1mm 2mm;
+}
+
+.gynae-modern-prescription .gm-urdu {
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif;
+  font-size: 7.5pt;
+  font-weight: 600;
+}
+
+.gynae-modern-prescription table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.gynae-modern-prescription .col-num { width: 4%; }
+.gynae-modern-prescription .col-med { width: 19%; }
+.gynae-modern-prescription .col-dose { width: 8%; }
+.gynae-modern-prescription .col-dur { width: 8%; }
+.gynae-modern-prescription .col-time { width: 5%; }
+.gynae-modern-prescription .col-food { width: 9%; }
+.gynae-modern-prescription .col-inst { width: 22%; }
+
+.gynae-modern-prescription th,
+.gynae-modern-prescription td {
+  border: 1px solid var(--gm-border);
+  font-size: 6.5pt;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  padding: 1mm 0.8mm;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+  word-break: normal;
+}
+
+.gynae-modern-prescription thead {
+  background: var(--gm-purple-soft);
+}
+
+.gynae-modern-prescription th {
+  color: var(--gm-purple-dark);
+  font-weight: 700;
+}
+
+.gynae-modern-prescription .gm-th-en {
+  display: block;
+}
+
+.gynae-modern-prescription .gm-th-ur {
+  display: block;
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif;
+  font-size: 6pt;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.gynae-modern-prescription .gm-med-name {
+  text-align: left;
+}
+
+.gynae-modern-prescription .gm-med-name strong {
+  display: block;
+  font-size: 7pt;
+  font-weight: 700;
+}
+
+.gynae-modern-prescription .gm-med-name small {
+  color: var(--gm-muted);
+  display: block;
+  font-size: 6pt;
+}
+
+.gynae-modern-prescription tbody td:last-child {
+  text-align: left;
+}
+
+.gynae-modern-prescription .gm-drips {
+  padding-bottom: 1mm;
+}
+
+.gynae-modern-prescription .gm-drip-row {
+  align-items: center;
+  border-top: 1px solid var(--gm-border);
+  display: flex;
+  font-size: 7pt;
+  justify-content: space-between;
+  min-height: 6mm;
+  padding: 0.8mm 1.5mm;
+}
+
+.gynae-modern-prescription .gm-extended-grid {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gynae-modern-prescription .gm-ext-field {
+  border-top: 1px solid var(--gm-border);
+  min-height: 7mm;
+  padding: 1mm 1.5mm;
+}
+
+.gynae-modern-prescription .gm-ext-field.span-full {
+  grid-column: 1 / -1;
+}
+
+.gynae-modern-prescription .gm-ext-field.is-danger {
+  background: #fff8ef;
+}
+
+.gynae-modern-prescription .gm-ext-field strong {
+  color: var(--gm-purple-dark);
+  display: block;
+  font-size: 6.5pt;
+  font-weight: 700;
+  margin-bottom: 0.4mm;
+}
+
+.gynae-modern-prescription .gm-ext-field p {
+  color: var(--gm-ink);
+  font-size: 7pt;
+  line-height: 1.35;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gynae-modern-prescription .gm-footer-blocks {
+  align-items: end;
+  display: grid;
+  gap: 2mm;
+  grid-template-columns: minmax(0, 1.3fr) 24mm minmax(0, 0.85fr);
+}
+
+.gynae-modern-prescription .gm-note {
+  padding: 1.5mm 2mm;
+}
+
+.gynae-modern-prescription .gm-note h4 {
+  color: var(--gm-purple-dark);
+  font-size: 7.5pt;
+  font-weight: 700;
+  margin: 0 0 1mm;
+}
+
+.gynae-modern-prescription .gm-note ul {
+  margin: 0;
+  padding-left: 4mm;
+}
+
+.gynae-modern-prescription .gm-note li,
+.gynae-modern-prescription .gm-note p {
+  font-size: 7pt;
+  line-height: 1.4;
+  margin: 0 0 0.5mm;
+}
+
+.gynae-modern-prescription .gm-brand {
+  align-items: center;
+  display: grid;
+  gap: 1mm;
+  justify-items: center;
+  padding: 1mm;
+  text-align: center;
+}
+
+.gynae-modern-prescription .gm-brand-icon {
+  align-items: center;
+  border: 1px solid var(--gm-pink);
+  border-radius: 50%;
+  color: var(--gm-purple);
+  display: flex;
+  height: 12mm;
+  justify-content: center;
+  width: 12mm;
+}
+
+.gynae-modern-prescription .gm-brand-icon i {
+  font-size: 5mm;
+}
+
+.gynae-modern-prescription .gm-brand strong {
+  color: var(--gm-purple-dark);
+  font-size: 6.5pt;
+  line-height: 1.25;
+}
+
+.gynae-modern-prescription .gm-signature {
+  padding: 1.2mm 1.5mm;
+  text-align: center;
+}
+
+.gynae-modern-prescription .gm-signature > strong {
+  color: var(--gm-purple-dark);
+  display: block;
+  font-size: 7pt;
+  font-weight: 700;
+  margin-bottom: 1mm;
+}
+
+.gynae-modern-prescription .gm-sign-line {
+  border: 1px dashed var(--gm-border);
+  border-radius: 1mm;
+  height: 12mm;
+  margin: 0 auto 1mm;
+  width: 90%;
+}
+
+.gynae-modern-prescription .gm-sign-name {
+  color: var(--gm-purple-dark);
+  display: block;
+  font-size: 8pt;
+  font-weight: 700;
+}
+
+.gynae-modern-prescription .gm-signature small {
+  color: var(--gm-muted);
+  display: block;
+  font-size: 6.5pt;
+  line-height: 1.3;
+}
+
+.gynae-modern-prescription .gm-bottom-bar {
+  align-items: center;
+  background: var(--gm-purple);
+  border-radius: 1.2mm;
+  color: #fff;
+  display: grid;
+  font-size: 6.5pt;
+  gap: 1.5mm;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.8fr) 8mm;
+  padding: 1.2mm 2mm;
+}
+
+.gynae-modern-prescription .gm-bottom-bar span {
+  align-items: center;
+  display: flex;
+  gap: 1mm;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gynae-modern-prescription .gm-bottom-bar i {
+  flex-shrink: 0;
+}
+
+.gynae-modern-prescription .gm-qr {
+  justify-content: flex-end;
+}
+
+@page {
+  margin: 8mm;
+  size: A4 portrait;
+}
+
+@media print {
+  .gynae-modern-prescription {
+    background: #fff !important;
+    box-sizing: border-box;
+    height: auto !important;
+    margin: 0 auto !important;
+    max-width: 210mm;
+    min-height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    width: 210mm;
+  }
+
+  .gynae-modern-prescription * {
+    box-sizing: border-box;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .gynae-modern-prescription .section,
+  .gynae-modern-prescription .card,
+  .gynae-modern-prescription .table-section,
+  .gynae-modern-prescription .footer,
+  .gynae-modern-prescription .signature-box {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .gynae-modern-prescription table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .gynae-modern-prescription thead {
+    display: table-header-group;
+  }
+
+  .gynae-modern-prescription tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .gynae-modern-prescription td,
+  .gynae-modern-prescription th {
+    overflow-wrap: break-word;
+    white-space: normal;
+    word-break: normal;
+  }
+}

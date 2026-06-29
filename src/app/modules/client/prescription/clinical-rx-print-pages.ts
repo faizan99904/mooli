@@ -49,6 +49,25 @@ function usesGynaeClinicalPagination(
   );
 }
 
+function usesGynaeModernPagination(
+  specialtySection: string,
+  prescriptionTemplate?: string
+): boolean {
+  return (
+    resolveGynaePrintLayout(
+      specialtySection as SpecialtyTemplateKey,
+      prescriptionTemplate as PrescriptionTemplate
+    ) === 'gynae-modern'
+  );
+}
+
+function buildGynaeModernPrintPages(
+  medicines: Array<Record<string, unknown>>,
+  extendedRows: Array<{ label: string; value: string; wide?: boolean }>
+): ClinicalRxPrintPage[] {
+  return buildGynaeCompactPreviewPrintPages(medicines, extendedRows);
+}
+
 type GynaeExtendedChunk = {
   rows: Array<{ label: string; value: string; wide?: boolean }>;
   showTitle: boolean;
@@ -478,6 +497,10 @@ export function buildClinicalRxPrintPages(input: ClinicalRxPrintLayoutInput): Cl
 
     if (usesGynaeClinicalPagination(input.specialtySection, input.prescriptionTemplate)) {
       return buildGynaeClinicalPrintPages(medicines, extendedRows);
+    }
+
+    if (usesGynaeModernPagination(input.specialtySection, input.prescriptionTemplate)) {
+      return buildGynaeModernPrintPages(medicines, extendedRows);
     }
 
     return buildGynaePrintPages(medicines, extendedRows);

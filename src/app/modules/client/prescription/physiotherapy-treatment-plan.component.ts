@@ -60,6 +60,7 @@ import {
   ChartPoint,
   parseNumericValue,
 } from './physiotherapy-charts';
+import { canEditPrescriptionInPlace, resolvePrescriptionOwnerUserId } from './prescription-edit-policy';
 
 @Component({
   selector: 'app-physiotherapy-treatment-plan',
@@ -72,6 +73,8 @@ export class PhysiotherapyTreatmentPlanComponent implements OnInit, OnDestroy {
   activeTab: PhysioTabKey = 'assessment';
   saving = false;
   editingId = '';
+  private editingInPlace = false;
+  private editingPrescriptionOwnerId = '';
   appointmentsLoading = false;
   selectedAppointmentId = '';
   selectedPatientId = '';
@@ -809,11 +812,23 @@ export class PhysiotherapyTreatmentPlanComponent implements OnInit, OnDestroy {
   }
 
   submitPlan(printAfterSave = false): void {
-    if (!this.editingId && !this.canCreate()) {
+    let shouldUpdate = Boolean(this.editingId && this.editingInPlace);
+    if (
+      shouldUpdate &&
+      this.editingPrescriptionOwnerId &&
+      this.editingPrescriptionOwnerId !== String(this.currentUserId || '').trim()
+    ) {
+      shouldUpdate = false;
+      this.editingInPlace = false;
+      this.editingId = '';
+      this.editingPrescriptionOwnerId = '';
+    }
+
+    if (!shouldUpdate && !this.canCreate()) {
       return;
     }
 
-    if (this.editingId && !this.canUpdate()) {
+    if (shouldUpdate && !this.canUpdate()) {
       return;
     }
 
@@ -855,12 +870,12 @@ export class PhysiotherapyTreatmentPlanComponent implements OnInit, OnDestroy {
       prescriptionTemplate: this.selectedDoctorProfile()?.prescriptionTemplate || 'classic',
     };
 
-    if (!this.editingId) {
+    if (!shouldUpdate) {
       payload['hospitalId'] = this.currentHospitalId || undefined;
     }
 
     this.saving = true;
-    const request$ = this.editingId
+    const request$ = shouldUpdate
       ? this.backend.updatePrescription(this.editingId, payload)
       : this.backend.createPrescription(payload);
 
@@ -868,6 +883,10 @@ export class PhysiotherapyTreatmentPlanComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.toastr.success(response.message);
         this.editingId = response.data?._id || this.editingId;
+        this.editingInPlace = Boolean(this.editingId);
+        this.editingPrescriptionOwnerId = shouldUpdate
+          ? this.editingPrescriptionOwnerId
+          : resolvePrescriptionOwnerUserId(response.data as Prescription);
         if (printAfterSave) {
           this.printPlan(response.data as Prescription);
         }
@@ -948,11 +967,45 @@ export class PhysiotherapyTreatmentPlanComponent implements OnInit, OnDestroy {
           return;
         }
 
-        this.editingId = prescription._id;
-        this.applyPrescription(prescription);
         if (mode === 'view') {
+          this.editingInPlace = false;
+          this.editingId = prescription._id;
+          this.applyPrescription(prescription);
           this.printPlan(prescription);
+          return;
         }
+
+        const editInPlace = canEditPrescriptionInPlace(prescription, this.currentUserId);
+
+        if (!editInPlace) {
+          if (!this.canCreate()) {
+            this.toastr.error('You cannot modify another doctor\'s treatment plan.');
+            return;
+          }
+
+          this.editingInPlace = false;
+          this.editingId = '';
+          this.editingPrescriptionOwnerId = '';
+          this.applyPrescription(prescription);
+          if (this.isDoctorUser()) {
+            this.physioForm.patchValue({
+              doctorId: this.currentUserId || '',
+              appointmentId: '',
+            });
+            this.selectedAppointmentId = '';
+          }
+          this.toastr.info('This treatment plan belongs to another doctor. Saving will create a new plan.');
+          return;
+        }
+
+        if (!this.canUpdate()) {
+          return;
+        }
+
+        this.editingInPlace = true;
+        this.editingId = prescription._id;
+        this.editingPrescriptionOwnerId = resolvePrescriptionOwnerUserId(prescription);
+        this.applyPrescription(prescription);
       },
       error: (err) => {
         this.toastr.error(err?.error?.message || 'Unable to load treatment plan');

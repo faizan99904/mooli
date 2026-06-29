@@ -6,6 +6,7 @@ export type PrescriptionTemplate =
   | 'clinical-blue'
   | 'gynae-clinical'
   | 'gynae-womens-health'
+  | 'gynae-modern'
   | 'minimal-teal'
   | 'compact-mono';
 

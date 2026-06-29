@@ -1,11 +1,12 @@
 import { PrescriptionTemplate } from '../../../shared/models/hospital.model';
 import { SpecialtyTemplateKey } from './prescription-specialty-print';
 
-export type GynaePrintLayout = 'gynae-clinical' | 'gynae-womens-health' | 'clinical-blue';
+export type GynaePrintLayout = 'gynae-clinical' | 'gynae-womens-health' | 'gynae-modern' | 'clinical-blue';
 
 const GYNAE_PRINT_TEMPLATES = new Set<PrescriptionTemplate>([
   'gynae-clinical',
   'gynae-womens-health',
+  'gynae-modern',
   'clinical-blue',
 ]);
 
@@ -18,7 +19,7 @@ export function normalizeGynaePrescriptionTemplate(
   specialtySection: SpecialtyTemplateKey | '' | null | undefined
 ): PrescriptionTemplate {
   if (!isGynaeSpecialty(specialtySection)) {
-    if (template === 'gynae-clinical' || template === 'gynae-womens-health') {
+    if (template === 'gynae-clinical' || template === 'gynae-womens-health' || template === 'gynae-modern') {
       return 'clinical-blue';
     }
 
@@ -60,6 +61,13 @@ export function usesGynaeWomensHealthPrint(
   template: PrescriptionTemplate | null | undefined
 ): boolean {
   return resolveGynaePrintLayout(specialtySection, template) === 'gynae-womens-health';
+}
+
+export function usesGynaeModernPrint(
+  specialtySection: SpecialtyTemplateKey | '' | null | undefined,
+  template: PrescriptionTemplate | null | undefined
+): boolean {
+  return resolveGynaePrintLayout(specialtySection, template) === 'gynae-modern';
 }
 
 export function usesGynaeClinicalBluePrint(

@@ -204,7 +204,7 @@
 }
 
 .created-view-backdrop {
-  align-items: center;
+  align-items: flex-start;
   background: rgba(15, 23, 42, 0.58);
   box-sizing: border-box;
   display: flex;
@@ -221,11 +221,13 @@
   border-radius: 8px;
   box-shadow: 0 22px 70px rgba(15, 23, 42, 0.25);
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
+  margin: auto;
   max-height: calc(100vh - 36px);
   max-width: 1120px;
   overflow: hidden;
-  width: min(1120px, 100%);
+  width: min(1120px, calc(100vw - 36px));
 }
 
 .created-view-toolbar {
@@ -253,7 +255,11 @@
 }
 
 .created-view-scroll {
+  align-items: center;
+  background: #fff;
+  display: flex;
   flex: 1 1 auto;
+  flex-direction: column;
   max-height: calc(100vh - 120px);
   min-height: 0;
   overflow: auto;
@@ -261,12 +267,14 @@
 }
 
 .created-view-scroll .prescription-print-host {
+  align-items: center;
   margin-left: auto;
   margin-right: auto;
   max-width: 100%;
+  width: 100%;
 }
 
-.created-view-scroll .prescription-print-sheet {
+.created-view-scroll .prescription-print-host > * {
   margin-left: auto;
   margin-right: auto;
   max-width: 100%;
